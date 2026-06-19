@@ -6,7 +6,13 @@
 
 ## Recovery Status
 
-This copy was restored on 2026-06-19 under:
+This project is now tracked on GitHub and the active stable working copy is:
+
+```text
+/home/deepseek_VG/JUNCHI/Video-causal
+```
+
+It was recovered on 2026-06-19 from an intermediate copy under:
 
 ```text
 /home/deepseek_VG/deepseek/video_concept_erasure_causal_footprint
@@ -37,7 +43,7 @@ Not recovered here:
 - External baseline checkouts under `baselines/external/`.
 - T2VUnlearning zip/source unless recovered separately from backup.
 
-Do not treat this recovery copy as containing the full experiment artifacts. It is enough to continue the research state and regenerate missing artifacts.
+Do not treat this repository as containing the full experiment artifacts. It is enough to continue the research state and regenerate missing artifacts. Large generated videos, model weights, adapters, and external baseline checkouts remain intentionally outside git.
 
 ## Current Evidence
 
@@ -81,15 +87,44 @@ Weak, collapsed, residual-cause, or target-visible outputs are method outcomes, 
 ## Quick Checks
 
 ```bash
-cd /home/deepseek_VG/deepseek/video_concept_erasure_causal_footprint
-python -m pytest tests/test_run_pilot.py tests/test_build_baseline_comparison.py tests/test_recovered_evidence.py -q
+cd /home/deepseek_VG/JUNCHI/Video-causal
+python -m pytest tests -q
 ```
 
-Expected recovered-state result:
+Expected lightweight result:
 
 ```text
-6 passed
+10 passed
 ```
+
+## CogVideoX Clean Generation
+
+Plan a clean-source CogVideoX-2B generation run without downloading models:
+
+```bash
+python scripts/generate_cogvideox_clean.py \
+  --prompts prompts/cogvideox_causal_screening.txt \
+  --output-dir outputs/cogvideox_clean_smoke \
+  --model zai-org/CogVideoX-2b \
+  --limit 2 \
+  --seed 42 \
+  --dry-run
+```
+
+Run real generation after installing `torch` and `diffusers` and making the model available locally or via Hugging Face:
+
+```bash
+python scripts/generate_cogvideox_clean.py \
+  --prompts prompts/cogvideox_causal_screening.txt \
+  --output-dir outputs/cogvideox_clean_v0 \
+  --model models/CogVideoX-2b \
+  --limit 4 \
+  --seed 42 \
+  --enable-model-cpu-offload \
+  --vae-tiling
+```
+
+Outputs under `outputs/` and generated `videos/` are ignored by git.
 
 ## Project Structure
 
@@ -114,14 +149,15 @@ video_concept_erasure_causal_footprint/
 │   ├── build_baseline_comparison.py
 │   ├── build_clean_source_review.py
 │   ├── check_baselines.py
+│   ├── generate_cogvideox_clean.py
 │   └── run_pilot.py
 └── tests/
 ```
 
 ## Next Actions
 
-1. Check whether a filesystem snapshot can restore the original `/home/deepseek_VG/JUNCHI` artifacts.
-2. If no snapshot exists, reclone/download external baselines and CogVideoX-2B weights into this recovery copy.
-3. Regenerate review videos/contact sheets as needed.
+1. Install or restore CogVideoX-2B runtime dependencies and weights outside git.
+2. Run clean-source CogVideoX generation and screen for high-quality causal chains.
+3. Rebuild baseline runners for Negative Prompt, SAFREE-CogVideoX, VideoEraser, and T2VUnlearning.
 4. Fill the six round2 car-barrier `T2VUnlearning` / `SAFREE-CogVideoX` coverage gaps.
 5. Continue the causal-footprint audit from the recovered cross-round matrix.

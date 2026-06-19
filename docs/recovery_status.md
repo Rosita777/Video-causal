@@ -16,6 +16,14 @@ The project was restored under:
 
 `/home/deepseek_VG/deepseek` is a symlink to `/dev/shm/deepseek`.
 
+The active stable working copy is now:
+
+```text
+/home/deepseek_VG/JUNCHI/Video-causal
+```
+
+The stable copy keeps the GitHub remote `https://github.com/Rosita777/Video-causal.git`. Generated videos, model weights, adapters, and external baseline checkouts remain outside git.
+
 ## Recovered
 
 - Top-level project docs and prompt files available in Codex logs.
@@ -24,6 +32,7 @@ The project was restored under:
   - `scripts/build_baseline_comparison.py`
   - `scripts/build_clean_source_review.py`
   - `scripts/check_baselines.py`
+  - `scripts/generate_cogvideox_clean.py`
 - Lightweight tests:
   - `tests/test_run_pilot.py`
   - `tests/test_build_baseline_comparison.py`
@@ -50,13 +59,14 @@ The project was restored under:
 ## Verification
 
 ```bash
-python -m pytest tests/test_run_pilot.py tests/test_build_baseline_comparison.py tests/test_recovered_evidence.py -q
+cd /home/deepseek_VG/JUNCHI/Video-causal
+python -m pytest tests -q
 ```
 
-Result after recovery:
+Current lightweight result:
 
 ```text
-6 passed
+10 passed
 ```
 
 ## Current Scientific State

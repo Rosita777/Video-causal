@@ -201,3 +201,39 @@ Not recovered and intentionally not tracked:
 - model weights, adapters, checkpoints, and zip archives.
 
 Repository hygiene decision: GitHub should store important code, docs, prompts, tests, and small CSV evidence only. Large media/model artifacts must remain outside git and be regenerated or downloaded when needed.
+
+## 2026-06-19: Stable Git Working Copy and CogVideoX Clean Runner
+
+**Goal:** Move active development from the volatile recovery copy into a stable Git-tracked path and rebuild the first runnable clean-source generation entry point.
+
+**Stable path:**
+
+```text
+/home/deepseek_VG/JUNCHI/Video-causal
+```
+
+**GitHub remote:**
+
+```text
+https://github.com/Rosita777/Video-causal.git
+```
+
+**Network note:** Direct GitHub clone attempts failed twice with `GnuTLS recv error (-110)`. The stable copy was created from the already-synced local recovery repository while preserving `.git` and `origin`.
+
+**Files added:**
+- `scripts/generate_cogvideox_clean.py`
+- `tests/test_generate_cogvideox_clean.py`
+
+**Runner behavior:**
+- `--dry-run` validates prompt parsing, planned video paths, seeds, generation parameters, and `generation_manifest.json` without importing heavy ML packages.
+- Real generation lazily imports `torch`, `diffusers.CogVideoXPipeline`, and `diffusers.utils.export_to_video`.
+- Default model ID is `zai-org/CogVideoX-2b`; local paths such as `models/CogVideoX-2b` can be passed with `--model`.
+- Generated videos and manifests under `outputs/` remain outside git.
+
+**Verification:**
+
+```bash
+python3 -m pytest tests/test_generate_cogvideox_clean.py -q
+```
+
+**Result:** `2 passed`.
