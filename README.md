@@ -71,10 +71,10 @@ Strict causal-footprint positives:
 
 The required comparison rows are:
 
-- Negative Prompt
-- VideoEraser
-- T2VUnlearning
-- SAFREE-CogVideoX
+- Negative Prompt: prompt-only inference control.
+- SAFREE-CogVideoX: training-free / inference-time erasure control.
+- VideoEraser: dedicated video erasure baseline.
+- T2VUnlearning: finetuning/unlearning baseline.
 
 Weak, collapsed, residual-cause, or target-visible outputs are method outcomes, not reasons to omit a baseline.
 
