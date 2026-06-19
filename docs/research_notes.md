@@ -30,6 +30,15 @@ Current CogVideoX-2B clean-source status:
 
 The most common clean-source failure is not conceptual erasure failure; it is base-model generation failure: the target cause, downstream effect, or both are absent in the clean source.
 
+## New CogVideoX-2B Baseline Evidence
+
+Negative Prompt round1 on the two current clean-valid sources produced two strict causal-footprint candidates:
+
+- `ice_cube_seed200`: the ice cube is not clearly visible, but cola surface turbulence and bubbles remain.
+- `stone_seed204`: the stone/impact object is absent, but circular ripples still appear and expand.
+
+This is consistent with the core hypothesis: prompt-level target suppression can remove or weaken the visible cause while preserving downstream event evidence.
+
 ## Recovered Evidence
 
 The recovered cross-round matrix has 59 annotated rows across 13 clean-source-valid cases.

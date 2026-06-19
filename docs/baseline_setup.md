@@ -50,7 +50,7 @@ Notes:
 - `scripts/build_baseline_comparison.py`: contact-sheet/annotation CSV helper.
 - `scripts/build_clean_source_review.py`: clean-source screening CSV helper.
 - `scripts/check_baselines.py`: source/package readiness checker.
-- `scripts/generate_cogvideox_clean.py`: clean-source CogVideoX-2B generation runner with a dependency-free dry-run mode.
+- `scripts/generate_cogvideox_clean.py`: CogVideoX-2B generation runner for clean and Negative Prompt videos with a dependency-free dry-run mode.
 - Rounds 1-3 summary CSVs and cross-round evidence tables.
 
 ## Not Recovered
@@ -108,6 +108,8 @@ python scripts/generate_cogvideox_clean.py \
 ```
 
 The manifest is written to `generation_manifest.json`. Videos are written under the selected output directory's `videos/` subdirectory. These generated artifacts are intentionally ignored by git.
+
+For Negative Prompt, add `--baseline negative_prompt`. The runner keeps the original positive prompt and passes each row's `target_concept` as the pipeline `negative_prompt`.
 
 The first local real-generation smoke used:
 

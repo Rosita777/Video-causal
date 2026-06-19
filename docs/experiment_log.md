@@ -359,3 +359,66 @@ experiments/clean_screening/cogvideox_clean_screening_round1_seed200_summary.csv
 | `sugar_cube_seed205` | no | Sugar cube and swirl/dissolve effect are not visible. |
 
 **Decision:** Use `ice_cube_seed200` and `stone_seed204` as immediate clean-valid candidates for first baseline runner tests. Continue generating more seeds for pitcher/bottle/pipette if those concepts are needed for broader coverage.
+
+## 2026-06-19: Negative Prompt Round1 on CogVideoX Clean-Valid Sources
+
+**Goal:** Run the first inference-time baseline on the current clean-valid CogVideoX-2B sources before implementing heavier baselines.
+
+**Code change:** Extended `scripts/generate_cogvideox_clean.py` with:
+- `--baseline clean` (default);
+- `--baseline negative_prompt`, which passes each prompt's `target_concept` as `negative_prompt` to `CogVideoXPipeline`.
+
+**Dry-run verification:**
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python \
+  scripts/generate_cogvideox_clean.py \
+  --baseline negative_prompt \
+  --prompts prompts/cogvideox_clean_screening_round1.txt \
+  --output-dir outputs/negative_prompt_round1_seed200_dryrun \
+  --model models/CogVideoX-2b \
+  --seed 200 \
+  --steps 20 \
+  --dry-run
+```
+
+**Generation command:**
+
+```bash
+PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=0 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/generate_cogvideox_clean.py \
+  --baseline negative_prompt \
+  --prompts prompts/cogvideox_clean_screening_round1.txt \
+  --output-dir outputs/negative_prompt_round1_seed200 \
+  --model models/CogVideoX-2b \
+  --seed 200 \
+  --steps 20 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --fps 8 \
+  --enable-model-cpu-offload \
+  --vae-tiling
+```
+
+**Generated local artifacts:**
+- `outputs/negative_prompt_round1_seed200/generation_manifest.json`
+- `outputs/negative_prompt_round1_seed200/videos/`
+- `outputs/negative_prompt_round1_seed200/review/clean_valid_compare_contact_sheet.jpg`
+- `outputs/negative_prompt_round1_seed200/review/clean_valid_compare_annotation.csv`
+
+These remain outside git.
+
+**Tracked summary:**
+
+```text
+experiments/baseline_runs/negative_prompt_round1_seed200_summary.csv
+```
+
+**Initial contact-sheet screening on clean-valid cases:**
+
+| Prompt ID | Target visible? | Effect visible? | Outcome |
+| --- | --- | --- | --- |
+| `ice_cube_seed200` | no | yes | strict causal-footprint candidate |
+| `stone_seed204` | no | yes | strict causal-footprint candidate |
+
+**Decision:** Negative Prompt is now a reproduced baseline on CogVideoX-2B for the current clean-valid sources. Next baseline priority is SAFREE-CogVideoX on the same two cases, followed by VideoEraser/T2VUnlearning setup.

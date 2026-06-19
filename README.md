@@ -94,7 +94,7 @@ python -m pytest tests -q
 Expected lightweight result:
 
 ```text
-10 passed
+11 passed
 ```
 
 ## CogVideoX Clean Generation
@@ -151,6 +151,17 @@ Round1 seed200-205 produced two clean-valid candidates:
 - `ice_cube_seed200`
 - `stone_seed204`
 
+Current baseline result:
+
+```text
+experiments/baseline_runs/negative_prompt_round1_seed200_summary.csv
+```
+
+Negative Prompt produced two strict causal-footprint candidates on the current clean-valid sources:
+
+- `ice_cube_seed200`
+- `stone_seed204`
+
 ## Project Structure
 
 ```text
@@ -170,6 +181,8 @@ video_concept_erasure_causal_footprint/
 │   └── cross_round_summary/
 ├── experiments/clean_screening/
 │   └── cogvideox_clean_screening_round1_seed200_summary.csv
+├── experiments/baseline_runs/
+│   └── negative_prompt_round1_seed200_summary.csv
 ├── prompts/
 │   ├── causal_pilot.txt
 │   ├── cogvideox_causal_screening.txt
@@ -187,7 +200,7 @@ video_concept_erasure_causal_footprint/
 ## Next Actions
 
 1. Expand CogVideoX clean-source screening for more seeds/templates.
-2. Start baseline runners on clean-valid `ice_cube_seed200` and `stone_seed204`.
-3. Rebuild baseline runners for Negative Prompt, SAFREE-CogVideoX, VideoEraser, and T2VUnlearning.
+2. Run SAFREE-CogVideoX on clean-valid `ice_cube_seed200` and `stone_seed204`.
+3. Rebuild VideoEraser and T2VUnlearning runners for the same clean-valid cases.
 4. Fill the six round2 car-barrier `T2VUnlearning` / `SAFREE-CogVideoX` coverage gaps.
 5. Continue the causal-footprint audit from the recovered cross-round matrix.
