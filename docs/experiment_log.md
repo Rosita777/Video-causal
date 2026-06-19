@@ -237,3 +237,71 @@ python3 -m pytest tests/test_generate_cogvideox_clean.py -q
 ```
 
 **Result:** `2 passed`.
+
+## 2026-06-19: CogVideoX-2B Local Weights and Real Clean Smoke
+
+**Goal:** Move from dry-run generation planning to real CogVideoX-2B clean-source video generation.
+
+**Runtime fixes:**
+- Reused `/home/deepseek_VG/.conda/envs/vcecf`.
+- Fixed `transformers 4.51.3` import by downgrading `tokenizers` from `0.22.2` to `0.21.4`.
+- Verified `CogVideoXPipeline` import with `diffusers 0.34.0`.
+- PyTorch CUDA was only reliable when launching with `CUDA_VISIBLE_DEVICES=0`.
+
+**Model download:**
+- Direct `https://huggingface.co` access timed out.
+- `HF_ENDPOINT=https://hf-mirror.com` worked.
+- Downloaded `zai-org/CogVideoX-2b` to `models/CogVideoX-2b`.
+- Model directory size after download: about 13G.
+- `models/` remains ignored by git.
+
+**Technical smoke:**
+
+```bash
+PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=0 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/generate_cogvideox_clean.py \
+  --prompts prompts/cogvideox_causal_screening.txt \
+  --output-dir outputs/cogvideox_clean_tech_smoke \
+  --model models/CogVideoX-2b \
+  --limit 1 \
+  --seed 42 \
+  --steps 2 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --fps 8 \
+  --enable-model-cpu-offload \
+  --vae-tiling
+```
+
+**Result:** succeeded and wrote one mp4 plus `generation_manifest.json`.
+
+**Two-prompt clean smoke:**
+
+```bash
+PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=0 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/generate_cogvideox_clean.py \
+  --prompts prompts/cogvideox_clean_smoke.txt \
+  --output-dir outputs/cogvideox_clean_v0_smoke \
+  --model models/CogVideoX-2b \
+  --limit 2 \
+  --seed 100 \
+  --steps 20 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --fps 8 \
+  --enable-model-cpu-offload \
+  --vae-tiling
+```
+
+**Outputs:**
+- `outputs/cogvideox_clean_v0_smoke/generation_manifest.json`
+- `outputs/cogvideox_clean_v0_smoke/videos/000_a-realistic-video-of-a-red-ball-rolling-into-wooden-blocks-and-the-block_seed100.mp4`
+- `outputs/cogvideox_clean_v0_smoke/videos/001_a-realistic-close-up-video-of-a-clear-ice-cube-dropping-into-a-glass-of_seed101.mp4`
+- `outputs/cogvideox_clean_v0_smoke/review/contact_sheet.jpg`
+- `outputs/cogvideox_clean_v0_smoke/review/annotation.csv`
+
+**Initial contact-sheet screening:**
+- `ice cube` / cola seed 101: usable clean source candidate; ice/liquid disturbance/bubbles are visible.
+- `ball` / wooden blocks seed 100: not clean-valid; the red ball is visible but wooden blocks and the causal effect are absent.
+
+**Decision:** Continue clean-source screening before applying erasure baselines. Invalid clean sources should be filtered out rather than interpreted as erasure failures.

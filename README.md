@@ -126,6 +126,19 @@ python scripts/generate_cogvideox_clean.py \
 
 Outputs under `outputs/` and generated `videos/` are ignored by git.
 
+Current local smoke assets, also ignored by git:
+
+```text
+models/CogVideoX-2b
+outputs/cogvideox_clean_tech_smoke/
+outputs/cogvideox_clean_v0_smoke/
+```
+
+Observed smoke result on 2026-06-19:
+
+- `ice cube` / cola seed 101: visually usable from contact-sheet screening.
+- `ball` / wooden blocks seed 100: not clean-valid; the blocks/effect are absent.
+
 ## Project Structure
 
 ```text
@@ -144,7 +157,9 @@ video_concept_erasure_causal_footprint/
 │   ├── causal_audit_round3_liquid_surface/round3_summary.csv
 │   └── cross_round_summary/
 ├── prompts/
-│   └── causal_pilot.txt
+│   ├── causal_pilot.txt
+│   ├── cogvideox_causal_screening.txt
+│   └── cogvideox_clean_smoke.txt
 ├── scripts/
 │   ├── build_baseline_comparison.py
 │   ├── build_clean_source_review.py

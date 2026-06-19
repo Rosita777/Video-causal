@@ -26,6 +26,24 @@ PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python -m pytest -q
 
 If unavailable, the recovered lightweight tests also pass with the system Python used by this session.
 
+Current CogVideoX smoke runtime as of 2026-06-19:
+
+```text
+python 3.10.20
+torch 2.6.0+cu124
+diffusers 0.34.0
+transformers 4.51.3
+accelerate 1.6.0
+safetensors 0.8.0
+huggingface_hub 0.36.2
+tokenizers 0.21.4
+```
+
+Notes:
+- `transformers 4.51.3` requires `tokenizers>=0.21,<0.22`; `tokenizers` was downgraded from `0.22.2` to `0.21.4`.
+- PyTorch only saw CUDA reliably when running with `CUDA_VISIBLE_DEVICES=0`.
+- Direct `huggingface.co` access timed out, but `HF_ENDPOINT=https://hf-mirror.com` worked for downloading `zai-org/CogVideoX-2b`.
+
 ## Recovered Locally
 
 - `scripts/run_pilot.py`: dry-run manifest driver.
@@ -91,10 +109,32 @@ python scripts/generate_cogvideox_clean.py \
 
 The manifest is written to `generation_manifest.json`. Videos are written under the selected output directory's `videos/` subdirectory. These generated artifacts are intentionally ignored by git.
 
+The first local real-generation smoke used:
+
+```bash
+PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=0 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/generate_cogvideox_clean.py \
+  --prompts prompts/cogvideox_clean_smoke.txt \
+  --output-dir outputs/cogvideox_clean_v0_smoke \
+  --model models/CogVideoX-2b \
+  --limit 2 \
+  --seed 100 \
+  --steps 20 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --fps 8 \
+  --enable-model-cpu-offload \
+  --vae-tiling
+```
+
+Initial contact-sheet screening:
+- `ice cube` / cola seed 101: visually usable clean source.
+- `ball` / wooden blocks seed 100: not clean-valid; the blocks/effect are absent.
+
 ## Immediate Reproduction Order After Recovery
 
-1. Recreate `models/CogVideoX-2b` or configure access to `zai-org/CogVideoX-2b` outside git.
-2. Run the CogVideoX clean-source runner and screen for clean-valid causal chains.
+1. Expand clean-source CogVideoX screening with more seeds/templates until each target has clean-valid source videos.
+2. Preserve `models/CogVideoX-2b` and generated videos locally, outside git.
 3. Reclone/import external baselines into `baselines/external/` outside git.
 4. Fill the six round2 car-barrier `T2VUnlearning` / `SAFREE-CogVideoX` missing rows.
 5. Rebuild review contact sheets only after videos exist again.

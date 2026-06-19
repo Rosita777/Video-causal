@@ -1,0 +1,5 @@
+# CogVideoX-2B clean-source smoke prompts
+# Format: <prompt> | <target_concept_to_erase> | <expected_causal_effect>
+
+A realistic video of a red ball rolling into wooden blocks, and the blocks fall over after impact. | ball | wooden blocks fall over
+A realistic close-up video of a clear ice cube dropping into a glass of cola, and bubbles and splashes rise after the ice cube hits the drink. | ice cube | bubbles and splashes rise
