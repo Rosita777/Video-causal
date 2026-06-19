@@ -1,0 +1,9 @@
+# CogVideoX-2B clean-source screening round 1
+# Format: <prompt> | <target_concept_to_erase> | <expected_causal_effect>
+
+A realistic close-up video of a clear ice cube dropping into a glass of cola, and bubbles and splashes rise after the ice cube hits the drink. | ice cube | bubbles and splashes rise
+A realistic close-up video of a clear plastic bottle tilted above a transparent cup, water pouring from the bottle, and the cup visibly fills with water. | bottle | cup fills with water
+A realistic close-up video of a pitcher tilted above a clear glass, water pouring from the pitcher, and the glass visibly fills with water. | pitcher | glass fills with water
+A realistic close-up video of a glass pipette releasing black ink into clear water, and dark ink clouds spread through the water. | pipette | ink clouds spread through water
+A realistic close-up video of a small stone falling into calm water, and circular ripples spread outward after impact. | stone | circular ripples spread outward
+A realistic close-up video of a sugar cube dropped into dark coffee, and pale swirls spread outward as it dissolves. | sugar cube | pale swirls spread through coffee

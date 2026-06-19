@@ -305,3 +305,57 @@ PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=0 \
 - `ball` / wooden blocks seed 100: not clean-valid; the red ball is visible but wooden blocks and the causal effect are absent.
 
 **Decision:** Continue clean-source screening before applying erasure baselines. Invalid clean sources should be filtered out rather than interpreted as erasure failures.
+
+## 2026-06-19: CogVideoX Clean Screening Round1 Seed200-205
+
+**Goal:** Expand clean-source screening beyond the initial two-prompt smoke and prioritize templates that are likely to produce visible causal chains.
+
+**Prompt file:**
+
+```text
+prompts/cogvideox_clean_screening_round1.txt
+```
+
+**Generation command:**
+
+```bash
+PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=0 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/generate_cogvideox_clean.py \
+  --prompts prompts/cogvideox_clean_screening_round1.txt \
+  --output-dir outputs/cogvideox_clean_screening_round1_seed200 \
+  --model models/CogVideoX-2b \
+  --seed 200 \
+  --steps 20 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --fps 8 \
+  --enable-model-cpu-offload \
+  --vae-tiling
+```
+
+**Generated local artifacts:**
+- `outputs/cogvideox_clean_screening_round1_seed200/generation_manifest.json`
+- `outputs/cogvideox_clean_screening_round1_seed200/videos/`
+- `outputs/cogvideox_clean_screening_round1_seed200/review/contact_sheet.jpg`
+- `outputs/cogvideox_clean_screening_round1_seed200/review/annotation.csv`
+
+These remain outside git.
+
+**Tracked summary:**
+
+```text
+experiments/clean_screening/cogvideox_clean_screening_round1_seed200_summary.csv
+```
+
+**Initial contact-sheet screening:**
+
+| Prompt ID | Clean-valid? | Notes |
+| --- | --- | --- |
+| `ice_cube_seed200` | yes | Ice cube and cola disturbance/bubbles are visible. |
+| `bottle_seed201` | no | Bottle mouth and stream visible, but cup/filling effect is too weak or absent. |
+| `pitcher_seed202` | no | Looks like a static glass/tube; pitcher and clear pouring event are absent. |
+| `pipette_seed203` | no | Ink diffusion is strong, but pipette target source is not visible enough. |
+| `stone_seed204` | yes | Stone/impact point and expanding ripples are visible. |
+| `sugar_cube_seed205` | no | Sugar cube and swirl/dissolve effect are not visible. |
+
+**Decision:** Use `ice_cube_seed200` and `stone_seed204` as immediate clean-valid candidates for first baseline runner tests. Continue generating more seeds for pitcher/bottle/pipette if those concepts are needed for broader coverage.

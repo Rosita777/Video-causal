@@ -22,6 +22,14 @@ A prompt/seed can enter erasure evaluation only if the clean video has:
 
 This gate prevents generic T2V failure from being misread as erasure failure.
 
+Current CogVideoX-2B clean-source status:
+
+- `ice_cube_seed101` from the initial two-prompt smoke is visually usable.
+- `ice_cube_seed200` and `stone_seed204` from round1 seed200-205 are clean-valid candidates.
+- `ball_seed100`, `bottle_seed201`, `pitcher_seed202`, `pipette_seed203`, and `sugar_cube_seed205` are not clean-valid under the current screening notes.
+
+The most common clean-source failure is not conceptual erasure failure; it is base-model generation failure: the target cause, downstream effect, or both are absent in the clean source.
+
 ## Recovered Evidence
 
 The recovered cross-round matrix has 59 annotated rows across 13 clean-source-valid cases.

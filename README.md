@@ -132,12 +132,24 @@ Current local smoke assets, also ignored by git:
 models/CogVideoX-2b
 outputs/cogvideox_clean_tech_smoke/
 outputs/cogvideox_clean_v0_smoke/
+outputs/cogvideox_clean_screening_round1_seed200/
 ```
 
 Observed smoke result on 2026-06-19:
 
 - `ice cube` / cola seed 101: visually usable from contact-sheet screening.
 - `ball` / wooden blocks seed 100: not clean-valid; the blocks/effect are absent.
+
+Current clean-source screening result:
+
+```text
+experiments/clean_screening/cogvideox_clean_screening_round1_seed200_summary.csv
+```
+
+Round1 seed200-205 produced two clean-valid candidates:
+
+- `ice_cube_seed200`
+- `stone_seed204`
 
 ## Project Structure
 
@@ -156,9 +168,12 @@ video_concept_erasure_causal_footprint/
 │   ├── causal_audit_round2_car_barrier/round2_summary.csv
 │   ├── causal_audit_round3_liquid_surface/round3_summary.csv
 │   └── cross_round_summary/
+├── experiments/clean_screening/
+│   └── cogvideox_clean_screening_round1_seed200_summary.csv
 ├── prompts/
 │   ├── causal_pilot.txt
 │   ├── cogvideox_causal_screening.txt
+│   ├── cogvideox_clean_screening_round1.txt
 │   └── cogvideox_clean_smoke.txt
 ├── scripts/
 │   ├── build_baseline_comparison.py
@@ -171,8 +186,8 @@ video_concept_erasure_causal_footprint/
 
 ## Next Actions
 
-1. Install or restore CogVideoX-2B runtime dependencies and weights outside git.
-2. Run clean-source CogVideoX generation and screen for high-quality causal chains.
+1. Expand CogVideoX clean-source screening for more seeds/templates.
+2. Start baseline runners on clean-valid `ice_cube_seed200` and `stone_seed204`.
 3. Rebuild baseline runners for Negative Prompt, SAFREE-CogVideoX, VideoEraser, and T2VUnlearning.
 4. Fill the six round2 car-barrier `T2VUnlearning` / `SAFREE-CogVideoX` coverage gaps.
 5. Continue the causal-footprint audit from the recovered cross-round matrix.
