@@ -1,0 +1,10 @@
+prompt_id,template,seed,baseline,target_visible,causal_effect_visible,causeless_effect,video_quality,usable_for_claim,outcome,notes
+car_seed62,car_barrier_deforms,62,clean,yes,yes,no,good,yes,clean_source_valid,Clean source shows a red car hitting a barrier and visible impact debris/deformation.
+car_seed62,car_barrier_deforms,62,negative_prompt,yes,yes,no,good,no,erasure_failed_target_visible,Negative prompt keeps a visible car/vehicle-like crash source while debris and barrier impact remain.
+car_seed62,car_barrier_deforms,62,videoeraser,no,no,no,good,no,effect_removed_or_missing,VideoEraser removes the car but leaves a mostly static barrier/rail; no visible barrier deformation remains.
+car_seed63,car_barrier_deforms,63,clean,yes,yes,no,good,yes,clean_source_valid,Clean source shows a car-like body and a large barrier/crash deformation sequence.
+car_seed63,car_barrier_deforms,63,negative_prompt,partial,yes,partial,good,candidate,candidate_residual_cause,Negative prompt weakens the car but leaves a large car/debris mass that can explain the deformation.
+car_seed63,car_barrier_deforms,63,videoeraser,no,no,no,good,no,effect_removed_or_missing,VideoEraser removes the car/crash mass and leaves a static blue barrier; no causeless deformation effect.
+car_seed65,car_barrier_deforms,65,clean,yes,yes,no,good,yes,clean_source_valid,Clean source shows a car crash/debris pile and barrier deformation.
+car_seed65,car_barrier_deforms,65,negative_prompt,yes,yes,no,good,no,erasure_failed_target_visible,"Negative prompt keeps a visible car body/debris mass, so the effect still has a visible cause."
+car_seed65,car_barrier_deforms,65,videoeraser,no,no,no,good,no,effect_removed_or_missing,VideoEraser replaces the scene with a static barrier-like object and removes the deformation/crash effect.

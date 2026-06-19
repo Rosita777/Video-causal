@@ -1,0 +1,69 @@
+# Recovery Status
+
+Updated: 2026-06-19
+
+## What Happened
+
+The original workspace path `/home/deepseek_VG/JUNCHI` disappeared from the active filesystem view. Both Codex and the user's IDE terminal could no longer see it. Bash history did not show an explicit `rm -rf JUNCHI` or `mv JUNCHI` command. Trash did not contain the project. The top-level `/home/deepseek_VG` directory had an mtime near `2026-06-19 04:54`, so an external cleanup, move, mount change, or workspace reset remains the most plausible cause.
+
+## Recovery Target
+
+The project was restored under:
+
+```text
+/home/deepseek_VG/deepseek/video_concept_erasure_causal_footprint
+```
+
+`/home/deepseek_VG/deepseek` is a symlink to `/dev/shm/deepseek`.
+
+## Recovered
+
+- Top-level project docs and prompt files available in Codex logs.
+- Lightweight scripts:
+  - `scripts/run_pilot.py`
+  - `scripts/build_baseline_comparison.py`
+  - `scripts/build_clean_source_review.py`
+  - `scripts/check_baselines.py`
+- Lightweight tests:
+  - `tests/test_run_pilot.py`
+  - `tests/test_build_baseline_comparison.py`
+  - `tests/test_recovered_evidence.py`
+  - `tests/test_check_baselines.py`
+- Recovered manual summary CSVs:
+  - `experiments/pilot_week1/causal_audit_round1/round1_summary.csv`
+  - `experiments/pilot_week1/causal_audit_round2_car_barrier/round2_summary.csv`
+  - `experiments/pilot_week1/causal_audit_round3_liquid_surface/round3_summary.csv`
+- Recovered cross-round CSVs:
+  - `rounds_1_3_master_matrix.csv`
+  - `rounds_1_3_required_baseline_coverage.csv`
+  - counts by baseline/template/round.
+
+## Not Recovered
+
+- Generated videos.
+- Contact sheets.
+- Model weights.
+- External baseline repositories.
+- Adapter checkpoints.
+- Any file content that existed only on disk and was never visible in logs.
+
+## Verification
+
+```bash
+python -m pytest tests/test_run_pilot.py tests/test_build_baseline_comparison.py tests/test_recovered_evidence.py -q
+```
+
+Result after recovery:
+
+```text
+6 passed
+```
+
+## Current Scientific State
+
+The recovered evidence supports the same narrow claim as before the loss:
+
+- Negative Prompt repeatedly produced strict causal-footprint positives across pitcher-water and ice-cube-cola.
+- VideoEraser produced one strict positive on pitcher-water, with no recovered strict positive on round3 bottle/ice.
+- T2VUnlearning and SAFREE-CogVideoX are required baselines but currently have no strict positives in the recovered summaries.
+- Round2 car-barrier still lacks T2VUnlearning and SAFREE-CogVideoX summary rows.

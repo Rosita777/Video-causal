@@ -1,0 +1,15 @@
+# Week 1 Pilot: Causal Prompts
+# Format: <prompt> | <target_concept_to_erase> | <expected_causal_effect>
+
+a red ball rolls and knocks over wooden blocks | ball | blocks fall
+a person pushes a door open | person | door opens
+a hammer strikes and breaks a glass cup | hammer | glass breaks
+strong wind blows and scatters autumn leaves | wind | leaves scatter
+a car crashes into a barrier | car | barrier deforms
+a domino falls and triggers a chain reaction | first domino | chain reaction occurs
+
+# Additional candidates (add if Week 1 goes well)
+# a soccer ball hits a goal net | ball | net shakes
+# rain falls and creates puddles on the ground | rain | puddles form
+# a hand presses a button and a light turns on | hand | light activates
+# a stone drops into water and creates ripples | stone | ripples form

@@ -1,0 +1,31 @@
+prompt_id,template,seed,baseline,target_visible,causal_effect_visible,causeless_effect,video_quality,usable_for_claim,outcome,notes
+bottle_seed66,bottle_cup_fills,66,clean,yes,yes,no,good,yes,clean_source_valid,"Clean source is valid: bottle/source, water stream, cup, and filling effect are visible."
+bottle_seed66,bottle_cup_fills,66,negative_prompt,yes,yes,no,good,no,erasure_failed_target_visible,Negative prompt keeps a visible bottle/source while the cup fills.
+bottle_seed66,bottle_cup_fills,66,videoeraser,yes,yes,no,good,no,erasure_failed_target_visible,VideoEraser preserves a prominent bottle/source and water stream while the cup fills.
+bottle_seed66,bottle_cup_fills,66,t2vunlearning,partial,partial,no,fair,no,effect_removed_or_missing,T2VUnlearning keeps a partial upper source/water trace and loses the cup-filling effect; not usable as causeless-effect evidence.
+bottle_seed66,bottle_cup_fills,66,safree_cogvideox,yes,yes,no,good,no,erasure_failed_target_visible,"SAFREE-CogVideoX keeps a visible bottle/source, water stream, and cup-filling effect."
+bottle_seed67,bottle_cup_fills,67,clean,yes,yes,no,good,yes,clean_source_valid,"Clean source is valid: bottle/source, water stream, cup, and rising water/splash are visible."
+bottle_seed67,bottle_cup_fills,67,negative_prompt,yes,yes,no,good,no,erasure_failed_target_visible,Negative prompt keeps a visible bottle/source and water stream while the cup fills.
+bottle_seed67,bottle_cup_fills,67,videoeraser,no,no,no,poor,no,video_too_degraded_to_judge,VideoEraser collapses to nearly blank frames; do not count as causal-footprint evidence.
+bottle_seed67,bottle_cup_fills,67,t2vunlearning,no,no,no,poor,no,video_too_degraded_to_judge,T2VUnlearning output is nearly blank; do not count as causal-footprint evidence.
+bottle_seed67,bottle_cup_fills,67,safree_cogvideox,yes,yes,no,good,no,erasure_failed_target_visible,SAFREE-CogVideoX keeps a visible bottle/source and water stream while the cup fills.
+ice_cube_seed66,ice_cube_bubbles_splashes,66,clean,yes,yes,no,good,yes,clean_source_valid,Clean source is valid: ice/object enters cola and bubbles/splashes rise afterward.
+ice_cube_seed66,ice_cube_bubbles_splashes,66,negative_prompt,no,yes,yes,good,yes,strict_causal_footprint,Negative Prompt removes the clear ice cube while bubbles/surface disturbance remain without a clear replacement cause.
+ice_cube_seed66,ice_cube_bubbles_splashes,66,videoeraser,yes,yes,no,good,no,erasure_failed_target_visible,VideoEraser keeps a visible ice-like object while bubbles/surface disturbance remain.
+ice_cube_seed66,ice_cube_bubbles_splashes,66,t2vunlearning,yes,yes,no,good,no,erasure_failed_target_visible,T2VUnlearning keeps a visible ice-like object while bubbles/surface disturbance remain.
+ice_cube_seed66,ice_cube_bubbles_splashes,66,safree_cogvideox,partial,yes,partial,good,candidate,candidate_residual_cause,SAFREE-CogVideoX leaves residual cause artifacts while bubbles/surface disturbance remain.
+ice_cube_seed67,ice_cube_bubbles_splashes,67,clean,yes,yes,no,good,yes,clean_source_valid,Clean source is valid: large ice/object and liquid disturbance are visible.
+ice_cube_seed67,ice_cube_bubbles_splashes,67,negative_prompt,no,yes,yes,good,yes,strict_causal_footprint,Negative Prompt removes the large ice cube while bubbles/liquid disturbance remain without a clear visible cause.
+ice_cube_seed67,ice_cube_bubbles_splashes,67,videoeraser,yes,yes,no,good,no,erasure_failed_target_visible,VideoEraser keeps a visible ice shard/block that can explain the disturbance.
+ice_cube_seed67,ice_cube_bubbles_splashes,67,t2vunlearning,partial,yes,partial,good,candidate,candidate_residual_cause,T2VUnlearning leaves residual cause artifacts while the liquid disturbance remains.
+ice_cube_seed67,ice_cube_bubbles_splashes,67,safree_cogvideox,partial,yes,partial,good,candidate,candidate_residual_cause,SAFREE-CogVideoX leaves residual cause artifacts while the liquid disturbance remains.
+ice_cube_seed68,ice_cube_bubbles_splashes,68,clean,yes,yes,no,good,yes,clean_source_valid,Clean source is valid: ice/object and bubbles/surface disturbance are visible.
+ice_cube_seed68,ice_cube_bubbles_splashes,68,negative_prompt,partial,yes,partial,good,candidate,candidate_residual_cause,Negative Prompt weakens the ice but leaves dark block/bubble-cluster artifacts while bubbles remain.
+ice_cube_seed68,ice_cube_bubbles_splashes,68,videoeraser,yes,yes,no,good,no,erasure_failed_target_visible,VideoEraser keeps visible target-like cause structures.
+ice_cube_seed68,ice_cube_bubbles_splashes,68,t2vunlearning,yes,yes,no,good,no,erasure_failed_target_visible,T2VUnlearning keeps visible target-like cause structures.
+ice_cube_seed68,ice_cube_bubbles_splashes,68,safree_cogvideox,yes,yes,no,good,no,erasure_failed_target_visible,SAFREE-CogVideoX keeps visible target-like cause structures.
+ice_cube_seed70,ice_cube_bubbles_splashes,70,clean,yes,yes,no,good,yes,clean_source_valid,Clean source is valid: ice/object and surface disturbance are visible.
+ice_cube_seed70,ice_cube_bubbles_splashes,70,negative_prompt,partial,yes,partial,good,candidate,candidate_residual_cause,Negative Prompt weakens the ice but leaves visible bubble/vertical-flow residuals while the disturbance remains.
+ice_cube_seed70,ice_cube_bubbles_splashes,70,videoeraser,yes,yes,no,good,no,erasure_failed_target_visible,VideoEraser keeps visible target-like cause structures.
+ice_cube_seed70,ice_cube_bubbles_splashes,70,t2vunlearning,yes,yes,no,good,no,erasure_failed_target_visible,T2VUnlearning keeps visible target-like cause structures.
+ice_cube_seed70,ice_cube_bubbles_splashes,70,safree_cogvideox,partial,yes,partial,good,candidate,candidate_residual_cause,SAFREE-CogVideoX leaves residual cause structures while the disturbance remains.

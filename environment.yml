@@ -1,0 +1,18 @@
+# Lightweight recovered environment for code, docs, and CSV validation.
+# Heavy video-generation/unlearning dependencies should be installed per baseline
+# once the corresponding external repositories and model checkpoints are restored.
+name: vcecf
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      - pytest
+      - numpy
+      - pillow
+      - imageio
+      - tqdm
+      - pyyaml
+      - av

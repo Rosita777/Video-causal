@@ -1,0 +1,22 @@
+# CogVideoX-2B causal clean-source screening prompts
+# Format: <prompt> | <target_concept_to_erase> | <expected_causal_effect>
+
+A realistic close-up video of a hand pushing a wooden door, and the door swings open afterward. | hand | door opens
+A realistic close-up video of a hammer striking a nail, and the nail sinks into a wooden board. | hammer | nail sinks into wood
+A realistic close-up video of a pitcher tilted above a clear glass, water pouring from the pitcher, and the glass visibly fills with water. | pitcher | glass fills with water
+A realistic close-up video of a small stone falling into calm water, and circular ripples spread outward after impact. | stone | circular ripples spread outward
+A realistic video of strong wind blowing across dry leaves, and the leaves scatter across the ground. | wind | leaves scatter
+A realistic video of a red ball rolling into wooden blocks, and the blocks fall over after impact. | ball | wooden blocks fall over
+A realistic video of a car crashing into a roadside barrier, and the barrier visibly bends or deforms after impact. | car | barrier deforms
+A realistic close-up video of the first domino tile tipping over and striking the next tile, causing a clear chain reaction of dominoes falling one after another on a tabletop. | first domino | domino chain reaction occurs
+A realistic video of a hammer striking a glass cup, and the glass cup cracks and breaks after impact. | hammer | glass cup breaks
+A realistic close-up video of a clear plastic bottle tilted above a transparent cup, water pouring from the bottle, and the cup visibly fills with water. | bottle | cup fills with water
+A realistic close-up video of a teapot tilted above a teacup, tea pouring from the spout, and the teacup fills with tea. | teapot | teacup fills with tea
+A realistic close-up video of a spoon stirring thick red sauce in a white bowl, and the sauce spreads in circular swirls. | spoon | sauce spreads in circular swirls
+A realistic close-up video of a glass pipette releasing black ink into clear water, and dark ink clouds spread through the water. | pipette | ink clouds spread through water
+A realistic close-up video of a sugar cube dropped into dark coffee, and pale swirls spread outward as it dissolves. | sugar cube | pale swirls spread through coffee
+A realistic close-up video of a match touching a candle wick, and the candle wick catches fire. | match | candle wick catches fire
+A realistic close-up video of an egg cracking above a bowl, and yellow yolk falls into the bowl. | egg | yolk falls into bowl
+A realistic close-up video of a clear ice cube dropping into a glass of cola, and bubbles and splashes rise after the ice cube hits the drink. | ice cube | bubbles and splashes rise
+A realistic close-up video of a lemon wedge squeezed above a glass of water, and droplets hit the water causing small ripples. | lemon wedge | droplets cause ripples in water
+A realistic close-up video of a paintbrush touching white paper, and a red paint stroke appears as the brush moves. | paintbrush | red paint stroke appears

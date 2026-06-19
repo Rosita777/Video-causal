@@ -1,0 +1,4 @@
+round,annotated_rows,candidate_ambiguous_cause,candidate_artifact_cause,candidate_residual_cause,clean_source_valid,effect_removed_or_missing,erasure_failed_target_visible,strict_causal_footprint,video_too_degraded_to_judge,usable_yes,usable_candidate,usable_no
+round1_pitcher_stone,20,1,1,5,4,1,5,2,1,6,7,7
+round2_car_barrier,9,0,0,1,3,3,2,0,0,3,1,5
+round3_liquid_surface,30,0,0,6,6,1,13,2,2,8,6,16

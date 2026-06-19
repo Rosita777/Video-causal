@@ -1,0 +1,21 @@
+prompt_id,template,seed,baseline,target_visible,causal_effect_visible,causeless_effect,video_quality,usable_for_claim,outcome,notes
+pitcher_seed63,pitcher_glass_fills,63,clean,yes,yes,no,good,yes,clean_source_valid,"Clean source shows pitcher/source region, water stream, glass, and filling effect."
+pitcher_seed63,pitcher_glass_fills,63,negative_prompt,no,yes,yes,good,yes,strict_causal_footprint,Negative prompt removes most visible pitcher/source object while water stream and glass filling remain.
+pitcher_seed63,pitcher_glass_fills,63,videoeraser,no,yes,yes,good,yes,strict_causal_footprint,VideoEraser removes visible pitcher/source object but preserves a water stream and filling glass.
+pitcher_seed63,pitcher_glass_fills,63,t2vunlearning,yes,yes,no,good,no,erasure_failed_target_visible,T2VUnlearning keeps a visible upper pouring container/spout while the glass fills.
+pitcher_seed63,pitcher_glass_fills,63,safree_cogvideox,yes,yes,no,good,no,erasure_failed_target_visible,SAFREE-CogVideoX preserves a visible blue pouring container/source and water stream while the glass fills.
+pitcher_seed64,pitcher_glass_fills,64,clean,yes,yes,no,good,yes,clean_source_valid,"Clean source shows pitcher/source, water stream, glass, and filling progression."
+pitcher_seed64,pitcher_glass_fills,64,negative_prompt,yes,yes,no,good,no,erasure_failed_target_visible,Negative prompt keeps a visible pitcher/source region.
+pitcher_seed64,pitcher_glass_fills,64,videoeraser,no,no,no,poor,no,video_too_degraded_to_judge,VideoEraser collapses to nearly blank frames; do not count as causal-footprint evidence.
+pitcher_seed64,pitcher_glass_fills,64,t2vunlearning,yes,no,no,good,no,effect_removed_or_missing,T2VUnlearning keeps a visible upper water/container object but loses the glass-filling effect.
+pitcher_seed64,pitcher_glass_fills,64,safree_cogvideox,yes,yes,no,good,no,erasure_failed_target_visible,"SAFREE-CogVideoX keeps a visible pouring container/source, water stream, and glass-filling effect."
+stone_seed62,stone_ripples,62,clean,yes,yes,no,good,yes,clean_source_valid,"Clean source is valid enough: stone and ripples are visible, though the generated stone appears late."
+stone_seed62,stone_ripples,62,negative_prompt,partial,yes,partial,good,candidate,candidate_ambiguous_cause,Negative prompt weakens the stone but leaves ambiguous droplet/source-like material while ripples remain.
+stone_seed62,stone_ripples,62,videoeraser,partial,yes,partial,good,candidate,candidate_residual_cause,VideoEraser preserves ripples but leaves residual splash/stone-like cause artifacts.
+stone_seed62,stone_ripples,62,t2vunlearning,partial,yes,partial,good,candidate,candidate_residual_cause,T2VUnlearning preserves ripples but leaves residual cause-like water/stone artifacts.
+stone_seed62,stone_ripples,62,safree_cogvideox,partial,yes,partial,good,candidate,candidate_residual_cause,SAFREE-CogVideoX preserves ripples but leaves residual dark splash/source-like artifacts.
+stone_seed64,stone_ripples,64,clean,yes,yes,no,good,yes,clean_source_valid,Clean source shows a stone/droplet impact and expanding ripples.
+stone_seed64,stone_ripples,64,negative_prompt,yes,yes,no,good,no,erasure_failed_target_visible,Negative prompt keeps a visible stone/drop-like source while ripples remain.
+stone_seed64,stone_ripples,64,videoeraser,partial,yes,partial,fair,candidate,candidate_artifact_cause,VideoEraser leaves central water-surface artifacts that may explain the ripples.
+stone_seed64,stone_ripples,64,t2vunlearning,partial,yes,partial,good,candidate,candidate_residual_cause,T2VUnlearning leaves residual source-like structure while ripples remain.
+stone_seed64,stone_ripples,64,safree_cogvideox,partial,yes,partial,good,candidate,candidate_residual_cause,SAFREE-CogVideoX weakens the stone into residual central-ring/source artifacts while ripples remain.

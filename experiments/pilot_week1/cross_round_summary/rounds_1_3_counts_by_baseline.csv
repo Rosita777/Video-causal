@@ -1,0 +1,5 @@
+baseline,annotated_rows,candidate_ambiguous_cause,candidate_artifact_cause,candidate_residual_cause,clean_source_valid,effect_removed_or_missing,erasure_failed_target_visible,strict_causal_footprint,video_too_degraded_to_judge,usable_yes,usable_candidate,usable_no
+negative_prompt,13,1,0,3,0,0,6,3,0,3,4,6
+safree_cogvideox,10,0,0,5,0,0,5,0,0,0,5,5
+t2vunlearning,10,0,0,3,0,2,4,0,1,0,3,7
+videoeraser,13,0,1,1,0,3,5,1,2,1,2,10

@@ -1,0 +1,81 @@
+# Conda environment
+*.egg-info/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Large baseline repos (clone locally, don't commit)
+baselines/external/*/
+
+# Model weights and caches
+*.pth
+*.pt
+*.safetensors
+*.ckpt
+*.bin
+models/
+checkpoints/
+.cache/
+
+# Experiment outputs
+experiments/*/videos/
+experiments/*/frames/
+experiments/*/*.mp4
+experiments/*/*.avi
+experiments/*/*.gif
+
+# System
+.DS_Store
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Temporary files
+tmp/
+temp/
+*.log
+*.out
+
+# Recovered-project policy: keep code/docs/CSV, not generated media or model artifacts
+*.mp4
+*.avi
+*.mov
+*.webm
+*.mkv
+*.gif
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+
+# Generated experiment media/review artifacts; keep CSV summaries and configs
+experiments/**/videos/
+experiments/**/frames/
+experiments/**/review/
+experiments/**/*.png
+experiments/**/*.jpg
+experiments/**/*.jpeg
+experiments/**/*.gif
+
+# Large model/adapters/checkpoints anywhere
+*.pth
+*.pt
+*.safetensors
+*.ckpt
+*.bin
+*.onnx
+*.gguf
+*.adapter
+*.lora
+models/
+checkpoints/
+adapters/
+outputs/
+# Local test/type-check/tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
