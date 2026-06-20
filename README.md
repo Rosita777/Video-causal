@@ -4,6 +4,16 @@
 
 **Canonical example:** after erasing "ball" from "a red ball rolls and knocks over wooden blocks", the ball disappears but the blocks still fall.
 
+## Current Direction
+
+The project is now benchmark-first. Before proposing a new erasure method, we are defining **causal footprint leakage** as a distinct failure mode from ordinary target-visible leakage and building a structured benchmark for it.
+
+Current benchmark design spec:
+
+```text
+docs/superpowers/specs/2026-06-20-causal-footprint-benchmark-v0-design.md
+```
+
 ## Recovery Status
 
 This project is now tracked on GitHub and the active stable working copy is:
@@ -94,7 +104,7 @@ python -m pytest tests -q
 Expected lightweight result:
 
 ```text
-24 passed
+26 passed
 ```
 
 ## CogVideoX Clean Generation

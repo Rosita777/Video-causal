@@ -1,6 +1,6 @@
 # Research Notes: Video Concept Erasure and Causal Footprint
 
-Updated: 2026-06-19
+Updated: 2026-06-20
 
 ## Core Hypothesis
 
@@ -8,7 +8,21 @@ Current text-to-video concept erasure methods may remove the visible target conc
 
 ## Current Framing
 
-The project is currently an empirical audit and evaluation-protocol effort. A new method should wait until the failure mode is demonstrated cleanly across valid clean-source cases.
+The project is now a benchmark-first effort. The immediate goal is to define and evaluate **causal footprint leakage** before designing a new erasure method.
+
+Current benchmark design spec:
+
+```text
+docs/superpowers/specs/2026-06-20-causal-footprint-benchmark-v0-design.md
+```
+
+Working definition:
+
+- `C`: source concept or event participant to erase.
+- `E(C)`: direct visual evidence of the source concept.
+- `F(C)`: causal footprint left by the source concept.
+
+The key failure is `E(C)` low while `F(C)` remains high. This separates causal-footprint leakage from ordinary target-visible erasure failure.
 
 ## Clean-Source Gate
 
@@ -61,4 +75,12 @@ Round2 car-barrier has clean/Negative Prompt/VideoEraser rows but still lacks T2
 
 ## Claim Strength
 
-Current safe wording: causal-footprint failures are observable and repeat for Negative Prompt across valid clean-source cases; VideoEraser shows one strict causal-footprint failure but needs more breadth before a strong method-level claim.
+Current safe wording: causal-footprint failures are observable in multiple CogVideoX-2B prompt families and repeat across several baseline interfaces. The next scientific step is not to claim a final method-level ranking, but to build a structured benchmark with clean-source gates, target-presence annotations, and causal-footprint annotations.
+
+The strongest planned metric is conditional footprint persistence:
+
+```text
+CFP@TPS<=1
+```
+
+This means causal-footprint persistence measured only when the target concept is already weak or absent. It directly addresses the reviewer objection that examples are merely incomplete erasure.

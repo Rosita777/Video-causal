@@ -994,3 +994,45 @@ tests/test_run_parallel_baseline_jobs.py
 ```
 
 The new scheduler expands runs into `(prompt, baseline)` jobs and assigns them to GPU slots. Future mining should use this scheduler so all baselines are interleaved. Start with `--slots-per-gpu 1`; only test `--slots-per-gpu 2` on a small subset after checking GPU memory headroom, because one full-size CogVideoX-2B process can already consume a large fraction of an H800.
+
+## 2026-06-20: Benchmark-First Research Direction
+
+**Goal:** Convert the current qualitative causal-footprint evidence into a rigorous benchmark plan before designing a new erasure method.
+
+**Motivation:** Round3 examples show the desired failure mode: the source concept can become weak or absent while downstream causal evidence remains, such as ripples, splash, cracks, net deformation, or footprints. A few examples are not enough for a paper-level claim; the next step is a benchmark that separates ordinary target-visible erasure failure from strict causal-footprint leakage.
+
+**Design spec added:**
+
+```text
+docs/superpowers/specs/2026-06-20-causal-footprint-benchmark-v0-design.md
+```
+
+**Core definitions:**
+
+```text
+C: source concept or event participant
+E(C): direct visual evidence of C
+F(C): causal footprint caused by C
+```
+
+**Key metric direction:**
+
+```text
+CFP@TPS<=1
+```
+
+This measures causal-footprint persistence only when target presence is already weak or absent, directly addressing the concern that examples might only be incomplete erasure.
+
+**Documentation updates:**
+
+- `README.md` now points to the benchmark design spec.
+- `docs/research_notes.md` now records the benchmark-first framing and the `E(C)` vs `F(C)` distinction.
+- `docs/current_open_questions.md` now prioritizes benchmark v0 prompt selection, strict-leakage thresholds, and canonical figure examples.
+
+**Verification:**
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python -m pytest tests -q
+```
+
+**Result:** `26 passed`.
