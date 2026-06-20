@@ -1,6 +1,6 @@
 # Baseline Setup and Reproduction
 
-Updated: 2026-06-19
+Updated: 2026-06-20
 
 This is the current stable project copy after recovery. It records what should be present and what must be regenerated before running heavy baselines again.
 
@@ -51,6 +51,7 @@ Notes:
 - `scripts/build_clean_source_review.py`: clean-source screening CSV helper.
 - `scripts/check_baselines.py`: source/package readiness checker.
 - `scripts/generate_cogvideox_clean.py`: CogVideoX-2B generation runner for clean and Negative Prompt videos with a dependency-free dry-run mode.
+- `scripts/adapters/run_safree_cogvideox.py`: SAFREE-CogVideoX wrapper with dependency-free dry-run mode and official-pipeline real-run mode.
 - `scripts/run_baseline_suite.py`: suite-level baseline interface that plans/runs all required baselines for the same prompt/seed set.
 - Rounds 1-3 summary CSVs and cross-round evidence tables.
 
@@ -59,7 +60,6 @@ Notes:
 The following were present before the workspace loss but are not present in this recovery copy:
 
 ```text
-models/CogVideoX-2b
 models/zeroscope_v2_576w
 baselines/external/VideoEraser
 baselines/external/T2VUnlearning
@@ -67,6 +67,13 @@ T2VUnlearning-main.zip
 round1/round2/round3 generated videos
 contact sheets
 T2VUnlearning local adapters
+```
+
+Current local ignored assets:
+
+```text
+models/CogVideoX-2b
+baselines/external/SAFREE/cogvideox/cogvideox_pipeline.py
 ```
 
 ## Required Baselines
@@ -78,7 +85,7 @@ The final matrix must include:
 | Negative Prompt | Summary rows recovered | Regenerate videos if visual artifacts are needed |
 | VideoEraser | Summary rows recovered | Reclone repo and regenerate videos if no snapshot exists |
 | T2VUnlearning | Summary rows recovered for rounds 1 and 3 | Recover source/adapters or retrain; fill round2 gaps |
-| SAFREE-CogVideoX | Summary rows recovered for rounds 1 and 3 | Recreate disclosed adaptation; fill round2 gaps |
+| SAFREE-CogVideoX | Summary rows recovered for rounds 1 and 3; adapter restored locally | Run on current clean-valid cases; fill round2 gaps |
 | CLEAR | No public code in recovered state | Cite as related work until code appears |
 
 ## Unified Baseline Suite Interface
@@ -107,11 +114,47 @@ Current dry-run statuses:
 | Baseline | Suite status | Meaning |
 | --- | --- | --- |
 | Negative Prompt | `ready` | Runs through `scripts/generate_cogvideox_clean.py --baseline negative_prompt` |
-| SAFREE-CogVideoX | `blocked_missing_adapter` | Need the CogVideoX attention/projection intervention adapter |
+| SAFREE-CogVideoX | `ready` locally; `blocked_missing_external` on fresh clones | Runs through `scripts/adapters/run_safree_cogvideox.py` when the official SAFREE CogVideoX pipeline exists under `baselines/external/SAFREE` |
 | VideoEraser | `blocked_missing_adapter` | Need external VideoEraser repo plus CogVideoX adapter wrapper |
 | T2VUnlearning | `blocked_missing_adapter` | Need external T2VUnlearning repo plus training/adaptation config |
 
 When adapters are restored or implemented, the suite status should change from blocked to ready without changing the high-level experiment command. For real runs, pass `--parallel` so all ready baselines start together; slower methods such as T2VUnlearning can finish later without forcing the entire interface to be serial.
+
+## SAFREE-CogVideoX Adapter
+
+The local wrapper expects the official SAFREE CogVideoX pipeline at:
+
+```text
+baselines/external/SAFREE/cogvideox/cogvideox_pipeline.py
+```
+
+The file was fetched locally from the official SAFREE repository:
+
+```text
+https://github.com/jaehong31/SAFREE
+```
+
+The external checkout is ignored by git. On a fresh clone, download or clone the SAFREE repository into `baselines/external/SAFREE` before running real SAFREE jobs.
+
+Dry-run the adapter:
+
+```bash
+PYTHONNOUSERSITE=1 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/adapters/run_safree_cogvideox.py \
+  --prompts prompts/cogvideox_clean_screening_round1.txt \
+  --output-dir outputs/safree_cogvideox_round1_seed200_dryrun \
+  --model models/CogVideoX-2b \
+  --seed 200 \
+  --steps 20 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --fps 8 \
+  --enable-model-cpu-offload \
+  --vae-tiling \
+  --dry-run
+```
+
+For real runs, remove `--dry-run`. The wrapper injects each row's `target_concept` into SAFREE's `CONCEPT_DICT` as `[target_concept]`, then passes that key as the `concept` argument to the official pipeline.
 
 ## CogVideoX-2B Clean Source Runner
 
@@ -170,6 +213,7 @@ Initial contact-sheet screening:
 
 1. Expand clean-source CogVideoX screening with more seeds/templates until each target has clean-valid source videos.
 2. Preserve `models/CogVideoX-2b` and generated videos locally, outside git.
-3. Reclone/import external baselines into `baselines/external/` outside git.
-4. Fill the six round2 car-barrier `T2VUnlearning` / `SAFREE-CogVideoX` missing rows.
-5. Rebuild review contact sheets only after videos exist again.
+3. Reclone/import external VideoEraser and T2VUnlearning into `baselines/external/` outside git.
+4. Run the unified suite on clean-valid cases so Negative Prompt and SAFREE-CogVideoX execute together.
+5. Fill the six round2 car-barrier `T2VUnlearning` / `SAFREE-CogVideoX` missing rows.
+6. Rebuild review contact sheets only after videos exist again.

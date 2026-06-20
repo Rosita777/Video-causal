@@ -94,7 +94,7 @@ python -m pytest tests -q
 Expected lightweight result:
 
 ```text
-13 passed
+17 passed
 ```
 
 ## CogVideoX Clean Generation
@@ -183,7 +183,9 @@ PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=0 \
   --dry-run
 ```
 
-Current suite status: Negative Prompt is runnable; SAFREE-CogVideoX, VideoEraser, and T2VUnlearning are planned but blocked until their adapters/external repos are restored. Use `--parallel` for real suite runs so ready baselines launch together.
+Current local suite status: Negative Prompt and SAFREE-CogVideoX are runnable; VideoEraser and T2VUnlearning remain planned but blocked until their adapters/external repos are restored. Use `--parallel` for real suite runs so ready baselines launch together.
+
+SAFREE-CogVideoX uses `scripts/adapters/run_safree_cogvideox.py`. The wrapper calls the official SAFREE CogVideoX pipeline under `baselines/external/SAFREE/cogvideox/cogvideox_pipeline.py` and injects each prompt row's `target_concept` into SAFREE's concept dictionary as a single concept entry. The external SAFREE checkout is intentionally ignored by git.
 
 ## Project Structure
 
@@ -216,6 +218,7 @@ video_concept_erasure_causal_footprint/
 │   ├── build_clean_source_review.py
 │   ├── check_baselines.py
 │   ├── generate_cogvideox_clean.py
+│   ├── adapters/run_safree_cogvideox.py
 │   ├── run_baseline_suite.py
 │   └── run_pilot.py
 └── tests/
@@ -224,7 +227,7 @@ video_concept_erasure_causal_footprint/
 ## Next Actions
 
 1. Expand CogVideoX clean-source screening for more seeds/templates.
-2. Run SAFREE-CogVideoX on clean-valid `ice_cube_seed200` and `stone_seed204`.
+2. Run the suite on clean-valid `ice_cube_seed200` and `stone_seed204` so Negative Prompt and SAFREE-CogVideoX execute together.
 3. Rebuild VideoEraser and T2VUnlearning runners for the same clean-valid cases.
 4. Fill the six round2 car-barrier `T2VUnlearning` / `SAFREE-CogVideoX` coverage gaps.
 5. Continue the causal-footprint audit from the recovered cross-round matrix.

@@ -20,13 +20,6 @@ REQUIRED_BASELINES = [
 
 
 BLOCKED_ADAPTERS = {
-    "safree_cogvideox": {
-        "status": "blocked_missing_adapter",
-        "missing": [
-            "scripts/adapters/run_safree_cogvideox.py",
-            "SAFREE projection/attention-intervention specification for CogVideoXPipeline",
-        ],
-    },
     "videoeraser": {
         "status": "blocked_missing_adapter",
         "missing": [
@@ -45,6 +38,10 @@ BLOCKED_ADAPTERS = {
 }
 
 
+def safree_pipeline_path(args: argparse.Namespace) -> Path:
+    return args.safree_root / "cogvideox" / "cogvideox_pipeline.py"
+
+
 def build_negative_prompt_command(args: argparse.Namespace, output_dir: Path) -> list[str]:
     command = [
         sys.executable,
@@ -57,6 +54,42 @@ def build_negative_prompt_command(args: argparse.Namespace, output_dir: Path) ->
         str(output_dir),
         "--model",
         args.model,
+        "--seed",
+        str(args.seed),
+        "--steps",
+        str(args.steps),
+        "--guidance-scale",
+        str(args.guidance_scale),
+        "--num-frames",
+        str(args.num_frames),
+        "--fps",
+        str(args.fps),
+    ]
+    if args.limit is not None:
+        command.extend(["--limit", str(args.limit)])
+    if args.enable_model_cpu_offload:
+        command.append("--enable-model-cpu-offload")
+    if args.enable_sequential_cpu_offload:
+        command.append("--enable-sequential-cpu-offload")
+    if args.vae_slicing:
+        command.append("--vae-slicing")
+    if args.vae_tiling:
+        command.append("--vae-tiling")
+    return command
+
+
+def build_safree_command(args: argparse.Namespace, output_dir: Path) -> list[str]:
+    command = [
+        sys.executable,
+        "scripts/adapters/run_safree_cogvideox.py",
+        "--prompts",
+        str(args.prompts),
+        "--output-dir",
+        str(output_dir),
+        "--model",
+        args.model,
+        "--safree-root",
+        str(args.safree_root),
         "--seed",
         str(args.seed),
         "--steps",
@@ -96,6 +129,27 @@ def build_jobs(args: argparse.Namespace) -> list[dict[str, object]]:
                 }
             )
             continue
+        if baseline == "safree_cogvideox":
+            pipeline_path = safree_pipeline_path(args)
+            if not pipeline_path.is_file():
+                jobs.append(
+                    {
+                        "baseline": baseline,
+                        "status": "blocked_missing_external",
+                        "output_dir": str(output_dir),
+                        "missing": [str(pipeline_path)],
+                    }
+                )
+                continue
+            jobs.append(
+                {
+                    "baseline": baseline,
+                    "status": "ready",
+                    "output_dir": str(output_dir),
+                    "command": build_safree_command(args, output_dir),
+                }
+            )
+            continue
         blocked = BLOCKED_ADAPTERS[baseline]
         jobs.append(
             {
@@ -123,6 +177,10 @@ def write_suite_manifest(args: argparse.Namespace, jobs: list[dict[str, object]]
             "num_frames": args.num_frames,
             "fps": args.fps,
             "limit": args.limit,
+        },
+        "external": {
+            "safree_root": str(args.safree_root),
+            "safree_pipeline": str(safree_pipeline_path(args)),
         },
         "jobs": jobs,
     }
@@ -165,6 +223,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--prompts", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--model", default="models/CogVideoX-2b")
+    parser.add_argument("--safree-root", type=Path, default=Path("baselines/external/SAFREE"))
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--steps", type=int, default=20)
     parser.add_argument("--guidance-scale", type=float, default=6.0)

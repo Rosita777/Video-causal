@@ -10,6 +10,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 def test_baseline_suite_dry_run_lists_required_baselines(tmp_path):
     prompt_file = tmp_path / "prompts.txt"
     output_root = tmp_path / "suite"
+    missing_safree_root = tmp_path / "missing_safree"
     prompt_file.write_text(
         "A realistic close-up video of a stone falling into calm water, and circular ripples spread outward. | stone | circular ripples spread outward\n",
         encoding="utf-8",
@@ -25,6 +26,8 @@ def test_baseline_suite_dry_run_lists_required_baselines(tmp_path):
             str(output_root),
             "--model",
             "models/CogVideoX-2b",
+            "--safree-root",
+            str(missing_safree_root),
             "--seed",
             "200",
             "--steps",
@@ -57,9 +60,58 @@ def test_baseline_suite_dry_run_lists_required_baselines(tmp_path):
         "negative_prompt",
     ]
     assert jobs["negative_prompt"]["output_dir"] == str(output_root / "negative_prompt")
-    assert jobs["safree_cogvideox"]["status"] == "blocked_missing_adapter"
+    assert jobs["safree_cogvideox"]["status"] == "blocked_missing_external"
+    assert jobs["safree_cogvideox"]["missing"] == [
+        str(missing_safree_root / "cogvideox" / "cogvideox_pipeline.py")
+    ]
     assert jobs["videoeraser"]["status"] == "blocked_missing_adapter"
     assert jobs["t2vunlearning"]["status"] == "blocked_missing_adapter"
+
+
+def test_baseline_suite_marks_safree_ready_when_external_pipeline_exists(tmp_path):
+    prompt_file = tmp_path / "prompts.txt"
+    output_root = tmp_path / "suite"
+    safree_root = tmp_path / "SAFREE"
+    (safree_root / "cogvideox").mkdir(parents=True)
+    (safree_root / "cogvideox" / "cogvideox_pipeline.py").write_text("# fake external pipeline\n", encoding="utf-8")
+    prompt_file.write_text(
+        "A realistic close-up video of an ice cube dropping into cola, and bubbles rise. | ice cube | bubbles rise\n",
+        encoding="utf-8",
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(PROJECT_ROOT / "scripts" / "run_baseline_suite.py"),
+            "--baseline",
+            "safree_cogvideox",
+            "--prompts",
+            str(prompt_file),
+            "--output-root",
+            str(output_root),
+            "--model",
+            "models/CogVideoX-2b",
+            "--safree-root",
+            str(safree_root),
+            "--seed",
+            "200",
+            "--dry-run",
+        ],
+        cwd=PROJECT_ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    manifest = json.loads((output_root / "suite_manifest.json").read_text(encoding="utf-8"))
+    assert len(manifest["jobs"]) == 1
+    assert manifest["external"]["safree_root"] == str(safree_root)
+    job = manifest["jobs"][0]
+    assert job["baseline"] == "safree_cogvideox"
+    assert job["status"] == "ready"
+    assert job["command"][:2] == [sys.executable, "scripts/adapters/run_safree_cogvideox.py"]
+    assert "--safree-root" in job["command"]
+    assert str(safree_root) in job["command"]
 
 
 def test_baseline_suite_can_select_single_baseline(tmp_path):

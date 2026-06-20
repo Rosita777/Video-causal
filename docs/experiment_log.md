@@ -450,7 +450,7 @@ PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=0 \
   --dry-run
 ```
 
-**Current suite dry-run statuses:**
+**Initial suite dry-run statuses before adapter restoration:**
 
 | Baseline | Status |
 | --- | --- |
@@ -459,6 +459,67 @@ PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=0 \
 | VideoEraser | `blocked_missing_adapter` |
 | T2VUnlearning | `blocked_missing_adapter` |
 
-**Decision:** The next engineering task is not another isolated run. It is to implement/restore adapters until SAFREE-CogVideoX, VideoEraser, and T2VUnlearning move from `blocked_missing_adapter` to `ready` in the same suite interface.
+**Decision at this point:** The next engineering task was not another isolated run. It was to implement/restore adapters until SAFREE-CogVideoX, VideoEraser, and T2VUnlearning move from blocked to ready in the same suite interface. The SAFREE status is superseded by the later 2026-06-20 SAFREE adapter entry below.
 
 `--parallel` is part of the suite contract. Once more adapters become ready, the same command can launch ready baselines together rather than forcing one-by-one reproduction.
+
+## 2026-06-20: SAFREE-CogVideoX Adapter Restored
+
+**Motivation:** SAFREE should be a first-class baseline in the unified suite, not a later one-off manual command.
+
+**Files added/updated:**
+- `scripts/adapters/run_safree_cogvideox.py`
+- `scripts/run_baseline_suite.py`
+- `scripts/check_baselines.py`
+- `tests/test_run_safree_cogvideox.py`
+- `tests/test_run_baseline_suite.py`
+- `tests/test_check_baselines.py`
+
+**External source state:** The official SAFREE CogVideoX pipeline was fetched locally into the ignored path:
+
+```text
+baselines/external/SAFREE/cogvideox/cogvideox_pipeline.py
+```
+
+The local wrapper injects each prompt row's `target_concept` into SAFREE's `CONCEPT_DICT` as `[target_concept]`, then passes the target string as the official pipeline's `concept` argument. This adapts SAFREE's safety-category interface to this project's arbitrary object/event concept-erasure prompts without treating it as Negative Prompt.
+
+**Dry-run checks:**
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/run_baseline_suite.py \
+  --prompts prompts/cogvideox_clean_screening_round1.txt \
+  --output-root outputs/baseline_suite_round1_seed200_safree_ready \
+  --model models/CogVideoX-2b \
+  --seed 200 \
+  --steps 20 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --fps 8 \
+  --enable-model-cpu-offload \
+  --vae-tiling \
+  --parallel \
+  --dry-run
+```
+
+Suite status from `outputs/baseline_suite_round1_seed200_safree_ready/suite_manifest.json`:
+
+| Baseline | Status |
+| --- | --- |
+| Negative Prompt | `ready` |
+| SAFREE-CogVideoX | `ready` |
+| VideoEraser | `blocked_missing_adapter` |
+| T2VUnlearning | `blocked_missing_adapter` |
+
+**Verification:**
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python -m pytest tests -q
+```
+
+Result:
+
+```text
+17 passed in 0.34s
+```
+
+**Decision:** Future clean-valid video experiments should run the suite so Negative Prompt and SAFREE-CogVideoX launch together. The next adapter priorities are VideoEraser and then T2VUnlearning.

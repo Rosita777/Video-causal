@@ -1,6 +1,6 @@
 # Recovery Status
 
-Updated: 2026-06-19
+Updated: 2026-06-20
 
 ## What Happened
 
@@ -33,11 +33,15 @@ The stable copy keeps the GitHub remote `https://github.com/Rosita777/Video-caus
   - `scripts/build_clean_source_review.py`
   - `scripts/check_baselines.py`
   - `scripts/generate_cogvideox_clean.py`
+  - `scripts/adapters/run_safree_cogvideox.py`
+  - `scripts/run_baseline_suite.py`
 - Lightweight tests:
   - `tests/test_run_pilot.py`
   - `tests/test_build_baseline_comparison.py`
   - `tests/test_recovered_evidence.py`
   - `tests/test_check_baselines.py`
+  - `tests/test_run_baseline_suite.py`
+  - `tests/test_run_safree_cogvideox.py`
 - Recovered manual summary CSVs:
   - `experiments/pilot_week1/causal_audit_round1/round1_summary.csv`
   - `experiments/pilot_week1/causal_audit_round2_car_barrier/round2_summary.csv`
@@ -66,7 +70,7 @@ python -m pytest tests -q
 Current lightweight result:
 
 ```text
-13 passed
+17 passed
 ```
 
 ## Current Scientific State
@@ -75,5 +79,6 @@ The recovered evidence supports the same narrow claim as before the loss:
 
 - Negative Prompt repeatedly produced strict causal-footprint positives across pitcher-water and ice-cube-cola.
 - VideoEraser produced one strict positive on pitcher-water, with no recovered strict positive on round3 bottle/ice.
-- T2VUnlearning and SAFREE-CogVideoX are required baselines but currently have no strict positives in the recovered summaries.
+- SAFREE-CogVideoX is now runnable through the restored wrapper, but has no strict positives in the recovered summaries.
+- T2VUnlearning remains a required baseline but currently has no strict positives in the recovered summaries.
 - Round2 car-barrier still lacks T2VUnlearning and SAFREE-CogVideoX summary rows.

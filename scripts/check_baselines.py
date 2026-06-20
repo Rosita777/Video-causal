@@ -14,6 +14,14 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 BASELINES = {
+    "safree_cogvideox": {
+        "root": "baselines/external/SAFREE",
+        "required_files": [
+            "cogvideox/README.md",
+            "cogvideox/cogvideox_pipeline.py",
+        ],
+        "packages": ["torch", "diffusers", "transformers", "accelerate"],
+    },
     "videoeraser_modelscope": {
         "root": "baselines/external/VideoEraser/ModelScope",
         "required_files": [

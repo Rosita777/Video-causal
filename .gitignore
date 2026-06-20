@@ -73,9 +73,10 @@ experiments/**/*.gif
 models/
 checkpoints/
 adapters/
+!scripts/adapters/
+!scripts/adapters/*.py
 outputs/
 # Local test/type-check/tool caches
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-

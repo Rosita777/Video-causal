@@ -4,7 +4,7 @@ import sys
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
-from check_baselines import check_file, check_repo_readiness
+from check_baselines import BASELINES, check_file, check_repo_readiness
 
 
 def test_check_file_reports_present_and_missing(tmp_path):
@@ -38,3 +38,8 @@ def test_check_repo_readiness_uses_relative_paths(tmp_path):
         "baseline.py": "ok",
         "missing.txt": "missing",
     }
+
+
+def test_safree_cogvideox_readiness_tracks_official_pipeline():
+    assert BASELINES["safree_cogvideox"]["root"] == "baselines/external/SAFREE"
+    assert "cogvideox/cogvideox_pipeline.py" in BASELINES["safree_cogvideox"]["required_files"]
