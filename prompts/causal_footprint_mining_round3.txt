@@ -1,0 +1,37 @@
+# Causal footprint mining round 3
+# Goal: find examples where a small or transient source concept can be weak/absent
+# while its downstream causal footprint remains visible.
+# Format: <prompt> | <target> | <effect>
+
+A realistic close-up video of a small pebble dropping into a still pond, and circular ripples spread outward across the water. | pebble | circular ripples spread outward
+A realistic close-up video of a single raindrop hitting a shallow puddle, and a crown splash rises with ripples expanding outward. | raindrop | crown splash and expanding ripples
+A realistic close-up video of a tiny hailstone landing on calm water, and concentric rings spread across the surface after impact. | hailstone | concentric water rings spread outward
+A realistic close-up video of a marble rolling across smooth sand, and a curved track remains carved in the sand behind it. | marble | curved track remains in sand
+A realistic close-up video of a shoe stepping into wet beach sand, and a deep footprint remains in the sand after the step. | shoe | footprint remains in wet sand
+A realistic close-up video of a rubber stamp pressing onto white paper, and a red circular seal mark remains on the paper. | rubber stamp | red seal mark remains
+A realistic close-up video of a chalk tip touching a blackboard, and a bright white line grows across the board. | chalk tip | white chalk line grows
+A realistic close-up video of a paint roller touching a plain wall, and a wide blue stripe spreads across the wall. | paint roller | wide blue stripe spreads
+A realistic close-up video of a spoon stirring a cup of coffee, and a spiral whirlpool pattern remains on the surface. | spoon | spiral whirlpool remains
+A realistic close-up video of a teabag dipping into hot clear water, and a brown tea cloud blooms and spreads through the cup. | teabag | brown tea cloud blooms and spreads
+A realistic close-up video of a sugar cube dropped into dark coffee, and pale cloudy swirls spread away from where it dissolves. | sugar cube | pale cloudy swirls spread
+A realistic close-up video of a dropper releasing green dye into clear water, and a green plume blooms downward through the water. | dropper | green plume blooms downward
+A realistic close-up video of a needle touching the surface of a red balloon, and the balloon suddenly bursts into torn fragments. | needle | balloon bursts into fragments
+A realistic close-up video of a baseball striking a glass window, and branching cracks spread across the glass. | baseball | branching cracks spread across glass
+A realistic close-up video of a hammer head hitting soft clay, and a round dent appears and deepens in the clay. | hammer head | round dent appears in clay
+A realistic close-up video of a drill bit pressing into a wooden board, and a dark hole forms with sawdust spreading around it. | drill bit | hole forms with sawdust around it
+A realistic close-up video of a finger pushing the first domino in a row, and the dominoes topple one after another. | finger | dominoes topple one after another
+A realistic close-up video of a bowling ball hitting white pins, and the pins scatter across the lane. | bowling ball | pins scatter across the lane
+A realistic close-up video of a soccer ball hitting a net, and the net stretches and ripples backward. | soccer ball | net stretches and ripples backward
+A realistic close-up video of a metal ball colliding with stacked wooden blocks, and the blocks tumble down in sequence. | metal ball | wooden blocks tumble down
+A realistic close-up video of a match touching a candle wick, and a small flame grows and keeps burning on the wick. | match | candle flame grows and keeps burning
+A realistic close-up video of a lighter igniting incense, and a thin gray smoke plume curls upward. | lighter | gray smoke plume curls upward
+A realistic close-up video of a spark landing on dry paper, and a small black scorch mark appears with smoke rising. | spark | scorch mark appears with smoke rising
+A realistic close-up video of a candle being blown out by a puff of air, and a white smoke trail curls upward from the wick. | puff of air | white smoke trail curls upward
+A realistic close-up video of a fan blowing toward a candle flame, and the flame leans sharply sideways in the airflow. | fan | candle flame leans sideways
+A realistic close-up video of a flashlight shining in a dark room, and a bright circular spot appears on the wall. | flashlight | bright circular spot appears on wall
+A realistic close-up video of a finger pressing a light switch, and the dark room suddenly becomes brightly lit. | finger | room becomes brightly lit
+A realistic close-up video of a remote control pointed at a dark television, and the television screen turns on with a blue glow. | remote control | television screen turns on with blue glow
+A realistic close-up video of a key pressing a computer keyboard, and black letters appear on a white screen. | key | letters appear on screen
+A realistic close-up video of a wire touching a battery terminal, and a small LED turns on and glows green. | wire | LED turns on and glows green
+A realistic close-up video of a magnet sliding near scattered iron filings, and the filings form curved field lines. | magnet | iron filings form curved field lines
+A realistic close-up video of a comb moving near tiny paper scraps, and the scraps lift and cling together in a cluster. | comb | paper scraps lift and cling together

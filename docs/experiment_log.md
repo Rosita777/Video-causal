@@ -923,3 +923,74 @@ outputs/analysis_contact_sheets/causal_footprint_mining_round1_limit6_step20/qc_
 
 **Initial QC interpretation:** `raindrop` and `dye droplet` were not flagged by the simple low-quality checks and should be inspected first for strong causal-footprint cases. `match`, `hand`, and `finger` have weak or nearly static clean-reference generations, so they should not be used as primary evidence unless visual inspection proves otherwise.
 
+## 2026-06-20: Causal Footprint Mining Round 2 and Round 3 Expansion
+
+**Goal:** Find more persuasive causal-footprint examples beyond the initial dye/water cases. The desired evidence is not simply "erasure failed"; it is a case where the source concept is absent or weak while a downstream causal footprint remains visible.
+
+**Round 2 prompt set:**
+
+```text
+prompts/causal_footprint_mining_round2.txt
+```
+
+Round 2 contains 16 prompts. Clean-reference QC selected 8 prompts for full baseline reproduction:
+
+```text
+prompts/causal_footprint_mining_round2_cleanpass8.txt
+source indices: 0, 1, 3, 10, 11, 12, 13, 15
+targets: blue ink droplet, black ink droplet, oil droplet, pencil eraser, needle, magnet, fan, remote control
+```
+
+The full clean-pass run produced clean reference plus four erasure baselines for all 8 selected prompts:
+
+```text
+outputs/causal_footprint_mining_round2_cleanpass8_bf16_step20_fullsize_parallel/
+outputs/analysis_contact_sheets/causal_footprint_mining_round2_cleanpass8_step20/video_gallery.html
+outputs/analysis_contact_sheets/causal_footprint_mining_round2_cleanpass8_step20/qc_metrics.tsv
+```
+
+**Round 2 interpretation:** `blue/black ink`, `oil`, and `magnet` are worth inspection, but this round still leans heavily on diffusion-in-water effects. `fan` is mostly black/low quality and should not be used.
+
+**Round 3 prompt set:**
+
+```text
+prompts/causal_footprint_mining_round3.txt
+```
+
+Round 3 contains 32 broader causal-footprint templates covering water disturbance, material traces, breakage, chain motion, light/electric state changes, magnetic/electrostatic effects, and deformation. Clean references were generated with 8 prompt shards on GPUs 0-7:
+
+```text
+outputs/causal_footprint_mining_round3_bf16_limit32_step20_fullsize_parallel/
+outputs/analysis_contact_sheets/causal_footprint_mining_round3_clean_step20/clean_gallery.html
+outputs/analysis_contact_sheets/causal_footprint_mining_round3_clean_step20/clean_ranked_shortlist.tsv
+```
+
+Clean QC selected 8 prompts for full baseline reproduction:
+
+```text
+prompts/causal_footprint_mining_round3_cleanpass8.txt
+source indices: 0, 1, 2, 4, 13, 18, 30, 31
+targets: pebble, raindrop, hailstone, shoe, baseball, soccer ball, magnet, comb
+```
+
+The full clean-pass run produced 40 videos: clean reference plus Negative Prompt, SAFREE-CogVideoX, VideoEraser local, and T2VUnlearning proxy for all 8 selected prompts.
+
+```text
+outputs/causal_footprint_mining_round3_cleanpass8_bf16_step20_fullsize_parallel/
+outputs/analysis_contact_sheets/causal_footprint_mining_round3_cleanpass8_step20/video_gallery.html
+outputs/analysis_contact_sheets/causal_footprint_mining_round3_cleanpass8_step20/overview_middle_frames.png
+outputs/analysis_contact_sheets/causal_footprint_mining_round3_cleanpass8_step20/qc_metrics.tsv
+```
+
+**Initial Round 3 inspection priority:** Based on decode/QC only, inspect `raindrop`, `hailstone`, `baseball`, `soccer ball`, `magnet`, and `pebble` first. `shoe` has weaker temporal change; use it only if the visible footprint is clear. `SAFREE pebble` appears relatively static by QC and may be a weak row even if other baselines are useful.
+
+**Parallelization correction:** The round2/round3 clean-pass reproductions were run as 8 prompt shards per baseline. That means each baseline used all 8 GPUs in parallel, but baselines themselves were still run one block at a time. This is stable but not the ideal utilization strategy requested for larger mining batches.
+
+To fix this, added:
+
+```text
+scripts/run_parallel_baseline_jobs.py
+tests/test_run_parallel_baseline_jobs.py
+```
+
+The new scheduler expands runs into `(prompt, baseline)` jobs and assigns them to GPU slots. Future mining should use this scheduler so all baselines are interleaved. Start with `--slots-per-gpu 1`; only test `--slots-per-gpu 2` on a small subset after checking GPU memory headroom, because one full-size CogVideoX-2B process can already consume a large fraction of an H800.

@@ -1,0 +1,13 @@
+# Causal footprint mining round 3 clean-pass subset
+# Selected after clean-reference QC from causal_footprint_mining_round3.txt
+# Original indices: 0, 1, 2, 4, 13, 18, 30, 31
+# Format: <prompt> | <target> | <effect>
+
+A realistic close-up video of a small pebble dropping into a still pond, and circular ripples spread outward across the water. | pebble | circular ripples spread outward
+A realistic close-up video of a single raindrop hitting a shallow puddle, and a crown splash rises with ripples expanding outward. | raindrop | crown splash and expanding ripples
+A realistic close-up video of a tiny hailstone landing on calm water, and concentric rings spread across the surface after impact. | hailstone | concentric water rings spread outward
+A realistic close-up video of a shoe stepping into wet beach sand, and a deep footprint remains in the sand after the step. | shoe | footprint remains in wet sand
+A realistic close-up video of a baseball striking a glass window, and branching cracks spread across the glass. | baseball | branching cracks spread across glass
+A realistic close-up video of a soccer ball hitting a net, and the net stretches and ripples backward. | soccer ball | net stretches and ripples backward
+A realistic close-up video of a magnet sliding near scattered iron filings, and the filings form curved field lines. | magnet | iron filings form curved field lines
+A realistic close-up video of a comb moving near tiny paper scraps, and the scraps lift and cling together in a cluster. | comb | paper scraps lift and cling together

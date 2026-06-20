@@ -55,6 +55,7 @@ Notes:
 - `scripts/adapters/run_videoeraser_cogvideox.py`: VideoEraser interface wrapper with dependency-free dry-run manifests and explicit external-runner checks.
 - `scripts/adapters/run_t2vunlearning_cogvideox.py`: T2VUnlearning interface wrapper with dependency-free dry-run manifests and explicit train/generate source checks.
 - `scripts/run_baseline_suite.py`: suite-level baseline interface that plans/runs all required baselines for the same prompt/seed set.
+- `scripts/run_parallel_baseline_jobs.py`: prompt x baseline job scheduler for mixed parallel runs across GPU slots. This is now the preferred launcher for mining batches because it interleaves baselines instead of running one whole baseline at a time.
 - Rounds 1-3 summary CSVs and cross-round evidence tables.
 
 ## Not Recovered
@@ -121,7 +122,45 @@ Current dry-run statuses:
 | VideoEraser | `ready` locally | Default `--mode local` runs the CogVideoX `spea_arng_cogvideox_v0` reimplementation; `--mode external` can still call an official runner if one becomes available |
 | T2VUnlearning | `ready` locally | Default `--mode local` runs `receler_cogvideox_proxy_v0`; `--mode external` can call official inference/training files if they become available |
 
-VideoEraser and T2VUnlearning no longer wait on external runners by default. For real full-size smoke runs on the currently crowded H800 node, prefer sequential execution without `--parallel` plus `--dtype bf16 --enable-model-cpu-offload --vae-tiling`. Use `--parallel` only when enough free GPU memory exists for multiple concurrent CogVideoX pipelines.
+VideoEraser and T2VUnlearning no longer wait on external runners by default. For real full-size smoke runs on the currently crowded H800 node, prefer `--dtype bf16 --vae-tiling`; add CPU offload only when needed. `run_baseline_suite.py --parallel` starts one process per baseline, which is coarse and not ideal for prompt mining.
+
+## Prompt x Baseline Parallel Scheduler
+
+Use `scripts/run_parallel_baseline_jobs.py` for future mining runs. It expands a prompt set into `(prompt, baseline)` jobs and schedules them across GPU slots, so Negative Prompt, SAFREE, VideoEraser, and T2VUnlearning can be interleaved instead of running one baseline block at a time.
+
+Dry-run a planned matrix:
+
+```bash
+PYTHONNOUSERSITE=1 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/run_parallel_baseline_jobs.py \
+  --prompts prompts/causal_footprint_mining_round3_cleanpass8.txt \
+  --output-root outputs/parallel_scheduler_dryrun_round3_cleanpass8 \
+  --model models/CogVideoX-2b \
+  --seed 700 \
+  --steps 20 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --height 480 \
+  --width 720 \
+  --fps 8 \
+  --dtype bf16 \
+  --gpus 0,1,2,3,4,5,6,7 \
+  --slots-per-gpu 1 \
+  --vae-slicing \
+  --vae-tiling \
+  --dry-run
+```
+
+Run the same matrix for real by removing `--dry-run`. Start with `--slots-per-gpu 1` because one full-size CogVideoX-2B process typically uses enough memory that two processes per card can OOM on this node. If the node is empty and `nvidia-smi` shows enough headroom, test `--slots-per-gpu 2` on a two-prompt subset before scaling.
+
+Useful subset options:
+
+```bash
+--source-indices 0,1,2,4,13,18,30,31
+--baseline negative_prompt --baseline safree_cogvideox
+```
+
+Each job writes an independent prompt shard, output directory, and log. A failed job should be retried alone rather than rerunning the whole matrix.
 
 ## SAFREE-CogVideoX Adapter
 

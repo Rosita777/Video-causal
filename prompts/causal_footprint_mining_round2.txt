@@ -1,0 +1,22 @@
+# Causal footprint mining round 2
+# Goal: find stronger and more diverse cases where the erased target source is
+# visually absent or weak while its downstream causal effect remains visible.
+# Prompts emphasize small/brief sources and large, persistent effects.
+# Format: <prompt> | <target_concept_to_erase> | <expected_causal_effect>
+
+A realistic close-up video of a glass pipette releasing a single blue ink droplet into clear water, and a blue cloud blooms and spreads through the water. | blue ink droplet | blue cloud blooms and spreads through water
+A realistic close-up video of a tiny black ink droplet falling into a clear glass of water, and a dark cloud expands downward through the water. | black ink droplet | dark cloud expands downward through water
+A realistic close-up video of a single white milk drop falling into black coffee, and pale white plumes spread through the coffee. | milk drop | pale white plumes spread through coffee
+A realistic close-up video of a small oil droplet landing on the surface of clear water, and a thin shimmering film spreads outward across the water. | oil droplet | shimmering film spreads outward
+A realistic close-up video of a lit lighter touching a candle wick, and the candle flame grows and keeps burning after ignition. | lighter | candle flame grows and keeps burning
+A realistic close-up video of a burning incense stick on a table, and a thin smoke plume curls upward into the air. | incense stick | smoke plume curls upward
+A realistic close-up video of a tiny spark landing on dry white paper, and a dark scorch mark appears with thin smoke rising. | spark | smoke rises from a scorch mark
+A realistic close-up video of a blown-out candle wick, and a gray smoke trail curls upward from the wick. | candle wick | gray smoke trail curls upward
+A realistic close-up video of a paintbrush touching clean white paper, and a red paint stroke grows across the paper. | paintbrush | red paint stroke grows across paper
+A realistic close-up video of a black marker touching white paper, and a thick black line appears and extends across the paper. | marker | black line extends across paper
+A realistic close-up video of a pencil eraser rubbing a graphite mark on white paper, and the dark mark fades away. | pencil eraser | dark graphite mark fades away
+A realistic close-up video of a sewing needle pricking a red balloon, and the balloon bursts into flying rubber fragments. | needle | balloon bursts into flying fragments
+A realistic close-up video of a small magnet placed beside scattered iron filings, and the filings align into curved field patterns. | magnet | iron filings align into curved field patterns
+A realistic close-up video of a fan blowing toward a candle flame, and the flame bends sideways in the airflow. | fan | candle flame bends sideways
+A realistic close-up video of a small metal ball rolling into a row of toy blocks, and the blocks topple one after another. | metal ball | toy blocks topple one after another
+A realistic close-up video of a remote control pointed at a dark television screen, and the screen turns on and glows blue. | remote control | television screen turns on and glows blue
