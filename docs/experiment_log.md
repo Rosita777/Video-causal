@@ -756,3 +756,30 @@ Result:
 24 passed
 ```
 
+## 2026-06-20: Full-Size Four-Baseline Suite, 10-Step Smoke
+
+**Goal:** Move beyond 1-step smoke and test whether all four baselines can run at full video shape with a more meaningful denoising budget.
+
+**Command:**
+
+```bash
+PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=7 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True   /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/run_baseline_suite.py   --prompts prompts/cogvideox_clean_screening_round1.txt   --output-root outputs/baseline_suite_round1_all_local_bf16_limit1_step10_fullsize_seq   --model models/CogVideoX-2b   --seed 200   --steps 10   --guidance-scale 6.0   --num-frames 49   --fps 8   --dtype bf16   --limit 1   --enable-model-cpu-offload   --vae-tiling
+```
+
+**Result:** Successful. Four full-size mp4 files and generation manifests were produced under:
+
+```text
+outputs/baseline_suite_round1_all_local_bf16_limit1_step10_fullsize_seq/
+```
+
+**Run shape:**
+
+```text
+negative_prompt: bf16, 10 steps, 49 frames, 1 prompt
+safree_cogvideox: bf16, 10 steps, 49 frames, 1 prompt
+videoeraser: bf16, 10 steps, 49 frames, 1 prompt
+t2vunlearning: bf16, 10 steps, 49 frames, 1 prompt
+```
+
+**Interpretation:** The current node can run the complete four-baseline suite sequentially at full shape when using `bf16`, model CPU offload, and VAE tiling. Do not run these four baselines in parallel on the current crowded GPU allocation unless substantially more free memory is available.
+
