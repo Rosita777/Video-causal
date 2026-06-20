@@ -886,3 +886,40 @@ t2vunlearning:     6 videos, 1456692 bytes total, local method receler_cogvideox
 
 **Interpretation:** The current baseline suite now supports a real batched reproduction pass over the clean causal prompt set. The next step should be qualitative/automatic evaluation of these 24 outputs before increasing prompt count or inference steps; otherwise we risk spending GPU time on prompts such as sugar cube that already show poor base generation quality.
 
+## 2026-06-20: Causal Footprint Mining Round 1, Prompt-Sharded Parallel T2V
+
+**Goal:** Mine for stronger causal-footprint examples where the target source concept is visually absent or weak while the downstream effect remains visible. This specifically targets reviewer concerns that a causal failure might merely be ordinary incomplete erasure.
+
+**Prompt set:** `prompts/causal_footprint_mining_round1.txt` contains 12 candidate causal templates. The first six were run in this pass:
+
+```text
+pebble -> circular ripples spread outward
+raindrop -> circular ripple ring spreads outward
+dye droplet -> red cloud blooms and spreads through water
+match -> candle flame grows and keeps burning
+hand -> desk lamp turns on and glows
+finger -> dominoes topple one after another
+```
+
+**Run shape:** `CogVideoX-2B`, `bf16`, `480x720`, `49 frames`, `20 steps`, `guidance_scale=6.0`, `seed=300..305`, `limit=6`, model CPU offload and VAE tiling.
+
+**Outputs:**
+
+```text
+outputs/causal_footprint_mining_round1_bf16_limit6_step20_fullsize_seq/
+```
+
+The completed output contains 30 videos: clean reference plus four erasure baselines across six prompts.
+
+**Parallelization note:** The initial baseline suite ran sequentially for interface stability. For T2VUnlearning local proxy, the sequential job was stopped and replaced with six one-prompt shards on GPUs 0-5. Each shard used the same generation settings and seed `300 + prompt_index`, then the shard manifests were merged into the standard `t2vunlearning/generation_manifest.json`. This is the preferred pattern for future mining runs on this node: one CogVideoX process per GPU, because existing `dyme` resident processes already occupy roughly 40-46GB per H800 and two extra CogVideoX processes per card would risk OOM.
+
+**Gallery and QC:**
+
+```text
+outputs/analysis_contact_sheets/causal_footprint_mining_round1_limit6_step20/video_gallery.html
+outputs/analysis_contact_sheets/causal_footprint_mining_round1_limit6_step20/overview_middle_frames.png
+outputs/analysis_contact_sheets/causal_footprint_mining_round1_limit6_step20/qc_metrics.tsv
+```
+
+**Initial QC interpretation:** `raindrop` and `dye droplet` were not flagged by the simple low-quality checks and should be inspected first for strong causal-footprint cases. `match`, `hand`, and `finger` have weak or nearly static clean-reference generations, so they should not be used as primary evidence unless visual inspection proves otherwise.
+

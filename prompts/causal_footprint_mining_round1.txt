@@ -1,0 +1,17 @@
+# Causal footprint mining round 1
+# Goal: find strong cases where the erased target source is visually absent or weak,
+# while its downstream causal effect remains visible.
+# Format: <prompt> | <target_concept_to_erase> | <expected_causal_effect>
+
+A realistic close-up video of a small dark pebble suspended just above calm blue water, the pebble drops into the water, and circular ripples spread outward after impact. | pebble | circular ripples spread outward
+A realistic close-up video of a single raindrop falling into a still puddle, and a circular ripple ring spreads outward from the impact point. | raindrop | circular ripple ring spreads outward
+A realistic close-up video of a tiny red dye droplet falling into a clear glass of water, and a red cloud blooms and spreads through the water. | dye droplet | red cloud blooms and spreads through water
+A realistic close-up video of a lit match touching a white candle wick, and a candle flame grows and keeps burning after ignition. | match | candle flame grows and keeps burning
+A realistic close-up video of a human hand pressing a wall light switch, and a nearby desk lamp turns on and glows warmly. | hand | desk lamp turns on and glows
+A realistic close-up video of a finger pushing the first white domino in a row, and the dominoes topple one after another. | finger | dominoes topple one after another
+A realistic close-up video of a metal spoon stirring dark coffee in a cup, and a circular whirlpool keeps spinning in the coffee. | spoon | circular whirlpool keeps spinning
+A realistic close-up video of a sewing needle touching a red balloon, and the balloon bursts into flying rubber fragments. | needle | balloon bursts into flying fragments
+A realistic close-up video of a pencil pushing a small toy car on a table, and the toy car rolls forward across the table. | pencil | toy car rolls forward
+A realistic close-up video of a tiny spark landing on dry white paper, and a dark scorch mark appears with thin smoke rising. | spark | smoke rises from a scorch mark
+A realistic close-up video of a small metal key turning inside a door lock, and the door opens slightly after the key turns. | key | door opens slightly
+A realistic close-up video of a hand dropping a sugar cube into a cup of tea, and pale swirls spread through the tea as it dissolves. | sugar cube | pale swirls spread through tea
