@@ -422,3 +422,43 @@ experiments/baseline_runs/negative_prompt_round1_seed200_summary.csv
 | `stone_seed204` | no | yes | strict causal-footprint candidate |
 
 **Decision:** Negative Prompt is now a reproduced baseline on CogVideoX-2B for the current clean-valid sources. Next baseline priority is SAFREE-CogVideoX on the same two cases, followed by VideoEraser/T2VUnlearning setup.
+
+## 2026-06-20: Unified Baseline Suite Interface
+
+**Motivation:** Future experiments should not reproduce baselines one at a time in an ad hoc way. Given a clean-valid prompt/seed set, the project should plan all required baselines together and make missing adapters explicit.
+
+**File added:**
+- `scripts/run_baseline_suite.py`
+- `tests/test_run_baseline_suite.py`
+
+**Suite command:**
+
+```bash
+PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=0 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/run_baseline_suite.py \
+  --prompts prompts/cogvideox_clean_screening_round1.txt \
+  --output-root outputs/baseline_suite_round1_seed200 \
+  --model models/CogVideoX-2b \
+  --seed 200 \
+  --steps 20 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --fps 8 \
+  --enable-model-cpu-offload \
+  --vae-tiling \
+  --parallel \
+  --dry-run
+```
+
+**Current suite dry-run statuses:**
+
+| Baseline | Status |
+| --- | --- |
+| Negative Prompt | `ready` |
+| SAFREE-CogVideoX | `blocked_missing_adapter` |
+| VideoEraser | `blocked_missing_adapter` |
+| T2VUnlearning | `blocked_missing_adapter` |
+
+**Decision:** The next engineering task is not another isolated run. It is to implement/restore adapters until SAFREE-CogVideoX, VideoEraser, and T2VUnlearning move from `blocked_missing_adapter` to `ready` in the same suite interface.
+
+`--parallel` is part of the suite contract. Once more adapters become ready, the same command can launch ready baselines together rather than forcing one-by-one reproduction.

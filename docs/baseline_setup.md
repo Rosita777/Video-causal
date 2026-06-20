@@ -51,6 +51,7 @@ Notes:
 - `scripts/build_clean_source_review.py`: clean-source screening CSV helper.
 - `scripts/check_baselines.py`: source/package readiness checker.
 - `scripts/generate_cogvideox_clean.py`: CogVideoX-2B generation runner for clean and Negative Prompt videos with a dependency-free dry-run mode.
+- `scripts/run_baseline_suite.py`: suite-level baseline interface that plans/runs all required baselines for the same prompt/seed set.
 - Rounds 1-3 summary CSVs and cross-round evidence tables.
 
 ## Not Recovered
@@ -79,6 +80,38 @@ The final matrix must include:
 | T2VUnlearning | Summary rows recovered for rounds 1 and 3 | Recover source/adapters or retrain; fill round2 gaps |
 | SAFREE-CogVideoX | Summary rows recovered for rounds 1 and 3 | Recreate disclosed adaptation; fill round2 gaps |
 | CLEAR | No public code in recovered state | Cite as related work until code appears |
+
+## Unified Baseline Suite Interface
+
+Use `scripts/run_baseline_suite.py` as the entry point for a given clean-valid prompt/seed set. The suite always plans the same required baselines, so experiments do not silently omit difficult or slow methods:
+
+```bash
+PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=0 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/run_baseline_suite.py \
+  --prompts prompts/cogvideox_clean_screening_round1.txt \
+  --output-root outputs/baseline_suite_round1_seed200 \
+  --model models/CogVideoX-2b \
+  --seed 200 \
+  --steps 20 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --fps 8 \
+  --enable-model-cpu-offload \
+  --vae-tiling \
+  --parallel \
+  --dry-run
+```
+
+Current dry-run statuses:
+
+| Baseline | Suite status | Meaning |
+| --- | --- | --- |
+| Negative Prompt | `ready` | Runs through `scripts/generate_cogvideox_clean.py --baseline negative_prompt` |
+| SAFREE-CogVideoX | `blocked_missing_adapter` | Need the CogVideoX attention/projection intervention adapter |
+| VideoEraser | `blocked_missing_adapter` | Need external VideoEraser repo plus CogVideoX adapter wrapper |
+| T2VUnlearning | `blocked_missing_adapter` | Need external T2VUnlearning repo plus training/adaptation config |
+
+When adapters are restored or implemented, the suite status should change from blocked to ready without changing the high-level experiment command. For real runs, pass `--parallel` so all ready baselines start together; slower methods such as T2VUnlearning can finish later without forcing the entire interface to be serial.
 
 ## CogVideoX-2B Clean Source Runner
 

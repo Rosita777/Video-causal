@@ -94,7 +94,7 @@ python -m pytest tests -q
 Expected lightweight result:
 
 ```text
-11 passed
+13 passed
 ```
 
 ## CogVideoX Clean Generation
@@ -162,6 +162,29 @@ Negative Prompt produced two strict causal-footprint candidates on the current c
 - `ice_cube_seed200`
 - `stone_seed204`
 
+## Baseline Suite Interface
+
+For future experiments, use the suite interface first so all required baselines are planned together:
+
+```bash
+PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=0 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/run_baseline_suite.py \
+  --prompts prompts/cogvideox_clean_screening_round1.txt \
+  --output-root outputs/baseline_suite_round1_seed200 \
+  --model models/CogVideoX-2b \
+  --seed 200 \
+  --steps 20 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --fps 8 \
+  --enable-model-cpu-offload \
+  --vae-tiling \
+  --parallel \
+  --dry-run
+```
+
+Current suite status: Negative Prompt is runnable; SAFREE-CogVideoX, VideoEraser, and T2VUnlearning are planned but blocked until their adapters/external repos are restored. Use `--parallel` for real suite runs so ready baselines launch together.
+
 ## Project Structure
 
 ```text
@@ -193,6 +216,7 @@ video_concept_erasure_causal_footprint/
 │   ├── build_clean_source_review.py
 │   ├── check_baselines.py
 │   ├── generate_cogvideox_clean.py
+│   ├── run_baseline_suite.py
 │   └── run_pilot.py
 └── tests/
 ```
