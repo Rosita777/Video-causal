@@ -523,3 +523,51 @@ Result:
 ```
 
 **Decision:** Future clean-valid video experiments should run the suite so Negative Prompt and SAFREE-CogVideoX launch together. The next adapter priorities are VideoEraser and then T2VUnlearning.
+
+
+## 2026-06-20: Real Negative Prompt + SAFREE-CogVideoX Suite Run
+
+**Goal:** Run the first real multi-baseline suite on the same CogVideoX-2B prompt/seed set instead of reproducing baselines one at a time.
+
+**Initial failures and fixes:**
+- `--enable-model-cpu-offload` failed in the sandbox with `RuntimeError: enable_model_cpu_offload requires accelerator, but not found`.
+- Sandboxed PyTorch reported `cuda_available False` and `device_count 0`, even though `nvidia-smi` could see H800 GPUs.
+- The same CUDA check outside the managed sandbox reported `cuda_available True`, `device_count 1`, `name NVIDIA H800`.
+- SAFREE-CogVideoX failed as `fp16` with `RuntimeError: mat1 and mat2 must have the same dtype, but got Float and Half` in the CogVideoX transformer time embedding path.
+- A 1-step SAFREE GPU smoke with `--dtype fp32` succeeded, so the real suite used `fp32`.
+
+**Successful command:**
+
+```bash
+PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=0 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/run_baseline_suite.py \
+  --baseline negative_prompt \
+  --baseline safree_cogvideox \
+  --prompts prompts/cogvideox_clean_screening_round1.txt \
+  --output-root outputs/baseline_suite_round1_seed200_real_gpu_fp32 \
+  --model models/CogVideoX-2b \
+  --seed 200 \
+  --steps 20 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --fps 8 \
+  --dtype fp32 \
+  --enable-model-cpu-offload \
+  --vae-tiling \
+  --parallel
+```
+
+**Generated local artifacts:**
+- `outputs/baseline_suite_round1_seed200_real_gpu_fp32/suite_manifest.json`
+- `outputs/baseline_suite_round1_seed200_real_gpu_fp32/negative_prompt/generation_manifest.json`
+- `outputs/baseline_suite_round1_seed200_real_gpu_fp32/safree_cogvideox/generation_manifest.json`
+- 12 ignored `.mp4` files: 6 Negative Prompt and 6 SAFREE-CogVideoX videos.
+- Review contact sheets for clean-valid `ice_cube_seed200` and `stone_seed204` under `outputs/baseline_suite_round1_seed200_real_gpu_fp32/review/`.
+
+**Tracked summary:**
+
+```text
+experiments/baseline_runs/baseline_suite_round1_seed200_real_gpu_fp32_summary.csv
+```
+
+**Current status:** Generation succeeded. Manual visual review is pending; do not treat these rows as scientific outcomes until the contact sheets/videos are annotated.

@@ -103,6 +103,7 @@ PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=0 \
   --guidance-scale 6.0 \
   --num-frames 49 \
   --fps 8 \
+  --dtype fp32 \
   --enable-model-cpu-offload \
   --vae-tiling \
   --parallel \
@@ -155,6 +156,8 @@ PYTHONNOUSERSITE=1 \
 ```
 
 For real runs, remove `--dry-run`. The wrapper injects each row's `target_concept` into SAFREE's `CONCEPT_DICT` as `[target_concept]`, then passes that key as the `concept` argument to the official pipeline.
+
+The 2026-06-20 real suite run used `--dtype fp32`. Under the current `torch 2.6.0+cu124` / `diffusers 0.34.0` environment, SAFREE-CogVideoX failed with a `Float` vs `Half` time-embedding dtype mismatch when run as `fp16`. Also run real generation outside the managed sandbox, because sandboxed PyTorch could not see CUDA devices even when `nvidia-smi` worked.
 
 ## CogVideoX-2B Clean Source Runner
 
@@ -214,6 +217,6 @@ Initial contact-sheet screening:
 1. Expand clean-source CogVideoX screening with more seeds/templates until each target has clean-valid source videos.
 2. Preserve `models/CogVideoX-2b` and generated videos locally, outside git.
 3. Reclone/import external VideoEraser and T2VUnlearning into `baselines/external/` outside git.
-4. Run the unified suite on clean-valid cases so Negative Prompt and SAFREE-CogVideoX execute together.
+4. Review `outputs/baseline_suite_round1_seed200_real_gpu_fp32/review/` for clean / Negative Prompt / SAFREE-CogVideoX comparisons on the clean-valid cases.
 5. Fill the six round2 car-barrier `T2VUnlearning` / `SAFREE-CogVideoX` missing rows.
 6. Rebuild review contact sheets only after videos exist again.

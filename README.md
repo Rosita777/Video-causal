@@ -162,6 +162,14 @@ Negative Prompt produced two strict causal-footprint candidates on the current c
 - `ice_cube_seed200`
 - `stone_seed204`
 
+Current real suite generation:
+
+```text
+experiments/baseline_runs/baseline_suite_round1_seed200_real_gpu_fp32_summary.csv
+```
+
+This run generated 12 ignored `.mp4` files under `outputs/baseline_suite_round1_seed200_real_gpu_fp32/`: 6 Negative Prompt videos and 6 SAFREE-CogVideoX videos. Manual review is pending.
+
 ## Baseline Suite Interface
 
 For future experiments, use the suite interface first so all required baselines are planned together:
@@ -186,6 +194,8 @@ PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=0 \
 Current local suite status: Negative Prompt and SAFREE-CogVideoX are runnable; VideoEraser and T2VUnlearning remain planned but blocked until their adapters/external repos are restored. Use `--parallel` for real suite runs so ready baselines launch together.
 
 SAFREE-CogVideoX uses `scripts/adapters/run_safree_cogvideox.py`. The wrapper calls the official SAFREE CogVideoX pipeline under `baselines/external/SAFREE/cogvideox/cogvideox_pipeline.py` and injects each prompt row's `target_concept` into SAFREE's concept dictionary as a single concept entry. The external SAFREE checkout is intentionally ignored by git.
+
+For the current SAFREE-CogVideoX adapter, use `--dtype fp32` in real suite runs. The official SAFREE CogVideoX path produced dtype mismatches with `fp16` under the current `torch` / `diffusers` environment. GPU generation also requires running outside the managed filesystem sandbox; inside the sandbox, PyTorch could not see `/dev/nvidia*` even though `nvidia-smi` worked.
 
 ## Project Structure
 
@@ -227,7 +237,7 @@ video_concept_erasure_causal_footprint/
 ## Next Actions
 
 1. Expand CogVideoX clean-source screening for more seeds/templates.
-2. Run the suite on clean-valid `ice_cube_seed200` and `stone_seed204` so Negative Prompt and SAFREE-CogVideoX execute together.
+2. Manually review the clean / Negative Prompt / SAFREE-CogVideoX contact sheets for `ice_cube_seed200` and `stone_seed204`.
 3. Rebuild VideoEraser and T2VUnlearning runners for the same clean-valid cases.
 4. Fill the six round2 car-barrier `T2VUnlearning` / `SAFREE-CogVideoX` coverage gaps.
 5. Continue the causal-footprint audit from the recovered cross-round matrix.

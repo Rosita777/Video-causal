@@ -64,6 +64,8 @@ def build_negative_prompt_command(args: argparse.Namespace, output_dir: Path) ->
         str(args.num_frames),
         "--fps",
         str(args.fps),
+        "--dtype",
+        args.dtype,
     ]
     if args.limit is not None:
         command.extend(["--limit", str(args.limit)])
@@ -100,6 +102,8 @@ def build_safree_command(args: argparse.Namespace, output_dir: Path) -> list[str
         str(args.num_frames),
         "--fps",
         str(args.fps),
+        "--dtype",
+        args.dtype,
     ]
     if args.limit is not None:
         command.extend(["--limit", str(args.limit)])
@@ -176,6 +180,7 @@ def write_suite_manifest(args: argparse.Namespace, jobs: list[dict[str, object]]
             "guidance_scale": args.guidance_scale,
             "num_frames": args.num_frames,
             "fps": args.fps,
+            "dtype": args.dtype,
             "limit": args.limit,
         },
         "external": {
@@ -229,6 +234,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--guidance-scale", type=float, default=6.0)
     parser.add_argument("--num-frames", type=int, default=49)
     parser.add_argument("--fps", type=int, default=8)
+    parser.add_argument("--dtype", choices=["fp16", "bf16", "fp32"], default="fp16")
     parser.add_argument("--limit", type=int)
     parser.add_argument("--enable-model-cpu-offload", action="store_true")
     parser.add_argument("--enable-sequential-cpu-offload", action="store_true")

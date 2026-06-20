@@ -93,6 +93,8 @@ def test_baseline_suite_marks_safree_ready_when_external_pipeline_exists(tmp_pat
             "models/CogVideoX-2b",
             "--safree-root",
             str(safree_root),
+            "--dtype",
+            "fp32",
             "--seed",
             "200",
             "--dry-run",
@@ -112,6 +114,8 @@ def test_baseline_suite_marks_safree_ready_when_external_pipeline_exists(tmp_pat
     assert job["command"][:2] == [sys.executable, "scripts/adapters/run_safree_cogvideox.py"]
     assert "--safree-root" in job["command"]
     assert str(safree_root) in job["command"]
+    assert "--dtype" in job["command"]
+    assert "fp32" in job["command"]
 
 
 def test_baseline_suite_can_select_single_baseline(tmp_path):
