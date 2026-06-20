@@ -139,6 +139,14 @@ def build_videoeraser_command(args: argparse.Namespace, output_dir: Path) -> lis
     ]
     if args.limit is not None:
         command.extend(["--limit", str(args.limit)])
+    if args.enable_model_cpu_offload:
+        command.append("--enable-model-cpu-offload")
+    if args.enable_sequential_cpu_offload:
+        command.append("--enable-sequential-cpu-offload")
+    if args.vae_slicing:
+        command.append("--vae-slicing")
+    if args.vae_tiling:
+        command.append("--vae-tiling")
     return command
 
 
@@ -171,6 +179,14 @@ def build_t2vunlearning_command(args: argparse.Namespace, output_dir: Path) -> l
     ]
     if args.limit is not None:
         command.extend(["--limit", str(args.limit)])
+    if args.enable_model_cpu_offload:
+        command.append("--enable-model-cpu-offload")
+    if args.enable_sequential_cpu_offload:
+        command.append("--enable-sequential-cpu-offload")
+    if args.vae_slicing:
+        command.append("--vae-slicing")
+    if args.vae_tiling:
+        command.append("--vae-tiling")
     return command
 
 

@@ -121,7 +121,7 @@ Current dry-run statuses:
 | VideoEraser | `ready` locally | Default `--mode local` runs the CogVideoX `spea_arng_cogvideox_v0` reimplementation; `--mode external` can still call an official runner if one becomes available |
 | T2VUnlearning | `ready` locally | Default `--mode local` runs `receler_cogvideox_proxy_v0`; `--mode external` can call official inference/training files if they become available |
 
-VideoEraser and T2VUnlearning no longer wait on external runners by default. For real runs, pass `--parallel` so all ready baselines start together; slower methods such as T2VUnlearning can finish later without forcing the entire interface to be serial.
+VideoEraser and T2VUnlearning no longer wait on external runners by default. For real full-size smoke runs on the currently crowded H800 node, prefer sequential execution without `--parallel` plus `--dtype bf16 --enable-model-cpu-offload --vae-tiling`. Use `--parallel` only when enough free GPU memory exists for multiple concurrent CogVideoX pipelines.
 
 ## SAFREE-CogVideoX Adapter
 
@@ -203,7 +203,7 @@ PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=5 PYTORCH_CUDA_ALLOC_CONF=expandable_seg
   --vae-tiling
 ```
 
-Full-size 480x720 / 49-frame smoke hit OOM because all eight H800s were already occupied by other processes at roughly 45GB each. Retry full-size generation when GPU memory is available.
+A full-size 480x720 / 49-frame / 1-step smoke initially hit OOM as fp32 on a crowded H800. Retrying with `--dtype bf16 --enable-model-cpu-offload --vae-tiling` succeeded.
 
 Optional external mode remains available for future official code:
 

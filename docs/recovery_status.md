@@ -73,7 +73,7 @@ python -m pytest tests -q
 Current lightweight result:
 
 ```text
-23 passed
+24 passed
 ```
 
 ## Current Scientific State

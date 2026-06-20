@@ -252,3 +252,42 @@ def test_baseline_suite_can_select_single_baseline(tmp_path):
 
     manifest = json.loads((output_root / "suite_manifest.json").read_text(encoding="utf-8"))
     assert [job["baseline"] for job in manifest["jobs"]] == ["negative_prompt"]
+
+
+def test_baseline_suite_passes_memory_flags_to_local_baselines(tmp_path):
+    prompt_file = tmp_path / "prompts.txt"
+    output_root = tmp_path / "suite"
+    prompt_file.write_text(
+        "A realistic close-up video of an ice cube dropping into cola, and bubbles rise. | ice cube | bubbles rise\n",
+        encoding="utf-8",
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(PROJECT_ROOT / "scripts" / "run_baseline_suite.py"),
+            "--baseline",
+            "videoeraser",
+            "--baseline",
+            "t2vunlearning",
+            "--prompts",
+            str(prompt_file),
+            "--output-root",
+            str(output_root),
+            "--enable-model-cpu-offload",
+            "--vae-tiling",
+            "--dry-run",
+        ],
+        cwd=PROJECT_ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    manifest = json.loads((output_root / "suite_manifest.json").read_text(encoding="utf-8"))
+    jobs = {job["baseline"]: job for job in manifest["jobs"]}
+    for baseline in ["videoeraser", "t2vunlearning"]:
+        command = jobs[baseline]["command"]
+        assert "--enable-model-cpu-offload" in command
+        assert "--vae-tiling" in command
+

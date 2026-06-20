@@ -638,7 +638,7 @@ PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=5 PYTORCH_CUDA_ALLOC_CONF=expandable_seg
 - `outputs/videoeraser_local_gpu_smoke_fp32_limit1_step1_256x384/generation_manifest.json`
 - `outputs/videoeraser_local_gpu_smoke_fp32_limit1_step1_256x384/videos/000_a-realistic-close-up-video-of-a-clear-ice-cube-dropping-into-a-glass-of_seed200.mp4`
 
-**Resource note:** A full-size 480x720 / 49-frame / 1-step smoke failed with CUDA OOM because all eight H800 GPUs were occupied by other processes using roughly 45GB each. This is a resource constraint, not a parser or adapter failure.
+**Resource note:** A full-size 480x720 / 49-frame / 1-step fp32 smoke failed with CUDA OOM on the crowded H800 node. Retrying full-size with `bf16`, model CPU offload, and VAE tiling succeeded later in the four-baseline suite smoke.
 
 **Verification:**
 
@@ -649,7 +649,7 @@ PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python -m pytest test
 Result:
 
 ```text
-23 passed
+24 passed
 ```
 
 ## 2026-06-20: T2VUnlearning Local Reimplementation v0
@@ -670,7 +670,22 @@ t2vunlearning ready local_reimplementation
 **Successful smoke command:**
 
 ```bash
-PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=5 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True   /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/adapters/run_t2vunlearning_cogvideox.py   --prompts prompts/cogvideox_clean_screening_round1.txt   --output-dir outputs/t2vunlearning_local_gpu_smoke_fp32_limit1_step1_256x384   --model models/CogVideoX-2b   --seed 200   --steps 1   --guidance-scale 6.0   --num-frames 9   --height 256   --width 384   --fps 8   --dtype fp32   --limit 1   --enable-model-cpu-offload   --vae-tiling
+PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=5 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/adapters/run_t2vunlearning_cogvideox.py \
+  --prompts prompts/cogvideox_clean_screening_round1.txt \
+  --output-dir outputs/t2vunlearning_local_gpu_smoke_fp32_limit1_step1_256x384 \
+  --model models/CogVideoX-2b \
+  --seed 200 \
+  --steps 1 \
+  --guidance-scale 6.0 \
+  --num-frames 9 \
+  --height 256 \
+  --width 384 \
+  --fps 8 \
+  --dtype fp32 \
+  --limit 1 \
+  --enable-model-cpu-offload \
+  --vae-tiling
 ```
 
 **Artifacts:**
@@ -686,6 +701,58 @@ PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python -m pytest test
 Result:
 
 ```text
-23 passed
+24 passed
+```
+
+## 2026-06-20: Full-Size Four-Baseline Suite Smoke
+
+**Goal:** Test whether the current crowded H800 node can run all four baselines at full video shape, rather than stopping at 256x384 smoke tests.
+
+**First attempt:** Full-size `bf16` suite failed on VideoEraser decode because `run_baseline_suite.py` did not pass `--enable-model-cpu-offload` and `--vae-tiling` through to the local VideoEraser/T2V adapter commands. A regression test now checks that local baseline commands inherit memory flags.
+
+**Successful command:**
+
+```bash
+PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=7 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/run_baseline_suite.py \
+  --prompts prompts/cogvideox_clean_screening_round1.txt \
+  --output-root outputs/baseline_suite_round1_all_local_bf16_limit1_step1_fullsize_seq_retry \
+  --model models/CogVideoX-2b \
+  --seed 200 \
+  --steps 1 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --fps 8 \
+  --dtype bf16 \
+  --limit 1 \
+  --enable-model-cpu-offload \
+  --vae-tiling
+```
+
+**Suite status:**
+
+```text
+negative_prompt ready
+safree_cogvideox ready
+videoeraser ready local_reimplementation
+t2vunlearning ready local_reimplementation
+```
+
+**Generated ignored artifacts:**
+- `outputs/baseline_suite_round1_all_local_bf16_limit1_step1_fullsize_seq_retry/negative_prompt/videos/000_a-realistic-close-up-video-of-a-clear-ice-cube-dropping-into-a-glass-of_seed200.mp4`
+- `outputs/baseline_suite_round1_all_local_bf16_limit1_step1_fullsize_seq_retry/safree_cogvideox/videos/000_a-realistic-close-up-video-of-a-clear-ice-cube-dropping-into-a-glass-of_seed200.mp4`
+- `outputs/baseline_suite_round1_all_local_bf16_limit1_step1_fullsize_seq_retry/videoeraser/videos/000_a-realistic-close-up-video-of-a-clear-ice-cube-dropping-into-a-glass-of_seed200.mp4`
+- `outputs/baseline_suite_round1_all_local_bf16_limit1_step1_fullsize_seq_retry/t2vunlearning/videos/000_a-realistic-close-up-video-of-a-clear-ice-cube-dropping-into-a-glass-of_seed200.mp4`
+
+**Verification:**
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python -m pytest tests -q
+```
+
+Result:
+
+```text
+24 passed
 ```
 
