@@ -52,6 +52,8 @@ Notes:
 - `scripts/check_baselines.py`: source/package readiness checker.
 - `scripts/generate_cogvideox_clean.py`: CogVideoX-2B generation runner for clean and Negative Prompt videos with a dependency-free dry-run mode.
 - `scripts/adapters/run_safree_cogvideox.py`: SAFREE-CogVideoX wrapper with dependency-free dry-run mode and official-pipeline real-run mode.
+- `scripts/adapters/run_videoeraser_cogvideox.py`: VideoEraser interface wrapper with dependency-free dry-run manifests and explicit external-runner checks.
+- `scripts/adapters/run_t2vunlearning_cogvideox.py`: T2VUnlearning interface wrapper with dependency-free dry-run manifests and explicit train/generate source checks.
 - `scripts/run_baseline_suite.py`: suite-level baseline interface that plans/runs all required baselines for the same prompt/seed set.
 - Rounds 1-3 summary CSVs and cross-round evidence tables.
 
@@ -66,7 +68,7 @@ baselines/external/T2VUnlearning
 T2VUnlearning-main.zip
 round1/round2/round3 generated videos
 contact sheets
-T2VUnlearning local adapters
+T2VUnlearning external training patches/checkpoints
 ```
 
 Current local ignored assets:
@@ -116,10 +118,10 @@ Current dry-run statuses:
 | --- | --- | --- |
 | Negative Prompt | `ready` | Runs through `scripts/generate_cogvideox_clean.py --baseline negative_prompt` |
 | SAFREE-CogVideoX | `ready` locally; `blocked_missing_external` on fresh clones | Runs through `scripts/adapters/run_safree_cogvideox.py` when the official SAFREE CogVideoX pipeline exists under `baselines/external/SAFREE` |
-| VideoEraser | `blocked_missing_adapter` | Need external VideoEraser repo plus CogVideoX adapter wrapper |
-| T2VUnlearning | `blocked_missing_adapter` | Need external T2VUnlearning repo plus training/adaptation config |
+| VideoEraser | `blocked_missing_external` locally | Adapter exists; need external `baselines/external/VideoEraser/ModelScope/inference.py` and compatible weights/config |
+| T2VUnlearning | `blocked_missing_external` locally | Adapter exists; need external `test_cogvideo.py`, `receler/concept_reg_cogvideo.py`, and training/adaptation config |
 
-When adapters are restored or implemented, the suite status should change from blocked to ready without changing the high-level experiment command. For real runs, pass `--parallel` so all ready baselines start together; slower methods such as T2VUnlearning can finish later without forcing the entire interface to be serial.
+When external sources and run configurations are restored, the suite status should change from `blocked_missing_external` to `ready` without changing the high-level experiment command. For real runs, pass `--parallel` so all ready baselines start together; slower methods such as T2VUnlearning can finish later without forcing the entire interface to be serial.
 
 ## SAFREE-CogVideoX Adapter
 
@@ -158,6 +160,27 @@ PYTHONNOUSERSITE=1 \
 For real runs, remove `--dry-run`. The wrapper injects each row's `target_concept` into SAFREE's `CONCEPT_DICT` as `[target_concept]`, then passes that key as the `concept` argument to the official pipeline.
 
 The 2026-06-20 real suite run used `--dtype fp32`. Under the current `torch 2.6.0+cu124` / `diffusers 0.34.0` environment, SAFREE-CogVideoX failed with a `Float` vs `Half` time-embedding dtype mismatch when run as `fp16`. Also run real generation outside the managed sandbox, because sandboxed PyTorch could not see CUDA devices even when `nvidia-smi` worked.
+
+## VideoEraser Adapter
+
+The local wrapper expects the external VideoEraser runner at:
+
+```text
+baselines/external/VideoEraser/ModelScope/inference.py
+```
+
+The wrapper has a dependency-free `--dry-run` mode that writes a manifest with prompt rows, expected output video paths, seed mapping, and external-file readiness. For real runs, it resolves prompt, output, and local model paths to absolute paths before delegating to the external runner, because the subprocess runs with the external repository as its working directory.
+
+## T2VUnlearning Adapter
+
+The local wrapper expects the external T2VUnlearning source files at:
+
+```text
+baselines/external/T2VUnlearning/test_cogvideo.py
+baselines/external/T2VUnlearning/receler/concept_reg_cogvideo.py
+```
+
+The wrapper records the train-then-generate contract in its manifest. Real reproduction still needs the external repository plus a compatible concept-adaptation configuration/checkpoint policy; missing or weak outputs should be logged as baseline outcomes rather than omitted.
 
 ## CogVideoX-2B Clean Source Runner
 
@@ -216,7 +239,8 @@ Initial contact-sheet screening:
 
 1. Expand clean-source CogVideoX screening with more seeds/templates until each target has clean-valid source videos.
 2. Preserve `models/CogVideoX-2b` and generated videos locally, outside git.
-3. Reclone/import external VideoEraser and T2VUnlearning into `baselines/external/` outside git.
+3. Reclone/import external VideoEraser and T2VUnlearning into `baselines/external/` outside git so the existing adapters can call their runners.
 4. Review `outputs/baseline_suite_round1_seed200_real_gpu_fp32/review/` for clean / Negative Prompt / SAFREE-CogVideoX comparisons on the clean-valid cases.
-5. Fill the six round2 car-barrier `T2VUnlearning` / `SAFREE-CogVideoX` missing rows.
-6. Rebuild review contact sheets only after videos exist again.
+5. Run a full four-baseline dry-run manifest after external sources are present, then run real generation/training.
+6. Fill the six round2 car-barrier `T2VUnlearning` / `SAFREE-CogVideoX` missing rows.
+7. Rebuild review contact sheets only after videos exist again.

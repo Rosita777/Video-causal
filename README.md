@@ -94,7 +94,7 @@ python -m pytest tests -q
 Expected lightweight result:
 
 ```text
-17 passed
+23 passed
 ```
 
 ## CogVideoX Clean Generation
@@ -191,7 +191,7 @@ PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=0 \
   --dry-run
 ```
 
-Current local suite status: Negative Prompt and SAFREE-CogVideoX are runnable; VideoEraser and T2VUnlearning remain planned but blocked until their adapters/external repos are restored. Use `--parallel` for real suite runs so ready baselines launch together.
+Current local suite status: all four required baselines have suite interfaces. Negative Prompt and SAFREE-CogVideoX are runnable locally; VideoEraser and T2VUnlearning now have adapter manifests but remain blocked on external source/runner availability. Use `--parallel` for real suite runs so all ready baselines launch together.
 
 SAFREE-CogVideoX uses `scripts/adapters/run_safree_cogvideox.py`. The wrapper calls the official SAFREE CogVideoX pipeline under `baselines/external/SAFREE/cogvideox/cogvideox_pipeline.py` and injects each prompt row's `target_concept` into SAFREE's concept dictionary as a single concept entry. The external SAFREE checkout is intentionally ignored by git.
 
@@ -229,6 +229,8 @@ video_concept_erasure_causal_footprint/
 │   ├── check_baselines.py
 │   ├── generate_cogvideox_clean.py
 │   ├── adapters/run_safree_cogvideox.py
+│   ├── adapters/run_videoeraser_cogvideox.py
+│   ├── adapters/run_t2vunlearning_cogvideox.py
 │   ├── run_baseline_suite.py
 │   └── run_pilot.py
 └── tests/
@@ -238,6 +240,7 @@ video_concept_erasure_causal_footprint/
 
 1. Expand CogVideoX clean-source screening for more seeds/templates.
 2. Manually review the clean / Negative Prompt / SAFREE-CogVideoX contact sheets for `ice_cube_seed200` and `stone_seed204`.
-3. Rebuild VideoEraser and T2VUnlearning runners for the same clean-valid cases.
-4. Fill the six round2 car-barrier `T2VUnlearning` / `SAFREE-CogVideoX` coverage gaps.
-5. Continue the causal-footprint audit from the recovered cross-round matrix.
+3. Import or reclone external VideoEraser and T2VUnlearning sources so their adapters move from `blocked_missing_external` to `ready`.
+4. Run the full four-baseline suite on the same clean-valid cases.
+5. Fill the six round2 car-barrier `T2VUnlearning` / `SAFREE-CogVideoX` coverage gaps.
+6. Continue the causal-footprint audit from the recovered cross-round matrix.

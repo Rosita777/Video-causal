@@ -571,3 +571,30 @@ experiments/baseline_runs/baseline_suite_round1_seed200_real_gpu_fp32_summary.cs
 ```
 
 **Current status:** Generation succeeded. Manual visual review is pending; do not treat these rows as scientific outcomes until the contact sheets/videos are annotated.
+
+## 2026-06-20: All Required Baselines Have Suite Interfaces
+
+**Goal:** Make future experiments run from one baseline suite interface instead of one-off reproduction commands.
+
+**Implemented interfaces:**
+- `negative_prompt`: ready through `scripts/generate_cogvideox_clean.py --baseline negative_prompt`.
+- `safree_cogvideox`: ready locally through `scripts/adapters/run_safree_cogvideox.py` when the ignored SAFREE pipeline is present.
+- `videoeraser`: adapter added at `scripts/adapters/run_videoeraser_cogvideox.py`; current local status is `blocked_missing_external` until `baselines/external/VideoEraser/ModelScope/inference.py` is restored.
+- `t2vunlearning`: adapter added at `scripts/adapters/run_t2vunlearning_cogvideox.py`; current local status is `blocked_missing_external` until `test_cogvideo.py` and `receler/concept_reg_cogvideo.py` are restored under `baselines/external/T2VUnlearning`.
+
+**Important boundary:** These interfaces do not fake VideoEraser or T2VUnlearning outputs. They provide a stable dry-run manifest, external-file checks, and real-run delegation points. If a method generates weak, collapsed, or target-visible videos later, those are baseline outcomes to record, not reasons to remove the method.
+
+**Path-handling fix:** The VideoEraser and T2VUnlearning adapters now resolve prompt, output, and local model paths before invoking external runners with the external repository as `cwd`. This prevents relative project paths from breaking after the subprocess changes working directory.
+
+**Verification:**
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python -m pytest tests/test_run_baseline_suite.py tests/test_run_external_adapters.py -q
+```
+
+Result:
+
+```text
+9 passed
+```
+

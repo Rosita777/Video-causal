@@ -19,27 +19,19 @@ REQUIRED_BASELINES = [
 ]
 
 
-BLOCKED_ADAPTERS = {
-    "videoeraser": {
-        "status": "blocked_missing_adapter",
-        "missing": [
-            "baselines/external/VideoEraser",
-            "scripts/adapters/run_videoeraser_cogvideox.py",
-        ],
-    },
-    "t2vunlearning": {
-        "status": "blocked_missing_adapter",
-        "missing": [
-            "baselines/external/T2VUnlearning",
-            "scripts/adapters/run_t2vunlearning_cogvideox.py",
-            "T2VUnlearning training/adaptation config for the target concept",
-        ],
-    },
-}
-
-
 def safree_pipeline_path(args: argparse.Namespace) -> Path:
     return args.safree_root / "cogvideox" / "cogvideox_pipeline.py"
+
+
+def videoeraser_runner_path(args: argparse.Namespace) -> Path:
+    return args.videoeraser_root / "ModelScope" / "inference.py"
+
+
+def t2vunlearning_required_paths(args: argparse.Namespace) -> list[Path]:
+    return [
+        args.t2vunlearning_root / "test_cogvideo.py",
+        args.t2vunlearning_root / "receler" / "concept_reg_cogvideo.py",
+    ]
 
 
 def build_negative_prompt_command(args: argparse.Namespace, output_dir: Path) -> list[str]:
@@ -118,6 +110,66 @@ def build_safree_command(args: argparse.Namespace, output_dir: Path) -> list[str
     return command
 
 
+def build_videoeraser_command(args: argparse.Namespace, output_dir: Path) -> list[str]:
+    command = [
+        sys.executable,
+        "scripts/adapters/run_videoeraser_cogvideox.py",
+        "--prompts",
+        str(args.prompts),
+        "--output-dir",
+        str(output_dir),
+        "--model",
+        args.model,
+        "--videoeraser-root",
+        str(args.videoeraser_root),
+        "--seed",
+        str(args.seed),
+        "--steps",
+        str(args.steps),
+        "--guidance-scale",
+        str(args.guidance_scale),
+        "--num-frames",
+        str(args.num_frames),
+        "--fps",
+        str(args.fps),
+        "--dtype",
+        args.dtype,
+    ]
+    if args.limit is not None:
+        command.extend(["--limit", str(args.limit)])
+    return command
+
+
+def build_t2vunlearning_command(args: argparse.Namespace, output_dir: Path) -> list[str]:
+    command = [
+        sys.executable,
+        "scripts/adapters/run_t2vunlearning_cogvideox.py",
+        "--prompts",
+        str(args.prompts),
+        "--output-dir",
+        str(output_dir),
+        "--model",
+        args.model,
+        "--t2vunlearning-root",
+        str(args.t2vunlearning_root),
+        "--seed",
+        str(args.seed),
+        "--steps",
+        str(args.steps),
+        "--guidance-scale",
+        str(args.guidance_scale),
+        "--num-frames",
+        str(args.num_frames),
+        "--fps",
+        str(args.fps),
+        "--dtype",
+        args.dtype,
+    ]
+    if args.limit is not None:
+        command.extend(["--limit", str(args.limit)])
+    return command
+
+
 def build_jobs(args: argparse.Namespace) -> list[dict[str, object]]:
     selected = args.baseline or REQUIRED_BASELINES
     jobs: list[dict[str, object]] = []
@@ -154,15 +206,49 @@ def build_jobs(args: argparse.Namespace) -> list[dict[str, object]]:
                 }
             )
             continue
-        blocked = BLOCKED_ADAPTERS[baseline]
-        jobs.append(
-            {
-                "baseline": baseline,
-                "status": blocked["status"],
-                "output_dir": str(output_dir),
-                "missing": blocked["missing"],
-            }
-        )
+        if baseline == "videoeraser":
+            runner_path = videoeraser_runner_path(args)
+            if not runner_path.is_file():
+                jobs.append(
+                    {
+                        "baseline": baseline,
+                        "status": "blocked_missing_external",
+                        "output_dir": str(output_dir),
+                        "missing": [str(runner_path)],
+                    }
+                )
+                continue
+            jobs.append(
+                {
+                    "baseline": baseline,
+                    "status": "ready",
+                    "output_dir": str(output_dir),
+                    "command": build_videoeraser_command(args, output_dir),
+                }
+            )
+            continue
+        if baseline == "t2vunlearning":
+            missing = [path for path in t2vunlearning_required_paths(args) if not path.is_file()]
+            if missing:
+                jobs.append(
+                    {
+                        "baseline": baseline,
+                        "status": "blocked_missing_external",
+                        "output_dir": str(output_dir),
+                        "missing": [str(path) for path in missing],
+                    }
+                )
+                continue
+            jobs.append(
+                {
+                    "baseline": baseline,
+                    "status": "ready",
+                    "output_dir": str(output_dir),
+                    "command": build_t2vunlearning_command(args, output_dir),
+                }
+            )
+            continue
+        raise ValueError(f"Unsupported baseline: {baseline}")
     return jobs
 
 
@@ -186,6 +272,10 @@ def write_suite_manifest(args: argparse.Namespace, jobs: list[dict[str, object]]
         "external": {
             "safree_root": str(args.safree_root),
             "safree_pipeline": str(safree_pipeline_path(args)),
+            "videoeraser_root": str(args.videoeraser_root),
+            "videoeraser_runner": str(videoeraser_runner_path(args)),
+            "t2vunlearning_root": str(args.t2vunlearning_root),
+            "t2vunlearning_required": [str(path) for path in t2vunlearning_required_paths(args)],
         },
         "jobs": jobs,
     }
@@ -229,6 +319,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--model", default="models/CogVideoX-2b")
     parser.add_argument("--safree-root", type=Path, default=Path("baselines/external/SAFREE"))
+    parser.add_argument("--videoeraser-root", type=Path, default=Path("baselines/external/VideoEraser"))
+    parser.add_argument("--t2vunlearning-root", type=Path, default=Path("baselines/external/T2VUnlearning"))
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--steps", type=int, default=20)
     parser.add_argument("--guidance-scale", type=float, default=6.0)

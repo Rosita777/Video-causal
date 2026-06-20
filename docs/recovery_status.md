@@ -22,7 +22,7 @@ The active stable working copy is now:
 /home/deepseek_VG/JUNCHI/Video-causal
 ```
 
-The stable copy keeps the GitHub remote `https://github.com/Rosita777/Video-causal.git`. Generated videos, model weights, adapters, and external baseline checkouts remain outside git.
+The stable copy keeps the GitHub remote `https://github.com/Rosita777/Video-causal.git`. Generated videos, model weights, adapter checkpoints, and external baseline checkouts remain outside git; lightweight suite adapters are tracked in git.
 
 ## Recovered
 
@@ -34,6 +34,8 @@ The stable copy keeps the GitHub remote `https://github.com/Rosita777/Video-caus
   - `scripts/check_baselines.py`
   - `scripts/generate_cogvideox_clean.py`
   - `scripts/adapters/run_safree_cogvideox.py`
+  - `scripts/adapters/run_videoeraser_cogvideox.py`
+  - `scripts/adapters/run_t2vunlearning_cogvideox.py`
   - `scripts/run_baseline_suite.py`
 - Lightweight tests:
   - `tests/test_run_pilot.py`
@@ -42,6 +44,7 @@ The stable copy keeps the GitHub remote `https://github.com/Rosita777/Video-caus
   - `tests/test_check_baselines.py`
   - `tests/test_run_baseline_suite.py`
   - `tests/test_run_safree_cogvideox.py`
+  - `tests/test_run_external_adapters.py`
 - Recovered manual summary CSVs:
   - `experiments/pilot_week1/causal_audit_round1/round1_summary.csv`
   - `experiments/pilot_week1/causal_audit_round2_car_barrier/round2_summary.csv`
@@ -70,7 +73,7 @@ python -m pytest tests -q
 Current lightweight result:
 
 ```text
-17 passed
+23 passed
 ```
 
 ## Current Scientific State
@@ -80,5 +83,5 @@ The recovered evidence supports the same narrow claim as before the loss:
 - Negative Prompt repeatedly produced strict causal-footprint positives across pitcher-water and ice-cube-cola.
 - VideoEraser produced one strict positive on pitcher-water, with no recovered strict positive on round3 bottle/ice.
 - SAFREE-CogVideoX is now runnable through the restored wrapper, but has no strict positives in the recovered summaries.
-- T2VUnlearning remains a required baseline but currently has no strict positives in the recovered summaries.
+- T2VUnlearning remains a required baseline with a suite adapter; it currently has no strict positives in the recovered summaries and still needs external source/config for new real runs.
 - Round2 car-barrier still lacks T2VUnlearning and SAFREE-CogVideoX summary rows.
