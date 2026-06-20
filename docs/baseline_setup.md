@@ -118,10 +118,10 @@ Current dry-run statuses:
 | --- | --- | --- |
 | Negative Prompt | `ready` | Runs through `scripts/generate_cogvideox_clean.py --baseline negative_prompt` |
 | SAFREE-CogVideoX | `ready` locally; `blocked_missing_external` on fresh clones | Runs through `scripts/adapters/run_safree_cogvideox.py` when the official SAFREE CogVideoX pipeline exists under `baselines/external/SAFREE` |
-| VideoEraser | `blocked_missing_external` locally | Adapter exists; need external `baselines/external/VideoEraser/ModelScope/inference.py` and compatible weights/config |
+| VideoEraser | `ready` locally | Default `--mode local` runs the CogVideoX `spea_arng_cogvideox_v0` reimplementation; `--mode external` can still call an official runner if one becomes available |
 | T2VUnlearning | `blocked_missing_external` locally | Adapter exists; need external `test_cogvideo.py`, `receler/concept_reg_cogvideo.py`, and training/adaptation config |
 
-When external sources and run configurations are restored, the suite status should change from `blocked_missing_external` to `ready` without changing the high-level experiment command. For real runs, pass `--parallel` so all ready baselines start together; slower methods such as T2VUnlearning can finish later without forcing the entire interface to be serial.
+VideoEraser no longer waits on an external runner by default. T2VUnlearning is the remaining local reimplementation target. For real runs, pass `--parallel` so all ready baselines start together; slower methods such as T2VUnlearning can finish later without forcing the entire interface to be serial.
 
 ## SAFREE-CogVideoX Adapter
 
@@ -163,13 +163,55 @@ The 2026-06-20 real suite run used `--dtype fp32`. Under the current `torch 2.6.
 
 ## VideoEraser Adapter
 
-The local wrapper expects the external VideoEraser runner at:
+The default VideoEraser path is now local and training-free:
+
+```bash
+PYTHONNOUSERSITE=1 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/adapters/run_videoeraser_cogvideox.py \
+  --prompts prompts/cogvideox_clean_screening_round1.txt \
+  --output-dir outputs/videoeraser_local_round1_seed200_dryrun \
+  --model models/CogVideoX-2b \
+  --seed 200 \
+  --steps 20 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --fps 8 \
+  --dtype fp32 \
+  --dry-run
+```
+
+`--mode local` implements `spea_arng_cogvideox_v0`: replace the erased concept in the positive prompt, use the target concept as adversarial negative guidance, and optionally push the erased prompt embeddings away from the original concept-bearing prompt with `--spea-strength`. This is a paper-faithful CogVideoX reimplementation path rather than a claim of official VideoEraser code parity.
+
+A real smoke succeeded with:
+
+```bash
+PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=5 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/adapters/run_videoeraser_cogvideox.py \
+  --prompts prompts/cogvideox_clean_screening_round1.txt \
+  --output-dir outputs/videoeraser_local_gpu_smoke_fp32_limit1_step1_256x384 \
+  --model models/CogVideoX-2b \
+  --seed 200 \
+  --steps 1 \
+  --guidance-scale 6.0 \
+  --num-frames 9 \
+  --height 256 \
+  --width 384 \
+  --fps 8 \
+  --dtype fp32 \
+  --limit 1 \
+  --enable-model-cpu-offload \
+  --vae-tiling
+```
+
+Full-size 480x720 / 49-frame smoke hit OOM because all eight H800s were already occupied by other processes at roughly 45GB each. Retry full-size generation when GPU memory is available.
+
+Optional external mode remains available for future official code:
 
 ```text
 baselines/external/VideoEraser/ModelScope/inference.py
 ```
 
-The wrapper has a dependency-free `--dry-run` mode that writes a manifest with prompt rows, expected output video paths, seed mapping, and external-file readiness. For real runs, it resolves prompt, output, and local model paths to absolute paths before delegating to the external runner, because the subprocess runs with the external repository as its working directory.
+Use `--mode external` only when that runner and its compatible config are present.
 
 ## T2VUnlearning Adapter
 
@@ -239,8 +281,8 @@ Initial contact-sheet screening:
 
 1. Expand clean-source CogVideoX screening with more seeds/templates until each target has clean-valid source videos.
 2. Preserve `models/CogVideoX-2b` and generated videos locally, outside git.
-3. Reclone/import external VideoEraser and T2VUnlearning into `baselines/external/` outside git so the existing adapters can call their runners.
+3. Implement the T2VUnlearning paper-faithful local train/adapter path.
 4. Review `outputs/baseline_suite_round1_seed200_real_gpu_fp32/review/` for clean / Negative Prompt / SAFREE-CogVideoX comparisons on the clean-valid cases.
-5. Run a full four-baseline dry-run manifest after external sources are present, then run real generation/training.
+5. Run a full ready-baseline dry-run manifest, then run real generation/training when GPU memory is available.
 6. Fill the six round2 car-barrier `T2VUnlearning` / `SAFREE-CogVideoX` missing rows.
 7. Rebuild review contact sheets only after videos exist again.

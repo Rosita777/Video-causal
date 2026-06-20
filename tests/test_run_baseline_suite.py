@@ -70,10 +70,11 @@ def test_baseline_suite_dry_run_lists_required_baselines(tmp_path):
     assert jobs["safree_cogvideox"]["missing"] == [
         str(missing_safree_root / "cogvideox" / "cogvideox_pipeline.py")
     ]
-    assert jobs["videoeraser"]["status"] == "blocked_missing_external"
-    assert jobs["videoeraser"]["missing"] == [
-        str(missing_videoeraser_root / "ModelScope" / "inference.py")
-    ]
+    assert jobs["videoeraser"]["status"] == "ready"
+    assert jobs["videoeraser"]["implementation"] == "local_reimplementation"
+    assert "missing" not in jobs["videoeraser"]
+    assert "--mode" in jobs["videoeraser"]["command"]
+    assert "local" in jobs["videoeraser"]["command"]
     assert jobs["t2vunlearning"]["status"] == "blocked_missing_external"
     assert jobs["t2vunlearning"]["missing"] == [
         str(missing_t2v_root / "test_cogvideo.py"),
@@ -155,6 +156,8 @@ def test_baseline_suite_marks_videoeraser_ready_when_external_runner_exists(tmp_
             str(output_root),
             "--videoeraser-root",
             str(videoeraser_root),
+            "--videoeraser-mode",
+            "external",
             "--seed",
             "200",
             "--dry-run",

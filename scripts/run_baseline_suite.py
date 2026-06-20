@@ -122,6 +122,8 @@ def build_videoeraser_command(args: argparse.Namespace, output_dir: Path) -> lis
         args.model,
         "--videoeraser-root",
         str(args.videoeraser_root),
+        "--mode",
+        args.videoeraser_mode,
         "--seed",
         str(args.seed),
         "--steps",
@@ -208,7 +210,7 @@ def build_jobs(args: argparse.Namespace) -> list[dict[str, object]]:
             continue
         if baseline == "videoeraser":
             runner_path = videoeraser_runner_path(args)
-            if not runner_path.is_file():
+            if args.videoeraser_mode == "external" and not runner_path.is_file():
                 jobs.append(
                     {
                         "baseline": baseline,
@@ -218,10 +220,12 @@ def build_jobs(args: argparse.Namespace) -> list[dict[str, object]]:
                     }
                 )
                 continue
+            implementation = "external" if args.videoeraser_mode == "external" else "local_reimplementation"
             jobs.append(
                 {
                     "baseline": baseline,
                     "status": "ready",
+                    "implementation": implementation,
                     "output_dir": str(output_dir),
                     "command": build_videoeraser_command(args, output_dir),
                 }
@@ -273,6 +277,7 @@ def write_suite_manifest(args: argparse.Namespace, jobs: list[dict[str, object]]
             "safree_root": str(args.safree_root),
             "safree_pipeline": str(safree_pipeline_path(args)),
             "videoeraser_root": str(args.videoeraser_root),
+            "videoeraser_mode": args.videoeraser_mode,
             "videoeraser_runner": str(videoeraser_runner_path(args)),
             "t2vunlearning_root": str(args.t2vunlearning_root),
             "t2vunlearning_required": [str(path) for path in t2vunlearning_required_paths(args)],
@@ -320,6 +325,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--model", default="models/CogVideoX-2b")
     parser.add_argument("--safree-root", type=Path, default=Path("baselines/external/SAFREE"))
     parser.add_argument("--videoeraser-root", type=Path, default=Path("baselines/external/VideoEraser"))
+    parser.add_argument("--videoeraser-mode", choices=["local", "external", "auto"], default="local")
     parser.add_argument("--t2vunlearning-root", type=Path, default=Path("baselines/external/T2VUnlearning"))
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--steps", type=int, default=20)

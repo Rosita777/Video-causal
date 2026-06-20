@@ -191,7 +191,9 @@ PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=0 \
   --dry-run
 ```
 
-Current local suite status: all four required baselines have suite interfaces. Negative Prompt and SAFREE-CogVideoX are runnable locally; VideoEraser and T2VUnlearning now have adapter manifests but remain blocked on external source/runner availability. Use `--parallel` for real suite runs so all ready baselines launch together.
+Current local suite status: all four required baselines have suite interfaces. Negative Prompt, SAFREE-CogVideoX, and VideoEraser-local are runnable locally; T2VUnlearning remains the remaining paper-faithful local reimplementation target. Use `--parallel` for real suite runs so all ready baselines launch together.
+
+VideoEraser uses `scripts/adapters/run_videoeraser_cogvideox.py`. The default `--mode local` path is a CogVideoX-oriented, training-free reimplementation (`spea_arng_cogvideox_v0`): it constructs an erased prompt by replacing the target concept, uses the target concept as negative guidance, and applies a prompt-embedding displacement away from the original concept-bearing prompt. A small real GPU smoke succeeded at 256x384 / 9 frames / 1 step; full-size runs should wait for enough free GPU memory.
 
 SAFREE-CogVideoX uses `scripts/adapters/run_safree_cogvideox.py`. The wrapper calls the official SAFREE CogVideoX pipeline under `baselines/external/SAFREE/cogvideox/cogvideox_pipeline.py` and injects each prompt row's `target_concept` into SAFREE's concept dictionary as a single concept entry. The external SAFREE checkout is intentionally ignored by git.
 
@@ -240,7 +242,7 @@ video_concept_erasure_causal_footprint/
 
 1. Expand CogVideoX clean-source screening for more seeds/templates.
 2. Manually review the clean / Negative Prompt / SAFREE-CogVideoX contact sheets for `ice_cube_seed200` and `stone_seed204`.
-3. Import or reclone external VideoEraser and T2VUnlearning sources so their adapters move from `blocked_missing_external` to `ready`.
-4. Run the full four-baseline suite on the same clean-valid cases.
+3. Implement the T2VUnlearning paper-faithful local train/adapter path.
+4. Run the full ready-baseline suite on the same clean-valid cases once GPU memory is available.
 5. Fill the six round2 car-barrier `T2VUnlearning` / `SAFREE-CogVideoX` coverage gaps.
 6. Continue the causal-footprint audit from the recovered cross-round matrix.

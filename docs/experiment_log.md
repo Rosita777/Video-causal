@@ -579,7 +579,7 @@ experiments/baseline_runs/baseline_suite_round1_seed200_real_gpu_fp32_summary.cs
 **Implemented interfaces:**
 - `negative_prompt`: ready through `scripts/generate_cogvideox_clean.py --baseline negative_prompt`.
 - `safree_cogvideox`: ready locally through `scripts/adapters/run_safree_cogvideox.py` when the ignored SAFREE pipeline is present.
-- `videoeraser`: adapter added at `scripts/adapters/run_videoeraser_cogvideox.py`; current local status is `blocked_missing_external` until `baselines/external/VideoEraser/ModelScope/inference.py` is restored.
+- `videoeraser`: adapter added at `scripts/adapters/run_videoeraser_cogvideox.py`; current default status is `ready` through local `spea_arng_cogvideox_v0`, with optional `--mode external` for future official runners.
 - `t2vunlearning`: adapter added at `scripts/adapters/run_t2vunlearning_cogvideox.py`; current local status is `blocked_missing_external` until `test_cogvideo.py` and `receler/concept_reg_cogvideo.py` are restored under `baselines/external/T2VUnlearning`.
 
 **Important boundary:** These interfaces do not fake VideoEraser or T2VUnlearning outputs. They provide a stable dry-run manifest, external-file checks, and real-run delegation points. If a method generates weak, collapsed, or target-visible videos later, those are baseline outcomes to record, not reasons to remove the method.
@@ -596,5 +596,59 @@ Result:
 
 ```text
 9 passed
+```
+
+## 2026-06-20: VideoEraser Local Reimplementation v0
+
+**Goal:** Stop blocking VideoEraser on unavailable or unstable external source code and provide a runnable CogVideoX baseline.
+
+**Implementation:** `scripts/adapters/run_videoeraser_cogvideox.py` now defaults to `--mode local`, recorded as `spea_arng_cogvideox_v0`. The method is training-free: each prompt row gets an erased positive prompt where the `target_concept` is replaced by a neutral token, the original target concept is used as adversarial negative guidance, and prompt embeddings are displaced away from the original concept-bearing prompt using `--spea-strength`.
+
+**Suite state after dry-run:**
+
+```text
+negative_prompt ready
+safree_cogvideox ready
+videoeraser ready local_reimplementation
+t2vunlearning blocked_missing_external
+```
+
+**Successful smoke command:**
+
+```bash
+PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=5 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/adapters/run_videoeraser_cogvideox.py \
+  --prompts prompts/cogvideox_clean_screening_round1.txt \
+  --output-dir outputs/videoeraser_local_gpu_smoke_fp32_limit1_step1_256x384 \
+  --model models/CogVideoX-2b \
+  --seed 200 \
+  --steps 1 \
+  --guidance-scale 6.0 \
+  --num-frames 9 \
+  --height 256 \
+  --width 384 \
+  --fps 8 \
+  --dtype fp32 \
+  --limit 1 \
+  --enable-model-cpu-offload \
+  --vae-tiling
+```
+
+**Artifacts:**
+- `outputs/videoeraser_local_gpu_smoke_fp32_limit1_step1_256x384/generation_manifest.json`
+- `outputs/videoeraser_local_gpu_smoke_fp32_limit1_step1_256x384/videos/000_a-realistic-close-up-video-of-a-clear-ice-cube-dropping-into-a-glass-of_seed200.mp4`
+
+**Resource note:** A full-size 480x720 / 49-frame / 1-step smoke failed with CUDA OOM because all eight H800 GPUs were occupied by other processes using roughly 45GB each. This is a resource constraint, not a parser or adapter failure.
+
+**Verification:**
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python -m pytest tests -q
+```
+
+Result:
+
+```text
+23 passed
 ```
 
