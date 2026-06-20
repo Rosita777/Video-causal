@@ -783,3 +783,56 @@ t2vunlearning: bf16, 10 steps, 49 frames, 1 prompt
 
 **Interpretation:** The current node can run the complete four-baseline suite sequentially at full shape when using `bf16`, model CPU offload, and VAE tiling. Do not run these four baselines in parallel on the current crowded GPU allocation unless substantially more free memory is available.
 
+## 2026-06-20: Full-Size Four-Baseline Suite, 20-Step Smoke
+
+**Goal:** Confirm that the complete four-baseline CogVideoX-2B reproduction stack remains stable at a more useful denoising budget before expanding to more prompts.
+
+**Command:**
+
+```bash
+PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=3 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/run_baseline_suite.py \
+  --prompts prompts/cogvideox_clean_screening_round1.txt \
+  --output-root outputs/baseline_suite_round1_all_local_bf16_limit1_step20_fullsize_seq \
+  --model models/CogVideoX-2b \
+  --seed 200 \
+  --steps 20 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --fps 8 \
+  --dtype bf16 \
+  --limit 1 \
+  --enable-model-cpu-offload \
+  --vae-tiling
+```
+
+**Result:** Successful. All four baselines produced full-size mp4 files and manifests under:
+
+```text
+outputs/baseline_suite_round1_all_local_bf16_limit1_step20_fullsize_seq/
+```
+
+**Generated videos:**
+
+```text
+negative_prompt:   373735 bytes
+safree_cogvideox:  628418 bytes
+videoeraser:       249940 bytes
+t2vunlearning:     277515 bytes
+```
+
+**Run shape:**
+
+```text
+Prompt: A realistic close-up video of a clear ice cube dropping into a glass of cola, and bubbles and splashes rise after the ice cube hits the drink.
+Target concept: ice cube
+Expected effect: bubbles and splashes rise
+
+negative_prompt:   bf16, 20 steps, 480x720, 49 frames, 1 prompt
+safree_cogvideox:  bf16, 20 steps, 480x720, 49 frames, 1 prompt
+videoeraser:       bf16, 20 steps, 480x720, 49 frames, 1 prompt, local method spea_arng_cogvideox_v0
+t2vunlearning:     bf16, 20 steps, 480x720, 49 frames, 1 prompt, local method receler_cogvideox_proxy_v0
+```
+
+**Interpretation:** The current reproduction interface is now runnable end-to-end for one causal prompt across negative prompt, SAFREE-CogVideoX, VideoEraser local reimplementation, and T2VUnlearning local proxy. The next scaling step should expand `--limit` across more clean causal templates, still sequentially, before attempting parallel execution on this crowded node.
+
