@@ -191,7 +191,11 @@ PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=0 \
   --dry-run
 ```
 
-Current local suite status: all four required baselines have suite interfaces. Negative Prompt, SAFREE-CogVideoX, and VideoEraser-local are runnable locally; T2VUnlearning remains the remaining paper-faithful local reimplementation target. Use `--parallel` for real suite runs so all ready baselines launch together.
+Current local suite status: all four required baselines are runnable through the suite interface. Negative Prompt and SAFREE-CogVideoX use their existing runners; VideoEraser-local and T2VUnlearning-local use paper-faithful CogVideoX reimplementation/proxy paths when complete official training code or checkpoints are unavailable. Use `--parallel` for real suite runs so all ready baselines launch together.
+
+
+
+T2VUnlearning uses `scripts/adapters/run_t2vunlearning_cogvideox.py`. The default `--mode local` path (`receler_cogvideox_proxy_v0`) mirrors the public inference contract: if no eraser checkpoint is available, it runs CogVideoX with concept-suppressed prompt embeddings plus target-concept negative guidance and records the Receler-style eraser rank/config in the manifest. A small real GPU smoke also succeeded at 256x384 / 9 frames / 1 step.
 
 VideoEraser uses `scripts/adapters/run_videoeraser_cogvideox.py`. The default `--mode local` path is a CogVideoX-oriented, training-free reimplementation (`spea_arng_cogvideox_v0`): it constructs an erased prompt by replacing the target concept, uses the target concept as negative guidance, and applies a prompt-embedding displacement away from the original concept-bearing prompt. A small real GPU smoke succeeded at 256x384 / 9 frames / 1 step; full-size runs should wait for enough free GPU memory.
 
@@ -242,7 +246,7 @@ video_concept_erasure_causal_footprint/
 
 1. Expand CogVideoX clean-source screening for more seeds/templates.
 2. Manually review the clean / Negative Prompt / SAFREE-CogVideoX contact sheets for `ice_cube_seed200` and `stone_seed204`.
-3. Implement the T2VUnlearning paper-faithful local train/adapter path.
-4. Run the full ready-baseline suite on the same clean-valid cases once GPU memory is available.
+3. Run the full four-baseline suite on clean-valid cases once GPU memory is available.
+4. Review and annotate the VideoEraser-local and T2VUnlearning-local smoke/full outputs separately from official-code claims.
 5. Fill the six round2 car-barrier `T2VUnlearning` / `SAFREE-CogVideoX` coverage gaps.
 6. Continue the causal-footprint audit from the recovered cross-round matrix.

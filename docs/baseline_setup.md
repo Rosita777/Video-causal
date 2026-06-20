@@ -119,9 +119,9 @@ Current dry-run statuses:
 | Negative Prompt | `ready` | Runs through `scripts/generate_cogvideox_clean.py --baseline negative_prompt` |
 | SAFREE-CogVideoX | `ready` locally; `blocked_missing_external` on fresh clones | Runs through `scripts/adapters/run_safree_cogvideox.py` when the official SAFREE CogVideoX pipeline exists under `baselines/external/SAFREE` |
 | VideoEraser | `ready` locally | Default `--mode local` runs the CogVideoX `spea_arng_cogvideox_v0` reimplementation; `--mode external` can still call an official runner if one becomes available |
-| T2VUnlearning | `blocked_missing_external` locally | Adapter exists; need external `test_cogvideo.py`, `receler/concept_reg_cogvideo.py`, and training/adaptation config |
+| T2VUnlearning | `ready` locally | Default `--mode local` runs `receler_cogvideox_proxy_v0`; `--mode external` can call official inference/training files if they become available |
 
-VideoEraser no longer waits on an external runner by default. T2VUnlearning is the remaining local reimplementation target. For real runs, pass `--parallel` so all ready baselines start together; slower methods such as T2VUnlearning can finish later without forcing the entire interface to be serial.
+VideoEraser and T2VUnlearning no longer wait on external runners by default. For real runs, pass `--parallel` so all ready baselines start together; slower methods such as T2VUnlearning can finish later without forcing the entire interface to be serial.
 
 ## SAFREE-CogVideoX Adapter
 
@@ -215,14 +215,54 @@ Use `--mode external` only when that runner and its compatible config are presen
 
 ## T2VUnlearning Adapter
 
-The local wrapper expects the external T2VUnlearning source files at:
+The default T2VUnlearning path is now local:
+
+```bash
+PYTHONNOUSERSITE=1 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/adapters/run_t2vunlearning_cogvideox.py \
+  --prompts prompts/cogvideox_clean_screening_round1.txt \
+  --output-dir outputs/t2vunlearning_local_round1_seed200_dryrun \
+  --model models/CogVideoX-2b \
+  --seed 200 \
+  --steps 20 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --fps 8 \
+  --dtype fp32 \
+  --dry-run
+```
+
+`--mode local` implements `receler_cogvideox_proxy_v0`. It follows the public T2VUnlearning inference contract: the manifest records the unlearn concept and eraser rank, and if no eraser checkpoint is available, generation uses concept-suppressed prompt embeddings plus target-concept negative guidance. This is a paper-faithful local proxy, not a claim that complete official training code/checkpoints were released.
+
+A real smoke succeeded with:
+
+```bash
+PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=5 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/adapters/run_t2vunlearning_cogvideox.py \
+  --prompts prompts/cogvideox_clean_screening_round1.txt \
+  --output-dir outputs/t2vunlearning_local_gpu_smoke_fp32_limit1_step1_256x384 \
+  --model models/CogVideoX-2b \
+  --seed 200 \
+  --steps 1 \
+  --guidance-scale 6.0 \
+  --num-frames 9 \
+  --height 256 \
+  --width 384 \
+  --fps 8 \
+  --dtype fp32 \
+  --limit 1 \
+  --enable-model-cpu-offload \
+  --vae-tiling
+```
+
+Optional external mode remains available for future official code:
 
 ```text
 baselines/external/T2VUnlearning/test_cogvideo.py
 baselines/external/T2VUnlearning/receler/concept_reg_cogvideo.py
 ```
 
-The wrapper records the train-then-generate contract in its manifest. Real reproduction still needs the external repository plus a compatible concept-adaptation configuration/checkpoint policy; missing or weak outputs should be logged as baseline outcomes rather than omitted.
+Use `--mode external` only when those files and compatible eraser weights/config are present.
 
 ## CogVideoX-2B Clean Source Runner
 
@@ -281,7 +321,7 @@ Initial contact-sheet screening:
 
 1. Expand clean-source CogVideoX screening with more seeds/templates until each target has clean-valid source videos.
 2. Preserve `models/CogVideoX-2b` and generated videos locally, outside git.
-3. Implement the T2VUnlearning paper-faithful local train/adapter path.
+3. Run the full four-baseline suite when GPU memory is available.
 4. Review `outputs/baseline_suite_round1_seed200_real_gpu_fp32/review/` for clean / Negative Prompt / SAFREE-CogVideoX comparisons on the clean-valid cases.
 5. Run a full ready-baseline dry-run manifest, then run real generation/training when GPU memory is available.
 6. Fill the six round2 car-barrier `T2VUnlearning` / `SAFREE-CogVideoX` missing rows.

@@ -75,11 +75,11 @@ def test_baseline_suite_dry_run_lists_required_baselines(tmp_path):
     assert "missing" not in jobs["videoeraser"]
     assert "--mode" in jobs["videoeraser"]["command"]
     assert "local" in jobs["videoeraser"]["command"]
-    assert jobs["t2vunlearning"]["status"] == "blocked_missing_external"
-    assert jobs["t2vunlearning"]["missing"] == [
-        str(missing_t2v_root / "test_cogvideo.py"),
-        str(missing_t2v_root / "receler" / "concept_reg_cogvideo.py"),
-    ]
+    assert jobs["t2vunlearning"]["status"] == "ready"
+    assert jobs["t2vunlearning"]["implementation"] == "local_reimplementation"
+    assert "missing" not in jobs["t2vunlearning"]
+    assert "--mode" in jobs["t2vunlearning"]["command"]
+    assert "local" in jobs["t2vunlearning"]["command"]
 
 
 def test_baseline_suite_marks_safree_ready_when_external_pipeline_exists(tmp_path):
@@ -202,6 +202,8 @@ def test_baseline_suite_marks_t2vunlearning_ready_when_external_runner_exists(tm
             str(output_root),
             "--t2vunlearning-root",
             str(t2v_root),
+            "--t2vunlearning-mode",
+            "external",
             "--seed",
             "200",
             "--dry-run",

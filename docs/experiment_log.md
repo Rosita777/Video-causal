@@ -580,7 +580,7 @@ experiments/baseline_runs/baseline_suite_round1_seed200_real_gpu_fp32_summary.cs
 - `negative_prompt`: ready through `scripts/generate_cogvideox_clean.py --baseline negative_prompt`.
 - `safree_cogvideox`: ready locally through `scripts/adapters/run_safree_cogvideox.py` when the ignored SAFREE pipeline is present.
 - `videoeraser`: adapter added at `scripts/adapters/run_videoeraser_cogvideox.py`; current default status is `ready` through local `spea_arng_cogvideox_v0`, with optional `--mode external` for future official runners.
-- `t2vunlearning`: adapter added at `scripts/adapters/run_t2vunlearning_cogvideox.py`; current local status is `blocked_missing_external` until `test_cogvideo.py` and `receler/concept_reg_cogvideo.py` are restored under `baselines/external/T2VUnlearning`.
+- `t2vunlearning`: adapter added at `scripts/adapters/run_t2vunlearning_cogvideox.py`; current default status is `ready` through local `receler_cogvideox_proxy_v0`, with optional `--mode external` for future official code/checkpoints.
 
 **Important boundary:** These interfaces do not fake VideoEraser or T2VUnlearning outputs. They provide a stable dry-run manifest, external-file checks, and real-run delegation points. If a method generates weak, collapsed, or target-visible videos later, those are baseline outcomes to record, not reasons to remove the method.
 
@@ -639,6 +639,43 @@ PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=5 PYTORCH_CUDA_ALLOC_CONF=expandable_seg
 - `outputs/videoeraser_local_gpu_smoke_fp32_limit1_step1_256x384/videos/000_a-realistic-close-up-video-of-a-clear-ice-cube-dropping-into-a-glass-of_seed200.mp4`
 
 **Resource note:** A full-size 480x720 / 49-frame / 1-step smoke failed with CUDA OOM because all eight H800 GPUs were occupied by other processes using roughly 45GB each. This is a resource constraint, not a parser or adapter failure.
+
+**Verification:**
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python -m pytest tests -q
+```
+
+Result:
+
+```text
+23 passed
+```
+
+## 2026-06-20: T2VUnlearning Local Reimplementation v0
+
+**Goal:** Stop treating incomplete public training code/checkpoint availability as a blocker and provide a runnable CogVideoX T2VUnlearning baseline.
+
+**Implementation:** `scripts/adapters/run_t2vunlearning_cogvideox.py` now defaults to `--mode local`, recorded as `receler_cogvideox_proxy_v0`. The local path mirrors the public inference contract: each prompt row records an unlearn concept and eraser rank; without a provided `--eraser-path`, generation uses a concept-suppressed prompt embedding plus target-concept negative guidance.
+
+**Suite state after dry-run:**
+
+```text
+negative_prompt ready
+safree_cogvideox ready
+videoeraser ready local_reimplementation
+t2vunlearning ready local_reimplementation
+```
+
+**Successful smoke command:**
+
+```bash
+PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=5 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True   /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/adapters/run_t2vunlearning_cogvideox.py   --prompts prompts/cogvideox_clean_screening_round1.txt   --output-dir outputs/t2vunlearning_local_gpu_smoke_fp32_limit1_step1_256x384   --model models/CogVideoX-2b   --seed 200   --steps 1   --guidance-scale 6.0   --num-frames 9   --height 256   --width 384   --fps 8   --dtype fp32   --limit 1   --enable-model-cpu-offload   --vae-tiling
+```
+
+**Artifacts:**
+- `outputs/t2vunlearning_local_gpu_smoke_fp32_limit1_step1_256x384/generation_manifest.json`
+- `outputs/t2vunlearning_local_gpu_smoke_fp32_limit1_step1_256x384/videos/000_a-realistic-close-up-video-of-a-clear-ice-cube-dropping-into-a-glass-of_seed200.mp4`
 
 **Verification:**
 

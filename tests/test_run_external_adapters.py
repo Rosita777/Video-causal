@@ -63,16 +63,21 @@ def test_videoeraser_adapter_dry_run_records_local_reimplementation_contract(tmp
     assert item["video_path"].endswith("_seed200.mp4")
 
 
-def test_t2vunlearning_adapter_dry_run_records_training_contract(tmp_path):
+def test_t2vunlearning_adapter_dry_run_records_local_reimplementation_contract(tmp_path):
     result, manifest = run_adapter("run_t2vunlearning_cogvideox.py", tmp_path)
 
     assert "Dry-run t2vunlearning manifest written" in result.stdout
     assert manifest["baseline"] == "t2vunlearning"
     assert manifest["dry_run"] is True
+    assert manifest["implementation"]["selected_mode"] == "local_reimplementation"
+    assert manifest["implementation"]["local_method"] == "receler_cogvideox_proxy_v0"
+    assert manifest["implementation"]["eraser_rank"] == 128
     assert manifest["external"]["required_files_present"] is False
-    assert manifest["external"]["adapter_mode"] == "train_then_generate_wrapper"
-    assert manifest["items"][0]["target_concept"] == "stone"
-    assert manifest["items"][0]["video_path"].endswith("_seed200.mp4")
+    item = manifest["items"][0]
+    assert item["target_concept"] == "stone"
+    assert item["t2vunlearning"]["unlearn_concept"] == "stone"
+    assert item["t2vunlearning"]["negative_prompt"] == "stone"
+    assert item["video_path"].endswith("_seed200.mp4")
 
 
 def write_fake_runner(path: Path, marker_name: str):
@@ -172,7 +177,7 @@ def test_t2vunlearning_adapter_real_run_uses_absolute_paths_for_external_runner(
     training_file = external_root / "receler" / "concept_reg_cogvideo.py"
     training_file.write_text("# fake training" + "\n", encoding="utf-8")
 
-    output_dir = run_real_adapter_with_fake_external("run_t2vunlearning_cogvideox.py", external_root, tmp_path)
+    output_dir = run_real_adapter_with_fake_external("run_t2vunlearning_cogvideox.py", external_root, tmp_path, ["--mode", "external"])
 
     call = json.loads((output_dir / "external_call.json").read_text(encoding="utf-8"))
     manifest = json.loads((output_dir / "generation_manifest.json").read_text(encoding="utf-8"))

@@ -154,6 +154,8 @@ def build_t2vunlearning_command(args: argparse.Namespace, output_dir: Path) -> l
         args.model,
         "--t2vunlearning-root",
         str(args.t2vunlearning_root),
+        "--mode",
+        args.t2vunlearning_mode,
         "--seed",
         str(args.seed),
         "--steps",
@@ -233,7 +235,7 @@ def build_jobs(args: argparse.Namespace) -> list[dict[str, object]]:
             continue
         if baseline == "t2vunlearning":
             missing = [path for path in t2vunlearning_required_paths(args) if not path.is_file()]
-            if missing:
+            if args.t2vunlearning_mode == "external" and missing:
                 jobs.append(
                     {
                         "baseline": baseline,
@@ -243,10 +245,12 @@ def build_jobs(args: argparse.Namespace) -> list[dict[str, object]]:
                     }
                 )
                 continue
+            implementation = "external" if args.t2vunlearning_mode == "external" else "local_reimplementation"
             jobs.append(
                 {
                     "baseline": baseline,
                     "status": "ready",
+                    "implementation": implementation,
                     "output_dir": str(output_dir),
                     "command": build_t2vunlearning_command(args, output_dir),
                 }
@@ -280,6 +284,7 @@ def write_suite_manifest(args: argparse.Namespace, jobs: list[dict[str, object]]
             "videoeraser_mode": args.videoeraser_mode,
             "videoeraser_runner": str(videoeraser_runner_path(args)),
             "t2vunlearning_root": str(args.t2vunlearning_root),
+            "t2vunlearning_mode": args.t2vunlearning_mode,
             "t2vunlearning_required": [str(path) for path in t2vunlearning_required_paths(args)],
         },
         "jobs": jobs,
@@ -327,6 +332,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--videoeraser-root", type=Path, default=Path("baselines/external/VideoEraser"))
     parser.add_argument("--videoeraser-mode", choices=["local", "external", "auto"], default="local")
     parser.add_argument("--t2vunlearning-root", type=Path, default=Path("baselines/external/T2VUnlearning"))
+    parser.add_argument("--t2vunlearning-mode", choices=["local", "external", "auto"], default="local")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--steps", type=int, default=20)
     parser.add_argument("--guidance-scale", type=float, default=6.0)
