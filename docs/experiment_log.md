@@ -836,3 +836,53 @@ t2vunlearning:     bf16, 20 steps, 480x720, 49 frames, 1 prompt, local method re
 
 **Interpretation:** The current reproduction interface is now runnable end-to-end for one causal prompt across negative prompt, SAFREE-CogVideoX, VideoEraser local reimplementation, and T2VUnlearning local proxy. The next scaling step should expand `--limit` across more clean causal templates, still sequentially, before attempting parallel execution on this crowded node.
 
+## 2026-06-20: Full-Size Four-Baseline Suite, 20-Step, Six Clean Causal Prompts
+
+**Goal:** Run the complete reproduction interface on every clean causal template currently in `prompts/cogvideox_clean_screening_round1.txt`, rather than validating only the first prompt.
+
+**Command:**
+
+```bash
+PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=7 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/run_baseline_suite.py \
+  --prompts prompts/cogvideox_clean_screening_round1.txt \
+  --output-root outputs/baseline_suite_round1_all_local_bf16_limit6_step20_fullsize_seq \
+  --model models/CogVideoX-2b \
+  --seed 200 \
+  --steps 20 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --fps 8 \
+  --dtype bf16 \
+  --limit 6 \
+  --enable-model-cpu-offload \
+  --vae-tiling
+```
+
+**Result:** Successful. The suite generated 24 full-size videos: 4 baselines x 6 causal prompts. All four generation manifests contain 6 items, and the suite manifest marks every job as `ready`.
+
+**Targets covered:**
+
+```text
+ice cube, bottle, pitcher, pipette, stone, sugar cube
+```
+
+**Output root:**
+
+```text
+outputs/baseline_suite_round1_all_local_bf16_limit6_step20_fullsize_seq/
+```
+
+**Artifact counts and total mp4 sizes:**
+
+```text
+negative_prompt:   6 videos, 1068612 bytes total
+safree_cogvideox:  6 videos, 1779554 bytes total
+videoeraser:       6 videos,  967289 bytes total, local method spea_arng_cogvideox_v0
+t2vunlearning:     6 videos, 1456692 bytes total, local method receler_cogvideox_proxy_v0
+```
+
+**Decode sanity check:** OpenCV successfully decoded every mp4 as 49 frames at 720x480 and 8 fps. The sugar-cube prompt produced near-black outputs across multiple baselines, with the VideoEraser sugar-cube output decoding as all-black frames (`mean=0.00`, `std=0.00`). Treat this as a generation-quality / prompt-robustness issue for the current baseline run, not an interface failure.
+
+**Interpretation:** The current baseline suite now supports a real batched reproduction pass over the clean causal prompt set. The next step should be qualitative/automatic evaluation of these 24 outputs before increasing prompt count or inference steps; otherwise we risk spending GPU time on prompts such as sugar cube that already show poor base generation quality.
+
