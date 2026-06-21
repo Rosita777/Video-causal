@@ -21,6 +21,7 @@ Current benchmark candidate pool:
 ```text
 benchmarks/causal_footprint_v0/candidate_pairs.tsv
 benchmarks/causal_footprint_v0/control_prompts.jsonl
+prompts/causal_footprint_v0_accepted24.txt
 ```
 
 ## Recovery Status
@@ -262,14 +263,14 @@ video_concept_erasure_causal_footprint/
 │   ├── adapters/run_t2vunlearning_cogvideox.py
 │   ├── run_baseline_suite.py
 │   ├── run_parallel_baseline_jobs.py
+│   ├── export_benchmark_prompts.py
 │   └── run_pilot.py
 └── tests/
 ```
 
 ## Next Actions
 
-1. Review `benchmarks/causal_footprint_v0/candidate_pairs.tsv` and adjust accepted/exploratory/rejected status if needed.
-2. Export accepted candidates into the existing `prompt | target | effect` format for clean-source generation.
-3. Run clean-source screening on the accepted slice and apply the clean-source gate.
-4. Convert clean-valid rows into `items.jsonl`, then run all four baselines with the mixed scheduler.
-5. Build contact sheets, annotate with the v0 rubric, and compute `CFP@TPS<=1`.
+1. Review `outputs/analysis_contact_sheets/causal_footprint_v0_clean_accepted24_step20/clean_gallery.html` and mark clean-valid rows.
+2. Demote weak accepted candidates in `candidate_pairs.tsv` or leave them as clean-source failures in the screening record.
+3. Convert clean-valid rows into `items.jsonl`, then run all four baselines with the mixed scheduler.
+4. Build baseline contact sheets, annotate with the v0 rubric, and compute `CFP@TPS<=1`.

@@ -119,3 +119,55 @@ def test_parallel_jobs_can_select_baselines_and_source_indices(tmp_path):
         ("t2vunlearning", 2, 902),
     ]
     assert all("--mode" in job["command"] and "local" in job["command"] for job in manifest["jobs"])
+
+
+def test_parallel_jobs_can_run_clean_generation_jobs(tmp_path):
+    prompt_file = tmp_path / "prompts.txt"
+    output_root = tmp_path / "jobs"
+    prompt_file.write_text(
+        "\n".join(
+            [
+                "Prompt zero. | zero | effect zero",
+                "Prompt one. | one | effect one",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(PROJECT_ROOT / "scripts" / "run_parallel_baseline_jobs.py"),
+            "--baseline",
+            "clean",
+            "--prompts",
+            str(prompt_file),
+            "--output-root",
+            str(output_root),
+            "--seed",
+            "1000",
+            "--gpus",
+            "0,1",
+            "--dry-run",
+        ],
+        cwd=PROJECT_ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    manifest = json.loads((output_root / "parallel_job_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["baselines"] == ["clean"]
+    assert [(job["baseline"], job["source_prompt_index"], job["seed"]) for job in manifest["jobs"]] == [
+        ("clean", 0, 1000),
+        ("clean", 1, 1001),
+    ]
+    first_command = manifest["jobs"][0]["command"]
+    assert first_command[:4] == [
+        sys.executable,
+        "scripts/generate_cogvideox_clean.py",
+        "--baseline",
+        "clean",
+    ]
+    assert manifest["jobs"][0]["output_dir"].endswith("clean_shards/prompt_000")

@@ -9,9 +9,9 @@ Updated: 2026-06-21
 
 ## Experiments
 
-1. Which accepted candidate pairs should be demoted before clean-source generation because they are too hard for CogVideoX or too ambiguous?
-2. Should the first runnable slice use all 24 accepted candidates or a smaller 16-row high-confidence subset?
-3. Should the control prompts be generated now for annotation calibration, or only after accepted-source clean screening?
+1. Which of the 24 generated clean videos pass the clean-source gate after full-video review?
+2. Which accepted candidates should be demoted because CogVideoX cannot generate a usable clean source?
+3. Should control prompts be generated now for annotation calibration, or after clean-valid benchmark rows are finalized?
 4. Which round3 clean-pass prompts should become canonical figure examples after checking full videos, not only middle frames?
 5. Should the six missing round2 car-barrier `T2VUnlearning` / `SAFREE-CogVideoX` rows be regenerated for historical completeness, or left as recovered-pilot evidence only?
 

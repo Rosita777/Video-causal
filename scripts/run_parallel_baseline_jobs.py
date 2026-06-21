@@ -16,6 +16,7 @@ from run_pilot import parse_prompt_file
 
 
 BASELINES = ["negative_prompt", "safree_cogvideox", "videoeraser", "t2vunlearning"]
+SELECTABLE_BASELINES = ["clean", *BASELINES]
 
 
 def parse_gpus(value: str) -> list[int]:
@@ -104,6 +105,18 @@ def append_common_generation_args(command: list[str], args: argparse.Namespace) 
 
 
 def build_command(baseline: str, args: argparse.Namespace, prompt_shard: Path, output_dir: Path) -> list[str]:
+    if baseline == "clean":
+        command = [
+            sys.executable,
+            "scripts/generate_cogvideox_clean.py",
+            "--baseline",
+            "clean",
+            "--prompts",
+            str(prompt_shard),
+            "--output-dir",
+            str(output_dir),
+        ]
+        return append_common_generation_args(command, args)
     if baseline == "negative_prompt":
         command = [
             sys.executable,
@@ -278,7 +291,7 @@ def run_jobs(jobs: list[dict[str, object]], args: argparse.Namespace) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
-    parser.add_argument("--baseline", action="append", choices=BASELINES)
+    parser.add_argument("--baseline", action="append", choices=SELECTABLE_BASELINES)
     parser.add_argument("--prompts", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--source-indices")

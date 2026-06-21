@@ -1,0 +1,28 @@
+# Exported from candidate_pairs.tsv
+# Status filter: accepted_v0_slice
+# Format: <prompt> | <target> | <effect>
+
+A realistic close-up video of a single raindrop hitting a shallow puddle, causing a crown splash to rise and circular ripples to expand outward across the water. | raindrop | crown splash and expanding ripples
+A realistic close-up video of a small pebble dropping into a still pond, causing circular ripples to spread outward across the water. | pebble | circular ripples spread outward
+A realistic close-up video of a tiny hailstone landing on calm water, causing concentric rings to spread across the surface after impact. | hailstone | concentric water rings spread outward
+A realistic close-up video of a blue ink droplet falling into a clear glass of water, causing a blue plume to bloom and spread downward through the water. | ink droplet | colored plume spreads through clear water
+A realistic close-up video of a shoe stepping into smooth wet beach sand, causing a clear footprint to remain after the step. | shoe | footprint remains in wet sand
+A realistic low-angle video of a bicycle tire rolling through soft mud, causing a clear tire track to remain behind it. | tire | tire track remains in mud
+A realistic close-up video of a hand pressing into a slab of soft clay, causing a clear handprint to remain after the hand lifts away. | hand | handprint remains in soft clay
+A realistic close-up video of a black marker drawing a curved line on a clean whiteboard, causing the black line to remain on the board. | marker | black line remains on whiteboard
+A realistic close-up video of a paintbrush dragging across a blank canvas, causing a blue paint stroke to remain on the canvas. | paintbrush | colored paint stroke remains on canvas
+A realistic side-view video of a baseball striking a clean glass window, causing branching cracks to spread across the glass. | baseball | branching cracks spread across glass
+A realistic close-up video of a hammer striking a white ceramic tile, causing a dark crack to spread across the tile. | hammer | crack spreads across ceramic tile
+A realistic front-view video of a small rock hitting a clean car windshield, causing a spiderweb crack to appear and spread outward. | rock | spiderweb crack appears on windshield
+A realistic slow-motion video of a ceramic cup falling onto a hard floor, causing broken ceramic pieces to scatter outward. | cup | broken ceramic pieces scatter on floor
+A realistic close-up video of a soccer ball hitting a goal net, causing the net to stretch and ripple backward. | soccer ball | net stretches and ripples backward
+A realistic slow-motion close-up video of a tennis ball hitting a racket, causing the racket strings to bend inward. | tennis ball | racket strings bend inward
+A realistic close-up video of a bowling ball landing on a soft mattress, causing the mattress surface to dent downward. | bowling ball | mattress surface dents downward
+A realistic close-up video of a finger pressing down on a thin rubber sheet, causing the sheet to stretch downward. | finger | rubber sheet stretches downward
+A realistic close-up video of a magnet sliding near scattered iron filings, causing the filings to form curved field lines. | magnet | iron filings form curved field lines
+A realistic close-up video of a plastic comb moving near tiny paper scraps, causing the scraps to lift and cling together in a cluster. | comb | paper scraps lift and cling together
+A realistic close-up video of a small electric fan blowing toward hanging paper strips, causing the strips to flutter and bend away. | fan | paper strips flutter and bend away
+A realistic close-up video of a finger pushing the first domino in a row, causing the dominoes to topple one after another. | finger | dominoes topple one after another
+A realistic living-room video of a remote control pointing at a television, causing the television screen to turn on and glow. | remote control | television screen turns on
+A realistic close-up video of a light switch being flipped on, causing a desk lamp to turn on and illuminate the table. | light switch | lamp turns on and illuminates table
+A realistic close-up video of a key turning in a door lock, causing the door to swing open. | key | door swings open

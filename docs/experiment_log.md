@@ -1129,3 +1129,39 @@ agent_or_object_response: 4
 **Validation:** A local TSV/JSONL parse check found no duplicate `pair_id` values and no out-of-range pair-level scores.
 
 **Interpretation:** This is still a candidate pool, not the final benchmark. The next step is to review the accepted slice, adjust scores/status if needed, then export accepted rows into the generation prompt format for clean-source screening.
+
+## 2026-06-21: Causal Footprint v0 Accepted Slice Clean Generation
+
+**Goal:** Export the accepted candidate pairs and run parallel clean-source generation before baseline erasure.
+
+**Code added:**
+
+```text
+scripts/export_benchmark_prompts.py
+tests/test_export_benchmark_prompts.py
+```
+
+**Scheduler update:** `scripts/run_parallel_baseline_jobs.py` now supports explicitly selected `--baseline clean` jobs while preserving the default four-erasure-baseline behavior.
+
+**Exported prompts:**
+
+```text
+prompts/causal_footprint_v0_accepted24.txt
+benchmarks/causal_footprint_v0/export_accepted24_manifest.json
+```
+
+**Clean run command shape:** 24 accepted candidates, CogVideoX-2B, `bf16`, `480x720`, `49 frames`, `20 steps`, `seed=1100..1123`, scheduled as one clean generation job per GPU across 8 H800 GPUs.
+
+**Outputs:**
+
+```text
+outputs/causal_footprint_v0_clean_accepted24_bf16_step20_parallel/
+outputs/causal_footprint_v0_clean_accepted24_bf16_step20_parallel/clean/generation_manifest.json
+outputs/analysis_contact_sheets/causal_footprint_v0_clean_accepted24_step20/clean_gallery.html
+outputs/analysis_contact_sheets/causal_footprint_v0_clean_accepted24_step20/clean_overview_5frames.png
+outputs/analysis_contact_sheets/causal_footprint_v0_clean_accepted24_step20/qc_metrics.tsv
+```
+
+**Result:** 24/24 clean generation jobs finished and produced mp4 files.
+
+**Initial visual note:** Several prompts are clearly not clean-valid yet. Stronger-looking rows include water impact, some glass/crack cases, soccer-net deformation, tennis-racket deformation, magnet/filings, comb/paper, and possibly key/door. Weak rows include hand/clay, marker/whiteboard, hammer/tile, dropped cup, finger/rubber sheet, switch/lamp, and several rows where the target concept is absent even if the footprint appears. The next step is manual clean-source screening from the gallery before exporting final `items.jsonl`.
