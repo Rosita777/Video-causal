@@ -1036,3 +1036,26 @@ PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python -m pytest test
 ```
 
 **Result:** `26 passed`.
+
+## 2026-06-21: Evaluation Protocol v0 Research and Design
+
+**Goal:** Decide how to evaluate causal-footprint leakage after the benchmark data construction strategy was defined.
+
+**External evaluation lessons:** Recent video generation and video editing benchmarks argue against relying on a single coarse score such as FVD, IS, or global CLIPScore. The useful pattern is disentangled evaluation dimensions, fine-grained prompt categories, atomic checklist questions, MLLM-assisted scoring, and human calibration for temporal or physical judgments. Relevant sources reviewed include VBench, VBench++, VBench-2.0, EvalCrafter, FETV, T2V-CompBench, ETVA, VideoPhy, VideoPhy-2, PhyGenBench, CoVEBench, VEFX-Bench, and UVE.
+
+**Claude/Opus discussion outcome:** Use MLLM scoring as a scalable first pass, but human-calibrate the protocol and human-adjudicate strict-leakage cases, unclear temporal/causal cases, and figure-selected examples. The key warning is that five-frame contact sheets are sufficient for browsing but not sufficient for final temporal/causal annotation.
+
+**Spec update:**
+
+```text
+docs/superpowers/specs/2026-06-20-causal-footprint-benchmark-v0-design.md
+```
+
+The spec now defines:
+
+- annotation fields for target presence, footprint presence, quality, scene fidelity, timing, alternative visible causes, and causal incoherence;
+- 0-3 scoring rubrics for TPS, FPS, QS, and SFS;
+- a chronological MLLM/human chain-of-query prompt;
+- strict leakage, target-visible failure, and quality-failure definitions;
+- metric formulas including `CFP@TPS<=1`;
+- cost-saving plan with MLLM first-pass scoring plus human calibration/adjudication.

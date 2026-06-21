@@ -17,5 +17,5 @@ Updated: 2026-06-20
 ## Writing
 
 1. How should the paper name the failure: `causal footprint leakage`, `counterfactual erasure failure`, or both?
-2. What threshold should define strict leakage in the main text: `target_presence_score <= 1` and `footprint_presence_score >= 2`, or a more conservative rule?
+2. Should the main table use MLLM first-pass scores, human-adjudicated scores, or both side by side?
 3. Should CLEAR remain related work only unless public code or a faithful implementation path appears?

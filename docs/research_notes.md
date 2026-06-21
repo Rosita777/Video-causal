@@ -1,6 +1,6 @@
 # Research Notes: Video Concept Erasure and Causal Footprint
 
-Updated: 2026-06-20
+Updated: 2026-06-21
 
 ## Core Hypothesis
 
@@ -23,6 +23,23 @@ Working definition:
 - `F(C)`: causal footprint left by the source concept.
 
 The key failure is `E(C)` low while `F(C)` remains high. This separates causal-footprint leakage from ordinary target-visible erasure failure.
+
+## Evaluation Protocol v0
+
+The current evaluation plan is hybrid:
+
+1. Use a clean-source gate before any erasure method is judged.
+2. Use a video-capable MLLM for structured first-pass scoring over all generated videos.
+3. Human-calibrate a 15-20 percent subset covering all causal mechanisms and baselines.
+4. Human-adjudicate all strict-leak candidates, unclear temporal/causal cases, and figure-selected examples.
+
+The required annotation dimensions are:
+
+- `target_presence_score`: direct evidence of `E(C)`, scored 0-3.
+- `footprint_presence_score`: causal footprint `F(C)`, scored 0-3.
+- `quality_score`: whether the video is usable for judgment, scored 0-3.
+- `scene_fidelity_score`: whether non-target scene content is preserved, scored 0-3.
+- `target_time`, `footprint_time`, `alternative_cause_visible`, and `temporal_order_valid`.
 
 ## Clean-Source Gate
 
