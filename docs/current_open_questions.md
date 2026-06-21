@@ -1,6 +1,6 @@
 # Current Open Questions
 
-Updated: 2026-06-20
+Updated: 2026-06-21
 
 ## Recovery
 
@@ -9,10 +9,11 @@ Updated: 2026-06-20
 
 ## Experiments
 
-1. Which 30-50 prompts should enter causal-footprint benchmark v0, and which 16 should be the first compute-light runnable slice?
-2. Which round3 clean-pass prompts should become canonical figure examples after checking full videos, not only middle frames?
-3. Should the six missing round2 car-barrier `T2VUnlearning` / `SAFREE-CogVideoX` rows be regenerated for historical completeness, or left as recovered-pilot evidence only?
-4. Should the next clean-source expansion retarget `pipette` to `ink droplet`, where the visible cause is cleaner?
+1. Which candidate `C -> F(C)` pairs should enter the first candidate pool, and which should be rejected before generation?
+2. Which control prompts should be paired with the main causal pairs to distinguish true footprints from natural background patterns?
+3. Which 16-24 high-exclusivity pairs should form the first compute-light runnable benchmark slice?
+4. Which round3 clean-pass prompts should become canonical figure examples after checking full videos, not only middle frames?
+5. Should the six missing round2 car-barrier `T2VUnlearning` / `SAFREE-CogVideoX` rows be regenerated for historical completeness, or left as recovered-pilot evidence only?
 
 ## Writing
 

@@ -41,6 +41,24 @@ The required annotation dimensions are:
 - `scene_fidelity_score`: whether non-target scene content is preserved, scored 0-3.
 - `target_time`, `footprint_time`, `alternative_cause_visible`, and `temporal_order_valid`.
 
+## Data Construction Protocol v0
+
+The benchmark should be described as taxonomy-driven causal pair construction, not hand-written prompt collection. A valid `C -> F(C)` pair must satisfy:
+
+- an explicit causal mechanism from `C` to `F(C)`;
+- counterfactual dependence, meaning `F(C)` should disappear or become much less likely under `do(not C)`;
+- temporal asymmetry, meaning the footprint cannot precede the source event;
+- visual observability, meaning the footprint is visible in video frames.
+
+Candidate pairs should also record:
+
+- `exclusivity_score`: whether the footprint strongly implies the source event;
+- `counterfactual_clarity`: whether the no-source counterfactual is visually clear;
+- `generatability_score`: whether current T2V models can generate a clean valid reference;
+- `erasure_targetability`: whether the source concept can be named and passed to erasure baselines.
+
+The main benchmark should prioritize high-exclusivity, high-counterfactual-clarity pairs and maintain mechanism balance so the benchmark is not dominated by water/ripple examples.
+
 ## Clean-Source Gate
 
 A prompt/seed can enter erasure evaluation only if the clean video has:

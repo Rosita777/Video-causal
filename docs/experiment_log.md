@@ -1059,3 +1059,24 @@ The spec now defines:
 - strict leakage, target-visible failure, and quality-failure definitions;
 - metric formulas including `CFP@TPS<=1`;
 - cost-saving plan with MLLM first-pass scoring plus human calibration/adjudication.
+
+## 2026-06-21: Data Construction Protocol v0
+
+**Goal:** Address the concern that causal pairs such as `raindrop -> ripples` or `baseball -> cracks` could look hand-picked unless the benchmark explains where pairs come from and how they are filtered.
+
+**Claude/Opus discussion outcome:** The benchmark should be framed as taxonomy-driven causal pair construction, not as a list of hand-written prompts. A valid pair must have an explicit causal mechanism, counterfactual dependence, temporal asymmetry, and visible footprint evidence. The data protocol should also include controls so the benchmark does not treat every natural ripple, crack, or deformation as causal leakage.
+
+**Spec update:**
+
+```text
+docs/superpowers/specs/2026-06-20-causal-footprint-benchmark-v0-design.md
+```
+
+The spec now defines:
+
+- a construction pipeline from mechanism taxonomy to candidate pairs to clean-source-gated benchmark rows;
+- valid causal pair conditions and exclusion criteria;
+- pair-level scores for exclusivity, counterfactual clarity, generatability, and erasure targetability;
+- controlled source and counterfactual prompt templates;
+- natural-footprint, no-footprint, and alternative-cause control prompts;
+- v0 and paper-scale target sizes.

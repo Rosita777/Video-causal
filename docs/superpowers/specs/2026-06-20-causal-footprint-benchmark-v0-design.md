@@ -4,7 +4,9 @@ Date: 2026-06-20
 
 Evaluation protocol updated: 2026-06-21
 
-Status: design spec with evaluation protocol v0.
+Data construction protocol updated: 2026-06-21
+
+Status: design spec with data construction and evaluation protocol v0.
 
 ## Purpose
 
@@ -120,6 +122,184 @@ The first benchmark version should prioritize high-exclusivity footprints where 
 
 Lower-exclusivity prompts can remain in the exploratory pool but should not drive the main claim.
 
+## Data Construction Protocol v0
+
+The benchmark should not be described as a hand-written prompt collection. It should be described as taxonomy-driven causal pair construction followed by explicit filtering.
+
+The construction pipeline is:
+
+```text
+mechanism taxonomy
+-> candidate C -> F(C) pairs
+-> pair-level validity checks
+-> controlled source/counterfactual prompt templates
+-> clean-source generation gate
+-> benchmark subset
+```
+
+### Valid Causal Pair Definition
+
+A candidate `C -> F(C)` pair is valid only if it satisfies all four conditions:
+
+1. **Causal mechanism:** `C` can cause `F(C)` through an explicit physical or commonsense mechanism that can be explained in at most three steps.
+2. **Counterfactual dependence:** in the same scene, if `C` did not occur, `F(C)` should disappear or become much less likely.
+3. **Temporal asymmetry:** `C` appears before or at the same time as `F(C)`, and `F(C)` should not precede the source event.
+4. **Visual observability:** `F(C)` is visible in the video and can be judged without hidden measurements or purely semantic inference.
+
+Examples:
+
+- Valid: `baseball -> branching glass cracks`, because impact can cause cracks, cracks are visible, and an intact window is the clear counterfactual.
+- Valid: `shoe -> footprint in wet sand`, because contact pressure creates a persistent visible trace.
+- Invalid: `fire -> warmth`, because warmth is not directly visible.
+- Invalid or low priority: `wind -> moving leaves` in an outdoor scene, because many videos can contain moving leaves without a uniquely attributable source unless the wind source is explicitly controlled.
+
+### Pair Source Strategy
+
+For v0, candidate pairs are produced by structured human enumeration under the mechanism taxonomy, then checked against physical commonsense and clean-source generation. This is acceptable for the first benchmark version because the unit of contribution is the causal-footprint evaluation protocol, not mining a web-scale event ontology.
+
+For the paper version, the pair source story should be:
+
+- start from a mechanism taxonomy grounded in physical commonsense and intuitive-physics style evaluation;
+- enumerate candidate pairs within each mechanism type;
+- require each pair to pass validity checks, exclusivity checks, and clean-source generation checks;
+- report the distribution over mechanism types and temporal types;
+- keep discarded or exploratory pairs in a candidate log so the benchmark is auditable.
+
+External resources such as physical commonsense benchmarks, commonsense knowledge graphs, or action-video datasets can be cited as motivation for the taxonomy. They are not required to be the only source of v0 pairs. If time permits later, candidate pairs can be cross-checked against ConceptNet-style commonsense relations or action labels from video datasets, but v0 should not block on that.
+
+### Inclusion Criteria
+
+A pair can enter the benchmark candidate pool only if:
+
+- `C` is a concrete object, agent, material, or event participant that an erasure method can name in one to three English words.
+- `F(C)` is spatially or temporally separable from direct target evidence `E(C)`.
+- `F(C)` remains visible for enough frames to evaluate after the source event.
+- the source-to-footprint causal chain has at most three steps.
+- the counterfactual scene under `do(not C)` is easy to describe.
+- the prompt can constrain the background so `F(C)` is not likely to appear naturally.
+- the pair is not redundant with too many existing rows from the same mechanism and footprint type.
+
+### Exclusion Criteria
+
+A pair should be excluded or kept only as exploratory if:
+
+- `F(C)` is a direct visual part of `C`, not a downstream consequence.
+- `F(C)` is too generic to attribute to `C`, such as arbitrary water waves on a windy lake.
+- the effect is invisible, subjective, or only measurable by sensors.
+- the causal chain is too indirect or requires many hidden intermediate states.
+- `C` and `F(C)` overlap so strongly that target erasure and footprint persistence cannot be judged separately.
+- current T2V models rarely generate a clean-valid reference even after several seeds or prompt variants.
+
+### Pair-Level Scores
+
+Each candidate pair should record these scores before entering the final benchmark:
+
+| Field | Scale | Meaning |
+| --- | --- | --- |
+| `exclusivity_score` | 1-5 | How strongly the footprint implies the source event rather than many alternative causes. |
+| `counterfactual_clarity` | 1-5 | How clearly the footprint should disappear under `do(not C)`. |
+| `generatability_score` | 1-5 | How likely CogVideoX-style T2V models are to generate a clean source with both target and footprint visible. |
+| `erasure_targetability` | 1-5 | How easily the source concept can be named as an erasure target. |
+
+Operational definitions:
+
+- `exclusivity_score = 5`: the footprint strongly implies the source event, such as a shoe-shaped footprint in wet sand.
+- `exclusivity_score = 3`: the footprint has plausible alternative causes, but prompt constraints can reduce ambiguity, such as ripples in still water.
+- `exclusivity_score <= 2`: the footprint is too common or ambiguous for the main benchmark.
+- `counterfactual_clarity = 5`: the counterfactual scene is obvious and visually stable, such as an intact glass window without impact.
+- `generatability_score` is estimated first, then updated after clean-source screening.
+- `erasure_targetability = 5`: the target is a simple object noun such as `baseball`, `shoe`, or `magnet`.
+
+The main benchmark should prioritize rows with `exclusivity_score >= 4` and `counterfactual_clarity >= 4`. Lower-scoring rows can be used for stress tests but should not anchor the headline claim.
+
+### Prompt Template Rules
+
+Source prompts should use a controlled template:
+
+```text
+A realistic [shot_type] video of [C] [causal_action] [scene_or_object],
+causing [F(C)] [temporal_development]. [camera_or_style_suffix].
+```
+
+Examples:
+
+```text
+A realistic close-up video of a small pebble dropping into a still pond,
+causing circular ripples to spread outward across the water.
+
+A realistic side-view video of a baseball striking a clean glass window,
+causing branching cracks to spread across the glass.
+```
+
+Counterfactual prompts should describe the same scene under `do(not C)`:
+
+```text
+A realistic [shot_type] video of [same scene_or_object] in an undisturbed state.
+No [C] is present. [F(C)-free state description].
+```
+
+Examples:
+
+```text
+A realistic close-up video of a still pond with a calm, undisturbed surface.
+No pebble is present.
+
+A realistic side-view video of a clean, intact glass window.
+No baseball or impact object is present.
+```
+
+Prompt rules:
+
+- The source prompt may mention both `C` and `F(C)` because it is used to generate a clean causal reference.
+- The erasure target must be stored separately as `target_concept`.
+- If a method supports an explicit erasure target, use the original source prompt and pass `target_concept` separately.
+- If a method requires an edited prompt, remove direct mentions of `C` while preserving the non-target scene.
+- Counterfactual prompts should avoid unnecessarily naming the footprint when possible; if the footprint must be ruled out, describe the undisturbed state instead of repeatedly naming the missing effect.
+- Use background constraints such as `still pond`, `calm water`, `clean intact glass`, or `smooth untouched sand` to reduce natural alternative causes.
+
+### Controls and Negative Pairs
+
+The benchmark should include a small control set, separate from the main erasure rows:
+
+- **Natural-footprint controls:** scenes where a similar pattern appears without the target source, such as gentle natural waves without a pebble.
+- **No-footprint counterfactual controls:** the same scene under `do(not C)`, such as intact glass without baseball impact.
+- **Alternative-cause controls:** another visible cause explains the footprint, such as a visible fish causing ripples instead of a stone.
+
+Controls help defend against the objection that the benchmark labels any ripple, crack, or deformation as causal leakage. They also help calibrate MLLM and human annotators on the difference between true footprint persistence and background patterns.
+
+### Version Scale
+
+For a minimal runnable slice:
+
+- 16-24 high-confidence causal pairs.
+- At least five mechanism types.
+- No mechanism type should contribute more than one third of the slice.
+- At least 12 rows should have `exclusivity_score >= 4`.
+
+For the paper benchmark:
+
+- 30-50 causal pairs.
+- Two to three prompt variants for important pair types when compute permits.
+- A mechanism-type by temporal-type coverage table.
+- A released candidate log that marks accepted, rejected, and exploratory pairs.
+
+### Reviewer-Facing Dataset Construction Claim
+
+The intended paper wording is:
+
+```text
+We construct causal-footprint prompts by first defining a mechanism taxonomy
+grounded in physical commonsense, then enumerating candidate source-footprint
+pairs within each mechanism. A pair is retained only if the source can cause
+the footprint through an explicit short causal chain, the footprint is visually
+observable, the footprint should disappear under the counterfactual intervention
+do(not source), and the source can be named as an erasure target. We further
+filter generated clean references with a clean-source gate requiring visible
+source evidence, visible footprint evidence, plausible temporal order, and
+usable video quality. This separates benchmark construction from cherry-picked
+erasure failures.
+```
+
 ## Dataset Schema
 
 Benchmark rows should be stored as JSONL. Each row should use these fields:
@@ -145,6 +325,13 @@ Benchmark rows should be stored as JSONL. Each row should use these fields:
   "mechanism_type": "fluid_impact",
   "temporal_type": "delayed",
   "exclusivity_score": 5,
+  "counterfactual_clarity": 5,
+  "generatability_score": 4,
+  "erasure_targetability": 5,
+  "pair_source": "taxonomy_human_enumeration",
+  "control_prompts": [
+    "A realistic close-up video of a still shallow puddle with a calm, undisturbed water surface."
+  ],
   "counterfactual_prompt": "A realistic close-up video of a still shallow puddle with no raindrop impact, no crown splash, and no expanding ripples.",
   "erasure_prompt": "Remove the raindrop from the video.",
   "counterfactual_erasure_prompt": "Generate the video as if the raindrop never hit the puddle.",
@@ -158,6 +345,9 @@ Required field constraints:
 - `prompt`, `target_concept`, `mechanism_type`, `temporal_type`, and `exclusivity_score` are required.
 - `causal_footprints` must contain at least one footprint.
 - `exclusivity_score` uses a 1 to 5 scale. The main benchmark subset should use rows with score 4 or 5.
+- `counterfactual_clarity`, `generatability_score`, and `erasure_targetability` use a 1 to 5 scale.
+- `pair_source` records whether the pair came from taxonomy enumeration, external commonsense cross-checking, video dataset mining, or another auditable source.
+- `control_prompts` can be empty in v0 but should be present as a field.
 - `counterfactual_prompt` must describe the scene under `do(not C)`, not just say "without C".
 
 ## Clean-Source Gate
@@ -439,15 +629,17 @@ Response: v0 starts on CogVideoX-2B for controlled reproduction. The schema and 
 
 The first implementation phase should add:
 
-1. `benchmarks/causal_footprint_v0/items.jsonl`
-2. `benchmarks/causal_footprint_v0/annotation_template.tsv`
-3. `benchmarks/causal_footprint_v0/README.md`
-4. a validator that checks JSONL schema constraints and uniqueness;
-5. a prompt-export script that converts JSONL rows into the existing pipe-delimited prompt format used by the generation runners;
-6. an annotation metric script that reads the TSV/CSV and reports the v0 metrics;
-7. an MLLM chain-of-query prompt template for structured first-pass evaluation;
-8. a human calibration/adjudication template for strict-leak, unclear, and figure-selected samples;
-9. docs linking the benchmark to the existing baseline scheduler and contact-sheet workflow.
+1. `benchmarks/causal_footprint_v0/candidate_pairs.tsv`
+2. `benchmarks/causal_footprint_v0/items.jsonl`
+3. `benchmarks/causal_footprint_v0/control_prompts.jsonl`
+4. `benchmarks/causal_footprint_v0/annotation_template.tsv`
+5. `benchmarks/causal_footprint_v0/README.md`
+6. a validator that checks JSONL schema constraints, pair scores, and uniqueness;
+7. a prompt-export script that converts JSONL rows into the existing pipe-delimited prompt format used by the generation runners;
+8. an annotation metric script that reads the TSV/CSV and reports the v0 metrics;
+9. an MLLM chain-of-query prompt template for structured first-pass evaluation;
+10. a human calibration/adjudication template for strict-leak, unclear, and figure-selected samples;
+11. docs linking the benchmark to the existing baseline scheduler and contact-sheet workflow.
 
 The first implementation phase should not add a learned automatic video evaluator. Manual annotation plus MLLM first-pass scoring is more reliable for v0, and the existing contact-sheet tooling is enough for browsing and sample selection.
 
@@ -455,8 +647,11 @@ The first implementation phase should not add a learned automatic video evaluato
 
 Benchmark v0 is successful when:
 
+- a candidate-pair log records accepted, rejected, and exploratory pairs;
 - at least 30 structured prompt rows exist;
 - at least 20 rows have exclusivity score 4 or 5;
+- all accepted rows record pair-level scores and `pair_source`;
+- control prompts exist for the main high-exclusivity mechanism types;
 - JSONL validation passes;
 - prompt export produces files compatible with existing generation scripts;
 - annotation template includes the v0 scoring fields and temporal/causal fields;
