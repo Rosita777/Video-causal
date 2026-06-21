@@ -14,6 +14,8 @@ Current benchmark design spec:
 docs/superpowers/specs/2026-06-20-causal-footprint-benchmark-v0-design.md
 ```
 
+The current spec covers three pieces: causal-pair data construction, hybrid MLLM/human evaluation, and the first implementation targets for `benchmarks/causal_footprint_v0/`.
+
 ## Recovery Status
 
 This project is now tracked on GitHub and the active stable working copy is:
