@@ -9,10 +9,10 @@ Updated: 2026-06-21
 
 ## Experiments
 
-1. Which of the 24 generated clean videos pass the clean-source gate after full-video review?
-2. Which accepted candidates should be demoted because CogVideoX cannot generate a usable clean source?
-3. Should control prompts be generated now for annotation calibration, or after clean-valid benchmark rows are finalized?
-4. Which round3 clean-pass prompts should become canonical figure examples after checking full videos, not only middle frames?
+1. Which valid5 baseline outputs are true causal-footprint leakage, rather than ordinary target leakage or collapsed video?
+2. Which weak clean-source rows can be rescued by additional seeds, and which require prompt rewrites?
+3. How many clean-valid rows per mechanism type are enough for v0 before freezing the benchmark slice?
+4. Should control prompts be generated now for annotation calibration, or after clean-valid benchmark rows are finalized?
 5. Should the six missing round2 car-barrier `T2VUnlearning` / `SAFREE-CogVideoX` rows be regenerated for historical completeness, or left as recovered-pilot evidence only?
 
 ## Writing

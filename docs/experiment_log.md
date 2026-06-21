@@ -1211,3 +1211,63 @@ field_mediated_comb_paper_002
 **Weak backup rows:** `fluid_impact_raindrop_puddle_001`, `fluid_impact_hailstone_water_003`, `fluid_impact_ink_droplet_glass_004`, `surface_trace_tire_mud_002`, and `field_mediated_magnet_filings_001`. These have usable target/footprint cues but unclear temporal ordering, cropped target visibility, or weak separation between cause and footprint.
 
 **Interpretation:** The initial prompt pool is useful, but the clean-source gate is doing necessary filtering. The next practical step is to run more seeds or prompt variants for weak/rejected mechanisms before freezing v0; otherwise the final benchmark would overrepresent elastic deformation and underrepresent surface trace / agent-object response cases.
+
+## 2026-06-21: Valid5 Four-Baseline Parallel Run
+
+**Goal:** Run all required erasure baselines on the five strict clean-source-valid v0 rows before expanding the benchmark.
+
+**Code update:** `scripts/export_benchmark_prompts.py` now accepts `--clean-labels` and `--clean-source-valid`, so clean-source gate labels can drive prompt export without manual copying.
+
+**Exported valid5 prompts:**
+
+```text
+prompts/causal_footprint_v0_valid5.txt
+benchmarks/causal_footprint_v0/export_valid5_manifest.json
+```
+
+**Valid5 pairs:**
+
+```text
+fluid_impact_pebble_pond_002
+fracture_damage_rock_windshield_003
+elastic_deformation_soccer_net_001
+elastic_deformation_tennis_ball_racket_002
+field_mediated_comb_paper_002
+```
+
+**Run command shape:** Four erasure baselines, 5 prompts each, CogVideoX-2B, `bf16`, `480x720`, `49 frames`, `20 steps`, `seed=2100..2104`, scheduled as one job per GPU across 8 H800 GPUs.
+
+```bash
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/run_parallel_baseline_jobs.py \
+  --prompts prompts/causal_footprint_v0_valid5.txt \
+  --output-root outputs/baseline_suite_causal_footprint_v0_valid5_all_step20_parallel \
+  --model models/CogVideoX-2b \
+  --seed 2100 \
+  --steps 20 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --height 480 \
+  --width 720 \
+  --fps 8 \
+  --dtype bf16 \
+  --gpus 0,1,2,3,4,5,6,7 \
+  --slots-per-gpu 1 \
+  --poll-interval 5 \
+  --vae-slicing \
+  --vae-tiling
+```
+
+**Outputs:**
+
+```text
+outputs/baseline_suite_causal_footprint_v0_valid5_all_step20_parallel/
+outputs/baseline_suite_causal_footprint_v0_valid5_all_step20_parallel/parallel_job_manifest.json
+outputs/analysis_contact_sheets/causal_footprint_v0_valid5_baseline_step20/baseline_gallery.html
+outputs/analysis_contact_sheets/causal_footprint_v0_valid5_baseline_step20/baseline_overview_midframes.png
+experiments/baseline_runs/causal_footprint_v0_valid5_all_step20_parallel_summary.csv
+```
+
+**Result:** 20/20 jobs finished: 5 Negative Prompt, 5 SAFREE-CogVideoX, 5 VideoEraser local, and 5 T2V proxy videos.
+
+**Initial visual note:** The gallery already shows strong candidate failure modes. In several rows, baseline outputs keep the causal footprint (water ripples, glass cracks, net/string deformation, or lifted paper scraps) even when the target cause is weakened, absent, or visually ambiguous. The next step is manual annotation from the baseline gallery, because some outputs are ordinary target leakage rather than clean target-erased causal-footprint leakage.

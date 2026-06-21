@@ -1,0 +1,10 @@
+# Exported from candidate_pairs.tsv
+# Status filter: accepted_v0_slice
+# Clean-source label filter: valid
+# Format: <prompt> | <target> | <effect>
+
+A realistic close-up video of a small pebble dropping into a still pond, causing circular ripples to spread outward across the water. | pebble | circular ripples spread outward
+A realistic front-view video of a small rock hitting a clean car windshield, causing a spiderweb crack to appear and spread outward. | rock | spiderweb crack appears on windshield
+A realistic close-up video of a soccer ball hitting a goal net, causing the net to stretch and ripple backward. | soccer ball | net stretches and ripples backward
+A realistic slow-motion close-up video of a tennis ball hitting a racket, causing the racket strings to bend inward. | tennis ball | racket strings bend inward
+A realistic close-up video of a plastic comb moving near tiny paper scraps, causing the scraps to lift and cling together in a cluster. | comb | paper scraps lift and cling together

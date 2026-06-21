@@ -1,0 +1,88 @@
+{
+  "created_at_utc": "2026-06-21T06:46:48.090823+00:00",
+  "candidates": "benchmarks/causal_footprint_v0/candidate_pairs.tsv",
+  "output_prompts": "prompts/causal_footprint_v0_valid5.txt",
+  "status": "accepted_v0_slice",
+  "count": 5,
+  "items": [
+    {
+      "pair_id": "fluid_impact_pebble_pond_002",
+      "target_concept": "pebble",
+      "causal_footprint": "circular ripples spread outward",
+      "mechanism_type": "fluid_impact",
+      "temporal_type": "delayed",
+      "exclusivity_score": 4,
+      "counterfactual_clarity": 5,
+      "generatability_score": 5,
+      "erasure_targetability": 5,
+      "counterfactual_prompt": "A realistic close-up video of a still pond with a calm, undisturbed surface. No pebble is present.",
+      "control_prompt": "A realistic close-up video of a still pond where gentle background ripples move across the surface with no impact point.",
+      "clean_source_valid": "valid",
+      "clean_source_notes": "Pebble and outward ripples are visible; causal relation is usable."
+    },
+    {
+      "pair_id": "fracture_damage_rock_windshield_003",
+      "target_concept": "rock",
+      "causal_footprint": "spiderweb crack appears on windshield",
+      "mechanism_type": "fracture_damage",
+      "temporal_type": "persistent",
+      "exclusivity_score": 5,
+      "counterfactual_clarity": 5,
+      "generatability_score": 4,
+      "erasure_targetability": 5,
+      "counterfactual_prompt": "A realistic front-view video of a clean intact car windshield. No rock or impact object is present.",
+      "control_prompt": "A realistic front-view video of a car windshield with an old spiderweb crack and no flying rock.",
+      "clean_source_valid": "valid",
+      "clean_source_notes": "Rock appears before spiderweb cracks; usable causal chain."
+    },
+    {
+      "pair_id": "elastic_deformation_soccer_net_001",
+      "target_concept": "soccer ball",
+      "causal_footprint": "net stretches and ripples backward",
+      "mechanism_type": "elastic_deformation",
+      "temporal_type": "delayed",
+      "exclusivity_score": 4,
+      "counterfactual_clarity": 5,
+      "generatability_score": 5,
+      "erasure_targetability": 5,
+      "counterfactual_prompt": "A realistic close-up video of a still goal net hanging straight. No soccer ball is present.",
+      "control_prompt": "A realistic close-up video of a goal net moving in wind with no soccer ball impact.",
+      "clean_source_valid": "valid",
+      "clean_source_notes": "Soccer ball hits the net and visible net deformation/ripple follows."
+    },
+    {
+      "pair_id": "elastic_deformation_tennis_ball_racket_002",
+      "target_concept": "tennis ball",
+      "causal_footprint": "racket strings bend inward",
+      "mechanism_type": "elastic_deformation",
+      "temporal_type": "synchronous",
+      "exclusivity_score": 5,
+      "counterfactual_clarity": 5,
+      "generatability_score": 4,
+      "erasure_targetability": 5,
+      "counterfactual_prompt": "A realistic slow-motion close-up video of a tennis racket with straight undisturbed strings. No tennis ball is present.",
+      "control_prompt": "A realistic close-up video of a tennis racket with slightly warped strings and no incoming ball.",
+      "clean_source_valid": "valid",
+      "clean_source_notes": "Tennis ball and racket contact are visible; string deformation/contact is usable."
+    },
+    {
+      "pair_id": "field_mediated_comb_paper_002",
+      "target_concept": "comb",
+      "causal_footprint": "paper scraps lift and cling together",
+      "mechanism_type": "field_mediated",
+      "temporal_type": "delayed",
+      "exclusivity_score": 4,
+      "counterfactual_clarity": 4,
+      "generatability_score": 4,
+      "erasure_targetability": 5,
+      "counterfactual_prompt": "A realistic close-up video of tiny paper scraps resting flat on a table. No comb is present.",
+      "control_prompt": "A realistic close-up video of paper scraps being blown by a visible fan with no comb nearby.",
+      "clean_source_valid": "valid",
+      "clean_source_notes": "Comb and paper scraps are visible; lift/clustering cue is usable."
+    }
+  ],
+  "clean_labels": "experiments/clean_screening/causal_footprint_v0_clean_accepted24_initial_labels.csv",
+  "clean_source_valid": [
+    "valid"
+  ]
+}

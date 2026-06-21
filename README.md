@@ -22,6 +22,7 @@ Current benchmark candidate pool:
 benchmarks/causal_footprint_v0/candidate_pairs.tsv
 benchmarks/causal_footprint_v0/control_prompts.jsonl
 prompts/causal_footprint_v0_accepted24.txt
+prompts/causal_footprint_v0_valid5.txt
 ```
 
 ## Recovery Status
@@ -114,7 +115,7 @@ python -m pytest tests -q
 Expected lightweight result:
 
 ```text
-30 passed
+31 passed
 ```
 
 ## CogVideoX Clean Generation
@@ -239,7 +240,8 @@ video_concept_erasure_causal_footprint/
 │   ├── README.md
 │   ├── candidate_pairs.tsv
 │   ├── control_prompts.jsonl
-│   └── export_accepted24_manifest.json
+│   ├── export_accepted24_manifest.json
+│   └── export_valid5_manifest.json
 ├── experiments/pilot_week1/
 │   ├── causal_audit_round1/round1_summary.csv
 │   ├── causal_audit_round2_car_barrier/round2_summary.csv
@@ -248,9 +250,11 @@ video_concept_erasure_causal_footprint/
 ├── experiments/clean_screening/
 │   └── cogvideox_clean_screening_round1_seed200_summary.csv
 ├── experiments/baseline_runs/
-│   └── negative_prompt_round1_seed200_summary.csv
+│   ├── negative_prompt_round1_seed200_summary.csv
+│   └── causal_footprint_v0_valid5_all_step20_parallel_summary.csv
 ├── prompts/
 │   ├── causal_footprint_v0_accepted24.txt
+│   ├── causal_footprint_v0_valid5.txt
 │   ├── causal_pilot.txt
 │   ├── cogvideox_causal_screening.txt
 │   ├── cogvideox_clean_screening_round1.txt
@@ -272,7 +276,7 @@ video_concept_erasure_causal_footprint/
 
 ## Next Actions
 
-1. Review the initial clean-source labels in `experiments/clean_screening/causal_footprint_v0_clean_accepted24_initial_labels.csv` against `outputs/analysis_contact_sheets/causal_footprint_v0_clean_accepted24_step20/clean_gallery.html`. The gallery is a **Clean reference** review page, not an erasure-baseline comparison.
-2. Use the five `valid` rows for the first all-baseline pass, while rerunning more seeds or prompt variants for weak/rejected mechanisms.
-3. Convert agreed clean-valid rows into `items.jsonl`, then run all four baselines with the mixed scheduler.
-4. Build baseline contact sheets, annotate with the v0 rubric, and compute `CFP@TPS<=1`.
+1. Review `outputs/analysis_contact_sheets/causal_footprint_v0_valid5_baseline_step20/baseline_gallery.html` and annotate target visibility / causal-footprint leakage for the first all-baseline pass.
+2. Expand clean-source generation for weak/rejected mechanisms, especially surface trace and agent-object response, so v0 is not dominated by the easiest mechanisms.
+3. Convert agreed clean-valid rows into `items.jsonl`, then rerun all four baselines on the larger benchmark slice.
+4. Compute `CFP@TPS<=1` and separate failure modes: target leakage, target-erased causal footprint, and collapsed/low-quality video.
