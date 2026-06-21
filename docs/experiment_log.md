@@ -1143,6 +1143,8 @@ tests/test_export_benchmark_prompts.py
 
 **Scheduler update:** `scripts/run_parallel_baseline_jobs.py` now supports explicitly selected `--baseline clean` jobs while preserving the default four-erasure-baseline behavior.
 
+**Review tool update:** `scripts/build_clean_source_review.py` now generates both `clean_source_screening.csv` and a readable `clean_gallery.html`. Each gallery row explicitly labels the baseline as `Clean reference`, shows the full source prompt, target concept, expected causal footprint, pair id, mechanism type, an mp4 link, and a five-frame preview strip.
+
 **Exported prompts:**
 
 ```text
@@ -1160,6 +1162,18 @@ outputs/causal_footprint_v0_clean_accepted24_bf16_step20_parallel/clean/generati
 outputs/analysis_contact_sheets/causal_footprint_v0_clean_accepted24_step20/clean_gallery.html
 outputs/analysis_contact_sheets/causal_footprint_v0_clean_accepted24_step20/clean_overview_5frames.png
 outputs/analysis_contact_sheets/causal_footprint_v0_clean_accepted24_step20/qc_metrics.tsv
+```
+
+**Clean review gallery command:**
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/build_clean_source_review.py \
+  --manifest outputs/causal_footprint_v0_clean_accepted24_bf16_step20_parallel/clean/generation_manifest.json \
+  --metadata-manifest benchmarks/causal_footprint_v0/export_accepted24_manifest.json \
+  --output-dir outputs/analysis_contact_sheets/causal_footprint_v0_clean_accepted24_step20 \
+  --frames-per-video 5 \
+  --thumb-width 220 \
+  --thumb-height 124
 ```
 
 **Result:** 24/24 clean generation jobs finished and produced mp4 files.

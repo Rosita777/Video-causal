@@ -114,7 +114,7 @@ python -m pytest tests -q
 Expected lightweight result:
 
 ```text
-26 passed
+30 passed
 ```
 
 ## CogVideoX Clean Generation
@@ -238,7 +238,8 @@ video_concept_erasure_causal_footprint/
 ├── benchmarks/causal_footprint_v0/
 │   ├── README.md
 │   ├── candidate_pairs.tsv
-│   └── control_prompts.jsonl
+│   ├── control_prompts.jsonl
+│   └── export_accepted24_manifest.json
 ├── experiments/pilot_week1/
 │   ├── causal_audit_round1/round1_summary.csv
 │   ├── causal_audit_round2_car_barrier/round2_summary.csv
@@ -249,6 +250,7 @@ video_concept_erasure_causal_footprint/
 ├── experiments/baseline_runs/
 │   └── negative_prompt_round1_seed200_summary.csv
 ├── prompts/
+│   ├── causal_footprint_v0_accepted24.txt
 │   ├── causal_pilot.txt
 │   ├── cogvideox_causal_screening.txt
 │   ├── cogvideox_clean_screening_round1.txt
@@ -270,7 +272,7 @@ video_concept_erasure_causal_footprint/
 
 ## Next Actions
 
-1. Review `outputs/analysis_contact_sheets/causal_footprint_v0_clean_accepted24_step20/clean_gallery.html` and mark clean-valid rows.
+1. Review `outputs/analysis_contact_sheets/causal_footprint_v0_clean_accepted24_step20/clean_gallery.html` and mark clean-valid rows. This page is a **Clean reference** review page, not an erasure-baseline comparison; regenerate it with `scripts/build_clean_source_review.py` when clean manifests change.
 2. Demote weak accepted candidates in `candidate_pairs.tsv` or leave them as clean-source failures in the screening record.
 3. Convert clean-valid rows into `items.jsonl`, then run all four baselines with the mixed scheduler.
 4. Build baseline contact sheets, annotate with the v0 rubric, and compute `CFP@TPS<=1`.
