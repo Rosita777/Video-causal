@@ -9,7 +9,7 @@ Updated: 2026-06-21
 
 ## Experiments
 
-1. Which valid5 baseline outputs are true causal-footprint leakage, rather than ordinary target leakage or collapsed video?
+1. Which valid5 manual labels should be revised after joint review of the annotated gallery?
 2. Which weak clean-source rows can be rescued by additional seeds, and which require prompt rewrites?
 3. How many clean-valid rows per mechanism type are enough for v0 before freezing the benchmark slice?
 4. Should control prompts be generated now for annotation calibration, or after clean-valid benchmark rows are finalized?

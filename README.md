@@ -276,7 +276,7 @@ video_concept_erasure_causal_footprint/
 
 ## Next Actions
 
-1. Review `outputs/analysis_contact_sheets/causal_footprint_v0_valid5_baseline_step20/baseline_gallery.html` and annotate target visibility / causal-footprint leakage for the first all-baseline pass.
+1. Review the manual valid5 baseline labels in `experiments/baseline_runs/causal_footprint_v0_valid5_all_step20_parallel_summary.csv` against `outputs/analysis_contact_sheets/causal_footprint_v0_valid5_baseline_step20/baseline_gallery_annotated.html`.
 2. Expand clean-source generation for weak/rejected mechanisms, especially surface trace and agent-object response, so v0 is not dominated by the easiest mechanisms.
 3. Convert agreed clean-valid rows into `items.jsonl`, then rerun all four baselines on the larger benchmark slice.
 4. Compute `CFP@TPS<=1` and separate failure modes: target leakage, target-erased causal footprint, and collapsed/low-quality video.

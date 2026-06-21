@@ -1271,3 +1271,56 @@ experiments/baseline_runs/causal_footprint_v0_valid5_all_step20_parallel_summary
 **Result:** 20/20 jobs finished: 5 Negative Prompt, 5 SAFREE-CogVideoX, 5 VideoEraser local, and 5 T2V proxy videos.
 
 **Initial visual note:** The gallery already shows strong candidate failure modes. In several rows, baseline outputs keep the causal footprint (water ripples, glass cracks, net/string deformation, or lifted paper scraps) even when the target cause is weakened, absent, or visually ambiguous. The next step is manual annotation from the baseline gallery, because some outputs are ordinary target leakage rather than clean target-erased causal-footprint leakage.
+
+## 2026-06-21: Valid5 Baseline Manual Annotation
+
+**Annotation file:** The valid5 baseline summary now includes manual labels for target visibility, causal-effect visibility, causeless-effect status, video quality, claim usability, and failure mode.
+
+```text
+experiments/baseline_runs/causal_footprint_v0_valid5_all_step20_parallel_summary.csv
+```
+
+**Local review page:**
+
+```text
+outputs/analysis_contact_sheets/causal_footprint_v0_valid5_baseline_step20/baseline_gallery_annotated.html
+```
+
+**Label policy:**
+
+- `usable_for_claim=yes`: target cause is absent or effectively erased, while the causal footprint remains visible.
+- `usable_for_claim=borderline`: footprint remains, but there is residual target/cause ambiguity or an alternative visible cause.
+- `usable_for_claim=no`: ordinary target leakage, unclear footprint, or unusable output.
+
+**Counts:**
+
+```text
+usable_for_claim=yes: 9
+usable_for_claim=borderline: 3
+usable_for_claim=no: 8
+```
+
+Strong `yes` cases by baseline:
+
+```text
+negative_prompt: 2
+safree_cogvideox: 2
+videoeraser: 3
+t2vunlearning: 2
+```
+
+Strong examples:
+
+```text
+negative_prompt  + rock/windshield crack
+negative_prompt  + tennis/racket deformation
+safree_cogvideox + rock/windshield crack
+safree_cogvideox + tennis/racket deformation
+videoeraser      + soccer/net deformation
+videoeraser      + tennis/racket deformation
+videoeraser      + comb/paper scraps
+t2vunlearning    + soccer/net deformation
+t2vunlearning    + tennis/racket deformation
+```
+
+**Interpretation:** The first strict clean-valid slice already supports the core claim: existing erasure baselines can remove or strongly weaken the target cause while preserving downstream causal footprints. The cleanest current figure candidate is `tennis ball -> racket strings bend inward`, because all four baselines show the target-erased footprint failure. `rock -> windshield crack`, `soccer ball -> net deformation`, and `comb -> paper scraps` are also useful but differ by baseline.
