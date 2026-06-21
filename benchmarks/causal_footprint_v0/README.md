@@ -32,11 +32,17 @@ prompts/causal_footprint_v0_round4_clean_expansion48.txt
 experiments/clean_screening/causal_footprint_v0_round4_clean_expansion48_initial_labels.csv
 ```
 
-Initial round4 screening keeps 9 rows as clean-valid and 11 rows as backup/borderline. The next baseline run should use:
+Initial round4 screening keeps 9 rows as clean-valid and 11 rows as backup/borderline. The clean-valid slice is:
 
 ```text
 prompts/causal_footprint_v0_round4_clean_valid9.txt
 benchmarks/causal_footprint_v0/export_round4_clean_valid9_manifest.json
+```
+
+This slice has now been run on Negative Prompt, SAFREE-CogVideoX, VideoEraser local, and T2V proxy. Initial labels are tracked in:
+
+```text
+experiments/baseline_runs/causal_footprint_v0_round4_valid9_all_step20_parallel_summary.csv
 ```
 
 Round4 is not a replacement for the candidate-pair taxonomy. It is the clean-source generation pass that tests which taxonomy-driven pairs CogVideoX-2B can actually render well enough for erasure evaluation.

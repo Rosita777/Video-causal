@@ -1419,4 +1419,103 @@ round4_field_hair_dryer_ribbons_006
 
 **Interpretation:** Round4 confirms the benchmark needs an explicit clean-source gate. Strong categories remain water/ripple, windshield crack, soccer-net/racket deformation, and some field-mediated paper/ribbon motion. Surface trace and agent-object response still need prompt rewrites or additional seeds before they can support a balanced final v0 benchmark.
 
+## 2026-06-21: Round4 Valid9 Four-Baseline Parallel Run
+
+**Goal:** Run all required erasure baselines on the 9 clean-valid round4 sources so the benchmark claim is no longer supported by valid5 alone.
+
+**Prompt file:**
+
+```text
+prompts/causal_footprint_v0_round4_clean_valid9.txt
+```
+
+**Run command shape:** Four erasure baselines, 9 prompts each, CogVideoX-2B, `bf16`, `480x720`, `49 frames`, `20 steps`, `seed=4100..4108`, scheduled across 8 H800 GPUs.
+
+```bash
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/run_parallel_baseline_jobs.py \
+  --prompts prompts/causal_footprint_v0_round4_clean_valid9.txt \
+  --output-root outputs/baseline_suite_causal_footprint_v0_round4_valid9_all_step20_parallel \
+  --model models/CogVideoX-2b \
+  --seed 4100 \
+  --steps 20 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --height 480 \
+  --width 720 \
+  --fps 8 \
+  --dtype bf16 \
+  --gpus 0,1,2,3,4,5,6,7 \
+  --slots-per-gpu 1 \
+  --poll-interval 5 \
+  --vae-slicing \
+  --vae-tiling
+```
+
+**Runtime note:** The first scheduler process was terminated after completing prompt indices 0-3, leaving 16/36 mp4 files. The interrupted manifest was preserved locally as:
+
+```text
+outputs/baseline_suite_causal_footprint_v0_round4_valid9_all_step20_parallel/parallel_job_manifest_interrupted_prompt0_3.json
+```
+
+The remaining prompt indices 4-8 were then resumed with:
+
+```bash
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/run_parallel_baseline_jobs.py \
+  --prompts prompts/causal_footprint_v0_round4_clean_valid9.txt \
+  --source-indices 4,5,6,7,8 \
+  --output-root outputs/baseline_suite_causal_footprint_v0_round4_valid9_all_step20_parallel \
+  --model models/CogVideoX-2b \
+  --seed 4100 \
+  --steps 20 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --height 480 \
+  --width 720 \
+  --fps 8 \
+  --dtype bf16 \
+  --gpus 0,1,2,3,4,5,6,7 \
+  --slots-per-gpu 1 \
+  --poll-interval 5 \
+  --vae-slicing \
+  --vae-tiling
+```
+
+**Result:** 36/36 erasure videos finished: 9 Negative Prompt, 9 SAFREE-CogVideoX, 9 VideoEraser local, and 9 T2V proxy videos.
+
+**Review artifacts:**
+
+```text
+outputs/baseline_suite_causal_footprint_v0_round4_valid9_all_step20_parallel/
+outputs/analysis_contact_sheets/causal_footprint_v0_round4_valid9_baseline_step20/baseline_gallery.html
+outputs/analysis_contact_sheets/causal_footprint_v0_round4_valid9_baseline_step20/baseline_gallery_annotated.html
+outputs/analysis_contact_sheets/causal_footprint_v0_round4_valid9_baseline_step20/baseline_overview_5frames_annotated.png
+```
+
+**Tracked summary:**
+
+```text
+experiments/baseline_runs/causal_footprint_v0_round4_valid9_all_step20_parallel_summary.csv
+```
+
+**Initial erasure-output labels, excluding clean-reference rows:**
+
+```text
+usable_for_claim=yes: 18
+usable_for_claim=borderline: 9
+usable_for_claim=no: 9
+```
+
+Strong `yes` cases by baseline:
+
+```text
+negative_prompt: 4
+safree_cogvideox: 4
+videoeraser: 5
+t2vunlearning: 5
+```
+
+**Interpretation:** Round4-valid9 strengthens the core observation. Stronger cases include ink plumes after droplet removal, tire tracks after tire removal, windshield cracks after rock removal, goal-net/racket deformation after ball removal, paper scraps after comb removal, and ribbons/streamers moving after fan or hair dryer removal. Some rows remain ordinary target leakage or residual-cause ambiguity; these are retained in the summary rather than silently filtered out.
+
 **Interpretation:** The first strict clean-valid slice already supports the core claim: existing erasure baselines can remove or strongly weaken the target cause while preserving downstream causal footprints. The cleanest current figure candidate is `tennis ball -> racket strings bend inward`, because all four baselines show the target-erased footprint failure. `rock -> windshield crack`, `soccer ball -> net deformation`, and `comb -> paper scraps` are also useful but differ by baseline.

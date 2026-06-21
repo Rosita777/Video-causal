@@ -108,7 +108,10 @@ Fresh clean-source expansion:
 
 - `benchmarks/causal_footprint_v0/round4_clean_expansion_prompts.tsv` contains 48 taxonomy-driven clean-source variants, 8 per mechanism type.
 - `experiments/clean_screening/causal_footprint_v0_round4_clean_expansion48_initial_labels.csv` records initial visual labels: 9 `yes`, 11 `borderline`, 28 `no`.
-- `prompts/causal_footprint_v0_round4_clean_valid9.txt` is the next recommended prompt file for a four-baseline run.
+- `prompts/causal_footprint_v0_round4_clean_valid9.txt` has been run on all four required baselines.
+- Manual round4-valid9 labels are tracked in `experiments/baseline_runs/causal_footprint_v0_round4_valid9_all_step20_parallel_summary.csv`.
+- Annotated local gallery: `outputs/analysis_contact_sheets/causal_footprint_v0_round4_valid9_baseline_step20/baseline_gallery_annotated.html`.
+- Initial round4-valid9 erasure-output counts: 18 `yes`, 9 `borderline`, 9 `no`.
 
 ## Baseline Policy
 
@@ -271,7 +274,8 @@ video_concept_erasure_causal_footprint/
 │   └── causal_footprint_v0_round4_clean_expansion48_initial_labels.csv
 ├── experiments/baseline_runs/
 │   ├── negative_prompt_round1_seed200_summary.csv
-│   └── causal_footprint_v0_valid5_all_step20_parallel_summary.csv
+│   ├── causal_footprint_v0_valid5_all_step20_parallel_summary.csv
+│   └── causal_footprint_v0_round4_valid9_all_step20_parallel_summary.csv
 ├── prompts/
 │   ├── causal_footprint_v0_accepted24.txt
 │   ├── causal_footprint_v0_valid5.txt
@@ -298,7 +302,7 @@ video_concept_erasure_causal_footprint/
 
 ## Next Actions
 
-1. Review the round4 annotated clean-source gallery at `outputs/analysis_contact_sheets/causal_footprint_v0_round4_clean_expansion48_step20/clean_gallery_annotated.html`.
-2. Run all four baselines on `prompts/causal_footprint_v0_round4_clean_valid9.txt` with the parallel suite.
+1. Jointly review the round4-valid9 annotated baseline gallery at `outputs/analysis_contact_sheets/causal_footprint_v0_round4_valid9_baseline_step20/baseline_gallery_annotated.html`.
+2. Revise any disputed round4-valid9 labels in `experiments/baseline_runs/causal_footprint_v0_round4_valid9_all_step20_parallel_summary.csv`.
 3. Merge agreed valid5 and round4 clean-valid rows into `items.jsonl`, then add control prompts for metric calibration.
 4. Compute `CFP@TPS<=1` and separate failure modes: target leakage, target-erased causal footprint, and collapsed/low-quality video.
