@@ -1179,3 +1179,35 @@ PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/build_
 **Result:** 24/24 clean generation jobs finished and produced mp4 files.
 
 **Initial visual note:** Several prompts are clearly not clean-valid yet. Stronger-looking rows include water impact, some glass/crack cases, soccer-net deformation, tennis-racket deformation, magnet/filings, comb/paper, and possibly key/door. Weak rows include hand/clay, marker/whiteboard, hammer/tile, dropped cup, finger/rubber sheet, switch/lamp, and several rows where the target concept is absent even if the footprint appears. The next step is manual clean-source screening from the gallery before exporting final `items.jsonl`.
+
+## 2026-06-21: Initial Clean-Source Gate Labels for Accepted24
+
+**Annotation file:**
+
+```text
+experiments/clean_screening/causal_footprint_v0_clean_accepted24_initial_labels.csv
+```
+
+**Screening rule:** A source video is marked `valid` only when the target cause is visible, the expected causal footprint is visible, temporal order is reasonably clear, and the footprint plausibly depends on the target. Videos with visible footprint but missing target cause are marked `reject`, because they would confound later erasure analysis.
+
+**Counts under strict initial screening:**
+
+```text
+valid: 5
+weak: 5
+reject: 14
+```
+
+**Valid rows for first baseline pass:**
+
+```text
+fluid_impact_pebble_pond_002
+fracture_damage_rock_windshield_003
+elastic_deformation_soccer_net_001
+elastic_deformation_tennis_ball_racket_002
+field_mediated_comb_paper_002
+```
+
+**Weak backup rows:** `fluid_impact_raindrop_puddle_001`, `fluid_impact_hailstone_water_003`, `fluid_impact_ink_droplet_glass_004`, `surface_trace_tire_mud_002`, and `field_mediated_magnet_filings_001`. These have usable target/footprint cues but unclear temporal ordering, cropped target visibility, or weak separation between cause and footprint.
+
+**Interpretation:** The initial prompt pool is useful, but the clean-source gate is doing necessary filtering. The next practical step is to run more seeds or prompt variants for weak/rejected mechanisms before freezing v0; otherwise the final benchmark would overrepresent elastic deformation and underrepresent surface trace / agent-object response cases.

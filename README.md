@@ -272,7 +272,7 @@ video_concept_erasure_causal_footprint/
 
 ## Next Actions
 
-1. Review `outputs/analysis_contact_sheets/causal_footprint_v0_clean_accepted24_step20/clean_gallery.html` and mark clean-valid rows. This page is a **Clean reference** review page, not an erasure-baseline comparison; regenerate it with `scripts/build_clean_source_review.py` when clean manifests change.
-2. Demote weak accepted candidates in `candidate_pairs.tsv` or leave them as clean-source failures in the screening record.
-3. Convert clean-valid rows into `items.jsonl`, then run all four baselines with the mixed scheduler.
+1. Review the initial clean-source labels in `experiments/clean_screening/causal_footprint_v0_clean_accepted24_initial_labels.csv` against `outputs/analysis_contact_sheets/causal_footprint_v0_clean_accepted24_step20/clean_gallery.html`. The gallery is a **Clean reference** review page, not an erasure-baseline comparison.
+2. Use the five `valid` rows for the first all-baseline pass, while rerunning more seeds or prompt variants for weak/rejected mechanisms.
+3. Convert agreed clean-valid rows into `items.jsonl`, then run all four baselines with the mixed scheduler.
 4. Build baseline contact sheets, annotate with the v0 rubric, and compute `CFP@TPS<=1`.
