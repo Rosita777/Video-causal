@@ -35,6 +35,21 @@ def load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def load_metadata_tsv(path: Path) -> list[dict[str, str]]:
+    with path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle, delimiter="\t")
+        if reader.fieldnames is None:
+            raise ValueError(f"{path}: missing header")
+        rows = list(reader)
+    normalized = []
+    for row in rows:
+        item = dict(row)
+        if "pair_id" not in item and "round4_id" in item:
+            item["pair_id"] = item["round4_id"]
+        normalized.append(item)
+    return normalized
+
+
 def safe_stem(text: str) -> str:
     cleaned = re.sub(r"[^a-zA-Z0-9_.-]+", "-", text).strip("-")
     return cleaned[:80] or "case"
@@ -261,6 +276,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--metadata-manifest", type=Path)
+    parser.add_argument("--metadata-tsv", type=Path)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--project-root", type=Path, default=Path.cwd())
     parser.add_argument("--videos-per-sheet", type=int, default=5)
@@ -269,11 +285,18 @@ def main() -> int:
     parser.add_argument("--thumb-height", type=int, default=160)
     parser.add_argument("--skip-frame-extraction", action="store_true")
     args = parser.parse_args()
+    if args.metadata_manifest and args.metadata_tsv:
+        parser.error("use only one of --metadata-manifest or --metadata-tsv")
 
     data = load_json(args.manifest)
     metadata_items = []
     if args.metadata_manifest:
         metadata_items = load_json(args.metadata_manifest).get("items", [])
+    if args.metadata_tsv:
+        try:
+            metadata_items = load_metadata_tsv(args.metadata_tsv)
+        except ValueError as exc:
+            parser.exit(2, f"{exc}\n")
     args.output_dir.mkdir(parents=True, exist_ok=True)
     rows = normalize_rows(data, metadata_items)
     csv_path = write_csv(rows, args.output_dir)

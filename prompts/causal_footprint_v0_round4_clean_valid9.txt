@@ -1,0 +1,12 @@
+# Round4 clean-valid source prompts selected from causal_footprint_v0_round4_clean_expansion48 initial labels.
+# Format: <prompt> | <target> | <effect>
+
+A high-speed close-up video of a single water droplet falling into a mirror-like puddle, causing a crown splash followed by circular ripples. | water droplet | crown splash and circular ripples
+A macro video of a distinct blue ink droplet entering a clear glass of still water from above, causing a blue plume to bloom downward through the transparent water. | blue ink droplet | blue plume blooms downward
+A realistic side close-up video of a bicycle tire entering the frame and rolling through soft wet mud, leaving a sharp tire track behind it. | bicycle tire | tire track remains in mud
+A fixed front-view video of a small dark rock flying into a clean car windshield, causing a spiderweb crack to spread outward from the impact point. | rock | spiderweb crack spreads on windshield
+A realistic close-up video of a black-and-white soccer ball hitting the center of a white goal net, causing the net to stretch backward and ripple. | soccer ball | net stretches backward
+A slow-motion close-up video of a bright yellow tennis ball hitting the center of a tennis racket, causing the racket strings to bend inward. | tennis ball | racket strings bend inward
+A close-up video of a yellow plastic comb moving near tiny white paper scraps on a blue table, causing the scraps to lift toward the comb. | plastic comb | paper scraps lift toward comb
+A fixed close-up video of a small desk fan blowing toward hanging paper streamers, causing the streamers to bend backward and flutter. | fan | paper streamers bend backward
+A side-view video of a black hair dryer blowing toward colorful ribbons, causing the ribbons to flutter and bend away from the air stream. | hair dryer | ribbons flutter away

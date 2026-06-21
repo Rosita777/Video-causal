@@ -21,8 +21,11 @@ Current benchmark candidate pool:
 ```text
 benchmarks/causal_footprint_v0/candidate_pairs.tsv
 benchmarks/causal_footprint_v0/control_prompts.jsonl
+benchmarks/causal_footprint_v0/round4_clean_expansion_prompts.tsv
 prompts/causal_footprint_v0_accepted24.txt
 prompts/causal_footprint_v0_valid5.txt
+prompts/causal_footprint_v0_round4_clean_expansion48.txt
+prompts/causal_footprint_v0_round4_clean_valid9.txt
 ```
 
 ## Recovery Status
@@ -94,6 +97,19 @@ Strict causal-footprint positives:
 - T2VUnlearning: none so far.
 - SAFREE-CogVideoX: none so far.
 
+Fresh v0 baseline evidence on the current CogVideoX-2B slice:
+
+- `prompts/causal_footprint_v0_valid5.txt` has been run on all four required baselines.
+- Manual valid5 baseline labels are tracked in `experiments/baseline_runs/causal_footprint_v0_valid5_all_step20_parallel_summary.csv`.
+- Annotated local gallery: `outputs/analysis_contact_sheets/causal_footprint_v0_valid5_baseline_step20/baseline_gallery_annotated.html`.
+- Strong usable causal-footprint leakage examples: 9 / 20 outputs.
+
+Fresh clean-source expansion:
+
+- `benchmarks/causal_footprint_v0/round4_clean_expansion_prompts.tsv` contains 48 taxonomy-driven clean-source variants, 8 per mechanism type.
+- `experiments/clean_screening/causal_footprint_v0_round4_clean_expansion48_initial_labels.csv` records initial visual labels: 9 `yes`, 11 `borderline`, 28 `no`.
+- `prompts/causal_footprint_v0_round4_clean_valid9.txt` is the next recommended prompt file for a four-baseline run.
+
 ## Baseline Policy
 
 The required comparison rows are:
@@ -115,7 +131,7 @@ python -m pytest tests -q
 Expected lightweight result:
 
 ```text
-31 passed
+32 passed
 ```
 
 ## CogVideoX Clean Generation
@@ -241,20 +257,26 @@ video_concept_erasure_causal_footprint/
 │   ├── candidate_pairs.tsv
 │   ├── control_prompts.jsonl
 │   ├── export_accepted24_manifest.json
-│   └── export_valid5_manifest.json
+│   ├── export_valid5_manifest.json
+│   ├── export_round4_clean_valid9_manifest.json
+│   └── round4_clean_expansion_prompts.tsv
 ├── experiments/pilot_week1/
 │   ├── causal_audit_round1/round1_summary.csv
 │   ├── causal_audit_round2_car_barrier/round2_summary.csv
 │   ├── causal_audit_round3_liquid_surface/round3_summary.csv
 │   └── cross_round_summary/
 ├── experiments/clean_screening/
-│   └── cogvideox_clean_screening_round1_seed200_summary.csv
+│   ├── cogvideox_clean_screening_round1_seed200_summary.csv
+│   ├── causal_footprint_v0_clean_accepted24_initial_labels.csv
+│   └── causal_footprint_v0_round4_clean_expansion48_initial_labels.csv
 ├── experiments/baseline_runs/
 │   ├── negative_prompt_round1_seed200_summary.csv
 │   └── causal_footprint_v0_valid5_all_step20_parallel_summary.csv
 ├── prompts/
 │   ├── causal_footprint_v0_accepted24.txt
 │   ├── causal_footprint_v0_valid5.txt
+│   ├── causal_footprint_v0_round4_clean_expansion48.txt
+│   ├── causal_footprint_v0_round4_clean_valid9.txt
 │   ├── causal_pilot.txt
 │   ├── cogvideox_causal_screening.txt
 │   ├── cogvideox_clean_screening_round1.txt
@@ -276,7 +298,7 @@ video_concept_erasure_causal_footprint/
 
 ## Next Actions
 
-1. Review the manual valid5 baseline labels in `experiments/baseline_runs/causal_footprint_v0_valid5_all_step20_parallel_summary.csv` against `outputs/analysis_contact_sheets/causal_footprint_v0_valid5_baseline_step20/baseline_gallery_annotated.html`.
-2. Expand clean-source generation for weak/rejected mechanisms, especially surface trace and agent-object response, so v0 is not dominated by the easiest mechanisms.
-3. Convert agreed clean-valid rows into `items.jsonl`, then rerun all four baselines on the larger benchmark slice.
+1. Review the round4 annotated clean-source gallery at `outputs/analysis_contact_sheets/causal_footprint_v0_round4_clean_expansion48_step20/clean_gallery_annotated.html`.
+2. Run all four baselines on `prompts/causal_footprint_v0_round4_clean_valid9.txt` with the parallel suite.
+3. Merge agreed valid5 and round4 clean-valid rows into `items.jsonl`, then add control prompts for metric calibration.
 4. Compute `CFP@TPS<=1` and separate failure modes: target leakage, target-erased causal footprint, and collapsed/low-quality video.

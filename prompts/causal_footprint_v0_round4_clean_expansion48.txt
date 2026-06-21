@@ -1,0 +1,52 @@
+# Round4 clean-source expansion prompts.
+# Exported manually from benchmarks/causal_footprint_v0/round4_clean_expansion_prompts.tsv.
+# Format: <prompt> | <target> | <effect>
+
+A fixed-camera macro video of a small dark bead falling from above into perfectly still clear water at the center of the frame, causing circular ripples to spread outward after impact. | dark bead | circular ripples spread outward
+A realistic slow-motion close-up video of a transparent glass marble dropping into a shallow tray of water, causing a small splash and expanding ripples across the surface. | glass marble | splash and expanding ripples
+A high-speed close-up video of a single water droplet falling into a mirror-like puddle, causing a crown splash followed by circular ripples. | water droplet | crown splash and circular ripples
+A macro video of a distinct blue ink droplet entering a clear glass of still water from above, causing a blue plume to bloom downward through the transparent water. | blue ink droplet | blue plume blooms downward
+A realistic close-up video of a clear ice cube dropping into a glass of dark cola, causing bubbles and a small splash to rise around the impact point. | ice cube | bubbles and splash rise
+A slow-motion close-up video of a bright green lime slice falling into a clear bowl of water, causing water to splash upward and rings to move outward. | lime slice | water splashes and rings outward
+A top-down realistic video of a small gray pebble dropping into a blue basin of still water, causing neat ripple rings to expand from the center. | pebble | ripple rings expand across blue water
+A close-up slow-motion video of a shiny metal ball falling into calm water, causing the water surface to dent, splash, and form expanding ripples. | metal ball | water surface dents and ripples
+A fixed close-up video of a square rubber stamp pressing down onto clean white paper and lifting away, leaving a dark ink stamp mark on the paper. | rubber stamp | ink stamp mark remains
+A top-down close-up video of a black pen tip drawing a short curved line on white paper, causing the black line to remain after the pen moves away. | black pen | black line remains on paper
+A realistic close-up video of a small paint roller moving across a white wall, leaving a thick blue stripe behind it. | paint roller | blue stripe remains on wall
+A macro video of a finger dragging through a flat layer of white flour on a dark tray, leaving a clear groove in the flour after the finger passes. | finger | groove remains in flour
+A low-angle close-up video of a small red toy car rolling across smooth damp sand, leaving two parallel tire tracks behind it. | toy car | two tire tracks remain in sand
+A realistic side close-up video of a bicycle tire entering the frame and rolling through soft wet mud, leaving a sharp tire track behind it. | bicycle tire | tire track remains in mud
+A close-up video of a dark winter boot stepping into clean white snow and lifting away, leaving a crisp bootprint in the snow. | boot | bootprint remains in snow
+A top-down close-up video of a hand pressing into a smooth slab of wet clay and lifting away, leaving a detailed handprint in the clay. | hand | handprint remains in wet clay
+A fixed front-view video of a small dark rock flying into a clean car windshield, causing a spiderweb crack to spread outward from the impact point. | rock | spiderweb crack spreads on windshield
+A slow-motion close-up video of a small metal ball striking a thin clear ice sheet, causing radial cracks to spread across the ice. | metal ball | radial cracks spread across ice
+A realistic close-up video of a hammer head tapping the center of a clear glass tile, causing a dark crack to spread across the tile. | hammer | crack spreads across glass tile
+A slow-motion video of a white ceramic mug falling onto a dark hard floor and breaking, causing ceramic pieces to scatter outward. | ceramic mug | broken pieces scatter on floor
+A side-view video of a white baseball flying into a clean window pane, causing branching cracks to spread across the glass. | baseball | branching cracks spread across window
+A realistic close-up video of a white golf ball hitting a clean car windshield, causing a star-shaped crack to appear at the impact point. | golf ball | star crack appears on windshield
+A close-up video of a white egg dropping onto a dark kitchen counter, causing the eggshell to crack open and spread into broken pieces. | egg | cracked shell spreads open
+A top-down close-up video of a small black rock hitting a thin sheet of glass, causing cracks to radiate outward from the impact point. | rock | cracks radiate across thin glass
+A side-view slow-motion video of an orange basketball landing on a black trampoline surface, causing the trampoline fabric to dip downward. | basketball | trampoline surface dips downward
+A close-up video of a red rubber ball landing on a soft white pillow, causing a round dent to form in the pillow. | rubber ball | pillow dents downward
+A macro video of a finger pressing into a clear silicone gel pad, causing the gel surface to indent downward under the finger. | finger | gel surface indents
+A close-up video of a hand pressing down on a vertical metal spring, causing the spring coils to compress tightly together. | hand | spring coils compress
+A slow-motion video of a white ping pong ball hitting a hanging blue curtain, causing the curtain fabric to billow backward. | ping pong ball | curtain billows backward
+A side-view video of a red boxing glove striking a black punching bag, causing the bag surface to dent inward and swing backward. | boxing glove | punching bag dents and swings
+A realistic close-up video of a black-and-white soccer ball hitting the center of a white goal net, causing the net to stretch backward and ripple. | soccer ball | net stretches backward
+A slow-motion close-up video of a bright yellow tennis ball hitting the center of a tennis racket, causing the racket strings to bend inward. | tennis ball | racket strings bend inward
+A top-down close-up video of a black bar magnet sliding near scattered iron filings on white paper, causing the filings to curve into magnetic field lines. | magnet | iron filings curve into field lines
+A close-up video of a yellow plastic comb moving near tiny white paper scraps on a blue table, causing the scraps to lift toward the comb. | plastic comb | paper scraps lift toward comb
+A close-up video of a red balloon moving near loose hair strands, causing the hair strands to rise up and cling toward the balloon. | balloon | hair strands rise and cling
+A top-down close-up video of a blue plastic ruler moving near tiny paper pieces, causing the paper pieces to jump upward and cluster under the ruler. | plastic ruler | paper pieces jump upward
+A fixed close-up video of a small desk fan blowing toward hanging paper streamers, causing the streamers to bend backward and flutter. | fan | paper streamers bend backward
+A side-view video of a black hair dryer blowing toward colorful ribbons, causing the ribbons to flutter and bend away from the air stream. | hair dryer | ribbons flutter away
+A close-up video of a round speaker cone vibrating under a thin layer of sand grains, causing the grains to form visible vibration patterns. | speaker | sand grains form vibration patterns
+A top-down video of a magnet moving underneath a sheet of white paper with iron filings on top, causing the filings to align into curved lines. | magnet | iron filings align into curved lines
+A close-up video of a finger pressing a red button on a small device, causing a green LED light next to it to turn on. | red button | LED light turns on
+A fixed close-up video of a hand flipping a white wall switch upward, causing a table lamp in the background to turn on and glow. | wall switch | lamp turns on
+A living-room video with a remote control large in the foreground pointing at a television, causing the television screen to turn on and glow blue. | remote control | television screen turns on
+A close-up video of a silver key turning inside a door lock, causing the deadbolt latch to slide open. | key | deadbolt slides open
+A side-view close-up video of a finger pushing the first domino in a short row, causing the dominoes to topple one after another. | finger | dominoes topple in sequence
+A close-up video of a hand turning a chrome faucet handle, causing clear water to start flowing from the faucet. | faucet handle | water starts flowing
+A close-up video of a finger pressing a round elevator button, causing the button light to turn on after the press. | elevator button | button light turns on
+A close-up video of a finger pressing a laptop keyboard key, causing the dark laptop screen to wake up and glow. | keyboard key | screen wakes up

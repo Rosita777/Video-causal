@@ -1,0 +1,102 @@
+{
+  "created_at_utc": "2026-06-21T08:05:40.679802+00:00",
+  "source_prompts": "prompts/causal_footprint_v0_round4_clean_expansion48.txt",
+  "source_metadata": "benchmarks/causal_footprint_v0/round4_clean_expansion_prompts.tsv",
+  "screening_labels": "experiments/clean_screening/causal_footprint_v0_round4_clean_expansion48_initial_labels.csv",
+  "review_gallery": "outputs/analysis_contact_sheets/causal_footprint_v0_round4_clean_expansion48_step20/clean_gallery_annotated.html",
+  "output_prompts": "prompts/causal_footprint_v0_round4_clean_valid9.txt",
+  "status": "initial_clean_valid_slice",
+  "count": 9,
+  "items": [
+    {
+      "source_index": 2,
+      "pair_id": "round4_fluid_impact_water_droplet_puddle_003",
+      "mechanism_type": "fluid_impact",
+      "target_concept": "water droplet",
+      "causal_footprint": "crown splash and circular ripples",
+      "prompt": "A high-speed close-up video of a single water droplet falling into a mirror-like puddle, causing a crown splash followed by circular ripples.",
+      "clean_source_valid": "yes",
+      "clean_source_notes": "Droplet/impact point and expanding ripple/crown sequence are visible."
+    },
+    {
+      "source_index": 3,
+      "pair_id": "round4_fluid_impact_blue_ink_droplet_004",
+      "mechanism_type": "fluid_impact",
+      "target_concept": "blue ink droplet",
+      "causal_footprint": "blue plume blooms downward",
+      "prompt": "A macro video of a distinct blue ink droplet entering a clear glass of still water from above, causing a blue plume to bloom downward through the transparent water.",
+      "clean_source_valid": "yes",
+      "clean_source_notes": "Blue source is partly cropped at the top, but the downward plume progression is clear."
+    },
+    {
+      "source_index": 13,
+      "pair_id": "round4_surface_trace_bicycle_tire_mud_006",
+      "mechanism_type": "surface_trace",
+      "target_concept": "bicycle tire",
+      "causal_footprint": "tire track remains in mud",
+      "prompt": "A realistic side close-up video of a bicycle tire entering the frame and rolling through soft wet mud, leaving a sharp tire track behind it.",
+      "clean_source_valid": "yes",
+      "clean_source_notes": "Bicycle tire enters/leaves frame and a muddy tire track remains visible."
+    },
+    {
+      "source_index": 16,
+      "pair_id": "round4_fracture_rock_windshield_001",
+      "mechanism_type": "fracture_damage",
+      "target_concept": "rock",
+      "causal_footprint": "spiderweb crack spreads on windshield",
+      "prompt": "A fixed front-view video of a small dark rock flying into a clean car windshield, causing a spiderweb crack to spread outward from the impact point.",
+      "clean_source_valid": "yes",
+      "clean_source_notes": "Rock appears before a spiderweb crack expands and remains on the windshield."
+    },
+    {
+      "source_index": 30,
+      "pair_id": "round4_elastic_soccer_net_variant_007",
+      "mechanism_type": "elastic_deformation",
+      "target_concept": "soccer ball",
+      "causal_footprint": "net stretches backward",
+      "prompt": "A realistic close-up video of a black-and-white soccer ball hitting the center of a white goal net, causing the net to stretch backward and ripple.",
+      "clean_source_valid": "yes",
+      "clean_source_notes": "Soccer ball and net deformation are clearly visible across frames."
+    },
+    {
+      "source_index": 31,
+      "pair_id": "round4_elastic_tennis_racket_variant_008",
+      "mechanism_type": "elastic_deformation",
+      "target_concept": "tennis ball",
+      "causal_footprint": "racket strings bend inward",
+      "prompt": "A slow-motion close-up video of a bright yellow tennis ball hitting the center of a tennis racket, causing the racket strings to bend inward.",
+      "clean_source_valid": "yes",
+      "clean_source_notes": "Tennis ball contact and racket-string bending are clearly visible."
+    },
+    {
+      "source_index": 33,
+      "pair_id": "round4_field_comb_paper_002",
+      "mechanism_type": "field_mediated",
+      "target_concept": "plastic comb",
+      "causal_footprint": "paper scraps lift toward comb",
+      "prompt": "A close-up video of a yellow plastic comb moving near tiny white paper scraps on a blue table, causing the scraps to lift toward the comb.",
+      "clean_source_valid": "yes",
+      "clean_source_notes": "Comb enters above paper scraps and scraps visibly react/cluster; usable field-mediated source."
+    },
+    {
+      "source_index": 36,
+      "pair_id": "round4_field_fan_streamers_005",
+      "mechanism_type": "field_mediated",
+      "target_concept": "fan",
+      "causal_footprint": "paper streamers bend backward",
+      "prompt": "A fixed close-up video of a small desk fan blowing toward hanging paper streamers, causing the streamers to bend backward and flutter.",
+      "clean_source_valid": "yes",
+      "clean_source_notes": "Fan and streamers are visible; streamers bend consistently backward."
+    },
+    {
+      "source_index": 37,
+      "pair_id": "round4_field_hair_dryer_ribbons_006",
+      "mechanism_type": "field_mediated",
+      "target_concept": "hair dryer",
+      "causal_footprint": "ribbons flutter away",
+      "prompt": "A side-view video of a black hair dryer blowing toward colorful ribbons, causing the ribbons to flutter and bend away from the air stream.",
+      "clean_source_valid": "yes",
+      "clean_source_notes": "Hair dryer and colorful ribbons are visible with clear fluttering response."
+    }
+  ]
+}

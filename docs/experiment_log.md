@@ -1323,4 +1323,100 @@ t2vunlearning    + soccer/net deformation
 t2vunlearning    + tennis/racket deformation
 ```
 
+## 2026-06-21: Round4 Clean-Source Expansion48
+
+**Motivation:** valid5 proves the problem but is too small for a benchmark claim. Round4 expands clean-source candidates using taxonomy-driven prompt variants before running more erasure baselines.
+
+**Prompt sources:**
+
+```text
+benchmarks/causal_footprint_v0/round4_clean_expansion_prompts.tsv
+prompts/causal_footprint_v0_round4_clean_expansion48.txt
+```
+
+**Design:** 48 clean-source prompts, 8 per mechanism type:
+
+```text
+fluid_impact: 8
+surface_trace: 8
+fracture_damage: 8
+elastic_deformation: 8
+field_mediated: 8
+agent_or_object_response: 8
+```
+
+**Generation command shape:** CogVideoX-2B, `bf16`, `480x720`, `49 frames`, `20 steps`, `seed=3100..3147`, scheduled across 8 H800 GPUs with one clean generation job per GPU slot.
+
+```bash
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/run_parallel_baseline_jobs.py \
+  --baseline clean \
+  --prompts prompts/causal_footprint_v0_round4_clean_expansion48.txt \
+  --output-root outputs/causal_footprint_v0_round4_clean_expansion48_bf16_step20_parallel \
+  --model models/CogVideoX-2b \
+  --seed 3100 \
+  --steps 20 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --height 480 \
+  --width 720 \
+  --fps 8 \
+  --dtype bf16 \
+  --gpus 0,1,2,3,4,5,6,7 \
+  --slots-per-gpu 1 \
+  --poll-interval 5 \
+  --vae-slicing \
+  --vae-tiling
+```
+
+**Result:** 48/48 clean jobs finished and produced mp4 files. Generated media remains under ignored `outputs/`.
+
+**Review artifacts:**
+
+```text
+outputs/causal_footprint_v0_round4_clean_expansion48_bf16_step20_parallel/clean/generation_manifest.json
+outputs/analysis_contact_sheets/causal_footprint_v0_round4_clean_expansion48_step20/clean_gallery.html
+outputs/analysis_contact_sheets/causal_footprint_v0_round4_clean_expansion48_step20/clean_gallery_annotated.html
+outputs/analysis_contact_sheets/causal_footprint_v0_round4_clean_expansion48_step20/clean_overview_5frames_annotated.png
+```
+
+**Review tool update:** `scripts/build_clean_source_review.py` now also accepts `--metadata-tsv`, so expansion TSV files can drive gallery labels without first creating a JSON manifest.
+
+**Tracked initial labels:**
+
+```text
+experiments/clean_screening/causal_footprint_v0_round4_clean_expansion48_initial_labels.csv
+```
+
+**Initial clean-source counts:**
+
+```text
+yes: 9
+borderline: 11
+no: 28
+```
+
+**Clean-valid rows exported for next baseline run:**
+
+```text
+prompts/causal_footprint_v0_round4_clean_valid9.txt
+benchmarks/causal_footprint_v0/export_round4_clean_valid9_manifest.json
+```
+
+The 9 current `yes` rows are:
+
+```text
+round4_fluid_impact_water_droplet_puddle_003
+round4_fluid_impact_blue_ink_droplet_004
+round4_surface_trace_bicycle_tire_mud_006
+round4_fracture_rock_windshield_001
+round4_elastic_soccer_net_variant_007
+round4_elastic_tennis_racket_variant_008
+round4_field_comb_paper_002
+round4_field_fan_streamers_005
+round4_field_hair_dryer_ribbons_006
+```
+
+**Interpretation:** Round4 confirms the benchmark needs an explicit clean-source gate. Strong categories remain water/ripple, windshield crack, soccer-net/racket deformation, and some field-mediated paper/ribbon motion. Surface trace and agent-object response still need prompt rewrites or additional seeds before they can support a balanced final v0 benchmark.
+
 **Interpretation:** The first strict clean-valid slice already supports the core claim: existing erasure baselines can remove or strongly weaken the target cause while preserving downstream causal footprints. The cleanest current figure candidate is `tennis ball -> racket strings bend inward`, because all four baselines show the target-erased footprint failure. `rock -> windshield crack`, `soccer ball -> net deformation`, and `comb -> paper scraps` are also useful but differ by baseline.
