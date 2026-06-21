@@ -1080,3 +1080,52 @@ The spec now defines:
 - controlled source and counterfactual prompt templates;
 - natural-footprint, no-footprint, and alternative-cause control prompts;
 - v0 and paper-scale target sizes.
+
+## 2026-06-21: Causal Footprint Candidate Pair Pool v0
+
+**Goal:** Start implementing the benchmark data construction protocol with an auditable candidate pool rather than directly writing final benchmark items.
+
+**Files added:**
+
+```text
+benchmarks/causal_footprint_v0/README.md
+benchmarks/causal_footprint_v0/candidate_pairs.tsv
+benchmarks/causal_footprint_v0/control_prompts.jsonl
+```
+
+**Candidate pool shape:**
+
+```text
+36 total candidate pairs
+24 accepted_v0_slice
+8 exploratory
+4 rejected
+```
+
+Mechanism coverage is balanced:
+
+```text
+fluid_impact: 6
+surface_trace: 6
+fracture_damage: 6
+elastic_deformation: 6
+field_mediated: 6
+agent_or_object_response: 6
+```
+
+Accepted v0 slice coverage:
+
+```text
+fluid_impact: 4
+surface_trace: 5
+fracture_damage: 4
+elastic_deformation: 4
+field_mediated: 3
+agent_or_object_response: 4
+```
+
+**Controls:** `control_prompts.jsonl` currently contains 8 controls covering natural-footprint, no-footprint counterfactual, prior-footprint, and alternative-cause cases.
+
+**Validation:** A local TSV/JSONL parse check found no duplicate `pair_id` values and no out-of-range pair-level scores.
+
+**Interpretation:** This is still a candidate pool, not the final benchmark. The next step is to review the accepted slice, adjust scores/status if needed, then export accepted rows into the generation prompt format for clean-source screening.

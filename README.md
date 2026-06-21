@@ -16,6 +16,13 @@ docs/superpowers/specs/2026-06-20-causal-footprint-benchmark-v0-design.md
 
 The current spec covers three pieces: causal-pair data construction, hybrid MLLM/human evaluation, and the first implementation targets for `benchmarks/causal_footprint_v0/`.
 
+Current benchmark candidate pool:
+
+```text
+benchmarks/causal_footprint_v0/candidate_pairs.tsv
+benchmarks/causal_footprint_v0/control_prompts.jsonl
+```
+
 ## Recovery Status
 
 This project is now tracked on GitHub and the active stable working copy is:
@@ -225,7 +232,12 @@ video_concept_erasure_causal_footprint/
 │   ├── current_open_questions.md
 │   ├── experiment_log.md
 │   ├── recovery_status.md
-│   └── research_notes.md
+│   ├── research_notes.md
+│   └── superpowers/specs/2026-06-20-causal-footprint-benchmark-v0-design.md
+├── benchmarks/causal_footprint_v0/
+│   ├── README.md
+│   ├── candidate_pairs.tsv
+│   └── control_prompts.jsonl
 ├── experiments/pilot_week1/
 │   ├── causal_audit_round1/round1_summary.csv
 │   ├── causal_audit_round2_car_barrier/round2_summary.csv
@@ -249,15 +261,15 @@ video_concept_erasure_causal_footprint/
 │   ├── adapters/run_videoeraser_cogvideox.py
 │   ├── adapters/run_t2vunlearning_cogvideox.py
 │   ├── run_baseline_suite.py
+│   ├── run_parallel_baseline_jobs.py
 │   └── run_pilot.py
 └── tests/
 ```
 
 ## Next Actions
 
-1. Expand CogVideoX clean-source screening for more seeds/templates.
-2. Manually review the clean / Negative Prompt / SAFREE-CogVideoX contact sheets for `ice_cube_seed200` and `stone_seed204`.
-3. Run the full four-baseline suite on clean-valid cases once GPU memory is available.
-4. Review and annotate the VideoEraser-local and T2VUnlearning-local smoke/full outputs separately from official-code claims.
-5. Fill the six round2 car-barrier `T2VUnlearning` / `SAFREE-CogVideoX` coverage gaps.
-6. Continue the causal-footprint audit from the recovered cross-round matrix.
+1. Review `benchmarks/causal_footprint_v0/candidate_pairs.tsv` and adjust accepted/exploratory/rejected status if needed.
+2. Export accepted candidates into the existing `prompt | target | effect` format for clean-source generation.
+3. Run clean-source screening on the accepted slice and apply the clean-source gate.
+4. Convert clean-valid rows into `items.jsonl`, then run all four baselines with the mixed scheduler.
+5. Build contact sheets, annotate with the v0 rubric, and compute `CFP@TPS<=1`.
