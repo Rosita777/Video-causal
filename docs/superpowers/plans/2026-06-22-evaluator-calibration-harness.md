@@ -47,4 +47,4 @@
 - [x] Document the calibration interface and generated artifacts.
 - [x] Run `PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python -m pytest tests -q`.
 - [x] Run `git diff --check`.
-- [ ] Commit and push.
+- [x] Commit and push.
