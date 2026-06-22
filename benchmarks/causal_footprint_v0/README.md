@@ -126,6 +126,40 @@ experiments/eval_calibration/calibration_metrics_summary.md
 
 `example_predictions.csv` is an oracle copy of the human labels for schema testing only. It is not an automatic evaluator result.
 
+## Contact-Sheet VLM Inputs
+
+The first real scorer interface uses 5-frame contact sheets rather than raw videos. This keeps model calls cheaper and mirrors the current human review workflow.
+
+Generate VLM inputs:
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/build_vlm_eval_inputs.py \
+  --gold experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv \
+  --sheet-dir experiments/eval_calibration/frame_sheets \
+  --output experiments/eval_calibration/vlm_inputs.csv
+```
+
+Current local generation result:
+
+```text
+vlm input rows: 56
+contact sheets generated locally: 56
+missing videos: 0
+```
+
+The contact-sheet JPEGs under `experiments/eval_calibration/frame_sheets/` are generated media and are intentionally ignored by git. Regenerate them from local videos when needed.
+
+Generate dry-run request payloads:
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/evaluate_with_vlm.py \
+  --inputs experiments/eval_calibration/vlm_inputs.csv \
+  --output-jsonl experiments/eval_calibration/vlm_payloads_dryrun.jsonl \
+  --dry-run
+```
+
+`vlm_payloads_dryrun.jsonl` contains the exact prompt, image path, target concept, expected effect, and required JSON response schema for each scorer call. It does not include `human_label`, so gold labels are not leaked into model prompts.
+
 ## Current Clean-Source Slices
 
 The current strict baseline slice is `valid5`:

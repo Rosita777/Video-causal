@@ -1627,3 +1627,58 @@ other_failure: 6
 ```text
 item_id,baseline,video_path,target_absent,effect_visible,quality_ok,pred_label,confidence,reason
 ```
+
+## 2026-06-22: VLM Contact-Sheet Dry-Run Inputs
+
+**Goal:** Prepare the first third-party VLM scorer input layer without making external API calls.
+
+**Input gold file:**
+
+```text
+experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv
+```
+
+**Contact-sheet command:**
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/build_vlm_eval_inputs.py \
+  --gold experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv \
+  --sheet-dir experiments/eval_calibration/frame_sheets \
+  --output experiments/eval_calibration/vlm_inputs.csv \
+  --frames-per-video 5 \
+  --thumb-width 192 \
+  --thumb-height 128
+```
+
+**Dry-run payload command:**
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/evaluate_with_vlm.py \
+  --inputs experiments/eval_calibration/vlm_inputs.csv \
+  --output-jsonl experiments/eval_calibration/vlm_payloads_dryrun.jsonl \
+  --dry-run
+```
+
+**Tracked artifacts:**
+
+```text
+experiments/eval_calibration/vlm_inputs.csv
+experiments/eval_calibration/vlm_payloads_dryrun.jsonl
+```
+
+**Local generated media, ignored by git:**
+
+```text
+experiments/eval_calibration/frame_sheets/
+```
+
+**Result:**
+
+```text
+VLM input rows: 56
+contact sheets generated: 56
+missing videos: 0
+dry-run payloads: 56
+```
+
+**Interpretation:** The project now has a complete pre-API evaluator path: generated videos are represented as 5-frame contact sheets, model prompts are deterministic, and future third-party VLM responses can be converted into the existing prediction CSV schema for calibration.
