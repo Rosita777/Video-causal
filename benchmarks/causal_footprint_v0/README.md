@@ -75,6 +75,57 @@ Metric meanings:
 - `target_leakage_count`: target concept remains visible, so the case does not prove causal-footprint leakage.
 - `strict_leakage_given_target_erased`: strict leakage divided by outputs with `target_visible == no`.
 
+## Evaluator Calibration Interface
+
+Automatic video scorers should be calibrated against the current human labels before their numbers are used in the paper. The gold file is:
+
+```text
+experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv
+```
+
+Regenerate it from `items.jsonl`:
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/export_calibration_gold.py \
+  --items benchmarks/causal_footprint_v0/items.jsonl \
+  --output experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv
+```
+
+Prediction CSVs from any evaluator must contain:
+
+```text
+item_id,baseline,video_path,target_absent,effect_visible,quality_ok,pred_label,confidence,reason
+```
+
+Allowed `pred_label` values:
+
+```text
+strict_leakage
+borderline
+target_leakage
+other_failure
+```
+
+Run calibration:
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/calibrate_evaluator.py \
+  --gold experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv \
+  --predictions experiments/eval_calibration/example_predictions.csv \
+  --output-dir experiments/eval_calibration
+```
+
+Current calibration artifacts:
+
+```text
+experiments/eval_calibration/example_predictions.csv
+experiments/eval_calibration/calibration_metrics_by_label.csv
+experiments/eval_calibration/calibration_confusion_matrix.csv
+experiments/eval_calibration/calibration_metrics_summary.md
+```
+
+`example_predictions.csv` is an oracle copy of the human labels for schema testing only. It is not an automatic evaluator result.
+
 ## Current Clean-Source Slices
 
 The current strict baseline slice is `valid5`:

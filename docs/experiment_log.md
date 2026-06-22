@@ -1577,3 +1577,53 @@ videoeraser: 8 / 14
 ```
 
 **Interpretation:** The current evidence now supports a benchmark-style problem statement rather than only selected examples. The headline count stays conservative by separating ordinary target leakage from target-erased causal-footprint leakage. The next research step is to expand clean-source coverage and calibrate automatic scoring against these human labels.
+
+## 2026-06-22: Evaluator Calibration Harness
+
+**Goal:** Standardize how future automatic video evaluators will be compared against the current 56-row human-labeled causal-footprint gold set.
+
+**Design note:** This is not a VLM run. The purpose is to lock the gold schema, prediction schema, join key, and calibration metrics before plugging in any specific scorer.
+
+**Gold export command:**
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/export_calibration_gold.py \
+  --items benchmarks/causal_footprint_v0/items.jsonl \
+  --output experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv
+```
+
+**Calibration command using oracle-format smoke predictions:**
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/calibrate_evaluator.py \
+  --gold experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv \
+  --predictions experiments/eval_calibration/example_predictions.csv \
+  --output-dir experiments/eval_calibration
+```
+
+**Tracked artifacts:**
+
+```text
+experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv
+experiments/eval_calibration/example_predictions.csv
+experiments/eval_calibration/calibration_metrics_by_label.csv
+experiments/eval_calibration/calibration_confusion_matrix.csv
+experiments/eval_calibration/calibration_metrics_summary.md
+```
+
+**Gold label support:**
+
+```text
+strict_leakage: 24
+borderline: 12
+target_leakage: 14
+other_failure: 6
+```
+
+**Smoke result:** `example_predictions.csv` copies the human labels into the prediction schema, so strict leakage F1, relaxed leakage F1, and macro F1 are all 1.0000. This only verifies the calibration interface; it is not an automatic evaluator result.
+
+**Next step:** plug in one real scorer that writes the required prediction schema:
+
+```text
+item_id,baseline,video_path,target_absent,effect_visible,quality_ok,pred_label,confidence,reason
+```

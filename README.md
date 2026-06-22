@@ -121,6 +121,7 @@ Formal benchmark-v0 artifact:
 - Metrics are generated from `items.jsonl` under `experiments/metrics/`.
 - Conservative current counts: 24 / 56 strict causal-footprint leakage, 12 / 56 borderline causal-footprint cases, 14 / 56 target-leakage failures.
 - By baseline strict leakage: Negative Prompt 5 / 14, SAFREE-CogVideoX 5 / 14, T2V proxy 6 / 14, VideoEraser local 8 / 14.
+- Evaluator calibration gold and schema-smoke files are under `experiments/eval_calibration/`.
 
 Regenerate the formal artifact and tables:
 
@@ -133,6 +134,19 @@ PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/build_
 PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/compute_benchmark_metrics.py \
   --items benchmarks/causal_footprint_v0/items.jsonl \
   --output-dir experiments/metrics
+```
+
+Regenerate the evaluator calibration gold file and run the oracle-format smoke test:
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/export_calibration_gold.py \
+  --items benchmarks/causal_footprint_v0/items.jsonl \
+  --output experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv
+
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/calibrate_evaluator.py \
+  --gold experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv \
+  --predictions experiments/eval_calibration/example_predictions.csv \
+  --output-dir experiments/eval_calibration
 ```
 
 ## Baseline Policy
@@ -156,7 +170,7 @@ python -m pytest tests -q
 Expected lightweight result:
 
 ```text
-35 passed
+39 passed
 ```
 
 ## CogVideoX Clean Generation
@@ -303,6 +317,12 @@ video_concept_erasure_causal_footprint/
 │   ├── causal_footprint_v0_metrics_by_baseline.csv
 │   ├── causal_footprint_v0_metrics_by_mechanism.csv
 │   └── causal_footprint_v0_metrics_summary.md
+├── experiments/eval_calibration/
+│   ├── causal_footprint_v0_gold_outputs.csv
+│   ├── example_predictions.csv
+│   ├── calibration_metrics_by_label.csv
+│   ├── calibration_confusion_matrix.csv
+│   └── calibration_metrics_summary.md
 ├── prompts/
 │   ├── causal_footprint_v0_accepted24.txt
 │   ├── causal_footprint_v0_valid5.txt
@@ -316,8 +336,10 @@ video_concept_erasure_causal_footprint/
 │   ├── build_baseline_comparison.py
 │   ├── build_benchmark_items.py
 │   ├── build_clean_source_review.py
+│   ├── calibrate_evaluator.py
 │   ├── check_baselines.py
 │   ├── compute_benchmark_metrics.py
+│   ├── export_calibration_gold.py
 │   ├── generate_cogvideox_clean.py
 │   ├── adapters/run_safree_cogvideox.py
 │   ├── adapters/run_videoeraser_cogvideox.py
@@ -332,6 +354,6 @@ video_concept_erasure_causal_footprint/
 ## Next Actions
 
 1. Add another clean-source expansion pass to increase mechanism balance and reduce dependence on the current 14-item slice.
-2. Calibrate automatic video scoring against the current human labels, especially strict vs borderline causal-footprint leakage.
+2. Plug one real automatic video scorer into the calibration schema and compare it against the current 56-row human gold set.
 3. Add no-source and alternative-cause controls to separate real causal footprints from generic visual priors.
 4. Start method design only after the benchmark/evaluation story is stable enough to support a paper claim.
