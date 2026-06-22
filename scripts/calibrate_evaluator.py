@@ -61,6 +61,8 @@ def join_gold_predictions(
     gold_rows: list[dict[str, str]],
     prediction_rows: list[dict[str, str]],
     prediction_path: Path,
+    *,
+    allow_partial: bool = False,
 ) -> list[tuple[str, str]]:
     predictions_by_key = index_rows(prediction_rows, prediction_path)
     joined = []
@@ -72,7 +74,7 @@ def join_gold_predictions(
             missing.append(key)
         else:
             joined.append((gold["human_label"], prediction["pred_label"]))
-    if missing:
+    if missing and not allow_partial:
         raise ValueError(f"missing predictions for: {', '.join(missing[:10])}")
 
     extra = sorted(set(predictions_by_key) - {output_key(row) for row in gold_rows})
@@ -190,13 +192,13 @@ def write_summary(
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def calibrate(gold_path: Path, prediction_path: Path, output_dir: Path) -> int:
+def calibrate(gold_path: Path, prediction_path: Path, output_dir: Path, *, allow_partial: bool = False) -> int:
     gold_rows = read_csv(gold_path, GOLD_FIELDS)
     prediction_rows = read_csv(prediction_path, PREDICTION_FIELDS)
     validate_labels(gold_rows, "human_label", gold_path)
     validate_labels(prediction_rows, "pred_label", prediction_path)
 
-    pairs = join_gold_predictions(gold_rows, prediction_rows, prediction_path)
+    pairs = join_gold_predictions(gold_rows, prediction_rows, prediction_path, allow_partial=allow_partial)
     label_rows = label_metrics(pairs)
     confusion = confusion_rows(pairs)
     strict_binary = binary_metrics(pairs, {"strict_leakage"})
@@ -213,6 +215,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--gold", type=Path, required=True)
     parser.add_argument("--predictions", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--allow-partial", action="store_true")
     return parser
 
 
@@ -220,7 +223,7 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     try:
-        count = calibrate(args.gold, args.predictions, args.output_dir)
+        count = calibrate(args.gold, args.predictions, args.output_dir, allow_partial=args.allow_partial)
     except ValueError as exc:
         parser.exit(2, f"{exc}\n")
     print(f"Calibrated {count} predictions into {args.output_dir}")

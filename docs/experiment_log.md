@@ -1682,3 +1682,58 @@ dry-run payloads: 56
 ```
 
 **Interpretation:** The project now has a complete pre-API evaluator path: generated videos are represented as 5-frame contact sheets, model prompts are deterministic, and future third-party VLM responses can be converted into the existing prediction CSV schema for calibration.
+
+## 2026-06-22: GPT-4o Scorer Attempt and GPT-4o-mini Fallback Smoke
+
+**Goal:** Start real VLM judging with a mainstream OpenAI model.
+
+**Preferred model:** `openai/gpt-4o`.
+
+**Endpoint status:** The provided `https://api.360.cn/v1` endpoint lists `openai/gpt-4o`, but real image requests returned:
+
+```text
+当前分组 default 下对于模型 gpt-4o 无可用渠道
+```
+
+The same image request format worked with `openai/gpt-4o-mini`, so the blocker is model-channel availability rather than API key or image payload format.
+
+**Fallback smoke command:**
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/evaluate_with_vlm.py \
+  --inputs experiments/eval_calibration/vlm_inputs.csv \
+  --output-predictions experiments/eval_calibration/gpt4o_mini_sample8_predictions.csv \
+  --raw-output-jsonl experiments/eval_calibration/gpt4o_mini_sample8_raw.jsonl \
+  --run-api \
+  --model openai/gpt-4o-mini \
+  --api-config-file /home/deepseek_VG/JUNCHI/Diffusion-Personalization-Target-Alignment/token.txt \
+  --limit 8 \
+  --temperature 0 \
+  --max-tokens 300 \
+  --timeout 120
+
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/calibrate_evaluator.py \
+  --gold experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv \
+  --predictions experiments/eval_calibration/gpt4o_mini_sample8_predictions.csv \
+  --output-dir experiments/eval_calibration/gpt4o_mini_sample8 \
+  --allow-partial
+```
+
+**Tracked artifacts:**
+
+```text
+experiments/eval_calibration/gpt4o_mini_sample8_predictions.csv
+experiments/eval_calibration/gpt4o_mini_sample8_raw.jsonl
+experiments/eval_calibration/gpt4o_mini_sample8/
+```
+
+**Calibration result:**
+
+```text
+matched predictions: 8
+strict leakage binary F1: 0.4000
+relaxed leakage binary F1: 0.7692
+macro F1: 0.1000
+```
+
+**Interpretation:** `gpt-4o-mini` predicted `strict_leakage` for all 8 sample rows, including rows manually labeled as `target_leakage`, `borderline`, and `other_failure`. It is useful only as a pipeline smoke test and should not be used as the main judge. The next real scorer run should use full `openai/gpt-4o` once the endpoint has an available channel, or use another mainstream strong VLM as an explicitly documented fallback.

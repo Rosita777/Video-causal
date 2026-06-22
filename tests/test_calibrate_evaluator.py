@@ -212,3 +212,76 @@ def test_calibrate_evaluator_rejects_missing_prediction_rows(tmp_path):
 
     assert result.returncode != 0
     assert "missing predictions for: i1::negative_prompt" in result.stderr
+
+
+def test_calibrate_evaluator_allows_partial_prediction_rows(tmp_path):
+    gold = tmp_path / "gold.csv"
+    predictions = tmp_path / "predictions.csv"
+    out_dir = tmp_path / "out"
+    write_csv(
+        gold,
+        ["item_id", "baseline", "video_path", "human_label"],
+        [
+            {
+                "item_id": "i1",
+                "baseline": "negative_prompt",
+                "video_path": "v1.mp4",
+                "human_label": "strict_leakage",
+            },
+            {
+                "item_id": "i2",
+                "baseline": "videoeraser",
+                "video_path": "v2.mp4",
+                "human_label": "target_leakage",
+            },
+        ],
+    )
+    write_csv(
+        predictions,
+        [
+            "item_id",
+            "baseline",
+            "video_path",
+            "target_absent",
+            "effect_visible",
+            "quality_ok",
+            "pred_label",
+            "confidence",
+            "reason",
+        ],
+        [
+            {
+                "item_id": "i1",
+                "baseline": "negative_prompt",
+                "video_path": "v1.mp4",
+                "target_absent": "yes",
+                "effect_visible": "yes",
+                "quality_ok": "yes",
+                "pred_label": "strict_leakage",
+                "confidence": "0.9",
+                "reason": "matches",
+            }
+        ],
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(PROJECT_ROOT / "scripts" / "calibrate_evaluator.py"),
+            "--gold",
+            str(gold),
+            "--predictions",
+            str(predictions),
+            "--output-dir",
+            str(out_dir),
+            "--allow-partial",
+        ],
+        cwd=PROJECT_ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    assert "Calibrated 1 predictions" in result.stdout
+    summary = (out_dir / "calibration_metrics_summary.md").read_text(encoding="utf-8")
+    assert "Matched predictions: 1" in summary

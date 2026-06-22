@@ -163,6 +163,31 @@ PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/evalua
   --dry-run
 ```
 
+Current real VLM scorer status:
+
+- `openai/gpt-4o` is the preferred primary judge, but the current `https://api.360.cn/v1` default group returned `no available channel` for this model on 2026-06-22.
+- `openai/gpt-4o-mini` was run as a fallback smoke on the first 8 rows, but it over-predicted `strict_leakage` for all 8 rows and is not reliable enough as the main judge.
+- Sample artifacts are under `experiments/eval_calibration/gpt4o_mini_sample8*`.
+
+Run a real scorer sample once the desired model is available:
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/evaluate_with_vlm.py \
+  --inputs experiments/eval_calibration/vlm_inputs.csv \
+  --output-predictions experiments/eval_calibration/gpt4o_sample8_predictions.csv \
+  --raw-output-jsonl experiments/eval_calibration/gpt4o_sample8_raw.jsonl \
+  --run-api \
+  --model openai/gpt-4o \
+  --api-config-file /path/to/local/token.txt \
+  --limit 8
+
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/calibrate_evaluator.py \
+  --gold experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv \
+  --predictions experiments/eval_calibration/gpt4o_sample8_predictions.csv \
+  --output-dir experiments/eval_calibration/gpt4o_sample8 \
+  --allow-partial
+```
+
 ## Baseline Policy
 
 The required comparison rows are:
@@ -184,7 +209,7 @@ python -m pytest tests -q
 Expected lightweight result:
 
 ```text
-43 passed
+48 passed
 ```
 
 ## CogVideoX Clean Generation
@@ -338,7 +363,10 @@ video_concept_erasure_causal_footprint/
 │   ├── calibration_confusion_matrix.csv
 │   ├── calibration_metrics_summary.md
 │   ├── vlm_inputs.csv
-│   └── vlm_payloads_dryrun.jsonl
+│   ├── vlm_payloads_dryrun.jsonl
+│   ├── gpt4o_mini_sample8_predictions.csv
+│   ├── gpt4o_mini_sample8_raw.jsonl
+│   └── gpt4o_mini_sample8/
 ├── prompts/
 │   ├── causal_footprint_v0_accepted24.txt
 │   ├── causal_footprint_v0_valid5.txt
@@ -372,6 +400,6 @@ video_concept_erasure_causal_footprint/
 ## Next Actions
 
 1. Add another clean-source expansion pass to increase mechanism balance and reduce dependence on the current 14-item slice.
-2. Plug one real VLM adapter into the dry-run payload schema and compare its predictions against the current 56-row human gold set.
+2. Re-run the first 8-row scorer sample with full `openai/gpt-4o` once the API channel is available; do not use `gpt-4o-mini` as the main judge.
 3. Add no-source and alternative-cause controls to separate real causal footprints from generic visual priors.
 4. Start method design only after the benchmark/evaluation story is stable enough to support a paper claim.

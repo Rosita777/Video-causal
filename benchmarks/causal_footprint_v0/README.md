@@ -160,6 +160,56 @@ PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/evalua
 
 `vlm_payloads_dryrun.jsonl` contains the exact prompt, image path, target concept, expected effect, and required JSON response schema for each scorer call. It does not include `human_label`, so gold labels are not leaked into model prompts.
 
+## GPT-4o Scorer Status
+
+The preferred primary VLM judge is `openai/gpt-4o`, because it is a mainstream model that is easier to justify in a paper. On 2026-06-22, the provided `https://api.360.cn/v1` default group listed the model but returned:
+
+```text
+gpt-4o: no available channel
+```
+
+The implemented API path is ready, but the full GPT-4o sample is blocked until that channel is available.
+
+Fallback smoke:
+
+```text
+model: openai/gpt-4o-mini
+sample rows: first 8 VLM inputs
+matched predictions: 8
+strict leakage binary F1: 0.4000
+relaxed leakage binary F1: 0.7692
+macro F1: 0.1000
+```
+
+`gpt-4o-mini` predicted `strict_leakage` for all 8 sample rows, including target-leakage and borderline human labels. It should not be used as the main judge.
+
+Artifacts:
+
+```text
+experiments/eval_calibration/gpt4o_mini_sample8_predictions.csv
+experiments/eval_calibration/gpt4o_mini_sample8_raw.jsonl
+experiments/eval_calibration/gpt4o_mini_sample8/
+```
+
+Run the preferred GPT-4o sample when the channel is available:
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/evaluate_with_vlm.py \
+  --inputs experiments/eval_calibration/vlm_inputs.csv \
+  --output-predictions experiments/eval_calibration/gpt4o_sample8_predictions.csv \
+  --raw-output-jsonl experiments/eval_calibration/gpt4o_sample8_raw.jsonl \
+  --run-api \
+  --model openai/gpt-4o \
+  --api-config-file /path/to/local/token.txt \
+  --limit 8
+
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/calibrate_evaluator.py \
+  --gold experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv \
+  --predictions experiments/eval_calibration/gpt4o_sample8_predictions.csv \
+  --output-dir experiments/eval_calibration/gpt4o_sample8 \
+  --allow-partial
+```
+
 ## Current Clean-Source Slices
 
 The current strict baseline slice is `valid5`:
