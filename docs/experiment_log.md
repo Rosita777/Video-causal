@@ -1521,3 +1521,59 @@ t2vunlearning: 4
 **Re-review note:** Five labels were made more conservative after prompt-by-prompt inspection. Tennis-ball Negative Prompt, comb T2V proxy, comb SAFREE, and fan SAFREE were downgraded because target-like source cues remained visible. Tennis-ball SAFREE was moved from `no` to `borderline` because the footprint remains but a yellow residual-cause cue is ambiguous. This keeps the headline count focused on cleaner target-erased causal-footprint leakage rather than target leakage.
 
 **Figure-candidate note:** After conservative re-review, the cleanest figure candidates are not rows where every baseline succeeds. Stronger candidates are `blue ink droplet -> blue plume`, `bicycle tire -> tire track`, `soccer ball -> net deformation`, and `fan/hair dryer -> streamer or ribbon motion`, because they show clear target-erased footprints in multiple baselines while keeping ordinary target leakage rows visible as negative cases.
+
+## 2026-06-22: Formal Benchmark Items and First Metrics
+
+**Goal:** Convert the current human-reviewed valid5 and round4-valid9 evidence into one benchmark source-of-truth file and reproducible metric tables.
+
+**Input evidence:**
+
+```text
+benchmarks/causal_footprint_v0/export_valid5_manifest.json
+experiments/baseline_runs/causal_footprint_v0_valid5_all_step20_parallel_summary.csv
+benchmarks/causal_footprint_v0/export_round4_clean_valid9_manifest.json
+experiments/baseline_runs/causal_footprint_v0_round4_valid9_all_step20_parallel_summary.csv
+```
+
+**Commands:**
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/build_benchmark_items.py \
+  --source valid5,benchmarks/causal_footprint_v0/export_valid5_manifest.json,experiments/baseline_runs/causal_footprint_v0_valid5_all_step20_parallel_summary.csv \
+  --source round4_valid9,benchmarks/causal_footprint_v0/export_round4_clean_valid9_manifest.json,experiments/baseline_runs/causal_footprint_v0_round4_valid9_all_step20_parallel_summary.csv \
+  --output benchmarks/causal_footprint_v0/items.jsonl
+
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/compute_benchmark_metrics.py \
+  --items benchmarks/causal_footprint_v0/items.jsonl \
+  --output-dir experiments/metrics
+```
+
+**Output artifacts:**
+
+```text
+benchmarks/causal_footprint_v0/items.jsonl
+experiments/metrics/causal_footprint_v0_metrics_by_baseline.csv
+experiments/metrics/causal_footprint_v0_metrics_by_mechanism.csv
+experiments/metrics/causal_footprint_v0_metrics_summary.md
+```
+
+**Result:**
+
+```text
+benchmark items: 14
+erasure outputs: 56
+strict causal-footprint leakage: 24 / 56
+borderline causal-footprint cases: 12 / 56
+target-leakage failures: 14 / 56
+```
+
+Strict causal-footprint leakage by baseline:
+
+```text
+negative_prompt: 5 / 14
+safree_cogvideox: 5 / 14
+t2vunlearning: 6 / 14
+videoeraser: 8 / 14
+```
+
+**Interpretation:** The current evidence now supports a benchmark-style problem statement rather than only selected examples. The headline count stays conservative by separating ordinary target leakage from target-erased causal-footprint leakage. The next research step is to expand clean-source coverage and calibrate automatic scoring against these human labels.

@@ -1,6 +1,6 @@
 # Causal Footprint Benchmark v0
 
-Status: candidate-pair construction plus clean-source expansion stage.
+Status: candidate-pair construction, clean-source gating, first formal item file, and first metric tables.
 
 This benchmark targets causal footprint leakage in video concept erasure: the source concept `C` is weak or absent after erasure, but the downstream footprint `F(C)` remains visible.
 
@@ -9,9 +9,71 @@ The benchmark is intentionally built in stages:
 1. `candidate_pairs.tsv`: auditable causal-pair pool with accepted, exploratory, and rejected rows.
 2. `control_prompts.jsonl`: control prompts for natural-footprint, no-footprint, and alternative-cause calibration.
 3. `round4_clean_expansion_prompts.tsv`: additional taxonomy-balanced clean-source variants for finding more generatable causal videos.
-4. `items.jsonl`: final clean-source-gated benchmark rows, created only after candidate screening.
+4. `items.jsonl`: current clean-source-gated benchmark rows with linked baseline annotations.
 
-Do not treat every candidate row as a benchmark item. The first runnable slice should use rows marked `accepted_v0_slice`, then pass clean-source generation and annotation gates before entering baseline evaluation.
+Do not treat every candidate row as a benchmark item. Rows enter `items.jsonl` only after passing clean-source generation and annotation gates, then being run through the required erasure baselines.
+
+## Current Formal Artifact
+
+The current benchmark-v0 source of truth is:
+
+```text
+benchmarks/causal_footprint_v0/items.jsonl
+```
+
+It is generated from:
+
+```text
+benchmarks/causal_footprint_v0/export_valid5_manifest.json
+experiments/baseline_runs/causal_footprint_v0_valid5_all_step20_parallel_summary.csv
+benchmarks/causal_footprint_v0/export_round4_clean_valid9_manifest.json
+experiments/baseline_runs/causal_footprint_v0_round4_valid9_all_step20_parallel_summary.csv
+```
+
+Current size:
+
+- 14 clean-source-gated benchmark items.
+- 56 erasure outputs across Negative Prompt, SAFREE-CogVideoX, VideoEraser local, and T2V proxy.
+
+Regenerate:
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/build_benchmark_items.py \
+  --source valid5,benchmarks/causal_footprint_v0/export_valid5_manifest.json,experiments/baseline_runs/causal_footprint_v0_valid5_all_step20_parallel_summary.csv \
+  --source round4_valid9,benchmarks/causal_footprint_v0/export_round4_clean_valid9_manifest.json,experiments/baseline_runs/causal_footprint_v0_round4_valid9_all_step20_parallel_summary.csv \
+  --output benchmarks/causal_footprint_v0/items.jsonl
+```
+
+## Current Metrics
+
+Metric tables are generated from `items.jsonl`:
+
+```text
+experiments/metrics/causal_footprint_v0_metrics_by_baseline.csv
+experiments/metrics/causal_footprint_v0_metrics_by_mechanism.csv
+experiments/metrics/causal_footprint_v0_metrics_summary.md
+```
+
+Regenerate:
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/compute_benchmark_metrics.py \
+  --items benchmarks/causal_footprint_v0/items.jsonl \
+  --output-dir experiments/metrics
+```
+
+Current conservative headline:
+
+- Strict causal-footprint leakage: 24 / 56.
+- Borderline causal-footprint cases: 12 / 56.
+- Target-leakage failures: 14 / 56.
+
+Metric meanings:
+
+- `strict_leakage_count`: `usable_for_claim == yes`; target is absent and the downstream footprint remains visible enough for the claim.
+- `borderline_count`: `usable_for_claim == borderline`; useful for analysis but not headline evidence.
+- `target_leakage_count`: target concept remains visible, so the case does not prove causal-footprint leakage.
+- `strict_leakage_given_target_erased`: strict leakage divided by outputs with `target_visible == no`.
 
 ## Current Clean-Source Slices
 
@@ -39,7 +101,7 @@ prompts/causal_footprint_v0_round4_clean_valid9.txt
 benchmarks/causal_footprint_v0/export_round4_clean_valid9_manifest.json
 ```
 
-This slice has now been run on Negative Prompt, SAFREE-CogVideoX, VideoEraser local, and T2V proxy. Initial labels are tracked in:
+This slice has now been run on Negative Prompt, SAFREE-CogVideoX, VideoEraser local, and T2V proxy. Conservative labels are tracked in:
 
 ```text
 experiments/baseline_runs/causal_footprint_v0_round4_valid9_all_step20_parallel_summary.csv

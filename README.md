@@ -26,6 +26,7 @@ prompts/causal_footprint_v0_accepted24.txt
 prompts/causal_footprint_v0_valid5.txt
 prompts/causal_footprint_v0_round4_clean_expansion48.txt
 prompts/causal_footprint_v0_round4_clean_valid9.txt
+benchmarks/causal_footprint_v0/items.jsonl
 ```
 
 ## Recovery Status
@@ -113,6 +114,27 @@ Fresh clean-source expansion:
 - Annotated local gallery: `outputs/analysis_contact_sheets/causal_footprint_v0_round4_valid9_baseline_step20/baseline_gallery_annotated.html`.
 - Conservative round4-valid9 erasure-output counts after re-review: 15 `yes`, 9 `borderline`, 12 `no`.
 
+Formal benchmark-v0 artifact:
+
+- `benchmarks/causal_footprint_v0/items.jsonl` merges the current valid5 and round4-valid9 clean-source-gated rows.
+- Current size: 14 benchmark items and 56 erasure baseline outputs.
+- Metrics are generated from `items.jsonl` under `experiments/metrics/`.
+- Conservative current counts: 24 / 56 strict causal-footprint leakage, 12 / 56 borderline causal-footprint cases, 14 / 56 target-leakage failures.
+- By baseline strict leakage: Negative Prompt 5 / 14, SAFREE-CogVideoX 5 / 14, T2V proxy 6 / 14, VideoEraser local 8 / 14.
+
+Regenerate the formal artifact and tables:
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/build_benchmark_items.py \
+  --source valid5,benchmarks/causal_footprint_v0/export_valid5_manifest.json,experiments/baseline_runs/causal_footprint_v0_valid5_all_step20_parallel_summary.csv \
+  --source round4_valid9,benchmarks/causal_footprint_v0/export_round4_clean_valid9_manifest.json,experiments/baseline_runs/causal_footprint_v0_round4_valid9_all_step20_parallel_summary.csv \
+  --output benchmarks/causal_footprint_v0/items.jsonl
+
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/compute_benchmark_metrics.py \
+  --items benchmarks/causal_footprint_v0/items.jsonl \
+  --output-dir experiments/metrics
+```
+
 ## Baseline Policy
 
 The required comparison rows are:
@@ -134,7 +156,7 @@ python -m pytest tests -q
 Expected lightweight result:
 
 ```text
-32 passed
+35 passed
 ```
 
 ## CogVideoX Clean Generation
@@ -262,6 +284,7 @@ video_concept_erasure_causal_footprint/
 │   ├── export_accepted24_manifest.json
 │   ├── export_valid5_manifest.json
 │   ├── export_round4_clean_valid9_manifest.json
+│   ├── items.jsonl
 │   └── round4_clean_expansion_prompts.tsv
 ├── experiments/pilot_week1/
 │   ├── causal_audit_round1/round1_summary.csv
@@ -276,6 +299,10 @@ video_concept_erasure_causal_footprint/
 │   ├── negative_prompt_round1_seed200_summary.csv
 │   ├── causal_footprint_v0_valid5_all_step20_parallel_summary.csv
 │   └── causal_footprint_v0_round4_valid9_all_step20_parallel_summary.csv
+├── experiments/metrics/
+│   ├── causal_footprint_v0_metrics_by_baseline.csv
+│   ├── causal_footprint_v0_metrics_by_mechanism.csv
+│   └── causal_footprint_v0_metrics_summary.md
 ├── prompts/
 │   ├── causal_footprint_v0_accepted24.txt
 │   ├── causal_footprint_v0_valid5.txt
@@ -287,8 +314,10 @@ video_concept_erasure_causal_footprint/
 │   └── cogvideox_clean_smoke.txt
 ├── scripts/
 │   ├── build_baseline_comparison.py
+│   ├── build_benchmark_items.py
 │   ├── build_clean_source_review.py
 │   ├── check_baselines.py
+│   ├── compute_benchmark_metrics.py
 │   ├── generate_cogvideox_clean.py
 │   ├── adapters/run_safree_cogvideox.py
 │   ├── adapters/run_videoeraser_cogvideox.py
@@ -302,7 +331,7 @@ video_concept_erasure_causal_footprint/
 
 ## Next Actions
 
-1. Jointly review the round4-valid9 annotated baseline gallery at `outputs/analysis_contact_sheets/causal_footprint_v0_round4_valid9_baseline_step20/baseline_gallery_annotated.html`.
-2. Revise any disputed round4-valid9 labels in `experiments/baseline_runs/causal_footprint_v0_round4_valid9_all_step20_parallel_summary.csv`.
-3. Merge agreed valid5 and round4 clean-valid rows into `items.jsonl`, then add control prompts for metric calibration.
-4. Compute `CFP@TPS<=1` and separate failure modes: target leakage, target-erased causal footprint, and collapsed/low-quality video.
+1. Add another clean-source expansion pass to increase mechanism balance and reduce dependence on the current 14-item slice.
+2. Calibrate automatic video scoring against the current human labels, especially strict vs borderline causal-footprint leakage.
+3. Add no-source and alternative-cause controls to separate real causal footprints from generic visual priors.
+4. Start method design only after the benchmark/evaluation story is stable enough to support a paper claim.
