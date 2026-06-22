@@ -1677,11 +1677,12 @@ experiments/eval_calibration/frame_sheets/
 ```text
 VLM input rows: 56
 contact sheets generated: 56
+reference sheets generated: 36
 missing videos: 0
 dry-run payloads: 56
 ```
 
-**Interpretation:** The project now has a complete pre-API evaluator path: generated videos are represented as 5-frame contact sheets, model prompts are deterministic, and future third-party VLM responses can be converted into the existing prediction CSV schema for calibration.
+**Interpretation:** The project now has a complete pre-API evaluator path: generated videos are represented as 5-frame contact sheets, model prompts are deterministic, and future third-party VLM responses can be converted into the existing prediction CSV schema for calibration. For `round4_valid9`, the VLM input also includes a clean-reference contact sheet; the older `valid5` rows do not have clean-reference videos.
 
 ## 2026-06-22: GPT-4o Scorer Attempt and GPT-4o-mini Fallback Smoke
 
@@ -1737,3 +1738,267 @@ macro F1: 0.1000
 ```
 
 **Interpretation:** `gpt-4o-mini` predicted `strict_leakage` for all 8 sample rows, including rows manually labeled as `target_leakage`, `borderline`, and `other_failure`. It is useful only as a pipeline smoke test and should not be used as the main judge. The next real scorer run should use full `openai/gpt-4o` once the endpoint has an available channel, or use another mainstream strong VLM as an explicitly documented fallback.
+
+## 2026-06-22: Qwen-VL Fallback Scorer Trial
+
+**Goal:** Replace the unavailable GPT-4o scorer with a usable mainstream VLM fallback, without using Doubao as the main judge.
+
+**Endpoint candidates checked:**
+
+```text
+openai/gpt-4o: listed but no available channel for image requests
+google/gemini-2.5-pro: returned truncated / non-JSON content through this OpenAI-compatible route
+google/gemini-2.5-flash: returned truncated / non-JSON content through this OpenAI-compatible route
+anthropic/claude-sonnet-4-6: could inspect the image, but did not reliably return the required JSON schema with the current prompt and token budget
+alibaba/qwen-vl-max: stable, but over-predicted strict_leakage on the first 8 rows
+qwen/qwen-vl-plus: stable and able to distinguish some target-leakage rows
+```
+
+**Qwen-VL-Max sample command:**
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/evaluate_with_vlm.py \
+  --inputs experiments/eval_calibration/vlm_inputs.csv \
+  --output-predictions experiments/eval_calibration/qwen_vl_max_sample8_predictions.csv \
+  --raw-output-jsonl experiments/eval_calibration/qwen_vl_max_sample8_raw.jsonl \
+  --run-api \
+  --model alibaba/qwen-vl-max \
+  --api-config-file /home/deepseek_VG/JUNCHI/Diffusion-Personalization-Target-Alignment/token.txt \
+  --limit 8 \
+  --temperature 0 \
+  --max-tokens 300 \
+  --timeout 120
+
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/calibrate_evaluator.py \
+  --gold experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv \
+  --predictions experiments/eval_calibration/qwen_vl_max_sample8_predictions.csv \
+  --output-dir experiments/eval_calibration/qwen_vl_max_sample8 \
+  --allow-partial
+```
+
+**Qwen-VL-Max sample result:**
+
+```text
+matched predictions: 8
+strict leakage binary F1: 0.4000
+relaxed leakage binary F1: 0.7692
+macro F1: 0.1000
+```
+
+`alibaba/qwen-vl-max` predicted `strict_leakage` for all 8 sample rows, so it is not a good fallback under the current prompt.
+
+**Qwen-VL-Plus full command:**
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/evaluate_with_vlm.py \
+  --inputs experiments/eval_calibration/vlm_inputs.csv \
+  --output-predictions experiments/eval_calibration/qwen_vl_plus_full_predictions.csv \
+  --raw-output-jsonl experiments/eval_calibration/qwen_vl_plus_full_raw.jsonl \
+  --run-api \
+  --model qwen/qwen-vl-plus \
+  --api-config-file /home/deepseek_VG/JUNCHI/Diffusion-Personalization-Target-Alignment/token.txt \
+  --temperature 0 \
+  --max-tokens 500 \
+  --timeout 180
+
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/calibrate_evaluator.py \
+  --gold experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv \
+  --predictions experiments/eval_calibration/qwen_vl_plus_full_predictions.csv \
+  --output-dir experiments/eval_calibration/qwen_vl_plus_full
+```
+
+**Artifact policy:**
+
+```text
+Qwen trial outputs were summarized here and removed from the tracked artifact set after the protocol moved to reference-aware Claude calibration.
+```
+
+**Qwen-VL-Plus full calibration result:**
+
+```text
+matched predictions: 56
+strict leakage binary F1: 0.6761
+relaxed leakage binary F1: 0.8675
+macro F1: 0.3429
+strict_leakage: precision 0.5106, recall 1.0000, F1 0.6761
+target_leakage: precision 0.8889, recall 0.5714, F1 0.6957
+```
+
+**Predicted label distribution:**
+
+```text
+strict_leakage: 47
+target_leakage: 9
+borderline: 0
+other_failure: 0
+```
+
+**Interpretation:** `qwen/qwen-vl-plus` is the best currently available fallback on this endpoint. It is useful as a high-recall leakage screener: it catches all human strict-leakage rows and most target-leakage rows. It is not yet a replacement for human labels because it collapses all `borderline` and `other_failure` cases into hard leakage decisions. The next evaluator step should recalibrate the prompt or split judging into staged questions so the model is allowed to say "ambiguous / not enough evidence" more often.
+
+## 2026-06-22: Atomic VLM Protocol Trial
+
+**Goal:** Reduce direct-label bias by asking the VLM for atomic visual facts instead of letting it choose the final benchmark label.
+
+**Protocol change:** The current `scripts/evaluate_with_vlm.py` prompt asks the model to return:
+
+```json
+{
+  "target_visible": "yes|no|partial",
+  "effect_visible": "yes|no|partial",
+  "separation_clear": "yes|no",
+  "quality_ok": "yes|no",
+  "confidence": 0.0,
+  "reason": "short visual evidence"
+}
+```
+
+The script derives the existing prediction CSV fields afterward:
+
+- `target_visible = yes` -> `target_leakage`
+- `target_visible = partial` -> `borderline`
+- `effect_visible = partial` -> `borderline`
+- `separation_clear = no` -> `borderline`
+- `quality_ok = no` -> `other_failure`
+- `target_visible = no` and `effect_visible = yes` -> `strict_leakage`
+
+**Command:**
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/evaluate_with_vlm.py \
+  --inputs experiments/eval_calibration/vlm_inputs.csv \
+  --output-predictions experiments/eval_calibration/qwen_vl_plus_atomic_sample8_predictions.csv \
+  --raw-output-jsonl experiments/eval_calibration/qwen_vl_plus_atomic_sample8_raw.jsonl \
+  --run-api \
+  --model qwen/qwen-vl-plus \
+  --api-config-file /home/deepseek_VG/JUNCHI/Diffusion-Personalization-Target-Alignment/token.txt \
+  --limit 8 \
+  --temperature 0 \
+  --max-tokens 500 \
+  --timeout 180
+
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/calibrate_evaluator.py \
+  --gold experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv \
+  --predictions experiments/eval_calibration/qwen_vl_plus_atomic_sample8_predictions.csv \
+  --output-dir experiments/eval_calibration/qwen_vl_plus_atomic_sample8 \
+  --allow-partial
+```
+
+**Artifact policy:**
+
+```text
+This Qwen atomic sample was summarized here and not retained as a tracked artifact.
+```
+
+**Calibration result:**
+
+```text
+matched predictions: 8
+strict leakage binary F1: 0.4000
+relaxed leakage binary F1: 0.7692
+macro F1: 0.1000
+```
+
+**Interpretation:** The atomic protocol did not fix the current `qwen/qwen-vl-plus` bias on the first 8 rows. It still marked every row as target absent, effect visible, and strict leakage. The direction remains conceptually cleaner than direct label prompting, but the prompt needs stronger ambiguity/negative-evidence calibration before running a full atomic evaluation.
+
+## 2026-06-22: Reference-Aware Atomic VLM Trial
+
+**Goal:** Test whether adding a clean-reference contact sheet helps `qwen/qwen-vl-plus` separate target visibility from downstream effects.
+
+**Input coverage:**
+
+```text
+VLM rows: 56
+output sheets: 56
+reference sheets: 36
+reference-backed subset: round4_valid9 only
+```
+
+**Full command:**
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/evaluate_with_vlm.py \
+  --inputs experiments/eval_calibration/vlm_inputs.csv \
+  --output-predictions experiments/eval_calibration/qwen_vl_plus_reference_atomic_full_predictions.csv \
+  --raw-output-jsonl experiments/eval_calibration/qwen_vl_plus_reference_atomic_full_raw.jsonl \
+  --run-api \
+  --model qwen/qwen-vl-plus \
+  --api-config-file /home/deepseek_VG/JUNCHI/Diffusion-Personalization-Target-Alignment/token.txt \
+  --require-reference \
+  --temperature 0 \
+  --max-tokens 500 \
+  --timeout 180
+
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/calibrate_evaluator.py \
+  --gold experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv \
+  --predictions experiments/eval_calibration/qwen_vl_plus_reference_atomic_full_predictions.csv \
+  --output-dir experiments/eval_calibration/qwen_vl_plus_reference_atomic_full \
+  --allow-partial
+```
+
+**Artifact policy:**
+
+```text
+Qwen reference-aware atomic outputs were summarized here and removed from the tracked artifact set after the Claude conservative cross-check was retained.
+```
+
+**Full calibration result:**
+
+```text
+matched predictions: 36
+strict leakage binary F1: 0.6087
+relaxed leakage binary F1: 0.8364
+macro F1: 0.3060
+strict_leakage: precision 0.4516, recall 0.9333, F1 0.6087
+target_leakage: precision 1.0000, recall 0.4444, F1 0.6154
+```
+
+**Interpretation:** Clean-reference context helped define the target/effect visually, but did not solve the over-strict bias. Qwen catches nearly all human strict-leakage rows, but maps all borderline rows and all other-failure rows to leakage-like labels. It is useful as a high-recall screener, not as the final automatic judge.
+
+## 2026-06-22: Claude Reference-Aware Atomic VLM Trial
+
+**Goal:** Test a mainstream non-Qwen VLM on the same reference-aware atomic protocol.
+
+**Command:**
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/evaluate_with_vlm.py \
+  --inputs experiments/eval_calibration/vlm_inputs.csv \
+  --output-predictions experiments/eval_calibration/claude_sonnet_4_6_reference_atomic_full_predictions.csv \
+  --raw-output-jsonl experiments/eval_calibration/claude_sonnet_4_6_reference_atomic_full_raw.jsonl \
+  --run-api \
+  --model anthropic/claude-sonnet-4-6 \
+  --api-config-file /home/deepseek_VG/JUNCHI/Diffusion-Personalization-Target-Alignment/token.txt \
+  --require-reference \
+  --temperature 0 \
+  --max-tokens 1000 \
+  --timeout 180
+
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/calibrate_evaluator.py \
+  --gold experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv \
+  --predictions experiments/eval_calibration/claude_sonnet_4_6_reference_atomic_full_predictions.csv \
+  --output-dir experiments/eval_calibration/claude_sonnet_4_6_reference_atomic_full \
+  --allow-partial
+```
+
+**Tracked artifacts:**
+
+```text
+experiments/eval_calibration/claude_sonnet_4_6_reference_atomic_full_predictions.csv
+experiments/eval_calibration/claude_sonnet_4_6_reference_atomic_full_raw.jsonl
+experiments/eval_calibration/claude_sonnet_4_6_reference_atomic_full/
+```
+
+**Calibration result:**
+
+```text
+matched predictions: 36
+strict leakage binary F1: 0.4000
+relaxed leakage binary F1: 0.7600
+macro F1: 0.3438
+strict_leakage: precision 0.8000, recall 0.2667, F1 0.4000
+borderline: precision 0.1905, recall 0.4444, F1 0.2667
+target_leakage: precision 0.4286, recall 0.3333, F1 0.3750
+other_failure: precision 0.3333, recall 0.3333, F1 0.3333
+```
+
+**Interpretation:** Claude has the opposite failure mode from Qwen. It uses all four labels and gives useful visual reasons, but it is conservative: it often downgrades human strict-leakage rows to `borderline`, giving low strict-leakage recall. This makes it useful as a cross-check for ambiguity and target leakage, but not as the final automatic judge.

@@ -1,0 +1,5 @@
+label,support,tp,fp,fn,precision,recall,f1
+strict_leakage,15,4,1,11,0.8000,0.2667,0.4000
+borderline,9,4,17,5,0.1905,0.4444,0.2667
+target_leakage,9,3,4,6,0.4286,0.3333,0.3750
+other_failure,3,1,2,2,0.3333,0.3333,0.3333

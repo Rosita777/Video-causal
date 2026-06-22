@@ -42,4 +42,19 @@
 
 - [x] Document the GPT-4o channel block, fallback sample command, and artifacts.
 - [x] Run the full lightweight test suite.
-- [ ] Commit and push.
+- [x] Commit and push.
+
+### Task 4: Qwen Fallback Scorer Trial
+
+**Files:**
+- Modify: `README.md`
+- Modify: `benchmarks/causal_footprint_v0/README.md`
+- Modify: `docs/experiment_log.md`
+
+- [x] Run `alibaba/qwen-vl-max` on the first 8 VLM inputs.
+- [x] Calibrate `alibaba/qwen-vl-max`; result over-predicts `strict_leakage` for all 8 rows.
+- [x] Run `qwen/qwen-vl-plus` on the first 8 VLM inputs.
+- [x] Calibrate the 8-row `qwen/qwen-vl-plus` sample; result distinguishes target-leakage rows better than previous fallbacks.
+- [x] Run `qwen/qwen-vl-plus` on all 56 VLM inputs.
+- [x] Calibrate the full run; result supports using `qwen/qwen-vl-plus` as a high-recall leakage screener, not as the final four-class judge.
+- [x] Document fallback model status. Qwen raw artifacts were summarized but not retained after the atomic/reference-aware protocol replaced the direct-label fallback.

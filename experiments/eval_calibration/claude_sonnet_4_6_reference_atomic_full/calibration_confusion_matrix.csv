@@ -1,0 +1,13 @@
+gold_label,pred_label,count
+strict_leakage,strict_leakage,4
+strict_leakage,borderline,10
+strict_leakage,other_failure,1
+borderline,strict_leakage,1
+borderline,borderline,4
+borderline,target_leakage,3
+borderline,other_failure,1
+target_leakage,borderline,6
+target_leakage,target_leakage,3
+other_failure,borderline,1
+other_failure,target_leakage,1
+other_failure,other_failure,1

@@ -18,6 +18,10 @@ GOLD_FIELDS = [
     "mechanism_type",
     "baseline",
     "video_path",
+    "reference_video_path",
+    "reference_video_exists",
+    "reference_video_quality",
+    "reference_notes",
     "seed",
     "target_concept",
     "expected_effect",
@@ -56,6 +60,7 @@ def flatten_gold_rows(items: list[dict[str, Any]]) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     for item in items:
         item_id = str(item.get("item_id", ""))
+        clean_reference = item.get("clean_reference", {})
         for output in item.get("baseline_outputs", []):
             baseline = str(output.get("baseline", ""))
             rows.append(
@@ -67,6 +72,10 @@ def flatten_gold_rows(items: list[dict[str, Any]]) -> list[dict[str, str]]:
                     "mechanism_type": str(item.get("mechanism_type", "")),
                     "baseline": baseline,
                     "video_path": str(output.get("video_path", "")),
+                    "reference_video_path": str(clean_reference.get("video_path", "")),
+                    "reference_video_exists": str(clean_reference.get("video_exists", "")),
+                    "reference_video_quality": str(clean_reference.get("video_quality", "")),
+                    "reference_notes": str(clean_reference.get("notes", "")),
                     "seed": "" if output.get("seed") is None else str(output.get("seed")),
                     "target_concept": str(item.get("target_concept", "")),
                     "expected_effect": str(item.get("expected_effect", "")),

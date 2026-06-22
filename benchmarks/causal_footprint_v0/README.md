@@ -160,6 +160,8 @@ PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/evalua
 
 `vlm_payloads_dryrun.jsonl` contains the exact prompt, image path, target concept, expected effect, and required JSON response schema for each scorer call. It does not include `human_label`, so gold labels are not leaked into model prompts.
 
+When `clean_reference.video_path` exists in `items.jsonl`, `vlm_inputs.csv` also contains a clean-reference contact sheet. Current reference coverage is 36 / 56 rows, all from `round4_valid9`; the older `valid5` rows do not have clean-reference videos. Pass `--require-reference` to evaluate only rows with the two-image clean-reference / erased-output protocol.
+
 ## GPT-4o Scorer Status
 
 The preferred primary VLM judge is `openai/gpt-4o`, because it is a mainstream model that is easier to justify in a paper. On 2026-06-22, the provided `https://api.360.cn/v1` default group listed the model but returned:
@@ -183,30 +185,64 @@ macro F1: 0.1000
 
 `gpt-4o-mini` predicted `strict_leakage` for all 8 sample rows, including target-leakage and borderline human labels. It should not be used as the main judge.
 
+Current reference-aware atomic trial results:
+
+```text
+model: qwen/qwen-vl-plus
+protocol: atomic visual fields with clean-reference image
+sample rows: all 36 rows with reference sheets
+strict leakage binary F1: 0.6087
+relaxed leakage binary F1: 0.8364
+macro F1: 0.3060
+strict leakage precision: 0.4516
+strict leakage recall: 0.9333
+status: high-recall but over-strict; misses all borderline rows
+artifact policy: summarized in docs, raw outputs not retained
+```
+
+```text
+model: anthropic/claude-sonnet-4-6
+protocol: atomic visual fields with clean-reference image
+sample rows: all 36 rows with reference sheets
+strict leakage binary F1: 0.4000
+relaxed leakage binary F1: 0.7600
+macro F1: 0.3438
+strict leakage precision: 0.8000
+strict leakage recall: 0.2667
+```
+
+This creates a useful diagnostic contrast: `qwen/qwen-vl-plus` is high-recall but over-strict, while `anthropic/claude-sonnet-4-6` is conservative and has low strict-leakage recall. Neither is ready as the final automatic judge.
+
 Artifacts:
 
 ```text
 experiments/eval_calibration/gpt4o_mini_sample8_predictions.csv
 experiments/eval_calibration/gpt4o_mini_sample8_raw.jsonl
 experiments/eval_calibration/gpt4o_mini_sample8/
+experiments/eval_calibration/claude_sonnet_4_6_reference_atomic_full_predictions.csv
+experiments/eval_calibration/claude_sonnet_4_6_reference_atomic_full_raw.jsonl
+experiments/eval_calibration/claude_sonnet_4_6_reference_atomic_full/
 ```
 
-Run the preferred GPT-4o sample when the channel is available:
+Run the current retained reference-aware atomic scorer:
 
 ```bash
 PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/evaluate_with_vlm.py \
   --inputs experiments/eval_calibration/vlm_inputs.csv \
-  --output-predictions experiments/eval_calibration/gpt4o_sample8_predictions.csv \
-  --raw-output-jsonl experiments/eval_calibration/gpt4o_sample8_raw.jsonl \
+  --output-predictions experiments/eval_calibration/claude_sonnet_4_6_reference_atomic_full_predictions.csv \
+  --raw-output-jsonl experiments/eval_calibration/claude_sonnet_4_6_reference_atomic_full_raw.jsonl \
   --run-api \
-  --model openai/gpt-4o \
+  --model anthropic/claude-sonnet-4-6 \
   --api-config-file /path/to/local/token.txt \
-  --limit 8
+  --require-reference \
+  --temperature 0 \
+  --max-tokens 1000 \
+  --timeout 180
 
 PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/calibrate_evaluator.py \
   --gold experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv \
-  --predictions experiments/eval_calibration/gpt4o_sample8_predictions.csv \
-  --output-dir experiments/eval_calibration/gpt4o_sample8 \
+  --predictions experiments/eval_calibration/claude_sonnet_4_6_reference_atomic_full_predictions.csv \
+  --output-dir experiments/eval_calibration/claude_sonnet_4_6_reference_atomic_full \
   --allow-partial
 ```
 

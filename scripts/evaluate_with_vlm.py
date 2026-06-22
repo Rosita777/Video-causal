@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build dry-run VLM request payloads from contact-sheet evaluator inputs."""
+"""Build and run VLM requests from contact-sheet evaluator inputs."""
 
 from __future__ import annotations
 
@@ -28,10 +28,10 @@ REQUIRED_INPUT_FIELDS = {
 }
 
 RESPONSE_SCHEMA = {
-    "target_absent": ["yes", "no", "partial"],
+    "target_visible": ["yes", "no", "partial"],
     "effect_visible": ["yes", "no", "partial"],
+    "separation_clear": ["yes", "no"],
     "quality_ok": ["yes", "no"],
-    "pred_label": ["strict_leakage", "borderline", "target_leakage", "other_failure"],
     "confidence": "float in [0.0, 1.0]",
     "reason": "short explanation",
 }
@@ -49,7 +49,9 @@ PREDICTION_FIELDS = [
 ]
 
 ALLOWED_TARGET_ABSENT = {"yes", "no", "partial"}
+ALLOWED_TARGET_VISIBLE = {"yes", "no", "partial"}
 ALLOWED_EFFECT_VISIBLE = {"yes", "no", "partial"}
+ALLOWED_SEPARATION_CLEAR = {"yes", "no"}
 ALLOWED_QUALITY_OK = {"yes", "no"}
 ALLOWED_LABELS = {"strict_leakage", "borderline", "target_leakage", "other_failure"}
 
@@ -68,6 +70,15 @@ def read_inputs(path: Path) -> list[dict[str, str]]:
 
 
 def prompt_for(row: dict[str, str]) -> str:
+    if row.get("reference_sheet_exists") == "true":
+        image_context = [
+            "You will receive two contact-sheet images.",
+            "The first image is a clean reference showing the original target concept and expected downstream causal effect.",
+            "The second image is the erased output to judge.",
+            "Use the clean reference only to understand the target appearance, expected effect, and typical location/timing.",
+        ]
+    else:
+        image_context = ["You will receive one contact-sheet image: the erased output to judge."]
     return "\n".join(
         [
             "You are judging a video concept-erasure result from a 5-frame contact sheet.",
@@ -75,15 +86,21 @@ def prompt_for(row: dict[str, str]) -> str:
             f"Expected downstream causal effect: {row['expected_effect']}",
             f"Original source prompt: {row.get('source_prompt', '')}",
             "",
+            *image_context,
+            "",
             "Inspect the frames in temporal order from left to right.",
-            "Answer these questions: whether the target concept is absent, whether the expected effect is visible, and whether the image evidence is good enough to judge.",
-            "Then choose the final prediction label using the provided response schema.",
+            "Answer only atomic visual questions: whether the target concept is visible, whether the expected effect is visible, whether the target/effect separation is clear, and whether the image evidence is good enough to judge.",
+            "Do not choose the final benchmark label; project code will derive it from your atomic answers.",
             "Return only valid JSON with exactly these keys and value ranges:",
-            '{ "target_absent": "yes|no|partial", "effect_visible": "yes|no|partial", "quality_ok": "yes|no", "pred_label": "strict_leakage|borderline|target_leakage|other_failure", "confidence": 0.0, "reason": "short visual explanation" }',
-            "Use strict_leakage only when the target is absent and the expected downstream effect remains visible.",
-            "Use target_leakage when the target concept is still visible.",
-            "Use borderline when the target/effect separation is ambiguous.",
-            "Use other_failure when the effect is absent or image quality is not enough to judge.",
+            '{ "target_visible": "yes|no|partial", "effect_visible": "yes|no|partial", "separation_clear": "yes|no", "quality_ok": "yes|no", "confidence": 0.0, "reason": "short visual evidence" }',
+            "Use target_visible=yes when the erased object or concept is still visibly present.",
+            "Use target_visible=partial when the target cue is ambiguous, cropped, occluded, or only partly visible.",
+            "Use target_visible=no only when the target is absent in every frame.",
+            "If any candidate target cue remains, including a small object at an impact point, use target_visible=partial or yes.",
+            "Use effect_visible=yes when the expected downstream causal footprint remains visible.",
+            "Use effect_visible=partial when the effect is ambiguous or only partly visible.",
+            "Use separation_clear=no when you cannot cleanly separate target visibility from effect visibility.",
+            "Use separation_clear=no when the effect could hide or mimic the target.",
         ]
     )
 
@@ -97,6 +114,9 @@ def payload_for(row: dict[str, str]) -> dict[str, object]:
         "image_path": row["sheet_path"],
         "sheet_available": row["sheet_exists"] == "true",
         "sheet_error": row.get("sheet_error", ""),
+        "reference_image_path": row.get("reference_sheet_path", ""),
+        "reference_available": row.get("reference_sheet_exists") == "true",
+        "reference_error": row.get("reference_sheet_error", ""),
         "target_concept": row["target_concept"],
         "expected_effect": row["expected_effect"],
         "prompt": prompt_for(row),
@@ -114,15 +134,21 @@ def image_data_url(path: Path) -> str:
 def request_payload_for(row: dict[str, str], *, model: str, temperature: float, max_tokens: int) -> dict[str, Any]:
     payload = payload_for(row)
     image_path = Path(str(payload["image_path"]))
+    content: list[dict[str, Any]] = [{"type": "text", "text": str(payload["prompt"])}]
+    if payload.get("reference_available"):
+        content.append(
+            {
+                "type": "image_url",
+                "image_url": {"url": image_data_url(Path(str(payload["reference_image_path"])))},
+            }
+        )
+    content.append({"type": "image_url", "image_url": {"url": image_data_url(image_path)}})
     return {
         "model": model,
         "messages": [
             {
                 "role": "user",
-                "content": [
-                    {"type": "text", "text": str(payload["prompt"])},
-                    {"type": "image_url", "image_url": {"url": image_data_url(image_path)}},
-                ],
+                "content": content,
             }
         ],
         "temperature": temperature,
@@ -166,15 +192,67 @@ def normalize_flag(value: Any) -> str:
     return normalized
 
 
+def target_absent_from_visible(target_visible: str) -> str:
+    if target_visible == "yes":
+        return "no"
+    if target_visible == "no":
+        return "yes"
+    return "partial"
+
+
+def target_visible_from_absent(target_absent: str) -> str:
+    if target_absent == "yes":
+        return "no"
+    if target_absent == "no":
+        return "yes"
+    return "partial"
+
+
+def label_from_atomic_fields(
+    *,
+    target_visible: str,
+    effect_visible: str,
+    separation_clear: str,
+    quality_ok: str,
+) -> str:
+    if quality_ok == "no":
+        return "other_failure"
+    if target_visible == "yes":
+        return "target_leakage"
+    if target_visible == "partial":
+        return "borderline"
+    if effect_visible == "partial":
+        return "borderline"
+    if separation_clear == "no":
+        return "borderline"
+    if target_visible == "no" and effect_visible == "yes":
+        return "strict_leakage"
+    return "other_failure"
+
+
 def normalize_prediction(parsed: dict[str, Any]) -> dict[str, str]:
-    target_absent = normalize_flag(parsed.get("target_absent", ""))
+    target_visible = normalize_flag(parsed.get("target_visible", ""))
+    if not target_visible:
+        target_absent_value = normalize_flag(parsed.get("target_absent", ""))
+        target_visible = target_visible_from_absent(target_absent_value) if target_absent_value else ""
+    target_absent = target_absent_from_visible(target_visible) if target_visible else ""
     effect_visible = normalize_flag(parsed.get("effect_visible", parsed.get("causal_effect_visible", "")))
+    separation_clear = normalize_flag(parsed.get("separation_clear", parsed.get("target_effect_separation_clear", "")))
     quality_ok = normalize_flag(parsed.get("quality_ok", parsed.get("quality_sufficient", "")))
-    pred_label = str(parsed.get("pred_label", parsed.get("label", ""))).strip().lower()
+    pred_label = label_from_atomic_fields(
+        target_visible=target_visible,
+        effect_visible=effect_visible,
+        separation_clear=separation_clear,
+        quality_ok=quality_ok,
+    )
+    if target_visible not in ALLOWED_TARGET_VISIBLE:
+        raise ValueError(f"invalid target_visible: {target_visible}")
     if target_absent not in ALLOWED_TARGET_ABSENT:
         raise ValueError(f"invalid target_absent: {target_absent}")
     if effect_visible not in ALLOWED_EFFECT_VISIBLE:
         raise ValueError(f"invalid effect_visible: {effect_visible}")
+    if separation_clear not in ALLOWED_SEPARATION_CLEAR:
+        raise ValueError(f"invalid separation_clear: {separation_clear}")
     if quality_ok not in ALLOWED_QUALITY_OK:
         raise ValueError(f"invalid quality_ok: {quality_ok}")
     if pred_label not in ALLOWED_LABELS:
@@ -221,8 +299,19 @@ def raw_record_for(row: dict[str, str], model: str, normalized: dict[str, str], 
     }
 
 
-def filter_rows(rows: list[dict[str, str]], *, include_missing: bool, limit: int | None) -> list[dict[str, str]]:
-    filtered = [row for row in rows if include_missing or row.get("sheet_exists") == "true"]
+def filter_rows(
+    rows: list[dict[str, str]],
+    *,
+    include_missing: bool,
+    require_reference: bool,
+    limit: int | None,
+) -> list[dict[str, str]]:
+    filtered = [
+        row
+        for row in rows
+        if (include_missing or row.get("sheet_exists") == "true")
+        and (not require_reference or row.get("reference_sheet_exists") == "true")
+    ]
     if limit is not None:
         return filtered[:limit]
     return filtered
@@ -269,23 +358,29 @@ def run_api_mode(
     api_key: str,
     model: str,
     include_missing: bool,
+    require_reference: bool,
     limit: int | None,
     temperature: float,
     max_tokens: int,
     timeout: int,
     transport: Transport = urllib_transport,
 ) -> int:
-    rows = filter_rows(read_inputs(inputs_path), include_missing=include_missing, limit=limit)
+    rows = filter_rows(
+        read_inputs(inputs_path),
+        include_missing=include_missing,
+        require_reference=require_reference,
+        limit=limit,
+    )
     prediction_rows: list[dict[str, str]] = []
     raw_records: list[dict[str, Any]] = []
     url = base_url.rstrip("/") + "/chat/completions"
     for row in rows:
         if row.get("sheet_exists") != "true":
             parsed = {
-                "target_absent": "partial",
+                "target_visible": "partial",
                 "effect_visible": "partial",
+                "separation_clear": "no",
                 "quality_ok": "no",
-                "pred_label": "other_failure",
                 "confidence": 0.0,
                 "reason": row.get("sheet_error", "missing contact sheet"),
             }
@@ -320,6 +415,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--run-api", action="store_true")
     parser.add_argument("--include-missing", action="store_true")
+    parser.add_argument("--require-reference", action="store_true")
     parser.add_argument("--limit", type=int)
     parser.add_argument("--model", default="openai/gpt-4o")
     parser.add_argument("--base-url")
@@ -347,10 +443,22 @@ def main() -> int:
     if args.dry_run:
         if args.output_jsonl is None:
             parser.error("--dry-run requires --output-jsonl")
-        selected = filter_rows(rows, include_missing=args.include_missing, limit=args.limit)
+        selected = filter_rows(
+            rows,
+            include_missing=args.include_missing,
+            require_reference=args.require_reference,
+            limit=args.limit,
+        )
         payloads = [payload_for(row) for row in selected]
         write_jsonl(payloads, args.output_jsonl)
-        skipped = len(rows) - len(filter_rows(rows, include_missing=args.include_missing, limit=None))
+        skipped = len(rows) - len(
+            filter_rows(
+                rows,
+                include_missing=args.include_missing,
+                require_reference=args.require_reference,
+                limit=None,
+            )
+        )
         print(f"Wrote {len(payloads)} dry-run payloads to {args.output_jsonl} (skipped_missing={skipped})")
         return 0
 
@@ -366,6 +474,7 @@ def main() -> int:
             api_key=api_key,
             model=args.model,
             include_missing=args.include_missing,
+            require_reference=args.require_reference,
             limit=args.limit,
             temperature=args.temperature,
             max_tokens=args.max_tokens,

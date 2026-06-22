@@ -163,28 +163,35 @@ PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/evalua
   --dry-run
 ```
 
+`vlm_inputs.csv` now includes clean-reference contact-sheet fields when a `clean_reference.video_path` is available. Current coverage is 36 / 56 rows with reference sheets, all from `round4_valid9`; the older `valid5` rows do not have clean-reference video paths. Use `--require-reference` for scorer runs that should only use the two-image reference/output protocol.
+
 Current real VLM scorer status:
 
 - `openai/gpt-4o` is the preferred primary judge, but the current `https://api.360.cn/v1` default group returned `no available channel` for this model on 2026-06-22.
 - `openai/gpt-4o-mini` was run as a fallback smoke on the first 8 rows, but it over-predicted `strict_leakage` for all 8 rows and is not reliable enough as the main judge.
-- Sample artifacts are under `experiments/eval_calibration/gpt4o_mini_sample8*`.
+- `qwen/qwen-vl-plus` with the reference-aware atomic protocol was tested as a high-recall fallback. On all 36 reference-backed rows it gets strict leakage F1 0.6087, relaxed leakage F1 0.8364, and strict leakage recall 0.9333, but it still collapses many borderline and other-failure rows into strict leakage. Its raw artifacts were summarized in the experiment log and not retained.
+- `anthropic/claude-sonnet-4-6` with the reference-aware atomic protocol has the opposite bias. On all 36 reference-backed rows it predicts all four labels and reaches macro F1 0.3438, but strict leakage recall is only 0.2667. It is useful as a conservative four-class cross-check, not yet as the main judge.
+- Tracked scorer artifacts are under `experiments/eval_calibration/gpt4o_mini_sample8*` and `claude_sonnet_4_6_reference_atomic_full*`.
 
-Run a real scorer sample once the desired model is available:
+Run the current retained reference-aware atomic scorer:
 
 ```bash
 PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/evaluate_with_vlm.py \
   --inputs experiments/eval_calibration/vlm_inputs.csv \
-  --output-predictions experiments/eval_calibration/gpt4o_sample8_predictions.csv \
-  --raw-output-jsonl experiments/eval_calibration/gpt4o_sample8_raw.jsonl \
+  --output-predictions experiments/eval_calibration/claude_sonnet_4_6_reference_atomic_full_predictions.csv \
+  --raw-output-jsonl experiments/eval_calibration/claude_sonnet_4_6_reference_atomic_full_raw.jsonl \
   --run-api \
-  --model openai/gpt-4o \
+  --model anthropic/claude-sonnet-4-6 \
   --api-config-file /path/to/local/token.txt \
-  --limit 8
+  --require-reference \
+  --temperature 0 \
+  --max-tokens 1000 \
+  --timeout 180
 
 PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/calibrate_evaluator.py \
   --gold experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv \
-  --predictions experiments/eval_calibration/gpt4o_sample8_predictions.csv \
-  --output-dir experiments/eval_calibration/gpt4o_sample8 \
+  --predictions experiments/eval_calibration/claude_sonnet_4_6_reference_atomic_full_predictions.csv \
+  --output-dir experiments/eval_calibration/claude_sonnet_4_6_reference_atomic_full \
   --allow-partial
 ```
 
@@ -209,7 +216,7 @@ python -m pytest tests -q
 Expected lightweight result:
 
 ```text
-48 passed
+49 passed
 ```
 
 ## CogVideoX Clean Generation
@@ -366,7 +373,10 @@ video_concept_erasure_causal_footprint/
 │   ├── vlm_payloads_dryrun.jsonl
 │   ├── gpt4o_mini_sample8_predictions.csv
 │   ├── gpt4o_mini_sample8_raw.jsonl
-│   └── gpt4o_mini_sample8/
+│   ├── gpt4o_mini_sample8/
+│   ├── claude_sonnet_4_6_reference_atomic_full_predictions.csv
+│   ├── claude_sonnet_4_6_reference_atomic_full_raw.jsonl
+│   └── claude_sonnet_4_6_reference_atomic_full/
 ├── prompts/
 │   ├── causal_footprint_v0_accepted24.txt
 │   ├── causal_footprint_v0_valid5.txt
@@ -400,6 +410,8 @@ video_concept_erasure_causal_footprint/
 ## Next Actions
 
 1. Add another clean-source expansion pass to increase mechanism balance and reduce dependence on the current 14-item slice.
-2. Re-run the first 8-row scorer sample with full `openai/gpt-4o` once the API channel is available; do not use `gpt-4o-mini` as the main judge.
-3. Add no-source and alternative-cause controls to separate real causal footprints from generic visual priors.
-4. Start method design only after the benchmark/evaluation story is stable enough to support a paper claim.
+2. Calibrate the automatic judge prompt so it can use `borderline` and `other_failure` instead of collapsing almost everything into leakage, even with clean-reference context.
+3. Compare the current complementary biases: `qwen/qwen-vl-plus` is high-recall/over-strict, while `anthropic/claude-sonnet-4-6` is conservative and has low strict-leakage recall.
+4. Re-run the first 8-row scorer sample with full `openai/gpt-4o` once the API channel is available; keep `qwen/qwen-vl-plus` as the current fallback screener.
+5. Add no-source and alternative-cause controls to separate real causal footprints from generic visual priors.
+6. Start method design only after the benchmark/evaluation story is stable enough to support a paper claim.
