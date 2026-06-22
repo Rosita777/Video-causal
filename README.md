@@ -111,7 +111,7 @@ Fresh clean-source expansion:
 - `prompts/causal_footprint_v0_round4_clean_valid9.txt` has been run on all four required baselines.
 - Manual round4-valid9 labels are tracked in `experiments/baseline_runs/causal_footprint_v0_round4_valid9_all_step20_parallel_summary.csv`.
 - Annotated local gallery: `outputs/analysis_contact_sheets/causal_footprint_v0_round4_valid9_baseline_step20/baseline_gallery_annotated.html`.
-- Initial round4-valid9 erasure-output counts: 18 `yes`, 9 `borderline`, 9 `no`.
+- Conservative round4-valid9 erasure-output counts after re-review: 15 `yes`, 9 `borderline`, 12 `no`.
 
 ## Baseline Policy
 

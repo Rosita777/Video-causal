@@ -1499,23 +1499,25 @@ outputs/analysis_contact_sheets/causal_footprint_v0_round4_valid9_baseline_step2
 experiments/baseline_runs/causal_footprint_v0_round4_valid9_all_step20_parallel_summary.csv
 ```
 
-**Initial erasure-output labels, excluding clean-reference rows:**
+**Conservative erasure-output labels after re-review, excluding clean-reference rows:**
 
 ```text
-usable_for_claim=yes: 18
+usable_for_claim=yes: 15
 usable_for_claim=borderline: 9
-usable_for_claim=no: 9
+usable_for_claim=no: 12
 ```
 
 Strong `yes` cases by baseline:
 
 ```text
-negative_prompt: 4
-safree_cogvideox: 4
+negative_prompt: 3
+safree_cogvideox: 3
 videoeraser: 5
-t2vunlearning: 5
+t2vunlearning: 4
 ```
 
 **Interpretation:** Round4-valid9 strengthens the core observation. Stronger cases include ink plumes after droplet removal, tire tracks after tire removal, windshield cracks after rock removal, goal-net/racket deformation after ball removal, paper scraps after comb removal, and ribbons/streamers moving after fan or hair dryer removal. Some rows remain ordinary target leakage or residual-cause ambiguity; these are retained in the summary rather than silently filtered out.
 
-**Interpretation:** The first strict clean-valid slice already supports the core claim: existing erasure baselines can remove or strongly weaken the target cause while preserving downstream causal footprints. The cleanest current figure candidate is `tennis ball -> racket strings bend inward`, because all four baselines show the target-erased footprint failure. `rock -> windshield crack`, `soccer ball -> net deformation`, and `comb -> paper scraps` are also useful but differ by baseline.
+**Re-review note:** Five labels were made more conservative after prompt-by-prompt inspection. Tennis-ball Negative Prompt, comb T2V proxy, comb SAFREE, and fan SAFREE were downgraded because target-like source cues remained visible. Tennis-ball SAFREE was moved from `no` to `borderline` because the footprint remains but a yellow residual-cause cue is ambiguous. This keeps the headline count focused on cleaner target-erased causal-footprint leakage rather than target leakage.
+
+**Figure-candidate note:** After conservative re-review, the cleanest figure candidates are not rows where every baseline succeeds. Stronger candidates are `blue ink droplet -> blue plume`, `bicycle tire -> tire track`, `soccer ball -> net deformation`, and `fan/hair dryer -> streamer or ribbon motion`, because they show clear target-erased footprints in multiple baselines while keeping ordinary target leakage rows visible as negative cases.
