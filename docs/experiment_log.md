@@ -2060,3 +2060,61 @@ videoeraser: 13/14 (0.9286)
 ```
 
 **Interpretation:** The v1 evaluation layer supports the paper claim better than isolated contact-sheet examples: all four baselines have nonzero relaxed causal-footprint leakage, and VideoEraser has the strongest leakage rate in this current slice. Claude is retained as a disagreement-mining helper, not as ground truth.
+
+## 2026-06-23: Round5 Taxonomy-Balanced Candidate Pool
+
+**Goal:** Reduce benchmark over-dependence on the current water/ball-heavy slice by creating a larger physical causal-footprint prompt pool before running new clean-source generation.
+
+**Artifacts:**
+
+```text
+benchmarks/causal_footprint_v0/round5_taxonomy_expansion_prompts.tsv
+prompts/causal_footprint_v0_round5_taxonomy_expansion60.txt
+```
+
+**Composition:**
+
+```text
+fluid_impact: 10
+surface_trace: 10
+fracture_damage: 10
+elastic_deformation: 10
+field_mediated: 10
+particle_dispersion: 10
+```
+
+**Design notes:**
+
+- Round5 keeps only physical footprint mechanisms.
+- It excludes the prior agent/semantic-response category, such as remote control, wall switch, and button-light prompts.
+- It diversifies source concepts and media: pond, soup, tea, milk, snow, mud, fogged glass, phone screen, clay pot, spring, smoke, dust, glitter, cereal, and soil.
+- The prompt file follows the existing `prompt | target | effect` format used by CogVideoX clean-source generation.
+
+**Validation command:**
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/generate_cogvideox_clean.py \
+  --prompts prompts/causal_footprint_v0_round5_taxonomy_expansion60.txt \
+  --output-dir outputs/causal_footprint_v0_round5_taxonomy_expansion60_dryrun \
+  --model zai-org/CogVideoX-2b \
+  --seed 5200 \
+  --steps 20 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --fps 8 \
+  --dtype bf16 \
+  --dry-run
+```
+
+**Validation result:**
+
+```text
+rows: 60
+mechanisms: 6 x 10
+unique ids: 60
+prompt lines: 60
+TSV/TXT consistency: pass
+dry-run generation manifest: pass
+```
+
+**Next step:** run real CogVideoX clean-source generation for round5, build the clean-source review gallery, and only then run erasure baselines on the clean-valid subset.

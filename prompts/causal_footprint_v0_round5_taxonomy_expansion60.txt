@@ -1,0 +1,64 @@
+# Round5 taxonomy-balanced clean-source expansion prompts.
+# Exported manually from benchmarks/causal_footprint_v0/round5_taxonomy_expansion_prompts.tsv.
+# Format: <prompt> | <target> | <effect>
+
+A top-down realistic video of a single brown leaf falling onto perfectly still pond water, causing soft circular ripples to spread across the surface after contact. | leaf | soft ripples spread across pond water
+A close-up video of a metal spoon dipping into a bowl of thick tomato soup and stirring once, causing a clear spiral swirl pattern to remain on the soup surface. | spoon | swirl pattern forms in soup
+A macro video of a white milk drop falling into a transparent cup of dark tea, causing a white cloudy plume to spread downward through the liquid. | milk drop | white plume spreads through tea
+A macro video of a dark coffee drop falling into a glass of still white milk, causing a brown plume to bloom downward through the milk. | coffee drop | brown plume blooms through milk
+A close-up slow-motion video of a shiny coin dropping into a shallow fountain basin, causing a small splash and ripple rings to appear around the impact point. | coin | small splash and ripple rings appear
+A close-up video of a red cherry dropping into a glass of clear soda, causing bubbles to rise and a small splash to form around the cherry impact. | cherry | bubbles rise around splash
+A realistic close-up video of a clear ice cube falling into yellow lemonade, causing a splash and bubbles to rise around the impact point. | ice cube | splash and bubbles rise in lemonade
+A macro video of a single raindrop landing on a flat green leaf, causing tiny water beads to scatter outward across the leaf surface. | raindrop | water beads scatter outward
+A close-up slow-motion video of a red strawberry dropping into a bowl of white yogurt, causing the yogurt surface to dent and splash upward. | strawberry | yogurt surface dents and splashes
+A macro video of a transparent glass marble dropping into a shallow tray of clear oil, causing slow smooth rings to spread outward across the oil surface. | glass marble | rings spread through clear oil
+A close-up video of a dark sneaker stepping into smooth wet beach sand and lifting away, leaving a crisp footprint pressed into the sand. | sneaker | footprint remains in wet sand
+A side close-up video of a black boot pressing into clean white snow and lifting away, leaving a deep bootprint with visible tread marks. | boot | deep bootprint remains in snow
+A low-angle close-up video of a dog paw stepping into soft brown mud and lifting away, leaving a clear paw print in the mud. | dog paw | paw print remains in mud
+A close-up video of a hand pressing against fogged glass and lifting away, leaving a visible handprint in the condensation. | hand | handprint remains on fogged glass
+A fixed close-up video of a white chalk stick drawing a short line on a clean blackboard, leaving a bright chalk line after the chalk moves away. | chalk | chalk line remains on blackboard
+A close-up video of a paintbrush dragging across blank canvas, leaving a thick red paint stroke behind after the brush passes. | paintbrush | red paint stroke remains on canvas
+A top-down close-up video of a small blue toy car rolling across a flat layer of white flour on a dark tray, leaving two parallel tracks behind it. | toy car | two tracks remain in flour
+A macro video of a finger dragging through a dusty black tabletop, leaving a clean streak where the dust has been wiped away. | finger | clean streak remains in dust
+A fixed close-up video of a square rubber stamp pressing onto clean white paper and lifting away, leaving a dark ink stamp mark on the paper. | rubber stamp | ink stamp mark remains on paper
+A side close-up video of a bicycle tire rolling out of a shallow puddle onto dry gray pavement, leaving a dark wet tire track behind it. | bicycle tire | wet tire track remains on pavement
+A side-view video of a white baseball flying into a clean glass window, causing branching cracks to spread across the glass from the impact point. | baseball | branching cracks spread across window
+A close-up video of a steel hammer head striking the center of a white ceramic tile, causing a dark radial crack to spread across the tile. | hammer | radial crack spreads across tile
+A slow-motion close-up video of a small metal ball striking a thin clear ice sheet, causing radial cracks to spread outward across the ice. | metal ball | radial cracks spread across ice
+A fixed front-view video of a large white hailstone hitting a clean car windshield, causing a star-shaped crack to appear at the impact point. | hailstone | star crack appears on windshield
+A slow-motion video of a white ceramic plate falling onto a dark hard floor, breaking into shards that scatter outward. | ceramic plate | shards scatter across floor
+A close-up video of a white egg dropping onto a dark kitchen counter, causing the shell to crack and yellow yolk to spread outward. | egg | cracked shell and yolk spread outward
+A top-down close-up video of a small gray pebble hitting a black phone screen, causing spiderweb cracks to spread across the glass. | pebble | spiderweb cracks spread on phone screen
+A close-up video of a metal wrench striking an empty clear glass bottle on a table, causing cracks and small glass pieces to scatter. | wrench | glass bottle cracks and pieces scatter
+A side-view close-up video of a small stone hitting a dry clay pot, causing a chip to break off and a crack to remain on the pot surface. | stone | clay pot chips and crack remains
+A realistic close-up video of a white golf ball hitting a clear window pane, causing a round impact mark and cracks to appear on the glass. | golf ball | round impact crack appears on glass
+A side-view video of a black bowling ball landing on a white mattress, causing a deep round dent to form in the mattress surface. | bowling ball | mattress dents downward
+A close-up video of a heavy hardcover book dropping onto a yellow foam block, causing the foam block to compress downward under the book. | book | foam block compresses downward
+A close-up video of a hand pressing into a soft white pillow and lifting away, leaving a shallow dent that remains briefly in the pillow. | hand | pillow dent remains briefly
+A close-up video of a small metal weight being placed on top of a vertical spring, causing the spring coils to compress tightly together. | metal weight | spring coils compress
+A slow-motion video of a white ping pong ball hitting a hanging blue curtain, causing the curtain fabric to billow backward. | ping pong ball | curtain billows backward
+A side-view video of a red boxing glove striking a black punching bag, causing the bag surface to dent inward and swing backward. | boxing glove | punching bag dents and swings
+A slow-motion close-up video of a small blue water balloon dropping onto a smooth table, causing the balloon to squash flat and rebound. | water balloon | balloon squashes against table
+A side close-up video of a cardboard box landing on a soft sofa cushion, causing the cushion to sink downward under the box. | cardboard box | sofa cushion sinks downward
+A macro video of a finger pulling a red rubber band sideways, causing the rubber band to stretch outward and become taut. | finger | rubber band stretches outward
+A slow-motion close-up video of a yellow tennis ball landing on a smooth slab of soft clay, causing a round dent to form in the clay. | tennis ball | soft clay dents inward
+A top-down close-up video of a black bar magnet sliding near scattered iron filings on white paper, causing the filings to form curved field lines. | bar magnet | iron filings form curved field lines
+A top-down video of a small magnet moving near several tiny compass needles on a table, causing the needles to rotate and point toward the magnet. | magnet | compass needles rotate toward magnet
+A close-up video of a red balloon moving near loose hair strands, causing the hair strands to lift upward and cling toward the balloon. | balloon | hair strands lift and cling
+A top-down close-up video of a blue plastic ruler moving above tiny paper pieces, causing the paper pieces to jump upward and cluster under the ruler. | plastic ruler | paper pieces jump upward
+A fixed close-up video of a small desk fan blowing toward hanging paper streamers, causing the streamers to bend backward and flutter. | desk fan | paper streamers bend backward
+A close-up video of a black hair dryer blowing across a small pile of white powder on a dark table, causing the powder to spread into a visible cloud. | hair dryer | white powder blows into a cloud
+A close-up video of a vacuum cleaner nozzle moving near a line of dust on a floor, causing the dust to stream toward the nozzle. | vacuum nozzle | dust stream moves toward nozzle
+A close-up video of a round speaker cone vibrating under a thin layer of sand grains, causing the grains to form visible vibration patterns. | speaker | sand grains form vibration patterns
+A side-view video of a small electric fan blowing toward a thin vertical smoke plume, causing the smoke plume to bend sideways and stream away. | electric fan | smoke plume bends sideways
+A close-up video of a yellow plastic comb moving near tiny colorful confetti pieces, causing the confetti pieces to lift and cling together near the comb. | plastic comb | tiny confetti pieces cling together
+A close-up video of a metal flour sifter shaking above a dark bowl, causing a white flour dust cloud to spread downward into the bowl. | flour sifter | flour dust cloud spreads downward
+A top-down close-up video of a glass salt shaker tipping over on a black table, causing white salt grains to scatter outward across the surface. | salt shaker | salt grains scatter across black table
+A close-up video of a chalk eraser hitting a blackboard tray, causing a white chalk dust cloud to spread outward through the air. | chalk eraser | chalk dust cloud spreads outward
+A close-up slow-motion video of a round makeup puff tapping a pile of pink powder, causing a colored powder cloud to bloom upward. | makeup puff | colored powder cloud blooms
+A close-up video of a small sandbag tearing open on a clean floor, causing sand to spill out and form a spreading pile. | sandbag | sand spills into a pile
+A top-down video of a small paper seed bag tipping over on a wooden table, causing many seeds to scatter outward. | seed bag | seeds scatter across table
+A side-view slow-motion video of a white snowball hitting a dark wall, causing snow powder to burst outward and stick to the wall. | snowball | snow powder bursts outward
+A close-up video of a small glitter jar tipping over on black paper, causing glitter to spill out into a sparkling trail. | glitter jar | glitter spills into sparkling trail
+A close-up video of a cereal box tipping over above a kitchen table, causing cereal pieces to pour out and scatter across the table. | cereal box | cereal pieces pour onto table
+A close-up video of a small garden trowel scooping and dropping dark soil onto a light surface, causing soil clumps to scatter outward. | garden trowel | soil clumps scatter outward

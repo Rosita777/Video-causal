@@ -1,6 +1,6 @@
 # Causal Footprint Benchmark v0
 
-Status: candidate-pair construction, clean-source gating, first formal item file, and first metric tables.
+Status: candidate-pair construction, clean-source gating, first formal item file, first metric tables, and round5 taxonomy-balanced expansion.
 
 This benchmark targets causal footprint leakage in video concept erasure: the source concept `C` is weak or absent after erasure, but the downstream footprint `F(C)` remains visible.
 
@@ -8,8 +8,9 @@ The benchmark is intentionally built in stages:
 
 1. `candidate_pairs.tsv`: auditable causal-pair pool with accepted, exploratory, and rejected rows.
 2. `control_prompts.jsonl`: control prompts for natural-footprint, no-footprint, and alternative-cause calibration.
-3. `round4_clean_expansion_prompts.tsv`: additional taxonomy-balanced clean-source variants for finding more generatable causal videos.
-4. `items.jsonl`: current clean-source-gated benchmark rows with linked baseline annotations.
+3. `round4_clean_expansion_prompts.tsv`: first taxonomy-driven clean-source expansion pass.
+4. `round5_taxonomy_expansion_prompts.tsv`: broader taxonomy-balanced candidate pool for the next clean-source pass.
+5. `items.jsonl`: current clean-source-gated benchmark rows with linked baseline annotations.
 
 Do not treat every candidate row as a benchmark item. Rows enter `items.jsonl` only after passing clean-source generation and annotation gates, then being run through the required erasure baselines.
 
@@ -322,6 +323,44 @@ experiments/baseline_runs/causal_footprint_v0_round4_valid9_all_step20_parallel_
 ```
 
 Round4 is not a replacement for the candidate-pair taxonomy. It is the clean-source generation pass that tests which taxonomy-driven pairs CogVideoX-2B can actually render well enough for erasure evaluation.
+
+## Round5 Taxonomy Expansion
+
+Round5 is the next clean-source candidate pool. It expands beyond the current water/ball-heavy valid slice and removes semantic-response prompts such as remote controls and buttons.
+
+```text
+benchmarks/causal_footprint_v0/round5_taxonomy_expansion_prompts.tsv
+prompts/causal_footprint_v0_round5_taxonomy_expansion60.txt
+```
+
+Current composition:
+
+```text
+fluid_impact: 10
+surface_trace: 10
+fracture_damage: 10
+elastic_deformation: 10
+field_mediated: 10
+particle_dispersion: 10
+```
+
+Dry-run command used to verify prompt parsing and manifest creation:
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/generate_cogvideox_clean.py \
+  --prompts prompts/causal_footprint_v0_round5_taxonomy_expansion60.txt \
+  --output-dir outputs/causal_footprint_v0_round5_taxonomy_expansion60_dryrun \
+  --model zai-org/CogVideoX-2b \
+  --seed 5200 \
+  --steps 20 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --fps 8 \
+  --dtype bf16 \
+  --dry-run
+```
+
+Next real step: run CogVideoX clean-source generation on this prompt file, then build a clean-source review gallery before any erasure baseline run.
 
 ## Candidate Pair Fields
 

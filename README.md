@@ -22,10 +22,12 @@ Current benchmark candidate pool:
 benchmarks/causal_footprint_v0/candidate_pairs.tsv
 benchmarks/causal_footprint_v0/control_prompts.jsonl
 benchmarks/causal_footprint_v0/round4_clean_expansion_prompts.tsv
+benchmarks/causal_footprint_v0/round5_taxonomy_expansion_prompts.tsv
 prompts/causal_footprint_v0_accepted24.txt
 prompts/causal_footprint_v0_valid5.txt
 prompts/causal_footprint_v0_round4_clean_expansion48.txt
 prompts/causal_footprint_v0_round4_clean_valid9.txt
+prompts/causal_footprint_v0_round5_taxonomy_expansion60.txt
 benchmarks/causal_footprint_v0/items.jsonl
 ```
 
@@ -113,6 +115,13 @@ Fresh clean-source expansion:
 - Manual round4-valid9 labels are tracked in `experiments/baseline_runs/causal_footprint_v0_round4_valid9_all_step20_parallel_summary.csv`.
 - Annotated local gallery: `outputs/analysis_contact_sheets/causal_footprint_v0_round4_valid9_baseline_step20/baseline_gallery_annotated.html`.
 - Conservative round4-valid9 erasure-output counts after re-review: 15 `yes`, 9 `borderline`, 12 `no`.
+
+Round5 taxonomy-balanced expansion pool:
+
+- `benchmarks/causal_footprint_v0/round5_taxonomy_expansion_prompts.tsv` contains 60 physical causal-footprint candidates.
+- `prompts/causal_footprint_v0_round5_taxonomy_expansion60.txt` is the direct CogVideoX clean-source prompt file.
+- The pool has 6 mechanism types with 10 candidates each: `fluid_impact`, `surface_trace`, `fracture_damage`, `elastic_deformation`, `field_mediated`, and `particle_dispersion`.
+- Round5 deliberately avoids the earlier button/remote semantic-response prompts and reduces dependence on water-drop and ball-net examples.
 
 Formal benchmark-v0 artifact:
 
@@ -385,7 +394,8 @@ video_concept_erasure_causal_footprint/
 │   ├── export_valid5_manifest.json
 │   ├── export_round4_clean_valid9_manifest.json
 │   ├── items.jsonl
-│   └── round4_clean_expansion_prompts.tsv
+│   ├── round4_clean_expansion_prompts.tsv
+│   └── round5_taxonomy_expansion_prompts.tsv
 ├── experiments/pilot_week1/
 │   ├── causal_audit_round1/round1_summary.csv
 │   ├── causal_audit_round2_car_barrier/round2_summary.csv
@@ -430,6 +440,7 @@ video_concept_erasure_causal_footprint/
 │   ├── causal_footprint_v0_valid5.txt
 │   ├── causal_footprint_v0_round4_clean_expansion48.txt
 │   ├── causal_footprint_v0_round4_clean_valid9.txt
+│   ├── causal_footprint_v0_round5_taxonomy_expansion60.txt
 │   ├── causal_pilot.txt
 │   ├── cogvideox_causal_screening.txt
 │   ├── cogvideox_clean_screening_round1.txt
@@ -460,8 +471,8 @@ video_concept_erasure_causal_footprint/
 
 ## Next Actions
 
-1. Review `experiments/evaluation/review.html` and use `annotation_queue.csv` to mark any human-label corrections.
-2. Expand the clean-source pool to increase mechanism balance and reduce dependence on the current 14-item slice.
-3. Use Claude/Qwen disagreement as a triage signal, not as ground truth.
-4. Add no-source and alternative-cause controls to separate real causal footprints from generic visual priors.
-5. Start method design only after the benchmark/evaluation story is stable enough to support a paper claim.
+1. Run round5 clean-source generation from `prompts/causal_footprint_v0_round5_taxonomy_expansion60.txt`.
+2. Build a clean-source review gallery and screen for valid, borderline, and failed source videos.
+3. Run all four baselines only on the clean-source-valid round5 slice.
+4. Use Claude/Qwen disagreement as a triage signal, not as ground truth.
+5. Add no-source and alternative-cause controls to separate real causal footprints from generic visual priors.
