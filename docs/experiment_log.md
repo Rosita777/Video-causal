@@ -2209,3 +2209,76 @@ PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/build_
 ```
 
 **Conclusion:** round5 clean-source generation is complete. The active next step is to annotate `clean_source_screening.csv` with valid, borderline, and failed clean-source labels, then export a clean-valid prompt slice for all four erasure baselines.
+
+## 2026-06-23: Round5 Initial Clean-Source Labels
+
+**Goal:** Pre-label the 60 generated round5 clean-source videos before deciding which prompts are safe enough for erasure-baseline runs.
+
+**Input artifacts:**
+
+```text
+outputs/analysis_contact_sheets/causal_footprint_v0_round5_taxonomy_expansion60_step20/clean_gallery.html
+outputs/analysis_contact_sheets/causal_footprint_v0_round5_taxonomy_expansion60_step20/frame_strips/
+outputs/analysis_contact_sheets/causal_footprint_v0_round5_taxonomy_expansion60_step20/clean_source_screening.csv
+```
+
+**Tracked label file:**
+
+```text
+experiments/clean_screening/causal_footprint_v0_round5_taxonomy_expansion60_initial_labels.csv
+```
+
+**Label policy:** `yes` is reserved for videos where the target, footprint, and temporal/dependence relation are all usable. `borderline` is used when the target and footprint are visible but the temporal chain is weak, cropped, static, or visually ambiguous. Blank/pure-color, target-missing, or footprint-missing generations are marked `no`.
+
+**Summary:**
+
+```text
+total: 60
+yes: 10
+borderline: 11
+no: 39
+```
+
+**By mechanism:**
+
+```text
+elastic_deformation: yes 0, borderline 1, no 9
+field_mediated: yes 4, borderline 2, no 4
+fluid_impact: yes 1, borderline 2, no 7
+fracture_damage: yes 0, borderline 1, no 9
+particle_dispersion: yes 4, borderline 3, no 3
+surface_trace: yes 1, borderline 2, no 7
+```
+
+**Strict yes rows:**
+
+```text
+round5_fluid_coin_fountain_005
+round5_surface_tire_puddle_010
+round5_field_magnet_filings_001
+round5_field_balloon_hair_003
+round5_field_fan_streamers_005
+round5_field_speaker_sand_008
+round5_particle_chalk_eraser_003
+round5_particle_snowball_wall_007
+round5_particle_glitter_jar_008
+round5_particle_soil_trowel_010
+```
+
+**Borderline rows:**
+
+```text
+round5_fluid_leaf_pond_001
+round5_fluid_cherry_soda_006
+round5_surface_sneaker_wet_sand_001
+round5_surface_paw_mud_003
+round5_fracture_ceramic_plate_floor_005
+round5_elastic_boxing_glove_bag_006
+round5_field_plastic_ruler_paper_004
+round5_field_comb_confetti_010
+round5_particle_flour_sifter_001
+round5_particle_salt_shaker_002
+round5_particle_seed_bag_006
+```
+
+**Interpretation:** Round5 confirms that broadening the taxonomy helps, but CogVideoX-2B still fails many physical prompts by producing blank/pure-color frames or static footprint-only scenes. For the next baseline run, the strict scientific slice is the 10 `yes` rows; the 11 `borderline` rows can be kept as an exploratory/backup slice but should not be mixed into the main claim without review.

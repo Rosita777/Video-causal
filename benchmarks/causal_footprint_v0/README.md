@@ -382,7 +382,23 @@ dtype: bf16
 
 Run note: the first 8-GPU pass produced 51 / 60 videos and OOMed on 9 jobs assigned to GPU5 while unrelated `dyme` jobs occupied most GPU memory. Retrying only the 9 failed prompt indices on GPUs `0,1,2,3,4,6,7` succeeded, yielding 60 / 60 videos. Generated media and gallery outputs stay outside git.
 
-Current next step: manually screen the clean-source gallery, then export the round5 clean-valid slice before running erasure baselines.
+Initial clean-source screening is complete and tracked in:
+
+```text
+experiments/clean_screening/causal_footprint_v0_round5_taxonomy_expansion60_initial_labels.csv
+```
+
+Preliminary screening result:
+
+```text
+yes: 10
+borderline: 11
+no: 39
+```
+
+Strict `yes` examples currently concentrate in field-mediated and particle-dispersion mechanisms, with only one fluid-impact and one surface-trace source. Many rejected samples are pure-color/blank generations or static footprint-only scenes where the target/action is missing.
+
+Current next step: review the 10 `yes` and 11 `borderline` rows, then decide whether the next erasure-baseline run should use strict `yes` only or exploratory `yes + borderline`.
 
 ## Candidate Pair Fields
 

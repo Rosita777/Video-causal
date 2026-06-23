@@ -124,6 +124,7 @@ Round5 taxonomy-balanced expansion pool:
 - Round5 deliberately avoids the earlier button/remote semantic-response prompts and reduces dependence on water-drop and ball-net examples.
 - Round5 CogVideoX-2B clean-source generation is complete: 60 / 60 videos at 49 frames, 720x480, 20 steps, seed 5200.
 - Review artifacts are under `outputs/analysis_contact_sheets/causal_footprint_v0_round5_taxonomy_expansion60_step20/clean_gallery.html` and `clean_source_screening.csv`.
+- Initial round5 clean-source labels are tracked in `experiments/clean_screening/causal_footprint_v0_round5_taxonomy_expansion60_initial_labels.csv`: 10 `yes`, 11 `borderline`, 39 `no`.
 
 Formal benchmark-v0 artifact:
 
@@ -473,9 +474,9 @@ video_concept_erasure_causal_footprint/
 
 ## Next Actions
 
-1. Screen round5 clean-source videos in `outputs/analysis_contact_sheets/causal_footprint_v0_round5_taxonomy_expansion60_step20/clean_gallery.html`.
-2. Save valid, borderline, and failed source labels in the generated `clean_source_screening.csv`.
-3. Export a round5 clean-valid prompt slice.
-4. Run all four baselines on the clean-source-valid round5 slice.
+1. Review the round5 initial labels in `experiments/clean_screening/causal_footprint_v0_round5_taxonomy_expansion60_initial_labels.csv`.
+2. Decide whether the next baseline slice should be strict `yes` only or exploratory `yes + borderline`.
+3. Export the chosen round5 prompt slice.
+4. Run all four baselines on the chosen round5 slice.
 5. Use Claude/Qwen disagreement as a triage signal, not as ground truth.
 6. Add no-source and alternative-cause controls to separate real causal footprints from generic visual priors.
