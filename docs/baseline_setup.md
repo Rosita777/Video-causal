@@ -49,6 +49,7 @@ Notes:
 - `scripts/run_pilot.py`: dry-run manifest driver.
 - `scripts/build_baseline_comparison.py`: contact-sheet/annotation CSV helper.
 - `scripts/build_clean_source_review.py`: clean-source screening CSV helper.
+- `scripts/build_baseline_review.py`: grouped clean-reference plus baseline review gallery/CSV helper for prompt-slice runs.
 - `scripts/check_baselines.py`: source/package readiness checker.
 - `scripts/generate_cogvideox_clean.py`: CogVideoX-2B generation runner for clean and Negative Prompt videos with a dependency-free dry-run mode.
 - `scripts/adapters/run_safree_cogvideox.py`: SAFREE-CogVideoX wrapper with dependency-free dry-run mode and official-pipeline real-run mode.

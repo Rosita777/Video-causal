@@ -3,6 +3,7 @@ import json
 import os
 import subprocess
 import sys
+from types import SimpleNamespace
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -187,3 +188,42 @@ def test_t2vunlearning_adapter_real_run_uses_absolute_paths_for_external_runner(
     assert Path(call["model"]).is_absolute()
     assert manifest["dry_run"] is False
 
+
+def test_videoeraser_uses_cpu_prompt_encoding_when_offloaded():
+    from scripts.adapters import run_videoeraser_cogvideox as adapter
+
+    offloaded = SimpleNamespace(
+        enable_sequential_cpu_offload=True,
+        enable_model_cpu_offload=False,
+        device="cuda",
+    )
+    not_offloaded = SimpleNamespace(
+        enable_sequential_cpu_offload=False,
+        enable_model_cpu_offload=False,
+        device="cuda",
+    )
+
+    assert adapter.select_encode_device(offloaded, selected_device="cuda", cuda_available=True) == "cpu"
+    assert adapter.select_encode_device(not_offloaded, selected_device="cuda", cuda_available=True) == "cuda"
+    assert adapter.offload_requested(offloaded) is True
+    assert adapter.offload_requested(not_offloaded) is False
+
+
+def test_t2vunlearning_uses_cpu_prompt_encoding_when_offloaded():
+    from scripts.adapters import run_t2vunlearning_cogvideox as adapter
+
+    offloaded = SimpleNamespace(
+        enable_sequential_cpu_offload=True,
+        enable_model_cpu_offload=False,
+        device="cuda",
+    )
+    not_offloaded = SimpleNamespace(
+        enable_sequential_cpu_offload=False,
+        enable_model_cpu_offload=False,
+        device="cuda",
+    )
+
+    assert adapter.select_encode_device(offloaded, selected_device="cuda", cuda_available=True) == "cpu"
+    assert adapter.select_encode_device(not_offloaded, selected_device="cuda", cuda_available=True) == "cuda"
+    assert adapter.offload_requested(offloaded) is True
+    assert adapter.offload_requested(not_offloaded) is False

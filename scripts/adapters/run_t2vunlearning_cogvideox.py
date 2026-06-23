@@ -220,19 +220,37 @@ def load_cogvideox_pipe(args: argparse.Namespace):
     if args.vae_tiling:
         pipe.vae.enable_tiling()
 
-    if args.enable_sequential_cpu_offload:
-        pipe.enable_sequential_cpu_offload()
+    selected_device = args.device
+    if selected_device == "auto":
         selected_device = "cuda" if torch.cuda.is_available() else "cpu"
-    elif args.enable_model_cpu_offload:
-        pipe.enable_model_cpu_offload()
+    if offload_requested(args):
         selected_device = "cuda" if torch.cuda.is_available() else "cpu"
     else:
-        selected_device = args.device
-        if selected_device == "auto":
-            selected_device = "cuda" if torch.cuda.is_available() else "cpu"
         pipe.to(selected_device)
 
     return torch, export_to_video, pipe, torch_dtype, selected_device
+
+
+def offload_requested(args: argparse.Namespace) -> bool:
+    return bool(args.enable_sequential_cpu_offload or args.enable_model_cpu_offload)
+
+
+def select_encode_device(args: argparse.Namespace, *, selected_device: str, cuda_available: bool) -> str:
+    if offload_requested(args):
+        return "cpu"
+    if selected_device == "auto":
+        return "cuda" if cuda_available else "cpu"
+    return selected_device
+
+
+def prepare_pipe_for_generation(pipe, args: argparse.Namespace, selected_device: str) -> None:
+    if args.enable_sequential_cpu_offload:
+        pipe.enable_sequential_cpu_offload()
+        return
+    if args.enable_model_cpu_offload:
+        pipe.enable_model_cpu_offload()
+        return
+    pipe.to(selected_device)
 
 
 def encode_unlearned_prompts(torch, pipe, args: argparse.Namespace, item: dict[str, object], device: str, torch_dtype):
@@ -261,13 +279,22 @@ def encode_unlearned_prompts(torch, pipe, args: argparse.Namespace, item: dict[s
 
 def generate_local(args: argparse.Namespace, items: list[dict[str, object]]) -> None:
     torch, export_to_video, pipe, torch_dtype, selected_device = load_cogvideox_pipe(args)
-    encode_device = selected_device if selected_device != "auto" else ("cuda" if torch.cuda.is_available() else "cpu")
+    cuda_available = torch.cuda.is_available()
+    encode_device = select_encode_device(args, selected_device=selected_device, cuda_available=cuda_available)
+
+    encoded_items = []
     for item in items:
+        prompt_embeds, negative_prompt_embeds = encode_unlearned_prompts(torch, pipe, args, item, encode_device, torch_dtype)
+        encoded_items.append((item, prompt_embeds, negative_prompt_embeds))
+
+    if offload_requested(args):
+        prepare_pipe_for_generation(pipe, args, selected_device)
+
+    for item, prompt_embeds, negative_prompt_embeds in encoded_items:
         video_path = Path(str(item["video_path"]))
         video_path.parent.mkdir(parents=True, exist_ok=True)
-        generator_device = "cuda" if str(encode_device).startswith("cuda") and torch.cuda.is_available() else "cpu"
+        generator_device = "cuda" if str(selected_device).startswith("cuda") and cuda_available else "cpu"
         generator = torch.Generator(device=generator_device).manual_seed(int(item["seed"]))
-        prompt_embeds, negative_prompt_embeds = encode_unlearned_prompts(torch, pipe, args, item, encode_device, torch_dtype)
         unlearn = item["t2vunlearning"]
         result = pipe(
             prompt=None,

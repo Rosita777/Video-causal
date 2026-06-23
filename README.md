@@ -126,6 +126,8 @@ Round5 taxonomy-balanced expansion pool:
 - Review artifacts are under `outputs/analysis_contact_sheets/causal_footprint_v0_round5_taxonomy_expansion60_step20/clean_gallery.html` and `clean_source_screening.csv`.
 - Initial round5 clean-source labels are tracked in `experiments/clean_screening/causal_footprint_v0_round5_taxonomy_expansion60_initial_labels.csv`: 10 `yes`, 11 `borderline`, 39 `no`.
 - Exported round5 slices: `prompts/causal_footprint_v0_round5_clean_yes10.txt` for the main run and `prompts/causal_footprint_v0_round5_clean_yes_borderline21.txt` for exploratory backup.
+- Round5 strict `yes10` has been run on all four erasure baselines: 40 / 40 erasure videos plus 10 clean references. Review artifacts are under `outputs/analysis_contact_sheets/causal_footprint_v0_round5_yes10_baseline_step20/baseline_gallery.html`, and the pending-label summary is `experiments/baseline_runs/causal_footprint_v0_round5_yes10_all_step20_parallel_summary.csv`.
+- Round5 `borderline11` has also been run as an exploratory backup: 44 / 44 erasure videos plus 11 clean references. Review artifacts are under `outputs/analysis_contact_sheets/causal_footprint_v0_round5_borderline11_baseline_step20/baseline_gallery.html`, and the pending-label summary is `experiments/baseline_runs/causal_footprint_v0_round5_borderline11_all_step20_parallel_summary.csv`.
 
 Formal benchmark-v0 artifact:
 

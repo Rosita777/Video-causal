@@ -398,7 +398,7 @@ no: 39
 
 Strict `yes` examples currently concentrate in field-mediated and particle-dispersion mechanisms, with only one fluid-impact and one surface-trace source. Many rejected samples are pure-color/blank generations or static footprint-only scenes where the target/action is missing.
 
-Current next step: review the 10 `yes` and 11 `borderline` rows, then decide whether the next erasure-baseline run should use strict `yes` only or exploratory `yes + borderline`.
+Current baseline status: the strict `yes10` slice has been run on all four required erasure baselines. The 11 `borderline` rows were split out and run separately as an exploratory backup slice.
 
 Exported prompt slices:
 
@@ -407,9 +407,22 @@ prompts/causal_footprint_v0_round5_clean_yes10.txt
 benchmarks/causal_footprint_v0/export_round5_clean_yes10_manifest.json
 prompts/causal_footprint_v0_round5_clean_yes_borderline21.txt
 benchmarks/causal_footprint_v0/export_round5_clean_yes_borderline21_manifest.json
+prompts/causal_footprint_v0_round5_clean_borderline11.txt
+benchmarks/causal_footprint_v0/export_round5_clean_borderline11_manifest.json
 ```
 
-Current main-run choice: use `round5_clean_yes10` for the next four-baseline erasure run. Keep `yes_borderline21` separate as an exploratory backup slice.
+Baseline review artifacts:
+
+```text
+outputs/analysis_contact_sheets/causal_footprint_v0_round5_yes10_baseline_step20/baseline_gallery.html
+outputs/analysis_contact_sheets/causal_footprint_v0_round5_yes10_baseline_step20/baseline_review.csv
+experiments/baseline_runs/causal_footprint_v0_round5_yes10_all_step20_parallel_summary.csv
+outputs/analysis_contact_sheets/causal_footprint_v0_round5_borderline11_baseline_step20/baseline_gallery.html
+outputs/analysis_contact_sheets/causal_footprint_v0_round5_borderline11_baseline_step20/baseline_review.csv
+experiments/baseline_runs/causal_footprint_v0_round5_borderline11_all_step20_parallel_summary.csv
+```
+
+Current next step: manually review the two baseline galleries. Use `yes10` for main scientific claims; treat `borderline11` as candidate mining / backup evidence unless rows are later adjudicated.
 
 ## Candidate Pair Fields
 

@@ -2311,3 +2311,97 @@ yes_borderline21: 21 prompts
 ```
 
 **Decision:** use `prompts/causal_footprint_v0_round5_clean_yes10.txt` as the main scientific slice for the next four-baseline run. Keep the 21-row `yes + borderline` slice separate as backup/exploratory material.
+
+## 2026-06-23: Round5 yes10 Four-Baseline Run
+
+**Goal:** Run the strict clean-valid round5 slice on the four required erasure baselines and build a clean-reference-aligned review page.
+
+**Prompt slice:**
+
+```text
+prompts/causal_footprint_v0_round5_clean_yes10.txt
+benchmarks/causal_footprint_v0/export_round5_clean_yes10_manifest.json
+```
+
+**Generation settings:**
+
+```text
+model: models/CogVideoX-2b
+seed: 6100 + prompt index
+steps: 20
+guidance_scale: 6.0
+frames: 49
+resolution: 720x480
+dtype: bf16
+baselines: negative_prompt, safree_cogvideox, videoeraser, t2vunlearning
+```
+
+**Runtime note:** The first mixed run exposed a memory issue in local VideoEraser/T2V proxy prompt encoding. The local adapters now encode prompts on CPU before enabling sequential/model CPU offload. This avoids T5 prompt-encoder OOM while keeping generation on the requested GPU/offload path.
+
+**Result:**
+
+```text
+negative_prompt: 10 / 10
+safree_cogvideox: 10 / 10
+videoeraser: 10 / 10
+t2vunlearning: 10 / 10
+total erasure outputs: 40 / 40
+```
+
+**Review artifacts:**
+
+```text
+outputs/baseline_suite_causal_footprint_v0_round5_yes10_all_step20_parallel/
+outputs/analysis_contact_sheets/causal_footprint_v0_round5_yes10_baseline_step20/baseline_gallery.html
+outputs/analysis_contact_sheets/causal_footprint_v0_round5_yes10_baseline_step20/baseline_review.csv
+experiments/baseline_runs/causal_footprint_v0_round5_yes10_all_step20_parallel_summary.csv
+```
+
+**Review tool update:** `scripts/build_baseline_review.py` is now the reusable review builder for prompt-slice baseline runs. It reads an exported clean-source manifest plus a baseline output root, keeps missing rows explicit, writes `baseline_review.csv`, and builds a clean-reference plus baseline HTML gallery.
+
+**Interpretation:** This is the current main round5 evidence pool, but labels remain pending. The next scientific step is manual review of target visibility, footprint visibility, source/effect separation, and usable-for-claim status.
+
+## 2026-06-23: Round5 borderline11 Exploratory Four-Baseline Run
+
+**Goal:** Use idle GPUs to run the 11 round5 clean-source `borderline` rows separately, without mixing them into the strict main claim.
+
+**Prompt slice:**
+
+```text
+prompts/causal_footprint_v0_round5_clean_borderline11.txt
+benchmarks/causal_footprint_v0/export_round5_clean_borderline11_manifest.json
+```
+
+**Generation settings:**
+
+```text
+model: models/CogVideoX-2b
+seed: 6300 + prompt index
+steps: 20
+guidance_scale: 6.0
+frames: 49
+resolution: 720x480
+dtype: bf16
+baselines: negative_prompt, safree_cogvideox, videoeraser, t2vunlearning
+```
+
+**Result:**
+
+```text
+negative_prompt: 11 / 11
+safree_cogvideox: 11 / 11
+videoeraser: 11 / 11
+t2vunlearning: 11 / 11
+total erasure outputs: 44 / 44
+```
+
+**Review artifacts:**
+
+```text
+outputs/baseline_suite_causal_footprint_v0_round5_borderline11_all_step20_parallel/
+outputs/analysis_contact_sheets/causal_footprint_v0_round5_borderline11_baseline_step20/baseline_gallery.html
+outputs/analysis_contact_sheets/causal_footprint_v0_round5_borderline11_baseline_step20/baseline_review.csv
+experiments/baseline_runs/causal_footprint_v0_round5_borderline11_all_step20_parallel_summary.csv
+```
+
+**Interpretation:** These rows are exploratory because their clean references had weak temporal order, weak causal dependence, or partial target/effect visibility. They are useful for candidate mining but should not be merged into headline metrics unless later adjudicated.
