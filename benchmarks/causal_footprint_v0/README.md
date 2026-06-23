@@ -326,7 +326,7 @@ Round4 is not a replacement for the candidate-pair taxonomy. It is the clean-sou
 
 ## Round5 Taxonomy Expansion
 
-Round5 is the next clean-source candidate pool. It expands beyond the current water/ball-heavy valid slice and removes semantic-response prompts such as remote controls and buttons.
+Round5 is the active clean-source candidate pool. It expands beyond the current water/ball-heavy valid slice and removes semantic-response prompts such as remote controls and buttons.
 
 ```text
 benchmarks/causal_footprint_v0/round5_taxonomy_expansion_prompts.tsv
@@ -360,7 +360,29 @@ PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/genera
   --dry-run
 ```
 
-Next real step: run CogVideoX clean-source generation on this prompt file, then build a clean-source review gallery before any erasure baseline run.
+Real CogVideoX-2B clean-source generation is complete for all 60 prompts.
+
+```text
+outputs/causal_footprint_v0_round5_taxonomy_expansion60_bf16_step20_parallel/clean/generation_manifest.json
+outputs/analysis_contact_sheets/causal_footprint_v0_round5_taxonomy_expansion60_step20/clean_gallery.html
+outputs/analysis_contact_sheets/causal_footprint_v0_round5_taxonomy_expansion60_step20/clean_source_screening.csv
+```
+
+Generation settings:
+
+```text
+model: models/CogVideoX-2b
+seed: 5200
+steps: 20
+guidance_scale: 6.0
+frames: 49
+resolution: 720x480
+dtype: bf16
+```
+
+Run note: the first 8-GPU pass produced 51 / 60 videos and OOMed on 9 jobs assigned to GPU5 while unrelated `dyme` jobs occupied most GPU memory. Retrying only the 9 failed prompt indices on GPUs `0,1,2,3,4,6,7` succeeded, yielding 60 / 60 videos. Generated media and gallery outputs stay outside git.
+
+Current next step: manually screen the clean-source gallery, then export the round5 clean-valid slice before running erasure baselines.
 
 ## Candidate Pair Fields
 

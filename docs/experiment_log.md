@@ -2117,4 +2117,95 @@ TSV/TXT consistency: pass
 dry-run generation manifest: pass
 ```
 
-**Next step:** run real CogVideoX clean-source generation for round5, build the clean-source review gallery, and only then run erasure baselines on the clean-valid subset.
+**Next step:** completed by the following round5 clean-generation entry. Manual clean-source screening is now the active task.
+
+## 2026-06-23: Round5 CogVideoX-2B Clean-Source Generation
+
+**Goal:** Generate the full round5 clean-source candidate set so the next benchmark slice is not limited to water-drop and ball-net examples.
+
+**Input:**
+
+```text
+benchmarks/causal_footprint_v0/round5_taxonomy_expansion_prompts.tsv
+prompts/causal_footprint_v0_round5_taxonomy_expansion60.txt
+```
+
+**Primary command:**
+
+```bash
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True PYTHONNOUSERSITE=1 \
+/home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/run_parallel_baseline_jobs.py \
+  --baseline clean \
+  --prompts prompts/causal_footprint_v0_round5_taxonomy_expansion60.txt \
+  --output-root outputs/causal_footprint_v0_round5_taxonomy_expansion60_bf16_step20_parallel \
+  --model models/CogVideoX-2b \
+  --seed 5200 \
+  --steps 20 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --height 480 \
+  --width 720 \
+  --fps 8 \
+  --dtype bf16 \
+  --gpus 0,1,2,3,4,5,6,7 \
+  --slots-per-gpu 1 \
+  --poll-interval 5 \
+  --enable-sequential-cpu-offload \
+  --vae-slicing \
+  --vae-tiling
+```
+
+**Initial result:** 51 / 60 videos completed. Nine jobs assigned to GPU5 failed with CUDA OOM because unrelated `dyme` processes were already using most memory on all eight GPUs, with GPU5 additionally carrying another process.
+
+**Retry command:** reran only failed prompt indices `5,8,16,24,31,39,43,48,56`, excluding GPU5.
+
+```bash
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True PYTHONNOUSERSITE=1 \
+/home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/run_parallel_baseline_jobs.py \
+  --baseline clean \
+  --prompts prompts/causal_footprint_v0_round5_taxonomy_expansion60.txt \
+  --source-indices 5,8,16,24,31,39,43,48,56 \
+  --output-root outputs/causal_footprint_v0_round5_taxonomy_expansion60_bf16_step20_parallel \
+  --model models/CogVideoX-2b \
+  --seed 5200 \
+  --steps 20 \
+  --guidance-scale 6.0 \
+  --num-frames 49 \
+  --height 480 \
+  --width 720 \
+  --fps 8 \
+  --dtype bf16 \
+  --gpus 0,1,2,3,4,6,7 \
+  --slots-per-gpu 1 \
+  --poll-interval 5 \
+  --enable-sequential-cpu-offload \
+  --vae-slicing \
+  --vae-tiling
+```
+
+**Final result:**
+
+```text
+clean-source videos: 60 / 60
+merged generation manifest:
+outputs/causal_footprint_v0_round5_taxonomy_expansion60_bf16_step20_parallel/clean/generation_manifest.json
+review gallery:
+outputs/analysis_contact_sheets/causal_footprint_v0_round5_taxonomy_expansion60_step20/clean_gallery.html
+screening CSV:
+outputs/analysis_contact_sheets/causal_footprint_v0_round5_taxonomy_expansion60_step20/clean_source_screening.csv
+frame strips: 60
+```
+
+**Review artifact command:**
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/build_clean_source_review.py \
+  --manifest outputs/causal_footprint_v0_round5_taxonomy_expansion60_bf16_step20_parallel/clean/generation_manifest.json \
+  --metadata-tsv benchmarks/causal_footprint_v0/round5_taxonomy_expansion_prompts.tsv \
+  --output-dir outputs/analysis_contact_sheets/causal_footprint_v0_round5_taxonomy_expansion60_step20 \
+  --frames-per-video 5 \
+  --thumb-width 220 \
+  --thumb-height 124
+```
+
+**Conclusion:** round5 clean-source generation is complete. The active next step is to annotate `clean_source_screening.csv` with valid, borderline, and failed clean-source labels, then export a clean-valid prompt slice for all four erasure baselines.
