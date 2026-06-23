@@ -1,0 +1,27 @@
+# Round5 clean-source slice: yes_borderline21
+# Clean-source label filter: yes, borderline
+# Source metadata: benchmarks/causal_footprint_v0/round5_taxonomy_expansion_prompts.tsv
+# Source labels: experiments/clean_screening/causal_footprint_v0_round5_taxonomy_expansion60_initial_labels.csv
+# Format: <prompt> | <target> | <effect>
+
+A top-down realistic video of a single brown leaf falling onto perfectly still pond water, causing soft circular ripples to spread across the surface after contact. | leaf | soft ripples spread across pond water
+A close-up slow-motion video of a shiny coin dropping into a shallow fountain basin, causing a small splash and ripple rings to appear around the impact point. | coin | small splash and ripple rings appear
+A close-up video of a red cherry dropping into a glass of clear soda, causing bubbles to rise and a small splash to form around the cherry impact. | cherry | bubbles rise around splash
+A close-up video of a dark sneaker stepping into smooth wet beach sand and lifting away, leaving a crisp footprint pressed into the sand. | sneaker | footprint remains in wet sand
+A low-angle close-up video of a dog paw stepping into soft brown mud and lifting away, leaving a clear paw print in the mud. | dog paw | paw print remains in mud
+A side close-up video of a bicycle tire rolling out of a shallow puddle onto dry gray pavement, leaving a dark wet tire track behind it. | bicycle tire | wet tire track remains on pavement
+A slow-motion video of a white ceramic plate falling onto a dark hard floor, breaking into shards that scatter outward. | ceramic plate | shards scatter across floor
+A side-view video of a red boxing glove striking a black punching bag, causing the bag surface to dent inward and swing backward. | boxing glove | punching bag dents and swings
+A top-down close-up video of a black bar magnet sliding near scattered iron filings on white paper, causing the filings to form curved field lines. | bar magnet | iron filings form curved field lines
+A close-up video of a red balloon moving near loose hair strands, causing the hair strands to lift upward and cling toward the balloon. | balloon | hair strands lift and cling
+A top-down close-up video of a blue plastic ruler moving above tiny paper pieces, causing the paper pieces to jump upward and cluster under the ruler. | plastic ruler | paper pieces jump upward
+A fixed close-up video of a small desk fan blowing toward hanging paper streamers, causing the streamers to bend backward and flutter. | desk fan | paper streamers bend backward
+A close-up video of a round speaker cone vibrating under a thin layer of sand grains, causing the grains to form visible vibration patterns. | speaker | sand grains form vibration patterns
+A close-up video of a yellow plastic comb moving near tiny colorful confetti pieces, causing the confetti pieces to lift and cling together near the comb. | plastic comb | tiny confetti pieces cling together
+A close-up video of a metal flour sifter shaking above a dark bowl, causing a white flour dust cloud to spread downward into the bowl. | flour sifter | flour dust cloud spreads downward
+A top-down close-up video of a glass salt shaker tipping over on a black table, causing white salt grains to scatter outward across the surface. | salt shaker | salt grains scatter across black table
+A close-up video of a chalk eraser hitting a blackboard tray, causing a white chalk dust cloud to spread outward through the air. | chalk eraser | chalk dust cloud spreads outward
+A top-down video of a small paper seed bag tipping over on a wooden table, causing many seeds to scatter outward. | seed bag | seeds scatter across table
+A side-view slow-motion video of a white snowball hitting a dark wall, causing snow powder to burst outward and stick to the wall. | snowball | snow powder bursts outward
+A close-up video of a small glitter jar tipping over on black paper, causing glitter to spill out into a sparkling trail. | glitter jar | glitter spills into sparkling trail
+A close-up video of a small garden trowel scooping and dropping dark soil onto a light surface, causing soil clumps to scatter outward. | garden trowel | soil clumps scatter outward

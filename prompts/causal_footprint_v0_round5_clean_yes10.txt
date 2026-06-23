@@ -1,0 +1,16 @@
+# Round5 clean-source slice: yes10
+# Clean-source label filter: yes
+# Source metadata: benchmarks/causal_footprint_v0/round5_taxonomy_expansion_prompts.tsv
+# Source labels: experiments/clean_screening/causal_footprint_v0_round5_taxonomy_expansion60_initial_labels.csv
+# Format: <prompt> | <target> | <effect>
+
+A close-up slow-motion video of a shiny coin dropping into a shallow fountain basin, causing a small splash and ripple rings to appear around the impact point. | coin | small splash and ripple rings appear
+A side close-up video of a bicycle tire rolling out of a shallow puddle onto dry gray pavement, leaving a dark wet tire track behind it. | bicycle tire | wet tire track remains on pavement
+A top-down close-up video of a black bar magnet sliding near scattered iron filings on white paper, causing the filings to form curved field lines. | bar magnet | iron filings form curved field lines
+A close-up video of a red balloon moving near loose hair strands, causing the hair strands to lift upward and cling toward the balloon. | balloon | hair strands lift and cling
+A fixed close-up video of a small desk fan blowing toward hanging paper streamers, causing the streamers to bend backward and flutter. | desk fan | paper streamers bend backward
+A close-up video of a round speaker cone vibrating under a thin layer of sand grains, causing the grains to form visible vibration patterns. | speaker | sand grains form vibration patterns
+A close-up video of a chalk eraser hitting a blackboard tray, causing a white chalk dust cloud to spread outward through the air. | chalk eraser | chalk dust cloud spreads outward
+A side-view slow-motion video of a white snowball hitting a dark wall, causing snow powder to burst outward and stick to the wall. | snowball | snow powder bursts outward
+A close-up video of a small glitter jar tipping over on black paper, causing glitter to spill out into a sparkling trail. | glitter jar | glitter spills into sparkling trail
+A close-up video of a small garden trowel scooping and dropping dark soil onto a light surface, causing soil clumps to scatter outward. | garden trowel | soil clumps scatter outward

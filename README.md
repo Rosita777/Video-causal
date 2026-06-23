@@ -125,6 +125,7 @@ Round5 taxonomy-balanced expansion pool:
 - Round5 CogVideoX-2B clean-source generation is complete: 60 / 60 videos at 49 frames, 720x480, 20 steps, seed 5200.
 - Review artifacts are under `outputs/analysis_contact_sheets/causal_footprint_v0_round5_taxonomy_expansion60_step20/clean_gallery.html` and `clean_source_screening.csv`.
 - Initial round5 clean-source labels are tracked in `experiments/clean_screening/causal_footprint_v0_round5_taxonomy_expansion60_initial_labels.csv`: 10 `yes`, 11 `borderline`, 39 `no`.
+- Exported round5 slices: `prompts/causal_footprint_v0_round5_clean_yes10.txt` for the main run and `prompts/causal_footprint_v0_round5_clean_yes_borderline21.txt` for exploratory backup.
 
 Formal benchmark-v0 artifact:
 
@@ -474,9 +475,8 @@ video_concept_erasure_causal_footprint/
 
 ## Next Actions
 
-1. Review the round5 initial labels in `experiments/clean_screening/causal_footprint_v0_round5_taxonomy_expansion60_initial_labels.csv`.
-2. Decide whether the next baseline slice should be strict `yes` only or exploratory `yes + borderline`.
-3. Export the chosen round5 prompt slice.
-4. Run all four baselines on the chosen round5 slice.
-5. Use Claude/Qwen disagreement as a triage signal, not as ground truth.
-6. Add no-source and alternative-cause controls to separate real causal footprints from generic visual priors.
+1. Run all four baselines on `prompts/causal_footprint_v0_round5_clean_yes10.txt`.
+2. Build the round5 yes10 baseline gallery and annotate causal-footprint leakage.
+3. Use the `yes + borderline` slice only as exploratory backup if the strict slice is too small.
+4. Use Claude/Qwen disagreement as a triage signal, not as ground truth.
+5. Add no-source and alternative-cause controls to separate real causal footprints from generic visual priors.

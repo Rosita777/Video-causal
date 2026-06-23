@@ -2282,3 +2282,32 @@ round5_particle_seed_bag_006
 ```
 
 **Interpretation:** Round5 confirms that broadening the taxonomy helps, but CogVideoX-2B still fails many physical prompts by producing blank/pure-color frames or static footprint-only scenes. For the next baseline run, the strict scientific slice is the 10 `yes` rows; the 11 `borderline` rows can be kept as an exploratory/backup slice but should not be mixed into the main claim without review.
+
+## 2026-06-23: Round5 Clean-Valid Prompt Slice Export
+
+**Goal:** Freeze prompt files for the next erasure-baseline run after clean-source screening.
+
+**Inputs:**
+
+```text
+benchmarks/causal_footprint_v0/round5_taxonomy_expansion_prompts.tsv
+experiments/clean_screening/causal_footprint_v0_round5_taxonomy_expansion60_initial_labels.csv
+```
+
+**Outputs:**
+
+```text
+prompts/causal_footprint_v0_round5_clean_yes10.txt
+benchmarks/causal_footprint_v0/export_round5_clean_yes10_manifest.json
+prompts/causal_footprint_v0_round5_clean_yes_borderline21.txt
+benchmarks/causal_footprint_v0/export_round5_clean_yes_borderline21_manifest.json
+```
+
+**Counts:**
+
+```text
+yes10: 10 prompts
+yes_borderline21: 21 prompts
+```
+
+**Decision:** use `prompts/causal_footprint_v0_round5_clean_yes10.txt` as the main scientific slice for the next four-baseline run. Keep the 21-row `yes + borderline` slice separate as backup/exploratory material.

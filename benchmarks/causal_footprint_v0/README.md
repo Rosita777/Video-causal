@@ -400,6 +400,17 @@ Strict `yes` examples currently concentrate in field-mediated and particle-dispe
 
 Current next step: review the 10 `yes` and 11 `borderline` rows, then decide whether the next erasure-baseline run should use strict `yes` only or exploratory `yes + borderline`.
 
+Exported prompt slices:
+
+```text
+prompts/causal_footprint_v0_round5_clean_yes10.txt
+benchmarks/causal_footprint_v0/export_round5_clean_yes10_manifest.json
+prompts/causal_footprint_v0_round5_clean_yes_borderline21.txt
+benchmarks/causal_footprint_v0/export_round5_clean_yes_borderline21_manifest.json
+```
+
+Current main-run choice: use `round5_clean_yes10` for the next four-baseline erasure run. Keep `yes_borderline21` separate as an exploratory backup slice.
+
 ## Candidate Pair Fields
 
 - `pair_id`: stable candidate id.
