@@ -1,0 +1,6 @@
+baseline,total_outputs,strict_leakage_count,borderline_count,relaxed_leakage_count,target_leakage_count,other_failure_count,strict_leakage_rate,borderline_rate,relaxed_leakage_rate,target_leakage_rate,other_failure_rate
+ALL,56,24,12,36,14,6,0.4286,0.2143,0.6429,0.2500,0.1071
+negative_prompt,14,5,2,7,6,1,0.3571,0.1429,0.5000,0.4286,0.0714
+safree_cogvideox,14,5,2,7,5,2,0.3571,0.1429,0.5000,0.3571,0.1429
+t2vunlearning,14,6,3,9,3,2,0.4286,0.2143,0.6429,0.2143,0.1429
+videoeraser,14,8,5,13,0,1,0.5714,0.3571,0.9286,0.0000,0.0714

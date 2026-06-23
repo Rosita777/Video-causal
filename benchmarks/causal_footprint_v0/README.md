@@ -75,6 +75,49 @@ Metric meanings:
 - `target_leakage_count`: target concept remains visible, so the case does not prove causal-footprint leakage.
 - `strict_leakage_given_target_erased`: strict leakage divided by outputs with `target_visible == no`.
 
+## Evaluation V1 Manifest
+
+The current evaluation layer is the preferred entry point for paper-facing tables and human review:
+
+```text
+experiments/evaluation/causal_footprint_v1_manifest.csv
+experiments/evaluation/review.html
+experiments/evaluation/annotation_queue.csv
+experiments/evaluation/metrics_by_baseline.csv
+experiments/evaluation/metrics_by_mechanism.csv
+experiments/evaluation/model_agreement.csv
+experiments/evaluation/metrics_summary.md
+```
+
+Regenerate:
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/build_evaluation_manifest.py \
+  --gold experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv \
+  --vlm-inputs experiments/eval_calibration/vlm_inputs.csv \
+  --prediction claude=experiments/eval_calibration/claude_sonnet_4_6_reference_atomic_full_predictions.csv \
+  --output experiments/evaluation/causal_footprint_v1_manifest.csv
+
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/build_annotation_review.py \
+  --manifest experiments/evaluation/causal_footprint_v1_manifest.csv \
+  --output-dir experiments/evaluation \
+  --project-root /home/deepseek_VG/JUNCHI/Video-causal
+
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/compute_evaluation_metrics.py \
+  --manifest experiments/evaluation/causal_footprint_v1_manifest.csv \
+  --output-dir experiments/evaluation
+```
+
+Current v1 result:
+
+- Strict leakage: 24 / 56.
+- Borderline: 12 / 56.
+- Relaxed leakage: 36 / 56.
+- Target leakage: 14 / 56.
+- Claude exact agreement with human labels: 12 / 36 on the reference-backed subset.
+
+The review page is static. Use `annotation_queue.csv` for manual revision columns; keep final benchmark labels in the source gold data after review.
+
 ## Evaluator Calibration Interface
 
 Automatic video scorers should be calibrated against the current human labels before their numbers are used in the paper. The gold file is:

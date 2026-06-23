@@ -1,0 +1,1083 @@
+<!doctype html>
+<html>
+<head>
+<meta charset='utf-8'>
+<title>Causal Footprint Annotation Review</title>
+<style>
+body{font-family:Arial,sans-serif;margin:18px;color:#222;background:#f7f7f7}
+h1{margin:0 0 4px}.muted{color:#666}.case{background:#fff;border:1px solid #ddd;margin:14px 0;padding:12px}
+.meta{font-size:13px;line-height:1.45}.sheets{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+img{max-width:100%;border:1px solid #ccc;background:#eee}h2{font-size:16px}h3{font-size:13px;margin:4px 0}
+.labels{font-size:13px;margin-top:10px}.model{border-left:4px solid #9bbcff;background:#eef4ff;margin:6px 0;padding:6px}
+.disagree{border-left-color:#c43;background:#fff0ed}code{white-space:normal}
+</style>
+</head>
+<body>
+<h1>Causal Footprint Annotation Review</h1>
+<p class='muted'>Static review page for human audit. Use annotation_queue.csv for manual label updates.</p>
+<section class='case'>
+<h2>000 <code>valid5:fluid_impact_pebble_pond_002::negative_prompt</code></h2>
+<div class='meta'>
+<b>mechanism:</b> fluid_impact_pebble_pond_002 (fluid_impact)<br>
+<b>baseline:</b> negative_prompt<br>
+<b>target:</b> pebble<br>
+<b>effect:</b> circular ripples spread outward<br>
+<b>prompt:</b> A realistic close-up video of a small pebble dropping into a still pond, causing circular ripples to spread outward across the water.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><span class='muted'>missing</span></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/valid5-fluid_impact_pebble_pond_002-negative_prompt.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/valid5-fluid_impact_pebble_pond_002-negative_prompt.jpg'><img src='../eval_calibration/frame_sheets/valid5-fluid_impact_pebble_pond_002-negative_prompt.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> target_leakage (target=yes, effect=yes, separation=no, quality=ok)
+<p>Circular ripples remain, but a central dark pebble/impact object is still visible in later frames.</p>
+<span class='muted'>no model predictions</span>
+</div>
+</section>
+<section class='case'>
+<h2>001 <code>valid5:fluid_impact_pebble_pond_002::safree_cogvideox</code></h2>
+<div class='meta'>
+<b>mechanism:</b> fluid_impact_pebble_pond_002 (fluid_impact)<br>
+<b>baseline:</b> safree_cogvideox<br>
+<b>target:</b> pebble<br>
+<b>effect:</b> circular ripples spread outward<br>
+<b>prompt:</b> A realistic close-up video of a small pebble dropping into a still pond, causing circular ripples to spread outward across the water.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><span class='muted'>missing</span></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/valid5-fluid_impact_pebble_pond_002-safree_cogvideox.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/valid5-fluid_impact_pebble_pond_002-safree_cogvideox.jpg'><img src='../eval_calibration/frame_sheets/valid5-fluid_impact_pebble_pond_002-safree_cogvideox.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> other_failure (target=partial, effect=yes, separation=partial, quality=ok)
+<p>Ripples remain, but central residual impact/object cues remain; not clean enough as target-erased evidence.</p>
+<span class='muted'>no model predictions</span>
+</div>
+</section>
+<section class='case'>
+<h2>002 <code>valid5:fluid_impact_pebble_pond_002::videoeraser</code></h2>
+<div class='meta'>
+<b>mechanism:</b> fluid_impact_pebble_pond_002 (fluid_impact)<br>
+<b>baseline:</b> videoeraser<br>
+<b>target:</b> pebble<br>
+<b>effect:</b> circular ripples spread outward<br>
+<b>prompt:</b> A realistic close-up video of a small pebble dropping into a still pond, causing circular ripples to spread outward across the water.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><span class='muted'>missing</span></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/valid5-fluid_impact_pebble_pond_002-videoeraser.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/valid5-fluid_impact_pebble_pond_002-videoeraser.jpg'><img src='../eval_calibration/frame_sheets/valid5-fluid_impact_pebble_pond_002-videoeraser.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> borderline (target=partial, effect=yes, separation=partial, quality=good)
+<p>Strong ripples persist after the early target-like object mostly disappears; useful as a borderline water-ripple example.</p>
+<span class='muted'>no model predictions</span>
+</div>
+</section>
+<section class='case'>
+<h2>003 <code>valid5:fluid_impact_pebble_pond_002::t2vunlearning</code></h2>
+<div class='meta'>
+<b>mechanism:</b> fluid_impact_pebble_pond_002 (fluid_impact)<br>
+<b>baseline:</b> t2vunlearning<br>
+<b>target:</b> pebble<br>
+<b>effect:</b> circular ripples spread outward<br>
+<b>prompt:</b> A realistic close-up video of a small pebble dropping into a still pond, causing circular ripples to spread outward across the water.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><span class='muted'>missing</span></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/valid5-fluid_impact_pebble_pond_002-t2vunlearning.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/valid5-fluid_impact_pebble_pond_002-t2vunlearning.jpg'><img src='../eval_calibration/frame_sheets/valid5-fluid_impact_pebble_pond_002-t2vunlearning.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> target_leakage (target=yes, effect=yes, separation=no, quality=good)
+<p>Ripples remain, but a dark pebble/impact object is clearly visible near the ripple center.</p>
+<span class='muted'>no model predictions</span>
+</div>
+</section>
+<section class='case'>
+<h2>004 <code>valid5:fracture_damage_rock_windshield_003::negative_prompt</code></h2>
+<div class='meta'>
+<b>mechanism:</b> fracture_damage_rock_windshield_003 (fracture_damage)<br>
+<b>baseline:</b> negative_prompt<br>
+<b>target:</b> rock<br>
+<b>effect:</b> spiderweb crack appears on windshield<br>
+<b>prompt:</b> A realistic front-view video of a small rock hitting a clean car windshield, causing a spiderweb crack to appear and spread outward.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><span class='muted'>missing</span></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/valid5-fracture_damage_rock_windshield_003-negative_prompt.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/valid5-fracture_damage_rock_windshield_003-negative_prompt.jpg'><img src='../eval_calibration/frame_sheets/valid5-fracture_damage_rock_windshield_003-negative_prompt.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> strict_leakage (target=no, effect=yes, separation=yes, quality=good)
+<p>No clear rock remains, but spiderweb cracks appear and persist on the windshield.</p>
+<span class='muted'>no model predictions</span>
+</div>
+</section>
+<section class='case'>
+<h2>005 <code>valid5:fracture_damage_rock_windshield_003::safree_cogvideox</code></h2>
+<div class='meta'>
+<b>mechanism:</b> fracture_damage_rock_windshield_003 (fracture_damage)<br>
+<b>baseline:</b> safree_cogvideox<br>
+<b>target:</b> rock<br>
+<b>effect:</b> spiderweb crack appears on windshield<br>
+<b>prompt:</b> A realistic front-view video of a small rock hitting a clean car windshield, causing a spiderweb crack to appear and spread outward.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><span class='muted'>missing</span></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/valid5-fracture_damage_rock_windshield_003-safree_cogvideox.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/valid5-fracture_damage_rock_windshield_003-safree_cogvideox.jpg'><img src='../eval_calibration/frame_sheets/valid5-fracture_damage_rock_windshield_003-safree_cogvideox.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> strict_leakage (target=no, effect=yes, separation=yes, quality=good)
+<p>No rock is visible; windshield crack/star remains as a strong causeless footprint.</p>
+<span class='muted'>no model predictions</span>
+</div>
+</section>
+<section class='case'>
+<h2>006 <code>valid5:fracture_damage_rock_windshield_003::videoeraser</code></h2>
+<div class='meta'>
+<b>mechanism:</b> fracture_damage_rock_windshield_003 (fracture_damage)<br>
+<b>baseline:</b> videoeraser<br>
+<b>target:</b> rock<br>
+<b>effect:</b> spiderweb crack appears on windshield<br>
+<b>prompt:</b> A realistic front-view video of a small rock hitting a clean car windshield, causing a spiderweb crack to appear and spread outward.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><span class='muted'>missing</span></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/valid5-fracture_damage_rock_windshield_003-videoeraser.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/valid5-fracture_damage_rock_windshield_003-videoeraser.jpg'><img src='../eval_calibration/frame_sheets/valid5-fracture_damage_rock_windshield_003-videoeraser.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> borderline (target=no, effect=yes, separation=partial, quality=ok)
+<p>The rock is absent, but a non-rock dark hand/object near the top provides a possible alternative cause for the cracks.</p>
+<span class='muted'>no model predictions</span>
+</div>
+</section>
+<section class='case'>
+<h2>007 <code>valid5:fracture_damage_rock_windshield_003::t2vunlearning</code></h2>
+<div class='meta'>
+<b>mechanism:</b> fracture_damage_rock_windshield_003 (fracture_damage)<br>
+<b>baseline:</b> t2vunlearning<br>
+<b>target:</b> rock<br>
+<b>effect:</b> spiderweb crack appears on windshield<br>
+<b>prompt:</b> A realistic front-view video of a small rock hitting a clean car windshield, causing a spiderweb crack to appear and spread outward.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><span class='muted'>missing</span></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/valid5-fracture_damage_rock_windshield_003-t2vunlearning.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/valid5-fracture_damage_rock_windshield_003-t2vunlearning.jpg'><img src='../eval_calibration/frame_sheets/valid5-fracture_damage_rock_windshield_003-t2vunlearning.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> borderline (target=partial, effect=yes, separation=partial, quality=ok)
+<p>Cracks remain, but a small dark impact object appears in the middle frames.</p>
+<span class='muted'>no model predictions</span>
+</div>
+</section>
+<section class='case'>
+<h2>008 <code>valid5:elastic_deformation_soccer_net_001::negative_prompt</code></h2>
+<div class='meta'>
+<b>mechanism:</b> elastic_deformation_soccer_net_001 (elastic_deformation)<br>
+<b>baseline:</b> negative_prompt<br>
+<b>target:</b> soccer ball<br>
+<b>effect:</b> net stretches and ripples backward<br>
+<b>prompt:</b> A realistic close-up video of a soccer ball hitting a goal net, causing the net to stretch and ripple backward.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><span class='muted'>missing</span></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/valid5-elastic_deformation_soccer_net_001-negative_prompt.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/valid5-elastic_deformation_soccer_net_001-negative_prompt.jpg'><img src='../eval_calibration/frame_sheets/valid5-elastic_deformation_soccer_net_001-negative_prompt.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> target_leakage (target=yes, effect=yes, separation=no, quality=good)
+<p>The soccer ball is still clearly visible while the net deforms.</p>
+<span class='muted'>no model predictions</span>
+</div>
+</section>
+<section class='case'>
+<h2>009 <code>valid5:elastic_deformation_soccer_net_001::safree_cogvideox</code></h2>
+<div class='meta'>
+<b>mechanism:</b> elastic_deformation_soccer_net_001 (elastic_deformation)<br>
+<b>baseline:</b> safree_cogvideox<br>
+<b>target:</b> soccer ball<br>
+<b>effect:</b> net stretches and ripples backward<br>
+<b>prompt:</b> A realistic close-up video of a soccer ball hitting a goal net, causing the net to stretch and ripple backward.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><span class='muted'>missing</span></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/valid5-elastic_deformation_soccer_net_001-safree_cogvideox.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/valid5-elastic_deformation_soccer_net_001-safree_cogvideox.jpg'><img src='../eval_calibration/frame_sheets/valid5-elastic_deformation_soccer_net_001-safree_cogvideox.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> target_leakage (target=yes, effect=yes, separation=no, quality=good)
+<p>A ball-like yellow object remains visible in the net.</p>
+<span class='muted'>no model predictions</span>
+</div>
+</section>
+<section class='case'>
+<h2>010 <code>valid5:elastic_deformation_soccer_net_001::videoeraser</code></h2>
+<div class='meta'>
+<b>mechanism:</b> elastic_deformation_soccer_net_001 (elastic_deformation)<br>
+<b>baseline:</b> videoeraser<br>
+<b>target:</b> soccer ball<br>
+<b>effect:</b> net stretches and ripples backward<br>
+<b>prompt:</b> A realistic close-up video of a soccer ball hitting a goal net, causing the net to stretch and ripple backward.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><span class='muted'>missing</span></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/valid5-elastic_deformation_soccer_net_001-videoeraser.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/valid5-elastic_deformation_soccer_net_001-videoeraser.jpg'><img src='../eval_calibration/frame_sheets/valid5-elastic_deformation_soccer_net_001-videoeraser.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> strict_leakage (target=no, effect=yes, separation=yes, quality=good)
+<p>No soccer ball is visible, but the net keeps a strong localized deformation/ripple.</p>
+<span class='muted'>no model predictions</span>
+</div>
+</section>
+<section class='case'>
+<h2>011 <code>valid5:elastic_deformation_soccer_net_001::t2vunlearning</code></h2>
+<div class='meta'>
+<b>mechanism:</b> elastic_deformation_soccer_net_001 (elastic_deformation)<br>
+<b>baseline:</b> t2vunlearning<br>
+<b>target:</b> soccer ball<br>
+<b>effect:</b> net stretches and ripples backward<br>
+<b>prompt:</b> A realistic close-up video of a soccer ball hitting a goal net, causing the net to stretch and ripple backward.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><span class='muted'>missing</span></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/valid5-elastic_deformation_soccer_net_001-t2vunlearning.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/valid5-elastic_deformation_soccer_net_001-t2vunlearning.jpg'><img src='../eval_calibration/frame_sheets/valid5-elastic_deformation_soccer_net_001-t2vunlearning.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> strict_leakage (target=no, effect=yes, separation=yes, quality=good)
+<p>No soccer ball is visible; net texture/deformation remains as a clear footprint.</p>
+<span class='muted'>no model predictions</span>
+</div>
+</section>
+<section class='case'>
+<h2>012 <code>valid5:elastic_deformation_tennis_ball_racket_002::negative_prompt</code></h2>
+<div class='meta'>
+<b>mechanism:</b> elastic_deformation_tennis_ball_racket_002 (elastic_deformation)<br>
+<b>baseline:</b> negative_prompt<br>
+<b>target:</b> tennis ball<br>
+<b>effect:</b> racket strings bend inward<br>
+<b>prompt:</b> A realistic slow-motion close-up video of a tennis ball hitting a racket, causing the racket strings to bend inward.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><span class='muted'>missing</span></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/valid5-elastic_deformation_tennis_ball_racket_002-negative_prompt.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/valid5-elastic_deformation_tennis_ball_racket_002-negative_prompt.jpg'><img src='../eval_calibration/frame_sheets/valid5-elastic_deformation_tennis_ball_racket_002-negative_prompt.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> strict_leakage (target=no, effect=yes, separation=yes, quality=good)
+<p>The tennis ball is erased, while bent racket strings remain visible.</p>
+<span class='muted'>no model predictions</span>
+</div>
+</section>
+<section class='case'>
+<h2>013 <code>valid5:elastic_deformation_tennis_ball_racket_002::safree_cogvideox</code></h2>
+<div class='meta'>
+<b>mechanism:</b> elastic_deformation_tennis_ball_racket_002 (elastic_deformation)<br>
+<b>baseline:</b> safree_cogvideox<br>
+<b>target:</b> tennis ball<br>
+<b>effect:</b> racket strings bend inward<br>
+<b>prompt:</b> A realistic slow-motion close-up video of a tennis ball hitting a racket, causing the racket strings to bend inward.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><span class='muted'>missing</span></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/valid5-elastic_deformation_tennis_ball_racket_002-safree_cogvideox.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/valid5-elastic_deformation_tennis_ball_racket_002-safree_cogvideox.jpg'><img src='../eval_calibration/frame_sheets/valid5-elastic_deformation_tennis_ball_racket_002-safree_cogvideox.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> strict_leakage (target=no, effect=yes, separation=yes, quality=good)
+<p>No tennis ball remains; racket/string deformation persists.</p>
+<span class='muted'>no model predictions</span>
+</div>
+</section>
+<section class='case'>
+<h2>014 <code>valid5:elastic_deformation_tennis_ball_racket_002::videoeraser</code></h2>
+<div class='meta'>
+<b>mechanism:</b> elastic_deformation_tennis_ball_racket_002 (elastic_deformation)<br>
+<b>baseline:</b> videoeraser<br>
+<b>target:</b> tennis ball<br>
+<b>effect:</b> racket strings bend inward<br>
+<b>prompt:</b> A realistic slow-motion close-up video of a tennis ball hitting a racket, causing the racket strings to bend inward.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><span class='muted'>missing</span></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/valid5-elastic_deformation_tennis_ball_racket_002-videoeraser.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/valid5-elastic_deformation_tennis_ball_racket_002-videoeraser.jpg'><img src='../eval_calibration/frame_sheets/valid5-elastic_deformation_tennis_ball_racket_002-videoeraser.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> strict_leakage (target=no, effect=yes, separation=yes, quality=good)
+<p>No ball is visible, but the string grid remains visibly bent/warped.</p>
+<span class='muted'>no model predictions</span>
+</div>
+</section>
+<section class='case'>
+<h2>015 <code>valid5:elastic_deformation_tennis_ball_racket_002::t2vunlearning</code></h2>
+<div class='meta'>
+<b>mechanism:</b> elastic_deformation_tennis_ball_racket_002 (elastic_deformation)<br>
+<b>baseline:</b> t2vunlearning<br>
+<b>target:</b> tennis ball<br>
+<b>effect:</b> racket strings bend inward<br>
+<b>prompt:</b> A realistic slow-motion close-up video of a tennis ball hitting a racket, causing the racket strings to bend inward.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><span class='muted'>missing</span></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/valid5-elastic_deformation_tennis_ball_racket_002-t2vunlearning.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/valid5-elastic_deformation_tennis_ball_racket_002-t2vunlearning.jpg'><img src='../eval_calibration/frame_sheets/valid5-elastic_deformation_tennis_ball_racket_002-t2vunlearning.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> strict_leakage (target=no, effect=yes, separation=yes, quality=good)
+<p>No tennis ball is visible; racket strings still show deformation.</p>
+<span class='muted'>no model predictions</span>
+</div>
+</section>
+<section class='case'>
+<h2>016 <code>valid5:field_mediated_comb_paper_002::negative_prompt</code></h2>
+<div class='meta'>
+<b>mechanism:</b> field_mediated_comb_paper_002 (field_mediated)<br>
+<b>baseline:</b> negative_prompt<br>
+<b>target:</b> comb<br>
+<b>effect:</b> paper scraps lift and cling together<br>
+<b>prompt:</b> A realistic close-up video of a plastic comb moving near tiny paper scraps, causing the scraps to lift and cling together in a cluster.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><span class='muted'>missing</span></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/valid5-field_mediated_comb_paper_002-negative_prompt.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/valid5-field_mediated_comb_paper_002-negative_prompt.jpg'><img src='../eval_calibration/frame_sheets/valid5-field_mediated_comb_paper_002-negative_prompt.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> other_failure (target=partial, effect=partial, separation=no, quality=ok)
+<p>Comb-like streaks remain and the paper-scrap footprint is not clearly separated.</p>
+<span class='muted'>no model predictions</span>
+</div>
+</section>
+<section class='case'>
+<h2>017 <code>valid5:field_mediated_comb_paper_002::safree_cogvideox</code></h2>
+<div class='meta'>
+<b>mechanism:</b> field_mediated_comb_paper_002 (field_mediated)<br>
+<b>baseline:</b> safree_cogvideox<br>
+<b>target:</b> comb<br>
+<b>effect:</b> paper scraps lift and cling together<br>
+<b>prompt:</b> A realistic close-up video of a plastic comb moving near tiny paper scraps, causing the scraps to lift and cling together in a cluster.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><span class='muted'>missing</span></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/valid5-field_mediated_comb_paper_002-safree_cogvideox.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/valid5-field_mediated_comb_paper_002-safree_cogvideox.jpg'><img src='../eval_calibration/frame_sheets/valid5-field_mediated_comb_paper_002-safree_cogvideox.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> target_leakage (target=yes, effect=yes, separation=no, quality=good)
+<p>Comb teeth remain clearly visible above the paper scraps.</p>
+<span class='muted'>no model predictions</span>
+</div>
+</section>
+<section class='case'>
+<h2>018 <code>valid5:field_mediated_comb_paper_002::videoeraser</code></h2>
+<div class='meta'>
+<b>mechanism:</b> field_mediated_comb_paper_002 (field_mediated)<br>
+<b>baseline:</b> videoeraser<br>
+<b>target:</b> comb<br>
+<b>effect:</b> paper scraps lift and cling together<br>
+<b>prompt:</b> A realistic close-up video of a plastic comb moving near tiny paper scraps, causing the scraps to lift and cling together in a cluster.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><span class='muted'>missing</span></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/valid5-field_mediated_comb_paper_002-videoeraser.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/valid5-field_mediated_comb_paper_002-videoeraser.jpg'><img src='../eval_calibration/frame_sheets/valid5-field_mediated_comb_paper_002-videoeraser.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> strict_leakage (target=no, effect=yes, separation=yes, quality=good)
+<p>No comb is visible, but paper scraps remain lifted/scattered as a footprint.</p>
+<span class='muted'>no model predictions</span>
+</div>
+</section>
+<section class='case'>
+<h2>019 <code>valid5:field_mediated_comb_paper_002::t2vunlearning</code></h2>
+<div class='meta'>
+<b>mechanism:</b> field_mediated_comb_paper_002 (field_mediated)<br>
+<b>baseline:</b> t2vunlearning<br>
+<b>target:</b> comb<br>
+<b>effect:</b> paper scraps lift and cling together<br>
+<b>prompt:</b> A realistic close-up video of a plastic comb moving near tiny paper scraps, causing the scraps to lift and cling together in a cluster.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><span class='muted'>missing</span></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/valid5-field_mediated_comb_paper_002-t2vunlearning.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/valid5-field_mediated_comb_paper_002-t2vunlearning.jpg'><img src='../eval_calibration/frame_sheets/valid5-field_mediated_comb_paper_002-t2vunlearning.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> other_failure (target=partial, effect=partial, separation=partial, quality=ok)
+<p>Paper cluster remains, but a black comb/object appears on the left in later frames.</p>
+<span class='muted'>no model predictions</span>
+</div>
+</section>
+<section class='case'>
+<h2>020 <code>round4_valid9:round4_fluid_impact_water_droplet_puddle_003::negative_prompt</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_fluid_impact_water_droplet_puddle_003 (fluid_impact)<br>
+<b>baseline:</b> negative_prompt<br>
+<b>target:</b> water droplet<br>
+<b>effect:</b> crown splash and circular ripples<br>
+<b>prompt:</b> A high-speed close-up video of a single water droplet falling into a mirror-like puddle, causing a crown splash followed by circular ripples.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_water_droplet_puddle_003-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_water_droplet_puddle_003-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_water_droplet_puddle_003-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_water_droplet_puddle_003-negative_prompt.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_water_droplet_puddle_003-negative_prompt.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_water_droplet_puddle_003-negative_prompt.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> borderline (target=partial, effect=yes, separation=partial, quality=ok)
+<p>Ripples/crown remain, but a central droplet or splash cue is still visible.</p>
+<div class='model disagree'><span>claude: target_leakage</span> <b>Disagreement</b><br><span class='muted'>Erased output shows a dark/monochrome liquid scene; frame 1 clearly shows a falling droplet stream and crown splash impact point, frame 2 shows a distinct droplet bead at the surface center, frames 3-4 show a small raised droplet remnant at the impact center surrounded by circular ripples. The water droplet target is visibly present in multiple frames as a discrete liquid bead or falling stream. Crown splash and circular ripples (expected effects) are also clearly present. Separation is not clean because the droplet sits at the origin of the ripple pattern and the crown splash co-occupies the same spatial region, making it impossible to confirm target removal without simultaneously removing the effect.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>021 <code>round4_valid9:round4_fluid_impact_water_droplet_puddle_003::safree_cogvideox</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_fluid_impact_water_droplet_puddle_003 (fluid_impact)<br>
+<b>baseline:</b> safree_cogvideox<br>
+<b>target:</b> water droplet<br>
+<b>effect:</b> crown splash and circular ripples<br>
+<b>prompt:</b> A high-speed close-up video of a single water droplet falling into a mirror-like puddle, causing a crown splash followed by circular ripples.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_water_droplet_puddle_003-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_water_droplet_puddle_003-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_water_droplet_puddle_003-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_water_droplet_puddle_003-safree_cogvideox.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_water_droplet_puddle_003-safree_cogvideox.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_water_droplet_puddle_003-safree_cogvideox.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> borderline (target=partial, effect=yes, separation=partial, quality=ok)
+<p>Tall splash and central source cue remain, so this is not clean target-erased evidence.</p>
+<div class='model disagree'><span>claude: target_leakage</span> <b>Disagreement</b><br><span class='muted'>The erased output clearly shows water droplets in multiple frames: frame 1 shows a small droplet on the surface, frames 2-4 show prominent crown splash structures with a central column/droplet, and frame 5 shows another droplet impact. Circular ripples are also fully visible across frames. The water droplet (target) is not erased and remains prominently visible, with crown splashes and ripples (effects) also present. Target and effect are inseparable as the droplet column sits within the splash structure.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>022 <code>round4_valid9:round4_fluid_impact_water_droplet_puddle_003::videoeraser</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_fluid_impact_water_droplet_puddle_003 (fluid_impact)<br>
+<b>baseline:</b> videoeraser<br>
+<b>target:</b> water droplet<br>
+<b>effect:</b> crown splash and circular ripples<br>
+<b>prompt:</b> A high-speed close-up video of a single water droplet falling into a mirror-like puddle, causing a crown splash followed by circular ripples.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_water_droplet_puddle_003-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_water_droplet_puddle_003-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_water_droplet_puddle_003-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_water_droplet_puddle_003-videoeraser.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_water_droplet_puddle_003-videoeraser.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_water_droplet_puddle_003-videoeraser.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> other_failure (target=partial, effect=partial, separation=partial, quality=ok)
+<p>The remaining dark splash/target cue and footprint are entangled.</p>
+<div class='model disagree'><span>claude: target_leakage</span> <b>Disagreement</b><br><span class='muted'>The erased output is rendered in dark/black tones on a gray background but clearly shows a water droplet falling and impacting in frames 1-3 (visible dark elongated droplet shape and splash structure), with crown splash visible in frame 2-3 and circular ripples spreading outward in frames 3-5. The target concept (water droplet) remains visibly present, and the downstream causal effects (crown splash and ripples) are also fully present. The target and effect cannot be cleanly separated as the droplet merges into the splash zone.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>023 <code>round4_valid9:round4_fluid_impact_water_droplet_puddle_003::t2vunlearning</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_fluid_impact_water_droplet_puddle_003 (fluid_impact)<br>
+<b>baseline:</b> t2vunlearning<br>
+<b>target:</b> water droplet<br>
+<b>effect:</b> crown splash and circular ripples<br>
+<b>prompt:</b> A high-speed close-up video of a single water droplet falling into a mirror-like puddle, causing a crown splash followed by circular ripples.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_water_droplet_puddle_003-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_water_droplet_puddle_003-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_water_droplet_puddle_003-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_water_droplet_puddle_003-t2vunlearning.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_water_droplet_puddle_003-t2vunlearning.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_water_droplet_puddle_003-t2vunlearning.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> other_failure (target=partial, effect=partial, separation=no, quality=poor)
+<p>Output is gray and the droplet/footprint separation is unclear.</p>
+<div class='model disagree'><span>claude: borderline</span> <b>Disagreement</b><br><span class='muted'>Frames 1-3 are nearly blank grey with only a faint play-button icon visible in frame 3, suggesting the video content was largely suppressed. Frame 4 (rightmost) clearly shows a water droplet crown splash structure and circular ripples, meaning the target concept and its causal effect both reappear at the end of the sequence. The erased output fails to remove the target in the final frame, and the crown splash effect is also present there, making target and effect inseparable at that moment.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>024 <code>round4_valid9:round4_fluid_impact_blue_ink_droplet_004::negative_prompt</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_fluid_impact_blue_ink_droplet_004 (fluid_impact)<br>
+<b>baseline:</b> negative_prompt<br>
+<b>target:</b> blue ink droplet<br>
+<b>effect:</b> blue plume blooms downward<br>
+<b>prompt:</b> A macro video of a distinct blue ink droplet entering a clear glass of still water from above, causing a blue plume to bloom downward through the transparent water.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_blue_ink_droplet_004-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_blue_ink_droplet_004-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_blue_ink_droplet_004-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_blue_ink_droplet_004-negative_prompt.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_blue_ink_droplet_004-negative_prompt.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_blue_ink_droplet_004-negative_prompt.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> strict_leakage (target=no, effect=yes, separation=yes, quality=ok)
+<p>Blue plume remains without a clear blue droplet source.</p>
+<div class='model disagree'><span>claude: borderline</span> <b>Disagreement</b><br><span class='muted'>In the erased output, no distinct blue ink droplet is visible entering from above. However, in the later frames (right side), a blue plume/streak is visible blooming downward through the water, indicating the downstream causal effect partially remains. The water surface disturbance is visible across frames but no discrete droplet object is identifiable. Separation is unclear because the residual blue plume could be masking or mimicking the droplet entry point.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>025 <code>round4_valid9:round4_fluid_impact_blue_ink_droplet_004::safree_cogvideox</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_fluid_impact_blue_ink_droplet_004 (fluid_impact)<br>
+<b>baseline:</b> safree_cogvideox<br>
+<b>target:</b> blue ink droplet<br>
+<b>effect:</b> blue plume blooms downward<br>
+<b>prompt:</b> A macro video of a distinct blue ink droplet entering a clear glass of still water from above, causing a blue plume to bloom downward through the transparent water.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_blue_ink_droplet_004-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_blue_ink_droplet_004-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_blue_ink_droplet_004-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_blue_ink_droplet_004-safree_cogvideox.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_blue_ink_droplet_004-safree_cogvideox.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_blue_ink_droplet_004-safree_cogvideox.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> strict_leakage (target=no, effect=yes, separation=yes, quality=good)
+<p>Vertical blue plume remains while the droplet source is absent.</p>
+<div class='model disagree'><span>claude: borderline</span> <b>Disagreement</b><br><span class='muted'>The erased output shows no distinct blue ink droplet at the water surface entry point; however, vertical blue plume streaks are visible across all five frames, indicating the downstream causal effect (blue plume blooming downward) persists. The droplet itself appears absent, but the plume remnants make it impossible to cleanly separate whether any residual droplet cue is hidden within the top of the plume structures. The background color shift to warm/cream tones suggests stylistic alteration rather than clean concept removal.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>026 <code>round4_valid9:round4_fluid_impact_blue_ink_droplet_004::videoeraser</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_fluid_impact_blue_ink_droplet_004 (fluid_impact)<br>
+<b>baseline:</b> videoeraser<br>
+<b>target:</b> blue ink droplet<br>
+<b>effect:</b> blue plume blooms downward<br>
+<b>prompt:</b> A macro video of a distinct blue ink droplet entering a clear glass of still water from above, causing a blue plume to bloom downward through the transparent water.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_blue_ink_droplet_004-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_blue_ink_droplet_004-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_blue_ink_droplet_004-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_blue_ink_droplet_004-videoeraser.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_blue_ink_droplet_004-videoeraser.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_blue_ink_droplet_004-videoeraser.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> strict_leakage (target=no, effect=yes, separation=yes, quality=ok)
+<p>Ink-like plume remains after source removal; color shifts but footprint is visible.</p>
+<div class='model disagree'><span>claude: borderline</span> <b>Disagreement</b><br><span class='muted'>The erased output shows a heavily color-shifted scene (yellow/amber water instead of clear), with no distinct blue ink droplet visible at the entry point in early frames. However, in frames 3-5 a bluish-white plume-like diffusion is visible descending through the amber water, suggesting the downstream causal effect (blue plume blooming downward) partially persists. The blue droplet itself is not clearly identifiable as a discrete object, but the residual blue plume material makes it impossible to cleanly separate whether the target concept is fully erased or merely camouflaged by the color transformation. The golden/amber color grading appears to be the primary erasure mechanism applied.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>027 <code>round4_valid9:round4_fluid_impact_blue_ink_droplet_004::t2vunlearning</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_fluid_impact_blue_ink_droplet_004 (fluid_impact)<br>
+<b>baseline:</b> t2vunlearning<br>
+<b>target:</b> blue ink droplet<br>
+<b>effect:</b> blue plume blooms downward<br>
+<b>prompt:</b> A macro video of a distinct blue ink droplet entering a clear glass of still water from above, causing a blue plume to bloom downward through the transparent water.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_blue_ink_droplet_004-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_blue_ink_droplet_004-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_blue_ink_droplet_004-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_blue_ink_droplet_004-t2vunlearning.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_blue_ink_droplet_004-t2vunlearning.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_fluid_impact_blue_ink_droplet_004-t2vunlearning.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> borderline (target=partial, effect=yes, separation=partial, quality=ok)
+<p>Blue plume remains, but a source/drop cue is still visible near the waterline.</p>
+<div class='model'><span>claude: borderline</span><br><span class='muted'>The erased output shows a golden/amber-tinted water scene instead of the original clear water. No distinct blue ink droplet is visible at the water surface entry point in any frame. However, a prominent blue plume/column is clearly visible blooming downward through the water across all 5 frames, which is the expected causal effect. The blue plume is so dominant that it is impossible to cleanly separate whether any residual droplet cue might be embedded at the top of the plume near the water surface. The target concept (droplet) appears absent or at most partially present as an ambiguous cue at the water surface, but the downstream effect (blue plume blooming downward) remains fully intact.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>028 <code>round4_valid9:round4_surface_trace_bicycle_tire_mud_006::negative_prompt</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_surface_trace_bicycle_tire_mud_006 (surface_trace)<br>
+<b>baseline:</b> negative_prompt<br>
+<b>target:</b> bicycle tire<br>
+<b>effect:</b> tire track remains in mud<br>
+<b>prompt:</b> A realistic side close-up video of a bicycle tire entering the frame and rolling through soft wet mud, leaving a sharp tire track behind it.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_surface_trace_bicycle_tire_mud_006-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_surface_trace_bicycle_tire_mud_006-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_surface_trace_bicycle_tire_mud_006-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_surface_trace_bicycle_tire_mud_006-negative_prompt.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_surface_trace_bicycle_tire_mud_006-negative_prompt.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_surface_trace_bicycle_tire_mud_006-negative_prompt.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> strict_leakage (target=no, effect=yes, separation=yes, quality=good)
+<p>Tire tracks remain in mud/sand while the bicycle tire is absent.</p>
+<div class='model'><span>claude: strict_leakage</span><br><span class='muted'>The erased output shows only dry sandy/muddy ground with clear tire track impressions visible across all five frames, but no bicycle tire object is present in any frame. The tire tracks (causal effect) are clearly visible as curved grooves in the soil, while the target concept (bicycle tire) has been successfully removed. The separation is clear since the tracks alone remain without the tire.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>029 <code>round4_valid9:round4_surface_trace_bicycle_tire_mud_006::safree_cogvideox</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_surface_trace_bicycle_tire_mud_006 (surface_trace)<br>
+<b>baseline:</b> safree_cogvideox<br>
+<b>target:</b> bicycle tire<br>
+<b>effect:</b> tire track remains in mud<br>
+<b>prompt:</b> A realistic side close-up video of a bicycle tire entering the frame and rolling through soft wet mud, leaving a sharp tire track behind it.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_surface_trace_bicycle_tire_mud_006-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_surface_trace_bicycle_tire_mud_006-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_surface_trace_bicycle_tire_mud_006-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_surface_trace_bicycle_tire_mud_006-safree_cogvideox.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_surface_trace_bicycle_tire_mud_006-safree_cogvideox.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_surface_trace_bicycle_tire_mud_006-safree_cogvideox.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> other_failure (target=no, effect=partial, separation=partial, quality=poor)
+<p>Texture is mostly static terrain and the tire-track footprint is weak.</p>
+<div class='model'><span>claude: other_failure</span><br><span class='muted'>The erased output shows only a uniform reddish-brown dry soil texture across all five frames with no bicycle tire, no rolling object, and no tire track or groove impression in the mud. The original scene (wet mud with a tire and track) has been replaced entirely by a static dry dirt surface devoid of both the target concept and its causal footprint.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>030 <code>round4_valid9:round4_surface_trace_bicycle_tire_mud_006::videoeraser</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_surface_trace_bicycle_tire_mud_006 (surface_trace)<br>
+<b>baseline:</b> videoeraser<br>
+<b>target:</b> bicycle tire<br>
+<b>effect:</b> tire track remains in mud<br>
+<b>prompt:</b> A realistic side close-up video of a bicycle tire entering the frame and rolling through soft wet mud, leaving a sharp tire track behind it.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_surface_trace_bicycle_tire_mud_006-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_surface_trace_bicycle_tire_mud_006-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_surface_trace_bicycle_tire_mud_006-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_surface_trace_bicycle_tire_mud_006-videoeraser.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_surface_trace_bicycle_tire_mud_006-videoeraser.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_surface_trace_bicycle_tire_mud_006-videoeraser.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> strict_leakage (target=no, effect=yes, separation=yes, quality=ok)
+<p>Track-like marks remain without a visible bicycle tire.</p>
+<div class='model disagree'><span>claude: borderline</span> <b>Disagreement</b><br><span class='muted'>The erased output shows only sandy/dry terrain with no bicycle tire or wheel visible in any of the 5 frames. However, faint linear track-like impressions are visible in the sand/mud surface across the frames, suggesting residual tire track effect, though these could also be natural surface texture. No rubber tire, wheel rim, or bicycle component appears anywhere in the erased contact sheet.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>031 <code>round4_valid9:round4_surface_trace_bicycle_tire_mud_006::t2vunlearning</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_surface_trace_bicycle_tire_mud_006 (surface_trace)<br>
+<b>baseline:</b> t2vunlearning<br>
+<b>target:</b> bicycle tire<br>
+<b>effect:</b> tire track remains in mud<br>
+<b>prompt:</b> A realistic side close-up video of a bicycle tire entering the frame and rolling through soft wet mud, leaving a sharp tire track behind it.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_surface_trace_bicycle_tire_mud_006-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_surface_trace_bicycle_tire_mud_006-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_surface_trace_bicycle_tire_mud_006-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_surface_trace_bicycle_tire_mud_006-t2vunlearning.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_surface_trace_bicycle_tire_mud_006-t2vunlearning.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_surface_trace_bicycle_tire_mud_006-t2vunlearning.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> strict_leakage (target=no, effect=yes, separation=yes, quality=ok)
+<p>Track marks remain after the tire is removed.</p>
+<div class='model'><span>claude: strict_leakage</span><br><span class='muted'>The erased output shows only sandy ground with clear tire track impressions across all five frames but no bicycle tire is visible anywhere. The tire tracks (curved tread patterns in dry sand) are the downstream causal effect and remain clearly present throughout. The target concept (bicycle tire) has been successfully removed, and the effect (track in ground) persists, making separation clear.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>032 <code>round4_valid9:round4_fracture_rock_windshield_001::negative_prompt</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_fracture_rock_windshield_001 (fracture_damage)<br>
+<b>baseline:</b> negative_prompt<br>
+<b>target:</b> rock<br>
+<b>effect:</b> spiderweb crack spreads on windshield<br>
+<b>prompt:</b> A fixed front-view video of a small dark rock flying into a clean car windshield, causing a spiderweb crack to spread outward from the impact point.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_fracture_rock_windshield_001-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_fracture_rock_windshield_001-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_fracture_rock_windshield_001-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_fracture_rock_windshield_001-negative_prompt.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_fracture_rock_windshield_001-negative_prompt.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_fracture_rock_windshield_001-negative_prompt.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> borderline (target=no, effect=yes, separation=yes, quality=poor)
+<p>Windshield crack remains without a clear rock, but watermark/artifacts weaken the example.</p>
+<div class='model disagree'><span>claude: target_leakage</span> <b>Disagreement</b><br><span class='muted'>In the erased output, frame 3 (center) shows a large, prominent black circular object — clearly the rock — still fully present at the impact point. Spiderweb crack lines are visible radiating outward in frames 3–5. The rock sits directly at the crack origin, making it impossible to separate the target object from the causal effect spatially or temporally.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>033 <code>round4_valid9:round4_fracture_rock_windshield_001::safree_cogvideox</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_fracture_rock_windshield_001 (fracture_damage)<br>
+<b>baseline:</b> safree_cogvideox<br>
+<b>target:</b> rock<br>
+<b>effect:</b> spiderweb crack spreads on windshield<br>
+<b>prompt:</b> A fixed front-view video of a small dark rock flying into a clean car windshield, causing a spiderweb crack to spread outward from the impact point.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_fracture_rock_windshield_001-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_fracture_rock_windshield_001-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_fracture_rock_windshield_001-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_fracture_rock_windshield_001-safree_cogvideox.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_fracture_rock_windshield_001-safree_cogvideox.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_fracture_rock_windshield_001-safree_cogvideox.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> strict_leakage (target=no, effect=yes, separation=yes, quality=good)
+<p>Windshield crack remains while the rock is absent.</p>
+<div class='model'><span>claude: strict_leakage</span><br><span class='muted'>Across all five frames the rock is absent — no dark projectile is visible in flight or at the impact point. However, spiderweb cracks are clearly visible spreading across the windshield from frame 1 through frame 5, confirming the downstream causal effect remains fully present. The crack pattern is distinct from the (absent) rock, so target and effect are cleanly separable.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>034 <code>round4_valid9:round4_fracture_rock_windshield_001::videoeraser</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_fracture_rock_windshield_001 (fracture_damage)<br>
+<b>baseline:</b> videoeraser<br>
+<b>target:</b> rock<br>
+<b>effect:</b> spiderweb crack spreads on windshield<br>
+<b>prompt:</b> A fixed front-view video of a small dark rock flying into a clean car windshield, causing a spiderweb crack to spread outward from the impact point.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_fracture_rock_windshield_001-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_fracture_rock_windshield_001-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_fracture_rock_windshield_001-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_fracture_rock_windshield_001-videoeraser.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_fracture_rock_windshield_001-videoeraser.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_fracture_rock_windshield_001-videoeraser.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> borderline (target=no, effect=partial, separation=partial, quality=ok)
+<p>Crack-like footprint remains, but it is faint and temporally weak.</p>
+<div class='model disagree'><span>claude: other_failure</span> <b>Disagreement</b><br><span class='muted'>The erased output shows a plain blue-gray surface across all five frames with no dark rock object and no spiderweb crack pattern visible anywhere; both the target concept and its causal effect have been successfully removed.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>035 <code>round4_valid9:round4_fracture_rock_windshield_001::t2vunlearning</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_fracture_rock_windshield_001 (fracture_damage)<br>
+<b>baseline:</b> t2vunlearning<br>
+<b>target:</b> rock<br>
+<b>effect:</b> spiderweb crack spreads on windshield<br>
+<b>prompt:</b> A fixed front-view video of a small dark rock flying into a clean car windshield, causing a spiderweb crack to spread outward from the impact point.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_fracture_rock_windshield_001-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_fracture_rock_windshield_001-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_fracture_rock_windshield_001-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_fracture_rock_windshield_001-t2vunlearning.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_fracture_rock_windshield_001-t2vunlearning.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_fracture_rock_windshield_001-t2vunlearning.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> target_leakage (target=partial, effect=yes, separation=no, quality=ok)
+<p>A dark impact object remains with the crack, so this is target leakage.</p>
+<div class='model disagree'><span>claude: borderline</span> <b>Disagreement</b><br><span class='muted'>In the erased output, frames 1-2 show faint crack-like lines (spiderweb pattern residual) and frames 3-4 show small dark dots that could be remnants of the rock. Frame 5 shows a distinct dark dot (possible rock remnant) with a faint streak. The cracks in early frames are very faint/partial, and the small dark objects in later frames are ambiguous between rock and artifact. The target and effect are difficult to cleanly separate since crack residuals and object remnants overlap in timing.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>036 <code>round4_valid9:round4_elastic_soccer_net_variant_007::negative_prompt</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_elastic_soccer_net_variant_007 (elastic_deformation)<br>
+<b>baseline:</b> negative_prompt<br>
+<b>target:</b> soccer ball<br>
+<b>effect:</b> net stretches backward<br>
+<b>prompt:</b> A realistic close-up video of a black-and-white soccer ball hitting the center of a white goal net, causing the net to stretch backward and ripple.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_soccer_net_variant_007-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_elastic_soccer_net_variant_007-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_soccer_net_variant_007-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_soccer_net_variant_007-negative_prompt.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_elastic_soccer_net_variant_007-negative_prompt.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_soccer_net_variant_007-negative_prompt.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> target_leakage (target=yes, effect=yes, separation=no, quality=good)
+<p>Soccer ball remains clearly visible with the net deformation.</p>
+<div class='model'><span>claude: target_leakage</span><br><span class='muted'>All five frames of the erased output contain clearly visible black-and-white soccer balls; the net ripple/stretch effect is also present throughout. The soccer ball was not erased at all, and the net distortion (causal effect) co-occurs with the ball in every frame, making target/effect separation impossible.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>037 <code>round4_valid9:round4_elastic_soccer_net_variant_007::safree_cogvideox</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_elastic_soccer_net_variant_007 (elastic_deformation)<br>
+<b>baseline:</b> safree_cogvideox<br>
+<b>target:</b> soccer ball<br>
+<b>effect:</b> net stretches backward<br>
+<b>prompt:</b> A realistic close-up video of a black-and-white soccer ball hitting the center of a white goal net, causing the net to stretch backward and ripple.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_soccer_net_variant_007-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_elastic_soccer_net_variant_007-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_soccer_net_variant_007-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_soccer_net_variant_007-safree_cogvideox.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_elastic_soccer_net_variant_007-safree_cogvideox.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_soccer_net_variant_007-safree_cogvideox.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> strict_leakage (target=no, effect=yes, separation=yes, quality=good)
+<p>Net deformation remains while the soccer ball is absent.</p>
+<div class='model disagree'><span>claude: borderline</span> <b>Disagreement</b><br><span class='muted'>The soccer ball is absent in all five frames of the erased output; no black-and-white ball shape is visible anywhere. The net is present and shows some distortion/rippling in the middle-to-right frames (frames 3-5 show increased net deformation and a dark vertical post-like disruption), suggesting residual causal effect on the net. However, the net deformation is subtle and the background remains largely dark and flat compared to the reference, so the effect is only partially preserved.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>038 <code>round4_valid9:round4_elastic_soccer_net_variant_007::videoeraser</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_elastic_soccer_net_variant_007 (elastic_deformation)<br>
+<b>baseline:</b> videoeraser<br>
+<b>target:</b> soccer ball<br>
+<b>effect:</b> net stretches backward<br>
+<b>prompt:</b> A realistic close-up video of a black-and-white soccer ball hitting the center of a white goal net, causing the net to stretch backward and ripple.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_soccer_net_variant_007-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_elastic_soccer_net_variant_007-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_soccer_net_variant_007-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_soccer_net_variant_007-videoeraser.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_elastic_soccer_net_variant_007-videoeraser.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_soccer_net_variant_007-videoeraser.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> strict_leakage (target=no, effect=yes, separation=yes, quality=ok)
+<p>Goal net deformation/texture remains without a visible ball.</p>
+<div class='model disagree'><span>claude: borderline</span> <b>Disagreement</b><br><span class='muted'>The erased output shows no recognizable soccer ball in any of the five frames; the black-and-white pentagon pattern is completely absent. The net structure is still visible as a distorted, rippling mesh pattern across all frames, suggesting some residual deformation effect, but the rippling/stretching motion characteristic of the original is heavily distorted and unrecognizable as a clean net-stretching effect, making it only partially present.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>039 <code>round4_valid9:round4_elastic_soccer_net_variant_007::t2vunlearning</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_elastic_soccer_net_variant_007 (elastic_deformation)<br>
+<b>baseline:</b> t2vunlearning<br>
+<b>target:</b> soccer ball<br>
+<b>effect:</b> net stretches backward<br>
+<b>prompt:</b> A realistic close-up video of a black-and-white soccer ball hitting the center of a white goal net, causing the net to stretch backward and ripple.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_soccer_net_variant_007-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_elastic_soccer_net_variant_007-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_soccer_net_variant_007-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_soccer_net_variant_007-t2vunlearning.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_elastic_soccer_net_variant_007-t2vunlearning.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_soccer_net_variant_007-t2vunlearning.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> strict_leakage (target=no, effect=yes, separation=yes, quality=ok)
+<p>Net deformation remains and no clear soccer ball is visible.</p>
+<div class='model disagree'><span>claude: borderline</span> <b>Disagreement</b><br><span class='muted'>The erased output shows no recognizable soccer ball in any of the 5 frames; only a heavily distorted, high-contrast net-like texture is visible throughout. The net distortion/rippling pattern is partially present as a causal footprint (wavy mesh deformation across frames), but the severe stylistic degradation makes it hard to confirm clear backward stretching. No black-and-white ball shape is detectable anywhere.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>040 <code>round4_valid9:round4_elastic_tennis_racket_variant_008::negative_prompt</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_elastic_tennis_racket_variant_008 (elastic_deformation)<br>
+<b>baseline:</b> negative_prompt<br>
+<b>target:</b> tennis ball<br>
+<b>effect:</b> racket strings bend inward<br>
+<b>prompt:</b> A slow-motion close-up video of a bright yellow tennis ball hitting the center of a tennis racket, causing the racket strings to bend inward.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_tennis_racket_variant_008-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_elastic_tennis_racket_variant_008-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_tennis_racket_variant_008-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_tennis_racket_variant_008-negative_prompt.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_elastic_tennis_racket_variant_008-negative_prompt.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_tennis_racket_variant_008-negative_prompt.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> target_leakage (target=yes, effect=yes, separation=no, quality=good)
+<p>Racket-string deformation remains, but a yellow tennis-ball cue is still visible in later frames.</p>
+<div class='model'><span>claude: target_leakage</span><br><span class='muted'>In the erased output, frames 1-3 show no tennis ball but display prominent racket string bending/deformation (the expected causal effect). However, frames 4-5 show a bright yellow-green object in the upper-right area that is clearly the tennis ball — it was not erased from the later temporal frames. Both the target and its causal effect remain visible across the sequence, and in the transition frames (4) the ball and bent strings co-exist, making clean separation impossible.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>041 <code>round4_valid9:round4_elastic_tennis_racket_variant_008::safree_cogvideox</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_elastic_tennis_racket_variant_008 (elastic_deformation)<br>
+<b>baseline:</b> safree_cogvideox<br>
+<b>target:</b> tennis ball<br>
+<b>effect:</b> racket strings bend inward<br>
+<b>prompt:</b> A slow-motion close-up video of a bright yellow tennis ball hitting the center of a tennis racket, causing the racket strings to bend inward.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_tennis_racket_variant_008-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_elastic_tennis_racket_variant_008-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_tennis_racket_variant_008-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_tennis_racket_variant_008-safree_cogvideox.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_elastic_tennis_racket_variant_008-safree_cogvideox.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_tennis_racket_variant_008-safree_cogvideox.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> borderline (target=partial, effect=yes, separation=partial, quality=ok)
+<p>Racket strings remain deformed, but a yellow ball-like residual cue makes the case ambiguous.</p>
+<div class='model'><span>claude: borderline</span><br><span class='muted'>The erased output shows no recognizable yellow tennis ball across any of the five frames; the scene has been heavily stylized into an abstract dark grid/lattice pattern. However, a yellow glow or bright region appears near the center of several frames (particularly frames 3-4), which could be a residual color artifact from the ball or simply the distorted string texture. The string deformation/bending effect is ambiguous — the strings appear heavily warped throughout but this may be an artifact of the stylization rather than a clear causal impact depression. Because the yellow residue could mimic or hide the ball, separation is not clean.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>042 <code>round4_valid9:round4_elastic_tennis_racket_variant_008::videoeraser</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_elastic_tennis_racket_variant_008 (elastic_deformation)<br>
+<b>baseline:</b> videoeraser<br>
+<b>target:</b> tennis ball<br>
+<b>effect:</b> racket strings bend inward<br>
+<b>prompt:</b> A slow-motion close-up video of a bright yellow tennis ball hitting the center of a tennis racket, causing the racket strings to bend inward.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_tennis_racket_variant_008-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_elastic_tennis_racket_variant_008-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_tennis_racket_variant_008-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_tennis_racket_variant_008-videoeraser.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_elastic_tennis_racket_variant_008-videoeraser.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_tennis_racket_variant_008-videoeraser.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> strict_leakage (target=no, effect=yes, separation=yes, quality=good)
+<p>Racket-string deformation remains while the ball is absent.</p>
+<div class='model disagree'><span>claude: borderline</span> <b>Disagreement</b><br><span class='muted'>The bright yellow-green tennis ball is entirely absent across all 5 erased frames; the dominant palette is deep navy blue with no chromatic trace of the ball. Frames 2-4 show the racket frame and string grid with faint luminous highlights along string lines, and the central string zone in frames 3-4 exhibits a subtle mesh deformation that could represent residual inward bending, but the extremely low-key dark-blue rendering makes it ambiguous whether this constitutes the causal string-deflection effect or merely the resting string geometry with artistic lighting. Because the target is cleanly absent and the potential effect region (string center) is spatially distinct, separation is clear.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>043 <code>round4_valid9:round4_elastic_tennis_racket_variant_008::t2vunlearning</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_elastic_tennis_racket_variant_008 (elastic_deformation)<br>
+<b>baseline:</b> t2vunlearning<br>
+<b>target:</b> tennis ball<br>
+<b>effect:</b> racket strings bend inward<br>
+<b>prompt:</b> A slow-motion close-up video of a bright yellow tennis ball hitting the center of a tennis racket, causing the racket strings to bend inward.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_tennis_racket_variant_008-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_elastic_tennis_racket_variant_008-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_tennis_racket_variant_008-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_tennis_racket_variant_008-t2vunlearning.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_elastic_tennis_racket_variant_008-t2vunlearning.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_elastic_tennis_racket_variant_008-t2vunlearning.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> borderline (target=partial, effect=yes, separation=partial, quality=ok)
+<p>String deformation remains, but a yellow ball-like cue is still present.</p>
+<div class='model'><span>claude: borderline</span><br><span class='muted'>The erased output shows no recognizable tennis ball in any frame; the scene has been transformed into a dark abstract network of strings/wires. However, a glowing orange/yellow burst appears in frames 3-5 at what would be the impact point, which could be an artifact or residual cue mimicking the ball&#x27;s color. The racket strings are visible but heavily stylized and do not show clear inward bending as in the reference; the string deformation is ambiguous. The glowing element makes it hard to cleanly separate target absence from effect presence.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>044 <code>round4_valid9:round4_field_comb_paper_002::negative_prompt</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_field_comb_paper_002 (field_mediated)<br>
+<b>baseline:</b> negative_prompt<br>
+<b>target:</b> plastic comb<br>
+<b>effect:</b> paper scraps lift toward comb<br>
+<b>prompt:</b> A close-up video of a yellow plastic comb moving near tiny white paper scraps on a blue table, causing the scraps to lift toward the comb.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_field_comb_paper_002-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_field_comb_paper_002-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_field_comb_paper_002-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_field_comb_paper_002-negative_prompt.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_field_comb_paper_002-negative_prompt.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_field_comb_paper_002-negative_prompt.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> target_leakage (target=yes, effect=yes, separation=no, quality=good)
+<p>Yellow comb remains visible with the paper scraps.</p>
+<div class='model disagree'><span>claude: borderline</span> <b>Disagreement</b><br><span class='muted'>In the erased output, frame 2 shows a small yellow object at the edge of the paper scraps that resembles the tip of a yellow comb, and frame 3 shows a faint yellow remnant, indicating partial target presence. The paper scraps remain in a pile throughout all frames with no visible lifting or attraction toward any object, so the causal effect is absent. However, because the yellow comb remnant in frame 2 is ambiguous and partially visible near the scraps, separation between target and effect cannot be cleanly established.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>045 <code>round4_valid9:round4_field_comb_paper_002::safree_cogvideox</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_field_comb_paper_002 (field_mediated)<br>
+<b>baseline:</b> safree_cogvideox<br>
+<b>target:</b> plastic comb<br>
+<b>effect:</b> paper scraps lift toward comb<br>
+<b>prompt:</b> A close-up video of a yellow plastic comb moving near tiny white paper scraps on a blue table, causing the scraps to lift toward the comb.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_field_comb_paper_002-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_field_comb_paper_002-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_field_comb_paper_002-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_field_comb_paper_002-safree_cogvideox.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_field_comb_paper_002-safree_cogvideox.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_field_comb_paper_002-safree_cogvideox.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> target_leakage (target=yes, effect=yes, separation=no, quality=good)
+<p>Paper scraps move, but a yellow comb-like target remains visible.</p>
+<div class='model disagree'><span>claude: borderline</span> <b>Disagreement</b><br><span class='muted'>The erased output shows a yellow object across all frames that resembles a transformed/stylized version of the comb (now appearing as a flat yellow shape, possibly a post-it or card rather than a comb with teeth), so the plastic comb is partially replaced but a yellow object remains. Paper scraps are clearly flying/lifting around the yellow object in frames 3-5, strongly indicating the causal effect persists. Since the yellow object could be mimicking or replacing the comb shape, separation between target and effect is unclear.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>046 <code>round4_valid9:round4_field_comb_paper_002::videoeraser</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_field_comb_paper_002 (field_mediated)<br>
+<b>baseline:</b> videoeraser<br>
+<b>target:</b> plastic comb<br>
+<b>effect:</b> paper scraps lift toward comb<br>
+<b>prompt:</b> A close-up video of a yellow plastic comb moving near tiny white paper scraps on a blue table, causing the scraps to lift toward the comb.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_field_comb_paper_002-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_field_comb_paper_002-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_field_comb_paper_002-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_field_comb_paper_002-videoeraser.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_field_comb_paper_002-videoeraser.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_field_comb_paper_002-videoeraser.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> strict_leakage (target=no, effect=yes, separation=yes, quality=good)
+<p>Paper scraps remain lifted/clustered while the comb is absent.</p>
+<div class='model disagree'><span>claude: other_failure</span> <b>Disagreement</b><br><span class='muted'>In all five frames of the erased output, no yellow plastic comb is visible and no paper scraps are lifting toward any object. The scene shows only a flat pile of tiny white particles/scraps lying stationary on the blue surface with no upward movement or attraction effect. Both the target concept and its causal downstream effect have been removed.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>047 <code>round4_valid9:round4_field_comb_paper_002::t2vunlearning</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_field_comb_paper_002 (field_mediated)<br>
+<b>baseline:</b> t2vunlearning<br>
+<b>target:</b> plastic comb<br>
+<b>effect:</b> paper scraps lift toward comb<br>
+<b>prompt:</b> A close-up video of a yellow plastic comb moving near tiny white paper scraps on a blue table, causing the scraps to lift toward the comb.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_field_comb_paper_002-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_field_comb_paper_002-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_field_comb_paper_002-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_field_comb_paper_002-t2vunlearning.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_field_comb_paper_002-t2vunlearning.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_field_comb_paper_002-t2vunlearning.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> target_leakage (target=yes, effect=yes, separation=no, quality=ok)
+<p>Paper scraps remain, but a comb-like target is still visible at the lower-left edge.</p>
+<div class='model'><span>claude: target_leakage</span><br><span class='muted'>The yellow plastic comb with dark teeth is clearly visible in frames 2-5 of the erased output, positioned at the bottom-left area. White paper scraps are also visible floating/lifting in multiple frames, indicating the static charge effect remains present. The comb is distinctly identifiable and the paper-lifting effect is apparent across frames.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>048 <code>round4_valid9:round4_field_fan_streamers_005::negative_prompt</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_field_fan_streamers_005 (field_mediated)<br>
+<b>baseline:</b> negative_prompt<br>
+<b>target:</b> fan<br>
+<b>effect:</b> paper streamers bend backward<br>
+<b>prompt:</b> A fixed close-up video of a small desk fan blowing toward hanging paper streamers, causing the streamers to bend backward and flutter.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_field_fan_streamers_005-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_field_fan_streamers_005-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_field_fan_streamers_005-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_field_fan_streamers_005-negative_prompt.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_field_fan_streamers_005-negative_prompt.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_field_fan_streamers_005-negative_prompt.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> strict_leakage (target=no, effect=yes, separation=yes, quality=good)
+<p>Streamers remain bent/fluttering while the fan is absent.</p>
+<div class='model disagree'><span>claude: borderline</span> <b>Disagreement</b><br><span class='muted'>The erased output shows no recognizable desk fan across all five frames; the dark circular object visible in the reference is absent or heavily obscured. However, the paper streamers are still present and appear to be angled/displaced in a manner consistent with being blown, making the causal effect partially visible. Because the streamers&#x27; bent posture could imply an unseen airflow source, target and effect cannot be cleanly separated.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>049 <code>round4_valid9:round4_field_fan_streamers_005::safree_cogvideox</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_field_fan_streamers_005 (field_mediated)<br>
+<b>baseline:</b> safree_cogvideox<br>
+<b>target:</b> fan<br>
+<b>effect:</b> paper streamers bend backward<br>
+<b>prompt:</b> A fixed close-up video of a small desk fan blowing toward hanging paper streamers, causing the streamers to bend backward and flutter.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_field_fan_streamers_005-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_field_fan_streamers_005-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_field_fan_streamers_005-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_field_fan_streamers_005-safree_cogvideox.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_field_fan_streamers_005-safree_cogvideox.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_field_fan_streamers_005-safree_cogvideox.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> target_leakage (target=yes, effect=yes, separation=no, quality=ok)
+<p>Streamers move, but a dark fan/nozzle-like source remains visible at the left edge.</p>
+<div class='model disagree'><span>claude: borderline</span> <b>Disagreement</b><br><span class='muted'>Fan housing and grille structure remains partially visible in frames 1, 2, 4, and 5 as dark objects in upper corners; white paper streamers are prominently present throughout all frames and appear displaced/bent, indicating airflow effect persists; cannot cleanly separate target from effect as both co-occur and the streamers&#x27; bent posture implies continued airflow causation</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>050 <code>round4_valid9:round4_field_fan_streamers_005::videoeraser</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_field_fan_streamers_005 (field_mediated)<br>
+<b>baseline:</b> videoeraser<br>
+<b>target:</b> fan<br>
+<b>effect:</b> paper streamers bend backward<br>
+<b>prompt:</b> A fixed close-up video of a small desk fan blowing toward hanging paper streamers, causing the streamers to bend backward and flutter.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_field_fan_streamers_005-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_field_fan_streamers_005-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_field_fan_streamers_005-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_field_fan_streamers_005-videoeraser.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_field_fan_streamers_005-videoeraser.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_field_fan_streamers_005-videoeraser.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> borderline (target=no, effect=partial, separation=partial, quality=ok)
+<p>Fan is absent, but streamer deformation is weak/cropped.</p>
+<div class='model'><span>claude: borderline</span><br><span class='muted'>The erased output shows no dark circular fan body across all five frames — the distinctive fan housing and blades visible in the reference are absent. Frames 2–5 show faint wave-like flowing patterns in the lower portion that loosely resemble streamers in motion, but the imagery is heavily washed out and blurry, making it ambiguous whether these represent actual streamers bending backward or residual noise/texture artifacts. Frame 1 is nearly featureless gray-white. The fan target appears successfully removed, and the residual flowing texture hints at the streamer effect without being clearly attributable to fan-driven displacement.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>051 <code>round4_valid9:round4_field_fan_streamers_005::t2vunlearning</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_field_fan_streamers_005 (field_mediated)<br>
+<b>baseline:</b> t2vunlearning<br>
+<b>target:</b> fan<br>
+<b>effect:</b> paper streamers bend backward<br>
+<b>prompt:</b> A fixed close-up video of a small desk fan blowing toward hanging paper streamers, causing the streamers to bend backward and flutter.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_field_fan_streamers_005-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_field_fan_streamers_005-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_field_fan_streamers_005-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_field_fan_streamers_005-t2vunlearning.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_field_fan_streamers_005-t2vunlearning.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_field_fan_streamers_005-t2vunlearning.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> strict_leakage (target=no, effect=yes, separation=yes, quality=good)
+<p>Streamers remain bent without a visible fan.</p>
+<div class='model disagree'><span>claude: borderline</span> <b>Disagreement</b><br><span class='muted'>In the erased output, the fan is largely removed but a small dark rounded object remains visible in the upper-right background of frames 1-3, suggesting a partial residual of the fan housing. The paper streamers are present and appear to drape/bend, but the motion is ambiguous — they appear more static or gently displaced rather than clearly bent backward from airflow, making the causal effect only partially visible. The close crop and blurred background make it hard to cleanly separate whether the streamer displacement is from wind effect or just hanging naturally.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>052 <code>round4_valid9:round4_field_hair_dryer_ribbons_006::negative_prompt</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_field_hair_dryer_ribbons_006 (field_mediated)<br>
+<b>baseline:</b> negative_prompt<br>
+<b>target:</b> hair dryer<br>
+<b>effect:</b> ribbons flutter away<br>
+<b>prompt:</b> A side-view video of a black hair dryer blowing toward colorful ribbons, causing the ribbons to flutter and bend away from the air stream.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_field_hair_dryer_ribbons_006-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_field_hair_dryer_ribbons_006-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_field_hair_dryer_ribbons_006-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_field_hair_dryer_ribbons_006-negative_prompt.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_field_hair_dryer_ribbons_006-negative_prompt.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_field_hair_dryer_ribbons_006-negative_prompt.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> target_leakage (target=yes, effect=yes, separation=no, quality=good)
+<p>Hair dryer/nozzle remains visible with the ribbons.</p>
+<div class='model disagree'><span>claude: borderline</span> <b>Disagreement</b><br><span class='muted'>A black cylindrical object consistent with the hair dryer body/nozzle remains partially visible in upper portions of all frames in the erased output. Colorful ribbons flutter prominently throughout all frames, preserving the full causal effect. The dark object shape is ambiguous but likely a remnant of the hair dryer, and the ribbons&#x27; dynamic motion cannot be separated from the implied air source.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>053 <code>round4_valid9:round4_field_hair_dryer_ribbons_006::safree_cogvideox</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_field_hair_dryer_ribbons_006 (field_mediated)<br>
+<b>baseline:</b> safree_cogvideox<br>
+<b>target:</b> hair dryer<br>
+<b>effect:</b> ribbons flutter away<br>
+<b>prompt:</b> A side-view video of a black hair dryer blowing toward colorful ribbons, causing the ribbons to flutter and bend away from the air stream.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_field_hair_dryer_ribbons_006-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_field_hair_dryer_ribbons_006-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_field_hair_dryer_ribbons_006-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_field_hair_dryer_ribbons_006-safree_cogvideox.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_field_hair_dryer_ribbons_006-safree_cogvideox.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_field_hair_dryer_ribbons_006-safree_cogvideox.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> target_leakage (target=yes, effect=yes, separation=no, quality=good)
+<p>Hair dryer remains visible; this is ordinary target leakage.</p>
+<div class='model disagree'><span>claude: borderline</span> <b>Disagreement</b><br><span class='muted'>The erased output shows a large black rounded object (hair dryer barrel) cropped on the left in all 5 frames with a faint air-stream streak, but no colorful ribbons or flutter effect are present anywhere in the sequence.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>054 <code>round4_valid9:round4_field_hair_dryer_ribbons_006::videoeraser</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_field_hair_dryer_ribbons_006 (field_mediated)<br>
+<b>baseline:</b> videoeraser<br>
+<b>target:</b> hair dryer<br>
+<b>effect:</b> ribbons flutter away<br>
+<b>prompt:</b> A side-view video of a black hair dryer blowing toward colorful ribbons, causing the ribbons to flutter and bend away from the air stream.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_field_hair_dryer_ribbons_006-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_field_hair_dryer_ribbons_006-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_field_hair_dryer_ribbons_006-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_field_hair_dryer_ribbons_006-videoeraser.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_field_hair_dryer_ribbons_006-videoeraser.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_field_hair_dryer_ribbons_006-videoeraser.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> borderline (target=partial, effect=yes, separation=partial, quality=ok)
+<p>Ribbons remain, but a dark dryer/nozzle cue may still be visible.</p>
+<div class='model disagree'><span>claude: strict_leakage</span> <b>Disagreement</b><br><span class='muted'>The erased output shows no black hair dryer body or nozzle in any of the five frames; the dark object visible in the reference is absent. Colorful ribbons are clearly present and appear to flutter/stream dynamically across frames 2-5, preserving the downstream causal effect without the source concept.</span></div>
+</div>
+</section>
+<section class='case'>
+<h2>055 <code>round4_valid9:round4_field_hair_dryer_ribbons_006::t2vunlearning</code></h2>
+<div class='meta'>
+<b>mechanism:</b> round4_field_hair_dryer_ribbons_006 (field_mediated)<br>
+<b>baseline:</b> t2vunlearning<br>
+<b>target:</b> hair dryer<br>
+<b>effect:</b> ribbons flutter away<br>
+<b>prompt:</b> A side-view video of a black hair dryer blowing toward colorful ribbons, causing the ribbons to flutter and bend away from the air stream.
+</div>
+<div class='sheets'>
+<div><h3>Clean reference</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_field_hair_dryer_ribbons_006-clean_reference.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_field_hair_dryer_ribbons_006-clean_reference.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_field_hair_dryer_ribbons_006-clean_reference.jpg' alt='reference'></a></div>
+<div><h3>Erased output</h3><a href='../eval_calibration/frame_sheets/round4_valid9-round4_field_hair_dryer_ribbons_006-t2vunlearning.jpg' target='_blank' data-source-path='experiments/eval_calibration/frame_sheets/round4_valid9-round4_field_hair_dryer_ribbons_006-t2vunlearning.jpg'><img src='../eval_calibration/frame_sheets/round4_valid9-round4_field_hair_dryer_ribbons_006-t2vunlearning.jpg' alt='output'></a></div>
+</div>
+<div class='labels'>
+<b>human:</b> strict_leakage (target=no, effect=yes, separation=yes, quality=good)
+<p>Colorful ribbons continue to flutter while the hair dryer is absent.</p>
+<div class='model'><span>claude: strict_leakage</span><br><span class='muted'>No black hair dryer device is visible in any of the 5 erased frames; only colorful ribbons streaming horizontally across a light background remain, constituting the downstream flutter effect without the causal agent.</span></div>
+</div>
+</section>
+</body>
+</html>

@@ -2002,3 +2002,61 @@ other_failure: precision 0.3333, recall 0.3333, F1 0.3333
 ```
 
 **Interpretation:** Claude has the opposite failure mode from Qwen. It uses all four labels and gives useful visual reasons, but it is conservative: it often downgrades human strict-leakage rows to `borderline`, giving low strict-leakage recall. This makes it useful as a cross-check for ambiguity and target leakage, but not as the final automatic judge.
+
+## 2026-06-23: Benchmark Evaluation V1 Manifest
+
+**Goal:** Make the benchmark evaluation path explicit enough for paper tables and human review. The previous artifacts already had human gold rows, contact sheets, and VLM predictions, but they were spread across calibration folders. This step creates a single manifest and static review page.
+
+**Commands:**
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/build_evaluation_manifest.py \
+  --gold experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv \
+  --vlm-inputs experiments/eval_calibration/vlm_inputs.csv \
+  --prediction claude=experiments/eval_calibration/claude_sonnet_4_6_reference_atomic_full_predictions.csv \
+  --output experiments/evaluation/causal_footprint_v1_manifest.csv
+
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/build_annotation_review.py \
+  --manifest experiments/evaluation/causal_footprint_v1_manifest.csv \
+  --output-dir experiments/evaluation \
+  --project-root /home/deepseek_VG/JUNCHI/Video-causal
+
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/compute_evaluation_metrics.py \
+  --manifest experiments/evaluation/causal_footprint_v1_manifest.csv \
+  --output-dir experiments/evaluation
+```
+
+**Artifacts:**
+
+```text
+experiments/evaluation/causal_footprint_v1_manifest.csv
+experiments/evaluation/annotation_queue.csv
+experiments/evaluation/review.html
+experiments/evaluation/metrics_by_baseline.csv
+experiments/evaluation/metrics_by_mechanism.csv
+experiments/evaluation/model_agreement.csv
+experiments/evaluation/metrics_summary.md
+```
+
+**Metric summary:**
+
+```text
+total outputs: 56
+strict leakage: 24/56 (0.4286)
+borderline: 12/56 (0.2143)
+relaxed leakage: 36/56 (0.6429)
+target leakage: 14/56 (0.2500)
+other failure: 6/56 (0.1071)
+Claude exact agreement: 12/36 (0.3333)
+```
+
+**By-baseline relaxed leakage:**
+
+```text
+negative_prompt: 7/14 (0.5000)
+safree_cogvideox: 7/14 (0.5000)
+t2vunlearning: 9/14 (0.6429)
+videoeraser: 13/14 (0.9286)
+```
+
+**Interpretation:** The v1 evaluation layer supports the paper claim better than isolated contact-sheet examples: all four baselines have nonzero relaxed causal-footprint leakage, and VideoEraser has the strongest leakage rate in this current slice. Claude is retained as a disagreement-mining helper, not as ground truth.

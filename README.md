@@ -195,6 +195,46 @@ PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/calibr
   --allow-partial
 ```
 
+## Benchmark Evaluation V1
+
+The current paper-facing evaluation layer is under `experiments/evaluation/`. It converts human gold rows, contact sheets, and optional VLM predictions into a single manifest, a static annotation review page, and metric tables.
+
+Regenerate the v1 manifest with Claude disagreement columns:
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/build_evaluation_manifest.py \
+  --gold experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv \
+  --vlm-inputs experiments/eval_calibration/vlm_inputs.csv \
+  --prediction claude=experiments/eval_calibration/claude_sonnet_4_6_reference_atomic_full_predictions.csv \
+  --output experiments/evaluation/causal_footprint_v1_manifest.csv
+```
+
+Build the human review page and queue:
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/build_annotation_review.py \
+  --manifest experiments/evaluation/causal_footprint_v1_manifest.csv \
+  --output-dir experiments/evaluation \
+  --project-root /home/deepseek_VG/JUNCHI/Video-causal
+```
+
+Compute benchmark metrics from the manifest:
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/compute_evaluation_metrics.py \
+  --manifest experiments/evaluation/causal_footprint_v1_manifest.csv \
+  --output-dir experiments/evaluation
+```
+
+Current v1 headline:
+
+- Total outputs: 56.
+- Strict leakage: 24 / 56.
+- Borderline: 12 / 56.
+- Relaxed leakage: 36 / 56.
+- Target leakage: 14 / 56.
+- Claude agreement with human labels on the 36 reference-backed rows: 12 / 36.
+
 ## Baseline Policy
 
 The required comparison rows are:
@@ -216,7 +256,7 @@ python -m pytest tests -q
 Expected lightweight result:
 
 ```text
-49 passed
+53 passed
 ```
 
 ## CogVideoX Clean Generation
@@ -377,6 +417,14 @@ video_concept_erasure_causal_footprint/
 │   ├── claude_sonnet_4_6_reference_atomic_full_predictions.csv
 │   ├── claude_sonnet_4_6_reference_atomic_full_raw.jsonl
 │   └── claude_sonnet_4_6_reference_atomic_full/
+├── experiments/evaluation/
+│   ├── causal_footprint_v1_manifest.csv
+│   ├── annotation_queue.csv
+│   ├── review.html
+│   ├── metrics_by_baseline.csv
+│   ├── metrics_by_mechanism.csv
+│   ├── model_agreement.csv
+│   └── metrics_summary.md
 ├── prompts/
 │   ├── causal_footprint_v0_accepted24.txt
 │   ├── causal_footprint_v0_valid5.txt
@@ -388,12 +436,15 @@ video_concept_erasure_causal_footprint/
 │   └── cogvideox_clean_smoke.txt
 ├── scripts/
 │   ├── build_baseline_comparison.py
+│   ├── build_annotation_review.py
 │   ├── build_benchmark_items.py
 │   ├── build_clean_source_review.py
+│   ├── build_evaluation_manifest.py
 │   ├── build_vlm_eval_inputs.py
 │   ├── calibrate_evaluator.py
 │   ├── check_baselines.py
 │   ├── compute_benchmark_metrics.py
+│   ├── compute_evaluation_metrics.py
 │   ├── evaluate_with_vlm.py
 │   ├── export_calibration_gold.py
 │   ├── generate_cogvideox_clean.py
@@ -409,9 +460,8 @@ video_concept_erasure_causal_footprint/
 
 ## Next Actions
 
-1. Add another clean-source expansion pass to increase mechanism balance and reduce dependence on the current 14-item slice.
-2. Calibrate the automatic judge prompt so it can use `borderline` and `other_failure` instead of collapsing almost everything into leakage, even with clean-reference context.
-3. Compare the current complementary biases: `qwen/qwen-vl-plus` is high-recall/over-strict, while `anthropic/claude-sonnet-4-6` is conservative and has low strict-leakage recall.
-4. Re-run the first 8-row scorer sample with full `openai/gpt-4o` once the API channel is available; keep `qwen/qwen-vl-plus` as the current fallback screener.
-5. Add no-source and alternative-cause controls to separate real causal footprints from generic visual priors.
-6. Start method design only after the benchmark/evaluation story is stable enough to support a paper claim.
+1. Review `experiments/evaluation/review.html` and use `annotation_queue.csv` to mark any human-label corrections.
+2. Expand the clean-source pool to increase mechanism balance and reduce dependence on the current 14-item slice.
+3. Use Claude/Qwen disagreement as a triage signal, not as ground truth.
+4. Add no-source and alternative-cause controls to separate real causal footprints from generic visual priors.
+5. Start method design only after the benchmark/evaluation story is stable enough to support a paper claim.
