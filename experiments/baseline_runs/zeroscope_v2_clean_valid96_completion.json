@@ -1,0 +1,15 @@
+{
+  "root": "outputs/zeroscope_v2_clean_valid96_baselines_step20_f24_320x576_8gpu_offload_s1_attached",
+  "present_counts": {
+    "negative_prompt": 96,
+    "videoeraser": 96,
+    "t2vunlearning": 96,
+    "safree_zeroscope": 96
+  },
+  "missing": {
+    "negative_prompt": [],
+    "videoeraser": [],
+    "t2vunlearning": [],
+    "safree_zeroscope": []
+  }
+}

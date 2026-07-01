@@ -64,6 +64,15 @@ Do not treat this repository as containing the full experiment artifacts. Large 
 
 ## Current Evidence
 
+ZeroScope v2 control-free slice:
+
+- Clean-source gate: 96 / 304 candidate prompts accepted with target visible and causal footprint visible.
+- Four-baseline closure is complete: 384 / 384 erasure outputs across `negative_prompt`, `videoeraser`, `t2vunlearning`, and `safree_zeroscope`.
+- VLM evaluation uses paired 5-frame contact sheets: clean reference plus erased output. Atomic fields are target visibility, footprint visibility, footprint match, separation clarity, and video quality; final labels are rule-derived from those fields.
+- Final merged labels: `experiments/evaluation/zeroscope_v2_clean_valid96_baselines_gpt54_sharded32_20260701/vlm_predictions_merged_retry1.csv`.
+- Metrics: `experiments/metrics/zeroscope_v2_clean_valid96_baselines_gpt54_20260701/`.
+- Headline result: strict causal-footprint leakage is 46 / 384 overall. By baseline: Negative Prompt 11 / 96, VideoEraser local 21 / 96, T2V proxy 11 / 96, SAFREE-ZeroScope 3 / 96.
+
 Authoritative recovered matrix:
 
 ```text

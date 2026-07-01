@@ -2405,3 +2405,115 @@ experiments/baseline_runs/causal_footprint_v0_round5_borderline11_all_step20_par
 ```
 
 **Interpretation:** These rows are exploratory because their clean references had weak temporal order, weak causal dependence, or partial target/effect visibility. They are useful for candidate mining but should not be merged into headline metrics unless later adjudicated.
+
+## 2026-07-01: ZeroScope v2 Clean-Valid96 Four-Baseline Closure
+
+**Goal:** Close the ZeroScope branch end-to-end on the v2 control-free benchmark protocol: clean-source gating, four erasure baselines, reference-aligned review sheets, VLM atomic labels, retry of API failures, and metric tables.
+
+**Clean-source slice:**
+
+```text
+clean generation manifest:
+outputs/zeroscope_v2_candidates304_clean_step20_f24_320x576_8gpu_s3/clean/generation_manifest.json
+
+clean-gate VLM aggregate:
+experiments/evaluation/zeroscope_v2_clean_gate_gpt54_6shards_retry_20260701_133602/aggregate_predictions_merged.csv
+
+accepted prompts:
+prompts/zeroscope_v2_clean_valid_gpt54_96.txt
+benchmarks/causal_footprint_v2/zeroscope_clean_valid_gpt54_96_manifest.json
+```
+
+**Clean-gate result:** 96 / 304 candidate prompts passed the simplified v2 source criterion: target visible and causal footprint visible in the clean reference.
+
+**Baseline generation settings:**
+
+```text
+base model: ZeroScope v2
+resolution: 320x576
+frames: 24
+steps: 20
+seed base: 3
+baselines: negative_prompt, videoeraser, t2vunlearning, safree_zeroscope
+```
+
+**Baseline generation result:**
+
+```text
+output root:
+outputs/zeroscope_v2_clean_valid96_baselines_step20_f24_320x576_8gpu_offload_s1_attached
+
+negative_prompt: 96 / 96
+videoeraser: 96 / 96
+t2vunlearning: 96 / 96
+safree_zeroscope: 96 / 96
+total erasure outputs: 384 / 384
+
+completion record:
+experiments/baseline_runs/zeroscope_v2_clean_valid96_completion.json
+```
+
+**Runtime note:** The first high-concurrency run hit GPU OOM because the machine was already occupied by unrelated 8-GPU training. The final run used model CPU offload, then a sequential CPU-offload repair pass for missing rows.
+
+**Review artifacts:**
+
+```text
+experiments/baseline_review/zeroscope_v2_clean_valid96_baselines_review/baseline_review.csv
+experiments/baseline_review/zeroscope_v2_clean_valid96_baselines_review/baseline_gallery.html
+experiments/baseline_review/zeroscope_v2_clean_valid96_baselines_review/frame_strips/
+```
+
+The review builder wrote 480 rows: 96 clean references plus 384 erasure outputs. Each video is represented by a 5-frame evenly sampled contact sheet.
+
+**VLM evaluation protocol:**
+
+```text
+judge model: gpt-5.4
+input per row: clean-reference contact sheet + erased-output contact sheet
+atomic fields: target_visible, footprint_visible, footprint_match, separation_clear, video_quality, confidence, reason
+derived final labels: strict_causal_footprint_leakage, erased_clean, target_leakage, borderline, other_failure
+```
+
+The first monolithic VLM run was stopped because it only wrote results after the full batch finished. The final run split the 384 rows into 32 shards, each with 12 rows. Thirteen API-level failures were retried separately and all were recovered.
+
+**VLM artifacts:**
+
+```text
+sharded raw root:
+experiments/evaluation/zeroscope_v2_clean_valid96_baselines_gpt54_sharded32_20260701
+
+final merged labels:
+experiments/evaluation/zeroscope_v2_clean_valid96_baselines_gpt54_sharded32_20260701/vlm_predictions_merged_retry1.csv
+
+metrics:
+experiments/metrics/zeroscope_v2_clean_valid96_baselines_gpt54_20260701/v2_metrics_summary.md
+experiments/metrics/zeroscope_v2_clean_valid96_baselines_gpt54_20260701/v2_metrics_by_baseline.csv
+experiments/metrics/zeroscope_v2_clean_valid96_baselines_gpt54_20260701/v2_metrics_by_mechanism.csv
+```
+
+**Final aggregate metrics:**
+
+```text
+total outputs: 384
+target erased: 316 / 384 (0.8229)
+footprint retained given target erased: 124 / 316 (0.3924)
+strict causal-footprint leakage: 46 / 384 (0.1198)
+strict leakage given target erased: 46 / 316 (0.1456)
+erased clean: 149 / 384 (0.3880)
+target leakage: 23 / 384 (0.0599)
+borderline: 143 / 384 (0.3724)
+other failure: 23 / 384 (0.0599)
+```
+
+**By baseline:**
+
+```text
+negative_prompt: strict 11 / 96, target erased 67 / 96
+videoeraser: strict 21 / 96, target erased 87 / 96
+t2vunlearning: strict 11 / 96, target erased 81 / 96
+safree_zeroscope: strict 3 / 96, target erased 81 / 96
+```
+
+**By mechanism:** Strict leakage is most visible for `fluid_impact` (12 / 60) and `fracture_damage` (15 / 92). `surface_trace` has lower strict leakage (6 / 100) but many borderline rows, suggesting these prompts often produce ambiguous traces rather than clean source-target separation.
+
+**Conclusion:** ZeroScope is now closed for the v2 protocol. It gives a second model family beyond CogVideoX-2B where current erasure baselines can remove the target in many cases while still retaining a downstream footprint. The strongest ZeroScope baseline for this failure mode is the local VideoEraser adapter; SAFREE-ZeroScope appears cleaner on strict leakage but has more erased-clean and quality-failure outcomes.

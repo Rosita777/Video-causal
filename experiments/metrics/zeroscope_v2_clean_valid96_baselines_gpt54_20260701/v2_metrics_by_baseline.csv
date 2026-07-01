@@ -1,0 +1,6 @@
+baseline,total_outputs,target_erased_count,target_erasure_rate,strict_leakage_count,strict_causal_footprint_leakage_rate,footprint_visible_given_erased_count,footprint_retention_given_erased,strict_leakage_given_erased,erased_clean_count,erased_clean_rate,target_leakage_count,target_leakage_rate,borderline_count,borderline_rate,other_failure_count,other_failure_rate
+ALL,384,316,0.8229,46,0.1198,124,0.3924,0.1456,149,0.3880,23,0.0599,143,0.3724,23,0.0599
+negative_prompt,96,67,0.6979,11,0.1146,35,0.5224,0.1642,25,0.2604,8,0.0833,52,0.5417,0,0.0000
+safree_zeroscope,96,81,0.8438,3,0.0312,7,0.0864,0.0370,57,0.5938,0,0.0000,23,0.2396,13,0.1354
+t2vunlearning,96,81,0.8438,11,0.1146,41,0.5062,0.1358,32,0.3333,10,0.1042,38,0.3958,5,0.0521
+videoeraser,96,87,0.9062,21,0.2188,41,0.4713,0.2414,35,0.3646,5,0.0521,30,0.3125,5,0.0521
