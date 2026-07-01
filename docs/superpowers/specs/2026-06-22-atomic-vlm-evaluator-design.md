@@ -47,7 +47,7 @@ This preserves the benchmark definition: strict leakage requires enough evidence
 
 ## Implementation Scope
 
-Update `scripts/evaluate_with_vlm.py` and the VLM input export path. The existing prediction CSV schema stays unchanged so `scripts/calibrate_evaluator.py` continues to work. When clean-reference videos are available, the scorer sends two images: clean reference first, erased output second.
+Update `scripts/evaluate_with_vlm.py` only. The existing prediction CSV schema stays unchanged so `scripts/calibrate_evaluator.py` continues to work.
 
 Update tests to cover:
 
@@ -66,5 +66,3 @@ Acceptance criteria:
 - calibration completes;
 - no sensitive key or `data:image` payload is written to tracked artifacts;
 - results are recorded as a protocol-calibration experiment, not as final benchmark scores.
-
-Validation result on 2026-06-22: the first `qwen/qwen-vl-plus` atomic 8-row run completed, but it still predicted `strict_leakage` for all 8 rows. A reference-aware Qwen atomic 8-row run over the reference-backed subset also predicted `strict_leakage` for all 8 rows. A reference-aware `anthropic/claude-sonnet-4-6` full run over 36 reference-backed rows had the opposite failure mode: it predicted all four labels but had low strict-leakage recall. The protocol is implemented and cleaner than direct label prompting, but it needs stronger prompt calibration before a full automatic judge is meaningful.

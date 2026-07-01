@@ -84,12 +84,11 @@ def test_clean_source_review_html_names_baseline_prompt_and_pair_metadata(tmp_pa
     assert rows[0]["mechanism_type"] == "fracture_damage"
 
 
-def test_clean_source_review_accepts_round_metadata_tsv(tmp_path):
+def test_clean_source_review_accepts_jsonl_metadata_manifest(tmp_path):
     generation_manifest = tmp_path / "generation_manifest.json"
-    metadata_tsv = tmp_path / "round4.tsv"
+    metadata_manifest = tmp_path / "candidate_items.jsonl"
     output_dir = tmp_path / "review"
 
-    prompt = "A macro video of a bead dropping into water, causing ripples."
     generation_manifest.write_text(
         json.dumps(
             {
@@ -97,10 +96,8 @@ def test_clean_source_review_accepts_round_metadata_tsv(tmp_path):
                 "items": [
                     {
                         "index": 0,
-                        "prompt": prompt,
-                        "target_concept": "bead",
-                        "expected_effect": "ripples spread outward",
-                        "video_path": "outputs/example/videos/bead.mp4",
+                        "prompt": "A realistic video of a pebble falling into a pond, causing ripples.",
+                        "video_path": "outputs/example/videos/pebble.mp4",
                         "source_prompt_index": 0,
                     }
                 ],
@@ -108,10 +105,16 @@ def test_clean_source_review_accepts_round_metadata_tsv(tmp_path):
         ),
         encoding="utf-8",
     )
-    metadata_tsv.write_text(
-        "round4_id\tmechanism_type\ttarget_concept\tcausal_footprint\tsource_prompt\tnotes\n"
-        "round4_fluid_bead_001\tfluid_impact\tbead\tripples spread outward\t"
-        f"{prompt}\tclean retry\n",
+    metadata_manifest.write_text(
+        json.dumps(
+            {
+                "pair_id": "fluid_impact_pebble_pond_002",
+                "mechanism_type": "fluid_impact",
+                "target_concept": "pebble",
+                "expected_effect": "circular ripples spread outward",
+            }
+        )
+        + "\n",
         encoding="utf-8",
     )
 
@@ -121,8 +124,8 @@ def test_clean_source_review_accepts_round_metadata_tsv(tmp_path):
             str(PROJECT_ROOT / "scripts" / "build_clean_source_review.py"),
             "--manifest",
             str(generation_manifest),
-            "--metadata-tsv",
-            str(metadata_tsv),
+            "--metadata-manifest",
+            str(metadata_manifest),
             "--output-dir",
             str(output_dir),
             "--skip-frame-extraction",
@@ -133,12 +136,8 @@ def test_clean_source_review_accepts_round_metadata_tsv(tmp_path):
         capture_output=True,
     )
 
-    html = (output_dir / "clean_gallery.html").read_text(encoding="utf-8")
-    assert "round4_fluid_bead_001" in html
-    assert "fluid_impact" in html
-    assert prompt in html
-
     with (output_dir / "clean_source_screening.csv").open(encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
-    assert rows[0]["pair_id"] == "round4_fluid_bead_001"
-    assert rows[0]["mechanism_type"] == "fluid_impact"
+    assert rows[0]["pair_id"] == "fluid_impact_pebble_pond_002"
+    assert rows[0]["target_concept"] == "pebble"
+    assert rows[0]["expected_effect"] == "circular ripples spread outward"

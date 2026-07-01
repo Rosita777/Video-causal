@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate or plan CogVideoX-2B clean and inference-time baseline videos."""
+"""Generate or plan clean CogVideoX-2B causal-source videos."""
 
 from __future__ import annotations
 
@@ -26,7 +26,6 @@ def slugify(text: str, max_length: int = 72) -> str:
 
 def build_generation_config(args: argparse.Namespace) -> dict[str, object]:
     return {
-        "baseline": args.baseline,
         "seed": args.seed,
         "num_inference_steps": args.steps,
         "guidance_scale": args.guidance_scale,
@@ -48,7 +47,6 @@ def build_manifest_items(
     output_dir: Path,
     base_seed: int,
     limit: int | None,
-    baseline: str,
 ) -> list[dict[str, object]]:
     selected = prompts[:limit] if limit is not None else prompts
     items: list[dict[str, object]] = []
@@ -57,24 +55,22 @@ def build_manifest_items(
         seed = base_seed + index
         prompt_slug = slugify(item["prompt"])
         video_path = video_dir / f"{index:03d}_{prompt_slug}_seed{seed}.mp4"
-        manifest_item: dict[str, object] = {
-            "index": index,
-            "prompt": item["prompt"],
-            "target_concept": item["target_concept"],
-            "expected_effect": item["expected_effect"],
-            "seed": seed,
-            "video_path": str(video_path),
-        }
-        if baseline == "negative_prompt":
-            manifest_item["negative_prompt"] = item["target_concept"]
-        items.append(manifest_item)
+        items.append(
+            {
+                "index": index,
+                "prompt": item["prompt"],
+                "target_concept": item["target_concept"],
+                "expected_effect": item["expected_effect"],
+                "seed": seed,
+                "video_path": str(video_path),
+            }
+        )
     return items
 
 
 def write_manifest(
     *,
     output_dir: Path,
-    baseline: str,
     model: str,
     prompts_path: Path,
     generation: dict[str, object],
@@ -84,7 +80,7 @@ def write_manifest(
     output_dir.mkdir(parents=True, exist_ok=True)
     manifest = {
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
-        "baseline": baseline,
+        "baseline": "clean",
         "model": model,
         "dry_run": dry_run,
         "prompts": str(prompts_path),
@@ -144,7 +140,6 @@ def generate_videos(args: argparse.Namespace, items: list[dict[str, object]]) ->
         generator = torch.Generator(device=generator_device).manual_seed(int(item["seed"]))
         result = pipe(
             prompt=str(item["prompt"]),
-            negative_prompt=item.get("negative_prompt"),
             num_videos_per_prompt=1,
             num_inference_steps=args.steps,
             num_frames=args.num_frames,
@@ -158,7 +153,6 @@ def generate_videos(args: argparse.Namespace, items: list[dict[str, object]]) ->
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--baseline", choices=["clean", "negative_prompt"], default="clean")
     parser.add_argument("--prompts", type=Path, default=DEFAULT_PROMPTS)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--model", default=DEFAULT_MODEL)
@@ -195,14 +189,13 @@ def main() -> int:
 
     prompts = parse_prompt_file(args.prompts)
     generation = build_generation_config(args)
-    items = build_manifest_items(prompts, args.output_dir, args.seed, args.limit, args.baseline)
+    items = build_manifest_items(prompts, args.output_dir, args.seed, args.limit)
 
     if not args.dry_run:
         generate_videos(args, items)
 
     manifest = write_manifest(
         output_dir=args.output_dir,
-        baseline=args.baseline,
         model=args.model,
         prompts_path=args.prompts,
         generation=generation,

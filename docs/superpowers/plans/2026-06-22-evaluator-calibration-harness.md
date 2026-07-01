@@ -15,11 +15,11 @@
 - Create: `tests/test_export_calibration_gold.py`
 - Create by running script: `experiments/eval_calibration/causal_footprint_v0_gold_outputs.csv`
 
-- [x] Write a failing subprocess test that creates a tiny `items.jsonl` and expects derived `human_label` values.
-- [x] Run the test and verify it fails because `scripts/export_calibration_gold.py` does not exist.
-- [x] Implement `scripts/export_calibration_gold.py` with `--items` and `--output`.
-- [x] Run the focused test and verify it passes.
-- [x] Export the real gold CSV from `benchmarks/causal_footprint_v0/items.jsonl`.
+- [ ] Write a failing subprocess test that creates a tiny `items.jsonl` and expects derived `human_label` values.
+- [ ] Run the test and verify it fails because `scripts/export_calibration_gold.py` does not exist.
+- [ ] Implement `scripts/export_calibration_gold.py` with `--items` and `--output`.
+- [ ] Run the focused test and verify it passes.
+- [ ] Export the real gold CSV from `benchmarks/causal_footprint_v0/items.jsonl`.
 
 ### Task 2: Calibration Metrics
 
@@ -31,11 +31,11 @@
 - Create by running script: `experiments/eval_calibration/calibration_confusion_matrix.csv`
 - Create by running script: `experiments/eval_calibration/calibration_metrics_summary.md`
 
-- [x] Write a failing subprocess test with a tiny gold CSV and prediction CSV.
-- [x] Run the test and verify it fails because `scripts/calibrate_evaluator.py` does not exist.
-- [x] Implement schema validation, joining, confusion counts, per-label metrics, strict binary metrics, and relaxed binary metrics.
-- [x] Run the focused test and verify it passes.
-- [x] Create an example prediction file from the current human labels and run calibration as a smoke test.
+- [ ] Write a failing subprocess test with a tiny gold CSV and prediction CSV.
+- [ ] Run the test and verify it fails because `scripts/calibrate_evaluator.py` does not exist.
+- [ ] Implement schema validation, joining, confusion counts, per-label metrics, strict binary metrics, and relaxed binary metrics.
+- [ ] Run the focused test and verify it passes.
+- [ ] Create an example prediction file from the current human labels and run calibration as a smoke test.
 
 ### Task 3: Documentation and Verification
 
@@ -44,7 +44,7 @@
 - Modify: `benchmarks/causal_footprint_v0/README.md`
 - Modify: `docs/experiment_log.md`
 
-- [x] Document the calibration interface and generated artifacts.
-- [x] Run `PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python -m pytest tests -q`.
-- [x] Run `git diff --check`.
-- [x] Commit and push.
+- [ ] Document the calibration interface and generated artifacts.
+- [ ] Run `PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python -m pytest tests -q`.
+- [ ] Run `git diff --check`.
+- [ ] Commit and push.

@@ -34,7 +34,7 @@ def write_queue(path: Path, rows: list[dict[str, str]]) -> None:
         if field not in fieldnames:
             fieldnames.append(field)
     with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         for row in rows:
             output = dict(row)

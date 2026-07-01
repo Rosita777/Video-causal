@@ -18,8 +18,8 @@
 
 - [x] Write failing tests showing dry-run payloads expose `target_visible`, `effect_visible`, `separation_clear`, and `quality_ok`, but do not ask the model for `pred_label`.
 - [x] Run the focused tests and observe failure.
-- [x] Implement the atomic response schema and prompt.
-- [x] Re-run the focused tests and observe pass.
+- [ ] Implement the atomic response schema and prompt.
+- [ ] Re-run the focused tests and observe pass.
 
 ### Task 2: Deterministic Label Rule
 
@@ -33,42 +33,31 @@
   - partial target/effect or unclear separation -> `borderline`;
   - bad quality or absent effect -> `other_failure`.
 - [x] Run focused tests and observe failure.
-- [x] Implement `label_from_atomic_fields()` and update `normalize_prediction()`.
-- [x] Re-run focused tests and observe pass.
+- [ ] Implement `label_from_atomic_fields()` and update `normalize_prediction()`.
+- [ ] Re-run focused tests and observe pass.
 
 ### Task 3: Protocol Calibration Run
 
 **Files:**
-- Modify: `scripts/export_calibration_gold.py`
-- Modify: `scripts/build_vlm_eval_inputs.py`
-- Create: `experiments/eval_calibration/claude_sonnet_4_6_reference_atomic_full_predictions.csv`
-- Create: `experiments/eval_calibration/claude_sonnet_4_6_reference_atomic_full_raw.jsonl`
-- Create: `experiments/eval_calibration/claude_sonnet_4_6_reference_atomic_full/`
+- Create: `experiments/eval_calibration/qwen_vl_plus_atomic_sample8_predictions.csv`
+- Create: `experiments/eval_calibration/qwen_vl_plus_atomic_sample8_raw.jsonl`
+- Create: `experiments/eval_calibration/qwen_vl_plus_atomic_sample8/`
 - Modify: `docs/experiment_log.md`
 - Modify: `README.md`
 - Modify: `benchmarks/causal_footprint_v0/README.md`
 
-- [x] Add clean-reference video metadata to calibration gold export.
-- [x] Generate clean-reference contact sheets when reference videos are available.
-- [x] Run `qwen/qwen-vl-plus` on the first 8 VLM inputs with the atomic protocol.
-- [x] Calibrate with `--allow-partial`.
-- [x] Inspect summary and prediction rows.
-- [x] Scan artifacts for API keys and base64 image data.
-- [x] Run `qwen/qwen-vl-plus` on the first 8 reference-backed VLM inputs with the atomic protocol.
-- [x] Calibrate the reference-aware sample with `--allow-partial`.
-- [x] Run `anthropic/claude-sonnet-4-6` on the first 8 reference-backed VLM inputs with the atomic protocol.
-- [x] Calibrate the Claude reference-aware sample with `--allow-partial`.
-- [x] Run `anthropic/claude-sonnet-4-6` on all 36 reference-backed VLM inputs with the atomic protocol.
-- [x] Calibrate the Claude reference-aware full run.
-- [x] Record the old-protocol failure and new-protocol result in docs; keep only the Claude full run as the retained non-GPT fallback artifact.
+- [ ] Run `qwen/qwen-vl-plus` on the first 8 VLM inputs with the atomic protocol.
+- [ ] Calibrate with `--allow-partial`.
+- [ ] Inspect summary and prediction rows.
+- [ ] Scan artifacts for API keys and base64 image data.
+- [ ] Record the old-protocol failure and new-protocol result in docs.
 
 ### Task 4: Verification and Commit
 
 **Files:**
 - Modify: project docs and tests from previous tasks.
 
-- [x] Run focused tests during implementation.
-- [x] Run `git diff --check`.
-- [x] Run `python -m pytest -q`.
-- [x] Commit code, docs, and small calibration artifacts.
+- [ ] Run `python -m pytest -q`.
+- [ ] Run `git diff --check`.
+- [ ] Commit code, docs, and small calibration artifacts.
 - [ ] Push to GitHub.

@@ -60,42 +60,6 @@ def test_cogvideox_clean_dry_run_writes_generation_manifest(tmp_path):
     assert manifest["items"][0]["video_path"].endswith("_seed123.mp4")
 
 
-def test_cogvideox_negative_prompt_dry_run_uses_target_concept(tmp_path):
-    prompt_file = tmp_path / "prompts.txt"
-    output_dir = tmp_path / "outputs"
-    prompt_file.write_text(
-        "A realistic video of a red ball rolling into wooden blocks, and the blocks fall over after impact. | ball | wooden blocks fall over\n",
-        encoding="utf-8",
-    )
-
-    subprocess.run(
-        [
-            sys.executable,
-            str(PROJECT_ROOT / "scripts" / "generate_cogvideox_clean.py"),
-            "--baseline",
-            "negative_prompt",
-            "--prompts",
-            str(prompt_file),
-            "--output-dir",
-            str(output_dir),
-            "--model",
-            "local/CogVideoX-2b",
-            "--seed",
-            "123",
-            "--dry-run",
-        ],
-        cwd=PROJECT_ROOT,
-        check=True,
-        text=True,
-        capture_output=True,
-    )
-
-    manifest = json.loads((output_dir / "generation_manifest.json").read_text(encoding="utf-8"))
-    assert manifest["baseline"] == "negative_prompt"
-    assert manifest["items"][0]["negative_prompt"] == "ball"
-    assert manifest["items"][0]["prompt"] == "A realistic video of a red ball rolling into wooden blocks, and the blocks fall over after impact."
-
-
 def test_cogvideox_clean_rejects_non_positive_limit(tmp_path):
     prompt_file = tmp_path / "prompts.txt"
     prompt_file.write_text(

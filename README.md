@@ -39,38 +39,28 @@ This project is now tracked on GitHub and the active stable working copy is:
 /home/deepseek_VG/JUNCHI/Video-causal
 ```
 
-It was recovered on 2026-06-19 from an intermediate copy under:
+The project has had two filesystem-loss events. The current working tree was restored on 2026-07-01 from the GitHub snapshot plus Codex session logs. The recovered code surface includes the v2 benchmark/evaluation pipeline, ZeroScope interfaces, and Wan interfaces; generated videos, contact sheets, model weights, external baseline checkouts, and interrupted run outputs were not recoverable and must be regenerated.
+
+Detailed status:
 
 ```text
-/home/deepseek_VG/deepseek/video_concept_erasure_causal_footprint
+docs/recovery_status.md
+docs/recovery/codex_sessions_recovery_manifest_20260701.json
 ```
 
-The real path is:
+Current lightweight verification:
+
+```bash
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python -m pytest -q
+```
+
+Expected result:
 
 ```text
-/dev/shm/deepseek/video_concept_erasure_causal_footprint
+79 passed
 ```
 
-Source directory lost from the active filesystem:
-
-```text
-/home/deepseek_VG/JUNCHI/video_concept_erasure_causal_footprint
-```
-
-Recovered from Codex logs and prior summaries:
-
-- Core docs, prompts, lightweight scripts, and lightweight tests.
-- Manual annotation summaries for rounds 1-3.
-- Cross-round evidence matrices under `experiments/pilot_week1/cross_round_summary/`.
-
-Not recovered here:
-
-- Generated `.mp4` videos and contact sheets.
-- Local model weights under `models/`.
-- External baseline checkouts under `baselines/external/`.
-- T2VUnlearning zip/source unless recovered separately from backup.
-
-Do not treat this repository as containing the full experiment artifacts. It is enough to continue the research state and regenerate missing artifacts. Large generated videos, model weights, adapters, and external baseline checkouts remain intentionally outside git.
+Do not treat this repository as containing the full experiment artifacts. Large generated videos, model weights, adapters, and external baseline checkouts remain intentionally outside git; code, prompts, manifests, metrics, and summaries should be backed up frequently.
 
 ## Current Evidence
 

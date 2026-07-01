@@ -34,6 +34,8 @@ def resolve_model_arg(model: str) -> str:
     model_path = Path(model).expanduser()
     if model_path.exists():
         return str(model_path.resolve())
+    if not model_path.is_absolute():
+        return str(model_path.resolve())
     return model
 
 

@@ -19,11 +19,6 @@ INPUT_FIELDS = [
     "baseline",
     "video_path",
     "video_exists",
-    "reference_video_path",
-    "reference_video_exists",
-    "reference_sheet_path",
-    "reference_sheet_exists",
-    "reference_sheet_error",
     "sheet_path",
     "sheet_exists",
     "sheet_error",
@@ -122,7 +117,6 @@ def build_input_row(
     base = {field: row.get(field, "") for field in INPUT_FIELDS}
     base["output_id"] = output_id
     base["video_path"] = row.get("video_path", "")
-    base["reference_video_path"] = row.get("reference_video_path", "")
 
     if not video_path.exists():
         base.update({"video_exists": "false", "sheet_path": "", "sheet_exists": "false", "sheet_error": "missing video"})
@@ -151,56 +145,6 @@ def build_input_row(
             "sheet_path": str(sheet_path),
             "sheet_exists": "true",
             "sheet_error": "",
-        }
-    )
-
-    reference_video_value = row.get("reference_video_path", "")
-    if not reference_video_value:
-        base.update(
-            {
-                "reference_video_exists": "false",
-                "reference_sheet_path": "",
-                "reference_sheet_exists": "false",
-                "reference_sheet_error": "missing reference video path",
-            }
-        )
-        return base
-
-    reference_video_path = resolve_path(reference_video_value, project_root)
-    if not reference_video_path.exists():
-        base.update(
-            {
-                "reference_video_exists": "false",
-                "reference_sheet_path": "",
-                "reference_sheet_exists": "false",
-                "reference_sheet_error": "missing reference video",
-            }
-        )
-        return base
-
-    reference_sheet_path = sheet_dir / f"{safe_slug(row.get('item_id', output_id) + '::clean_reference')}.jpg"
-    try:
-        reference_frames = read_video_frames(reference_video_path, frames_per_video)
-        if not reference_frames:
-            raise ValueError("reference video has no decodable frames")
-        write_contact_sheet(reference_frames, reference_sheet_path, thumb_width=thumb_width, thumb_height=thumb_height)
-    except Exception as exc:  # keep the row auditable rather than dropping it
-        base.update(
-            {
-                "reference_video_exists": "true",
-                "reference_sheet_path": "",
-                "reference_sheet_exists": "false",
-                "reference_sheet_error": f"{type(exc).__name__}: {exc}",
-            }
-        )
-        return base
-
-    base.update(
-        {
-            "reference_video_exists": "true",
-            "reference_sheet_path": str(reference_sheet_path),
-            "reference_sheet_exists": "true",
-            "reference_sheet_error": "",
         }
     )
     return base

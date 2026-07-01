@@ -1,0 +1,552 @@
+[
+  {
+    "path": "benchmarks/causal_footprint_v0/README.md",
+    "timestamp": "2026-06-21T05:26:16.558Z",
+    "bytes": 2085
+  },
+  {
+    "path": "benchmarks/causal_footprint_v0/candidate_pairs.tsv",
+    "timestamp": "2026-06-21T05:26:16.558Z",
+    "bytes": 21278
+  },
+  {
+    "path": "benchmarks/causal_footprint_v0/control_prompts.jsonl",
+    "timestamp": "2026-06-21T05:26:16.558Z",
+    "bytes": 2528
+  },
+  {
+    "path": "benchmarks/causal_footprint_v0/controls_v1_specs.jsonl",
+    "timestamp": "2026-06-25T10:47:53.959Z",
+    "bytes": 20538
+  },
+  {
+    "path": "benchmarks/causal_footprint_v0/round4_clean_expansion_prompts.tsv",
+    "timestamp": "2026-06-21T07:44:05.359Z",
+    "bytes": 12557
+  },
+  {
+    "path": "benchmarks/causal_footprint_v0/round5_taxonomy_expansion_prompts.tsv",
+    "timestamp": "2026-06-23T03:28:35.611Z",
+    "bytes": 15734
+  },
+  {
+    "path": "benchmarks/causal_footprint_v0/round6_taxonomy_expansion_prompts.tsv",
+    "timestamp": "2026-06-24T08:00:42.650Z",
+    "bytes": 29586
+  },
+  {
+    "path": "benchmarks/causal_footprint_v1/README.md",
+    "timestamp": "2026-06-27T06:54:36.292Z",
+    "bytes": 2765
+  },
+  {
+    "path": "docs/superpowers/plans/2026-06-22-atomic-vlm-evaluator.md",
+    "timestamp": "2026-06-22T07:35:13.821Z",
+    "bytes": 2713
+  },
+  {
+    "path": "docs/superpowers/plans/2026-06-22-benchmark-items-metrics.md",
+    "timestamp": "2026-06-22T02:21:19.997Z",
+    "bytes": 2614
+  },
+  {
+    "path": "docs/superpowers/plans/2026-06-22-evaluator-calibration-harness.md",
+    "timestamp": "2026-06-22T02:39:37.630Z",
+    "bytes": 2584
+  },
+  {
+    "path": "docs/superpowers/plans/2026-06-22-gpt4o-vlm-scorer.md",
+    "timestamp": "2026-06-22T05:55:54.847Z",
+    "bytes": 1872
+  },
+  {
+    "path": "docs/superpowers/plans/2026-06-22-vlm-contact-sheet-evaluator.md",
+    "timestamp": "2026-06-22T05:21:12.827Z",
+    "bytes": 2786
+  },
+  {
+    "path": "docs/superpowers/plans/2026-06-23-benchmark-evaluation-v1.md",
+    "timestamp": "2026-06-23T02:18:05.376Z",
+    "bytes": 3026
+  },
+  {
+    "path": "docs/superpowers/plans/2026-06-28-causal-footprint-v2-candidate-expansion.md",
+    "timestamp": "2026-06-28T02:34:03.826Z",
+    "bytes": 4209
+  },
+  {
+    "path": "docs/superpowers/plans/2026-06-28-control-free-v2-main-experiment.md",
+    "timestamp": "2026-06-28T06:54:08.447Z",
+    "bytes": 5465
+  },
+  {
+    "path": "docs/superpowers/specs/2026-06-20-causal-footprint-benchmark-v0-design.md",
+    "timestamp": "2026-06-20T12:35:37.249Z",
+    "bytes": 12658
+  },
+  {
+    "path": "docs/superpowers/specs/2026-06-22-atomic-vlm-evaluator-design.md",
+    "timestamp": "2026-06-22T07:35:13.821Z",
+    "bytes": 2890
+  },
+  {
+    "path": "docs/superpowers/specs/2026-06-22-evaluator-calibration-harness-design.md",
+    "timestamp": "2026-06-22T02:39:37.630Z",
+    "bytes": 2697
+  },
+  {
+    "path": "docs/superpowers/specs/2026-06-22-gpt4o-vlm-scorer-design.md",
+    "timestamp": "2026-06-22T05:55:54.847Z",
+    "bytes": 1493
+  },
+  {
+    "path": "docs/superpowers/specs/2026-06-22-vlm-contact-sheet-evaluator-design.md",
+    "timestamp": "2026-06-22T05:21:12.827Z",
+    "bytes": 2584
+  },
+  {
+    "path": "docs/superpowers/specs/2026-06-23-benchmark-evaluation-v1-design.md",
+    "timestamp": "2026-06-23T02:18:05.376Z",
+    "bytes": 3848
+  },
+  {
+    "path": "experiments/baseline_runs/negative_prompt_round1_seed200_summary.csv",
+    "timestamp": "2026-06-19T14:20:33.629Z",
+    "bytes": 886
+  },
+  {
+    "path": "experiments/clean_screening/cogvideox_clean_screening_round1_seed200_summary.csv",
+    "timestamp": "2026-06-19T13:55:46.479Z",
+    "bytes": 2009
+  },
+  {
+    "path": "outputs/demo_round5_examples/ideal_candidates.html",
+    "timestamp": "2026-06-23T14:26:58.178Z",
+    "bytes": 10942
+  },
+  {
+    "path": "outputs/demo_round5_examples/index.html",
+    "timestamp": "2026-06-23T14:15:20.980Z",
+    "bytes": 9174
+  },
+  {
+    "path": "prompts/causal_footprint_mining_round2.txt",
+    "timestamp": "2026-06-20T08:29:37.754Z",
+    "bytes": 3178
+  },
+  {
+    "path": "prompts/causal_footprint_mining_round3.txt",
+    "timestamp": "2026-06-20T08:56:42.533Z",
+    "bytes": 5434
+  },
+  {
+    "path": "prompts/causal_footprint_v0_round4_clean_expansion48.txt",
+    "timestamp": "2026-06-21T07:44:05.359Z",
+    "bytes": 8781
+  },
+  {
+    "path": "prompts/causal_footprint_v0_round5_taxonomy_expansion60.txt",
+    "timestamp": "2026-06-23T03:28:35.611Z",
+    "bytes": 11160
+  },
+  {
+    "path": "prompts/cogvideox_clean_screening_round1.txt",
+    "timestamp": "2026-06-19T13:45:31.579Z",
+    "bytes": 1165
+  },
+  {
+    "path": "prompts/cogvideox_clean_smoke.txt",
+    "timestamp": "2026-06-19T13:28:52.380Z",
+    "bytes": 431
+  },
+  {
+    "path": "scripts/adapters/run_safree_cogvideox.py",
+    "timestamp": "2026-06-20T02:12:07.872Z",
+    "bytes": 9385
+  },
+  {
+    "path": "scripts/adapters/run_safree_wan.py",
+    "timestamp": "2026-06-30T11:52:36.246Z",
+    "bytes": 3536
+  },
+  {
+    "path": "scripts/adapters/run_safree_zeroscope.py",
+    "timestamp": "2026-06-27T10:57:25.451Z",
+    "bytes": 3550
+  },
+  {
+    "path": "scripts/adapters/run_t2vunlearning_wan.py",
+    "timestamp": "2026-06-30T11:52:36.246Z",
+    "bytes": 4127
+  },
+  {
+    "path": "scripts/adapters/run_t2vunlearning_zeroscope.py",
+    "timestamp": "2026-06-27T10:55:34.199Z",
+    "bytes": 4172
+  },
+  {
+    "path": "scripts/adapters/run_videoeraser_wan.py",
+    "timestamp": "2026-06-30T11:52:36.246Z",
+    "bytes": 3529
+  },
+  {
+    "path": "scripts/adapters/run_videoeraser_zeroscope.py",
+    "timestamp": "2026-06-27T10:54:42.569Z",
+    "bytes": 3511
+  },
+  {
+    "path": "scripts/adapters/wan_adapter_common.py",
+    "timestamp": "2026-06-30T11:52:36.246Z",
+    "bytes": 7651
+  },
+  {
+    "path": "scripts/adapters/zeroscope_adapter_common.py",
+    "timestamp": "2026-06-27T10:53:56.383Z",
+    "bytes": 7484
+  },
+  {
+    "path": "scripts/build_annotation_review.py",
+    "timestamp": "2026-06-23T02:22:05.686Z",
+    "bytes": 7598
+  },
+  {
+    "path": "scripts/build_baseline_review.py",
+    "timestamp": "2026-06-23T09:22:23.512Z",
+    "bytes": 14749
+  },
+  {
+    "path": "scripts/build_benchmark_items.py",
+    "timestamp": "2026-06-22T02:26:41.029Z",
+    "bytes": 8789
+  },
+  {
+    "path": "scripts/build_benchmark_v1_candidates.py",
+    "timestamp": "2026-06-27T06:50:23.155Z",
+    "bytes": 20016
+  },
+  {
+    "path": "scripts/build_benchmark_v2_candidates.py",
+    "timestamp": "2026-06-28T02:38:20.879Z",
+    "bytes": 31711
+  },
+  {
+    "path": "scripts/build_causal_eval_manifest.py",
+    "timestamp": "2026-06-27T05:53:42.267Z",
+    "bytes": 4401
+  },
+  {
+    "path": "scripts/build_control_prompt_slice.py",
+    "timestamp": "2026-06-25T10:41:51.455Z",
+    "bytes": 4319
+  },
+  {
+    "path": "scripts/build_evaluation_manifest.py",
+    "timestamp": "2026-06-23T02:22:05.686Z",
+    "bytes": 6476
+  },
+  {
+    "path": "scripts/build_human_adjudication_queue.py",
+    "timestamp": "2026-06-27T05:58:02.238Z",
+    "bytes": 1894
+  },
+  {
+    "path": "scripts/build_paper_assets.py",
+    "timestamp": "2026-06-25T01:56:49.452Z",
+    "bytes": 14872
+  },
+  {
+    "path": "scripts/build_vlm_eval_inputs.py",
+    "timestamp": "2026-06-22T05:23:04.115Z",
+    "bytes": 5961
+  },
+  {
+    "path": "scripts/calibrate_evaluator.py",
+    "timestamp": "2026-06-22T02:43:47.823Z",
+    "bytes": 8241
+  },
+  {
+    "path": "scripts/compute_benchmark_metrics.py",
+    "timestamp": "2026-06-22T02:26:41.029Z",
+    "bytes": 6478
+  },
+  {
+    "path": "scripts/compute_causal_eval_metrics.py",
+    "timestamp": "2026-06-27T05:56:48.471Z",
+    "bytes": 5923
+  },
+  {
+    "path": "scripts/compute_control_metrics.py",
+    "timestamp": "2026-06-26T03:25:18.009Z",
+    "bytes": 11293
+  },
+  {
+    "path": "scripts/compute_evaluation_metrics.py",
+    "timestamp": "2026-06-23T02:22:05.686Z",
+    "bytes": 7395
+  },
+  {
+    "path": "scripts/compute_v2_baseline_metrics.py",
+    "timestamp": "2026-06-29T01:41:23.716Z",
+    "bytes": 7514
+  },
+  {
+    "path": "scripts/evaluate_clean_chunks_with_vlm.py",
+    "timestamp": "2026-06-27T12:59:18.340Z",
+    "bytes": 23378
+  },
+  {
+    "path": "scripts/evaluate_clean_controls_with_vlm.py",
+    "timestamp": "2026-06-27T11:42:34.889Z",
+    "bytes": 14594
+  },
+  {
+    "path": "scripts/evaluate_v2_baseline_with_vlm.py",
+    "timestamp": "2026-06-28T15:01:08.200Z",
+    "bytes": 21834
+  },
+  {
+    "path": "scripts/evaluate_with_vlm.py",
+    "timestamp": "2026-06-22T05:25:18.680Z",
+    "bytes": 4491
+  },
+  {
+    "path": "scripts/export_benchmark_prompts.py",
+    "timestamp": "2026-06-21T05:47:21.105Z",
+    "bytes": 4379
+  },
+  {
+    "path": "scripts/export_calibration_gold.py",
+    "timestamp": "2026-06-22T02:41:06.311Z",
+    "bytes": 3779
+  },
+  {
+    "path": "scripts/export_v2_clean_source_slice.py",
+    "timestamp": "2026-06-29T12:08:56.171Z",
+    "bytes": 9095
+  },
+  {
+    "path": "scripts/generate_cogvideox_clean.py",
+    "timestamp": "2026-06-19T09:09:30.700Z",
+    "bytes": 7392
+  },
+  {
+    "path": "scripts/generate_wan_clean.py",
+    "timestamp": "2026-06-30T08:25:06.055Z",
+    "bytes": 7917
+  },
+  {
+    "path": "scripts/generate_zeroscope_clean.py",
+    "timestamp": "2026-06-27T10:17:36.500Z",
+    "bytes": 7501
+  },
+  {
+    "path": "scripts/merge_parallel_clean_shards.py",
+    "timestamp": "2026-06-25T10:41:51.455Z",
+    "bytes": 2968
+  },
+  {
+    "path": "scripts/run_baseline_suite.py",
+    "timestamp": "2026-06-20T01:31:03.076Z",
+    "bytes": 5927
+  },
+  {
+    "path": "scripts/run_parallel_baseline_jobs.py",
+    "timestamp": "2026-06-20T09:19:04.009Z",
+    "bytes": 12989
+  },
+  {
+    "path": "scripts/run_parallel_wan_jobs.py",
+    "timestamp": "2026-06-30T09:14:32.581Z",
+    "bytes": 11151
+  },
+  {
+    "path": "scripts/run_parallel_zeroscope_jobs.py",
+    "timestamp": "2026-06-27T11:05:36.052Z",
+    "bytes": 12006
+  },
+  {
+    "path": "scripts/wait_and_eval_wan_baselines.sh",
+    "timestamp": "2026-06-30T14:03:01.957Z",
+    "bytes": 5072
+  },
+  {
+    "path": "tests/test_build_annotation_review.py",
+    "timestamp": "2026-06-23T02:19:50.382Z",
+    "bytes": 3435
+  },
+  {
+    "path": "tests/test_build_baseline_review.py",
+    "timestamp": "2026-06-23T09:18:47.663Z",
+    "bytes": 5356
+  },
+  {
+    "path": "tests/test_build_benchmark_items.py",
+    "timestamp": "2026-06-22T02:25:00.783Z",
+    "bytes": 5421
+  },
+  {
+    "path": "tests/test_build_benchmark_v1_candidates.py",
+    "timestamp": "2026-06-27T06:45:44.881Z",
+    "bytes": 5951
+  },
+  {
+    "path": "tests/test_build_benchmark_v2_candidates.py",
+    "timestamp": "2026-06-28T02:34:55.851Z",
+    "bytes": 4436
+  },
+  {
+    "path": "tests/test_build_causal_eval_manifest.py",
+    "timestamp": "2026-06-27T05:52:55.240Z",
+    "bytes": 3427
+  },
+  {
+    "path": "tests/test_build_clean_source_review.py",
+    "timestamp": "2026-06-21T06:18:16.428Z",
+    "bytes": 2644
+  },
+  {
+    "path": "tests/test_build_control_prompt_slice.py",
+    "timestamp": "2026-06-25T10:28:52.963Z",
+    "bytes": 4384
+  },
+  {
+    "path": "tests/test_build_evaluation_manifest.py",
+    "timestamp": "2026-06-23T02:19:50.382Z",
+    "bytes": 7628
+  },
+  {
+    "path": "tests/test_build_human_adjudication_queue.py",
+    "timestamp": "2026-06-27T05:57:18.827Z",
+    "bytes": 1493
+  },
+  {
+    "path": "tests/test_build_paper_assets.py",
+    "timestamp": "2026-06-25T01:53:11.290Z",
+    "bytes": 9350
+  },
+  {
+    "path": "tests/test_build_vlm_eval_inputs.py",
+    "timestamp": "2026-06-22T05:22:08.671Z",
+    "bytes": 4727
+  },
+  {
+    "path": "tests/test_calibrate_evaluator.py",
+    "timestamp": "2026-06-22T02:42:14.355Z",
+    "bytes": 6401
+  },
+  {
+    "path": "tests/test_compute_benchmark_metrics.py",
+    "timestamp": "2026-06-22T02:25:00.783Z",
+    "bytes": 3471
+  },
+  {
+    "path": "tests/test_compute_causal_eval_metrics.py",
+    "timestamp": "2026-06-27T05:55:09.619Z",
+    "bytes": 2771
+  },
+  {
+    "path": "tests/test_compute_control_metrics.py",
+    "timestamp": "2026-06-26T03:22:03.780Z",
+    "bytes": 5062
+  },
+  {
+    "path": "tests/test_compute_evaluation_metrics.py",
+    "timestamp": "2026-06-23T02:19:50.382Z",
+    "bytes": 3909
+  },
+  {
+    "path": "tests/test_compute_v2_baseline_metrics.py",
+    "timestamp": "2026-06-29T01:39:45.652Z",
+    "bytes": 4329
+  },
+  {
+    "path": "tests/test_evaluate_clean_chunks_with_vlm.py",
+    "timestamp": "2026-06-27T12:54:31.504Z",
+    "bytes": 4597
+  },
+  {
+    "path": "tests/test_evaluate_clean_controls_with_vlm.py",
+    "timestamp": "2026-06-27T11:39:49.811Z",
+    "bytes": 4012
+  },
+  {
+    "path": "tests/test_evaluate_v2_baseline_with_vlm.py",
+    "timestamp": "2026-06-28T14:56:36.183Z",
+    "bytes": 6432
+  },
+  {
+    "path": "tests/test_evaluate_with_vlm.py",
+    "timestamp": "2026-06-22T05:24:30.853Z",
+    "bytes": 3906
+  },
+  {
+    "path": "tests/test_export_benchmark_prompts.py",
+    "timestamp": "2026-06-21T05:46:37.600Z",
+    "bytes": 3385
+  },
+  {
+    "path": "tests/test_export_calibration_gold.py",
+    "timestamp": "2026-06-22T02:40:30.963Z",
+    "bytes": 4467
+  },
+  {
+    "path": "tests/test_export_v2_clean_source_slice.py",
+    "timestamp": "2026-06-29T12:07:34.737Z",
+    "bytes": 6339
+  },
+  {
+    "path": "tests/test_generate_cogvideox_clean.py",
+    "timestamp": "2026-06-19T09:07:13.445Z",
+    "bytes": 2856
+  },
+  {
+    "path": "tests/test_generate_wan_clean.py",
+    "timestamp": "2026-06-30T08:23:00.830Z",
+    "bytes": 1768
+  },
+  {
+    "path": "tests/test_generate_zeroscope_clean.py",
+    "timestamp": "2026-06-27T10:15:26.958Z",
+    "bytes": 1780
+  },
+  {
+    "path": "tests/test_merge_parallel_clean_shards.py",
+    "timestamp": "2026-06-25T10:28:52.963Z",
+    "bytes": 3594
+  },
+  {
+    "path": "tests/test_run_baseline_suite.py",
+    "timestamp": "2026-06-20T01:30:11.102Z",
+    "bytes": 2841
+  },
+  {
+    "path": "tests/test_run_parallel_baseline_jobs.py",
+    "timestamp": "2026-06-20T09:17:33.179Z",
+    "bytes": 3821
+  },
+  {
+    "path": "tests/test_run_parallel_wan_jobs.py",
+    "timestamp": "2026-06-30T09:13:15.914Z",
+    "bytes": 1855
+  },
+  {
+    "path": "tests/test_run_parallel_zeroscope_jobs.py",
+    "timestamp": "2026-06-27T11:03:16.978Z",
+    "bytes": 2061
+  },
+  {
+    "path": "tests/test_run_safree_cogvideox.py",
+    "timestamp": "2026-06-20T02:10:24.678Z",
+    "bytes": 2803
+  },
+  {
+    "path": "tests/test_run_wan_adapters.py",
+    "timestamp": "2026-06-30T11:47:57.220Z",
+    "bytes": 2806
+  },
+  {
+    "path": "tests/test_run_zeroscope_adapters.py",
+    "timestamp": "2026-06-27T10:51:41.497Z",
+    "bytes": 2966
+  }
+]

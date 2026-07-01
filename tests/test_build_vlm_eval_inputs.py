@@ -26,7 +26,7 @@ def write_tiny_video(path: Path, colors: list[tuple[int, int, int]]) -> None:
             container.mux(packet)
 
 
-def write_gold(path: Path, video_path: Path, reference_video_path: Path | None = None) -> None:
+def write_gold(path: Path, video_path: Path) -> None:
     fieldnames = [
         "output_id",
         "item_id",
@@ -35,10 +35,6 @@ def write_gold(path: Path, video_path: Path, reference_video_path: Path | None =
         "mechanism_type",
         "baseline",
         "video_path",
-        "reference_video_path",
-        "reference_video_exists",
-        "reference_video_quality",
-        "reference_notes",
         "seed",
         "target_concept",
         "expected_effect",
@@ -64,10 +60,6 @@ def write_gold(path: Path, video_path: Path, reference_video_path: Path | None =
                 "mechanism_type": "fluid_impact",
                 "baseline": "videoeraser",
                 "video_path": str(video_path),
-                "reference_video_path": "" if reference_video_path is None else str(reference_video_path),
-                "reference_video_exists": "false" if reference_video_path is None else "true",
-                "reference_video_quality": "good" if reference_video_path is not None else "",
-                "reference_notes": "clean reference" if reference_video_path is not None else "",
                 "seed": "7",
                 "target_concept": "pebble",
                 "expected_effect": "ripples spread outward",
@@ -86,13 +78,11 @@ def write_gold(path: Path, video_path: Path, reference_video_path: Path | None =
 
 def test_build_vlm_eval_inputs_creates_sheet_and_csv_row(tmp_path):
     video = tmp_path / "videos" / "sample.mp4"
-    reference_video = tmp_path / "videos" / "reference.mp4"
     gold = tmp_path / "gold.csv"
     sheet_dir = tmp_path / "sheets"
     output = tmp_path / "vlm_inputs.csv"
     write_tiny_video(video, [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255)])
-    write_tiny_video(reference_video, [(0, 0, 0), (30, 30, 30), (60, 60, 60), (90, 90, 90), (120, 120, 120)])
-    write_gold(gold, video, reference_video)
+    write_gold(gold, video)
 
     result = subprocess.run(
         [
@@ -126,12 +116,8 @@ def test_build_vlm_eval_inputs_creates_sheet_and_csv_row(tmp_path):
     assert rows[0]["sheet_error"] == ""
     assert rows[0]["target_concept"] == "pebble"
     assert rows[0]["human_label"] == "strict_leakage"
-    assert rows[0]["reference_sheet_exists"] == "true"
-    assert rows[0]["reference_sheet_error"] == ""
     sheet = Image.open(rows[0]["sheet_path"])
-    reference_sheet = Image.open(rows[0]["reference_sheet_path"])
     assert sheet.size == (160, 24)
-    assert reference_sheet.size == (160, 24)
 
 
 def test_build_vlm_eval_inputs_keeps_missing_video_rows(tmp_path):

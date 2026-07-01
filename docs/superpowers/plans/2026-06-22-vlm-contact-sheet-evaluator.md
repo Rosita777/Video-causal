@@ -18,11 +18,11 @@
 - Create by running script: `experiments/eval_calibration/vlm_inputs.csv`
 - Create by running script: `experiments/eval_calibration/frame_sheets/*.jpg`
 
-- [x] Write a failing test with a tiny synthetic mp4 and gold CSV; expect one generated sheet and one `vlm_inputs.csv` row.
-- [x] Write a failing test for a missing video; expect `sheet_exists=false` and a non-empty `sheet_error`.
-- [x] Implement `scripts/build_vlm_eval_inputs.py` with `--gold`, `--sheet-dir`, `--output`, `--frames-per-video`, and image size options.
-- [x] Run the focused tests and verify they pass.
-- [x] Generate real VLM inputs from the current 56-row gold CSV.
+- [ ] Write a failing test with a tiny synthetic mp4 and gold CSV; expect one generated sheet and one `vlm_inputs.csv` row.
+- [ ] Write a failing test for a missing video; expect `sheet_exists=false` and a non-empty `sheet_error`.
+- [ ] Implement `scripts/build_vlm_eval_inputs.py` with `--gold`, `--sheet-dir`, `--output`, `--frames-per-video`, and image size options.
+- [ ] Run the focused tests and verify they pass.
+- [ ] Generate real VLM inputs from the current 56-row gold CSV.
 
 ### Task 2: Dry-Run VLM Payload Builder
 
@@ -31,11 +31,11 @@
 - Create: `tests/test_evaluate_with_vlm.py`
 - Create by running script: `experiments/eval_calibration/vlm_payloads_dryrun.jsonl`
 
-- [x] Write a failing test with a tiny `vlm_inputs.csv`; expect one JSONL payload containing target/effect metadata and the required output schema.
-- [x] Write a failing test that rows with `sheet_exists=false` are skipped by default and can be included with `--include-missing`.
-- [x] Implement dry-run mode with `--inputs`, `--output-jsonl`, `--limit`, and `--include-missing`.
-- [x] Run the focused tests and verify they pass.
-- [x] Generate dry-run payloads for the current VLM inputs.
+- [ ] Write a failing test with a tiny `vlm_inputs.csv`; expect one JSONL payload containing target/effect metadata and the required output schema.
+- [ ] Write a failing test that rows with `sheet_exists=false` are skipped by default and can be included with `--include-missing`.
+- [ ] Implement dry-run mode with `--inputs`, `--output-jsonl`, `--limit`, and `--include-missing`.
+- [ ] Run the focused tests and verify they pass.
+- [ ] Generate dry-run payloads for the current VLM inputs.
 
 ### Task 3: Documentation and Verification
 
@@ -44,7 +44,7 @@
 - Modify: `benchmarks/causal_footprint_v0/README.md`
 - Modify: `docs/experiment_log.md`
 
-- [x] Document the contact-sheet input flow and dry-run payload command.
-- [x] Run `PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python -m pytest tests -q`.
-- [x] Run `git diff --check`.
-- [x] Commit and push.
+- [ ] Document the contact-sheet input flow and dry-run payload command.
+- [ ] Run `PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python -m pytest tests -q`.
+- [ ] Run `git diff --check`.
+- [ ] Commit and push.

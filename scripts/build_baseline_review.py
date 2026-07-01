@@ -349,12 +349,12 @@ def write_html(path: Path, rows: list[dict[str, str]], *, baselines: list[str], 
         cells = []
         for baseline in baseline_order:
             row = item_rows.get(baseline)
-            cell_html = (
+            content = (
                 row_media_html(row, output_dir=output_dir, project_root=project_root)
                 if row
-                else "<span class='missing'>missing row</span>"
+                else '<span class="missing">missing row</span>'
             )
-            cells.append(f"<td>{cell_html}</td>")
+            cells.append(f"<td>{content}</td>")
         lines.append("<tr>" + meta + "".join(cells) + "</tr>")
     lines.extend(["</table>", "</body>", "</html>"])
     path.parent.mkdir(parents=True, exist_ok=True)

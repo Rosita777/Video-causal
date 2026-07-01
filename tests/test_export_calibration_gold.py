@@ -19,12 +19,6 @@ def test_export_calibration_gold_flattens_outputs_and_derives_labels(tmp_path):
         "target_concept": "pebble",
         "expected_effect": "ripples",
         "source_prompt": "A pebble drops into water.",
-        "clean_reference": {
-            "video_path": "outputs/clean.mp4",
-            "video_exists": True,
-            "video_quality": "good",
-            "notes": "clean target and effect visible",
-        },
         "baseline_outputs": [
             {
                 "baseline": "negative_prompt",
@@ -77,9 +71,6 @@ def test_export_calibration_gold_flattens_outputs_and_derives_labels(tmp_path):
     assert rows[0]["human_label"] == "strict_leakage"
     assert rows[0]["target_concept"] == "pebble"
     assert rows[0]["expected_effect"] == "ripples"
-    assert rows[0]["reference_video_path"] == "outputs/clean.mp4"
-    assert rows[0]["reference_video_exists"] == "True"
-    assert rows[0]["reference_video_quality"] == "good"
     assert rows[0]["seed"] == "1"
     assert rows[1]["output_id"] == "valid5:p1::videoeraser"
     assert rows[1]["human_label"] == "target_leakage"

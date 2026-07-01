@@ -72,7 +72,7 @@ def grouped(rows: list[dict[str, str]], field: str) -> dict[str, dict[str, str]]
 def write_group_csv(path: Path, group_field: str, table: dict[str, dict[str, str]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=[group_field, *METRIC_FIELDS], lineterminator="\n")
+        writer = csv.DictWriter(handle, fieldnames=[group_field, *METRIC_FIELDS])
         writer.writeheader()
         for group, metrics in table.items():
             writer.writerow({group_field: group, **metrics})
@@ -110,7 +110,6 @@ def write_model_agreement(path: Path, rows: list[dict[str, str]]) -> None:
         writer = csv.DictWriter(
             handle,
             fieldnames=["model", "compared_outputs", "agreement_count", "disagreement_count", "agreement_rate"],
-            lineterminator="\n",
         )
         writer.writeheader()
         writer.writerows(rows)

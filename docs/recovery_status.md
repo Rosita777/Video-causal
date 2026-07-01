@@ -1,5 +1,70 @@
 # Recovery Status
 
+Updated: 2026-07-01
+
+## 2026-07-01 Deletion And Recovery
+
+`/home/deepseek_VG/JUNCHI/Video-causal` disappeared again during a cleanup run outside this project. The clearest local evidence is:
+
+```text
+/home/deepseek_VG/phaseA_fluxmem_sota_gate/audits/cleanup_and_datadir_probe_20260701_021335.log
+```
+
+That log lists `/home/deepseek_VG/JUNCHI/Video-causal` as a cleanup candidate and records a delete phase for it at `2026-07-01 02:13:35 +08:00` on `worker18` under user `deepseek_VG`. We should treat this as an external cleanup collision rather than a normal project operation.
+
+The repository was restored in two layers:
+
+- GitHub snapshot from `Rosita777/Video-causal`, pushed on 2026-06-23. This restored the early project structure, v0 docs, prompts, scripts, and lightweight historical results.
+- Codex session-log extraction from `/home/deepseek_VG/.codex/sessions`, which recovered 110 later files including v2 benchmark/evaluation scripts, ZeroScope adapters, Wan adapters, and their tests.
+
+The extracted recovery manifest is tracked at:
+
+```text
+docs/recovery/codex_sessions_recovery_manifest_20260701.json
+```
+
+Current verification after restoring and reconciling the recovered files:
+
+```bash
+cd /home/deepseek_VG/JUNCHI/Video-causal
+PYTHONNOUSERSITE=1 /home/deepseek_VG/.conda/envs/vcecf/bin/python -m pytest -q
+```
+
+Result:
+
+```text
+79 passed
+```
+
+Recovered current-code surface:
+
+- CogVideoX clean generation and baseline suite scripts.
+- v2 candidate construction, clean-source chunk VLM evaluation, v2 baseline VLM evaluation, metric computation, paper asset builders.
+- ZeroScope clean/baseline generation interfaces and parallel launchers.
+- Wan clean/baseline generation interfaces, parallel launcher, and wait-then-evaluate helper.
+
+Post-recovery robustness updates now covered by tests:
+
+- Clean-source review accepts both JSON and JSONL metadata manifests.
+- Chunked VLM clean-source evaluation accepts single-item enum lists returned by VLMs.
+- VLM API calls support retries and resumable shard runs, so interrupted or slow clean-gate jobs can continue without repeating completed chunk requests.
+
+Not recovered from the 2026-07-01 deletion:
+
+- Generated `.mp4` videos, contact sheets, and partial Wan outputs.
+- Model weights and external baseline checkouts.
+- Live experiment process state. The Wan baseline run that was in progress must be restarted.
+- The latest Wan/ZeroScope result artifacts that existed only in `outputs/` or `experiments/` and were not present in GitHub/session patches.
+
+Important pre-deletion scientific results preserved in conversation notes, but not fully backed by local artifact files after deletion:
+
+- CogVideoX-2B: 100 clean-valid prompts, 400 baseline outputs, strict causal-footprint leakage `87/400 = 21.75%`.
+- ZeroScope: 163 clean-valid prompts, 652 baseline outputs, strict causal-footprint leakage `116/652 = 17.79%`.
+- CogVideoX-5B: diagnostic only; 59 clean-valid prompts, excluded from main plan because the clean-valid yield was too low and the model was slow/large.
+- Wan2.1-T2V-1.3B: 335 clean-valid prompts before deletion; baseline generation was in progress and needs to be rerun.
+
+Next operational step is to re-download or verify required model weights, then rerun Wan baseline generation/evaluation from the restored scripts. Large outputs should remain out of git; code, prompts, manifests, metrics, and summaries should be pushed regularly.
+
 Updated: 2026-06-20
 
 ## What Happened

@@ -16,7 +16,6 @@ from run_pilot import parse_prompt_file
 
 
 BASELINES = ["negative_prompt", "safree_cogvideox", "videoeraser", "t2vunlearning"]
-SELECTABLE_BASELINES = ["clean", *BASELINES]
 
 
 def parse_gpus(value: str) -> list[int]:
@@ -105,18 +104,6 @@ def append_common_generation_args(command: list[str], args: argparse.Namespace) 
 
 
 def build_command(baseline: str, args: argparse.Namespace, prompt_shard: Path, output_dir: Path) -> list[str]:
-    if baseline == "clean":
-        command = [
-            sys.executable,
-            "scripts/generate_cogvideox_clean.py",
-            "--baseline",
-            "clean",
-            "--prompts",
-            str(prompt_shard),
-            "--output-dir",
-            str(output_dir),
-        ]
-        return append_common_generation_args(command, args)
     if baseline == "negative_prompt":
         command = [
             sys.executable,
@@ -261,8 +248,6 @@ def run_jobs(jobs: list[dict[str, object]], args: argparse.Namespace) -> None:
             env["CUDA_VISIBLE_DEVICES"] = str(gpu)
             env["PYTHONNOUSERSITE"] = "1"
             print(f"Starting {job['job_id']} on {slot_name}")
-            job["status"] = "running"
-            job["started_at_utc"] = datetime.now(timezone.utc).isoformat()
             process = subprocess.Popen(job["command"], stdout=log_handle, stderr=subprocess.STDOUT, env=env)
             running[slot_name] = (job, process, log_handle)
 
@@ -274,14 +259,10 @@ def run_jobs(jobs: list[dict[str, object]], args: argparse.Namespace) -> None:
             log_handle.close()
             running.pop(slot_name)
             available_slots[slot_name] = int(job["gpu"])
-            job["finished_at_utc"] = datetime.now(timezone.utc).isoformat()
-            job["return_code"] = return_code
             if return_code:
-                job["status"] = "failed"
                 failures.append((str(job["job_id"]), return_code))
                 print(f"Failed {job['job_id']} with exit code {return_code}")
             else:
-                job["status"] = "finished"
                 print(f"Finished {job['job_id']}")
 
     if failures:
@@ -291,7 +272,7 @@ def run_jobs(jobs: list[dict[str, object]], args: argparse.Namespace) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
-    parser.add_argument("--baseline", action="append", choices=SELECTABLE_BASELINES)
+    parser.add_argument("--baseline", action="append", choices=BASELINES)
     parser.add_argument("--prompts", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--source-indices")

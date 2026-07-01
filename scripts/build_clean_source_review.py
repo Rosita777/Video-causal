@@ -35,6 +35,23 @@ def load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def load_metadata_manifest(path: Path) -> list[dict]:
+    text = path.read_text(encoding="utf-8").strip()
+    if not text:
+        return []
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        return [json.loads(line) for line in text.splitlines() if line.strip()]
+    if isinstance(data, dict):
+        if isinstance(data.get("items"), list):
+            return data["items"]
+        return [data]
+    if isinstance(data, list):
+        return data
+    raise ValueError(f"{path}: expected JSON object, JSON list, or JSONL metadata")
+
+
 def load_metadata_tsv(path: Path) -> list[dict[str, str]]:
     with path.open(newline="", encoding="utf-8") as handle:
         reader = csv.DictReader(handle, delimiter="\t")
@@ -88,6 +105,7 @@ def normalize_rows(data: dict, metadata_items: list[dict]) -> list[dict]:
         expected_effect = (
             item.get("expected_effect")
             or item.get("causal_footprint")
+            or metadata.get("expected_effect")
             or metadata.get("causal_footprint")
             or ""
         )
@@ -291,7 +309,10 @@ def main() -> int:
     data = load_json(args.manifest)
     metadata_items = []
     if args.metadata_manifest:
-        metadata_items = load_json(args.metadata_manifest).get("items", [])
+        try:
+            metadata_items = load_metadata_manifest(args.metadata_manifest)
+        except (ValueError, json.JSONDecodeError) as exc:
+            parser.exit(2, f"{exc}\n")
     if args.metadata_tsv:
         try:
             metadata_items = load_metadata_tsv(args.metadata_tsv)
