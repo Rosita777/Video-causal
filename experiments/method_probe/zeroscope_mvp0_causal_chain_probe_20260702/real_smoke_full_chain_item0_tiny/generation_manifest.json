@@ -1,0 +1,72 @@
+{
+  "created_at_utc": "2026-07-02T06:48:30.062778+00:00",
+  "baseline": "mvp0_causal_chain_probe",
+  "model": "models/zeroscope_v2_576w",
+  "dry_run": false,
+  "probe_manifest": "experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/probe_manifest.json",
+  "source_probe_name": "zeroscope_mvp0_causal_chain_probe",
+  "conditions": [
+    "full_chain_steering"
+  ],
+  "generation": {
+    "seed": 15000,
+    "num_inference_steps": 4,
+    "guidance_scale": 9.0,
+    "num_frames": 8,
+    "fps": 8,
+    "height": 160,
+    "width": 288,
+    "dtype": "fp16",
+    "device": "auto",
+    "enable_model_cpu_offload": true,
+    "enable_sequential_cpu_offload": false,
+    "vae_slicing": true,
+    "steering_alpha": 0.5,
+    "timestep_window": [
+      1,
+      3
+    ]
+  },
+  "items": [
+    {
+      "probe_index": 0,
+      "pair_id": "fluid_impact_pebble_pond_002",
+      "slice_index": 0,
+      "mechanism_type": "fluid_impact",
+      "condition": "full_chain_steering",
+      "prompt": "A realistic close-up video of a small pebble dropping into a still pond, causing circular ripples to spread outward across the water.",
+      "negative_prompt": "pebble, circular ripples spread outward",
+      "target_concept": "pebble",
+      "causal_footprint": "circular ripples spread outward",
+      "seed": 15000,
+      "video_path": "experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/real_smoke_full_chain_item0_tiny/videos/000_fluid-impact-pebble-pond-002_full_chain_steering_seed15000.mp4",
+      "steering": {
+        "enabled": true,
+        "links": [
+          "cause",
+          "mechanism",
+          "footprint"
+        ],
+        "minimal_pairs": {
+          "cause": {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, with pebble.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, without pebble."
+          },
+          "mechanism": {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, with pebble impact with water.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, with no impact or causal disturbance."
+          },
+          "footprint": {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, with circular ripples spread outward.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, with no circular ripples spread outward."
+          }
+        },
+        "alpha": 0.5,
+        "timestep_window": [
+          1,
+          3
+        ]
+      }
+    }
+  ]
+}

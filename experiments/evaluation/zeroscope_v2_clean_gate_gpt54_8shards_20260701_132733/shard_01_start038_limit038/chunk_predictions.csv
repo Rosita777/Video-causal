@@ -1,0 +1,2 @@
+sample_id,pair_id,row_index,chunk_index,frame_start,frame_end,target_visible,target_frame_ids,effect_visible,effect_frame_ids,local_temporal_order,local_causal_transition,video_quality,confidence,reason
+case_038,v2_fracture_damage_wooden_mallet_a_small_chip_and_crack_line_remain_o_bright_024,38,0,0,7,no,,no,,no,no,no,0.8200,"This chunk does not visibly show a clay pot or a wooden mallet; frames appear as an unclear brown patterned surface, so neither contact nor a chip/crack effect can be verified from f000-f007."

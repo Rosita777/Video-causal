@@ -1,0 +1,721 @@
+{
+  "created_at_utc": "2026-07-02T08:54:45.160087+00:00",
+  "probe_name": "zeroscope_mvp0_causal_chain_probe_phase_b_paraphrase",
+  "dry_run": true,
+  "source_manifest": "benchmarks/causal_footprint_v2/zeroscope_clean_valid_gpt54_96_manifest.json",
+  "baseline_labels": "experiments/evaluation/zeroscope_v2_clean_valid96_baselines_gpt54_sharded32_20260701/vlm_predictions_merged_retry1.csv",
+  "count": 12,
+  "items": [
+    {
+      "probe_index": 0,
+      "pair_id": "fluid_impact_pebble_pond_002",
+      "source_index": "0",
+      "slice_index": 0,
+      "mechanism_type": "fluid_impact",
+      "target_concept": "pebble",
+      "causal_footprint": "circular ripples spread outward",
+      "source_prompt": "A realistic close-up video of a small pebble dropping into a still pond, causing circular ripples to spread outward across the water.",
+      "generation_prompt": "A realistic close-up video of a still pond with a calm, undisturbed surface. pebble causes circular ripples spread outward.",
+      "counterfactual_prompt": "A realistic close-up video of a still pond with a calm, undisturbed surface. No pebble is present.",
+      "control_prompt": "A realistic close-up video of a still pond where gentle background ripples move across the surface with no impact point.",
+      "clean_video_path": "outputs/zeroscope_v2_candidates304_clean_step20_f24_320x576_8gpu_s3/clean_shards/prompt_000/videos/000_a-realistic-close-up-video-of-a-small-pebble-dropping-into-a-still-pond_seed9100.mp4",
+      "minimal_pairs": {
+        "cause": [
+          {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, with pebble.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, without pebble."
+          },
+          {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, pebble is visible in the scene.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, pebble is absent from the scene."
+          },
+          {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, the scene includes pebble.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, the scene includes no pebble."
+          }
+        ],
+        "mechanism": [
+          {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, with pebble impact with water.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, with no impact or causal disturbance."
+          },
+          {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, pebble strikes the water surface.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, no impact or causal contact occurs."
+          },
+          {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, the cause physically triggers the event.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, the scene stays undisturbed with no causal trigger."
+          }
+        ],
+        "footprint": [
+          {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, with circular ripples spread outward.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, with no circular ripples spread outward."
+          },
+          {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, the downstream effect is visible: circular ripples spread outward.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, the downstream effect is absent."
+          },
+          {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, visible evidence shows circular ripples spread outward.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, visible evidence shows no circular ripples spread outward."
+          }
+        ]
+      },
+      "phase_b_pair_count_per_link": 3
+    },
+    {
+      "probe_index": 1,
+      "pair_id": "v2_fracture_damage_black_hockey_puck_a_star_shaped_crack_spreads_across_t_side_033",
+      "source_index": "47",
+      "slice_index": 20,
+      "mechanism_type": "fracture_damage",
+      "target_concept": "black hockey puck",
+      "causal_footprint": "a star-shaped crack spreads across the mirror",
+      "source_prompt": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack. A clearly visible black hockey puck enters the frame and remains visible before contact. The black hockey puck slides into the mirror tile after the target is clearly visible, causing a star-shaped crack spreads across the mirror; the effect begins only after contact and remains visible for several frames.",
+      "generation_prompt": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack. black hockey puck causes a star-shaped crack spreads across the mirror.",
+      "counterfactual_prompt": "A realistic fixed-camera close-up video of the same scene before the event, with no black hockey puck, no visible cause, and no a star-shaped crack spreads across the mirror.",
+      "control_prompt": "A realistic fixed-camera close-up video showing a star-shaped crack spreads across the mirror, with no black hockey puck or other visible cause in the frame.",
+      "clean_video_path": "outputs/zeroscope_v2_candidates304_clean_step20_f24_320x576_8gpu_s3/clean_shards/prompt_047/videos/000_a-realistic-fixed-camera-close-up-video-from-a-side-close-up-view-the-sc_seed9147.mp4",
+      "minimal_pairs": {
+        "cause": [
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with black hockey puck.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, without black hockey puck."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, black hockey puck is visible in the scene.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, black hockey puck is absent from the scene."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, the scene includes black hockey puck.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, the scene includes no black hockey puck."
+          }
+        ],
+        "mechanism": [
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with black hockey puck impact causing fracture.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with no impact or causal disturbance."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, black hockey puck hits the mirror surface.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, no impact or causal contact occurs."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, the cause physically triggers the event.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, the scene stays undisturbed with no causal trigger."
+          }
+        ],
+        "footprint": [
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with a star-shaped crack spreads across the mirror.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with no star-shaped crack spreads across the mirror."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, the downstream effect is visible: a star-shaped crack spreads across the mirror.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, the downstream effect is absent."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, visible evidence shows a star-shaped crack spreads across the mirror.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, visible evidence shows no a star-shaped crack spreads across the mirror."
+          }
+        ]
+      },
+      "phase_b_pair_count_per_link": 3
+    },
+    {
+      "probe_index": 2,
+      "pair_id": "elastic_deformation_soccer_net_001",
+      "source_index": "2",
+      "slice_index": 1,
+      "mechanism_type": "elastic_deformation",
+      "target_concept": "soccer ball",
+      "causal_footprint": "net stretches and ripples backward",
+      "source_prompt": "A realistic close-up video of a soccer ball hitting a goal net, causing the net to stretch and ripple backward.",
+      "generation_prompt": "A realistic close-up video of a still goal net hanging straight. soccer ball causes net stretches and ripples backward.",
+      "counterfactual_prompt": "A realistic close-up video of a still goal net hanging straight. No soccer ball is present.",
+      "control_prompt": "A realistic close-up video of a goal net moving in wind with no soccer ball impact.",
+      "clean_video_path": "outputs/zeroscope_v2_candidates304_clean_step20_f24_320x576_8gpu_s3/clean_shards/prompt_002/videos/000_a-realistic-close-up-video-of-a-soccer-ball-hitting-a-goal-net-causing-t_seed9102.mp4",
+      "minimal_pairs": {
+        "cause": [
+          {
+            "positive": "A realistic close-up video of a still goal net hanging straight, with soccer ball.",
+            "negative": "A realistic close-up video of a still goal net hanging straight, without soccer ball."
+          },
+          {
+            "positive": "A realistic close-up video of a still goal net hanging straight, soccer ball is visible in the scene.",
+            "negative": "A realistic close-up video of a still goal net hanging straight, soccer ball is absent from the scene."
+          },
+          {
+            "positive": "A realistic close-up video of a still goal net hanging straight, the scene includes soccer ball.",
+            "negative": "A realistic close-up video of a still goal net hanging straight, the scene includes no soccer ball."
+          }
+        ],
+        "mechanism": [
+          {
+            "positive": "A realistic close-up video of a still goal net hanging straight, with soccer ball collision causing elastic deformation.",
+            "negative": "A realistic close-up video of a still goal net hanging straight, with no impact or causal disturbance."
+          },
+          {
+            "positive": "A realistic close-up video of a still goal net hanging straight, soccer ball collides with the elastic net.",
+            "negative": "A realistic close-up video of a still goal net hanging straight, no impact or causal contact occurs."
+          },
+          {
+            "positive": "A realistic close-up video of a still goal net hanging straight, the cause physically triggers the event.",
+            "negative": "A realistic close-up video of a still goal net hanging straight, the scene stays undisturbed with no causal trigger."
+          }
+        ],
+        "footprint": [
+          {
+            "positive": "A realistic close-up video of a still goal net hanging straight, with net stretches and ripples backward.",
+            "negative": "A realistic close-up video of a still goal net hanging straight, with no net stretches and ripples backward."
+          },
+          {
+            "positive": "A realistic close-up video of a still goal net hanging straight, the downstream effect is visible: net stretches and ripples backward.",
+            "negative": "A realistic close-up video of a still goal net hanging straight, the downstream effect is absent."
+          },
+          {
+            "positive": "A realistic close-up video of a still goal net hanging straight, visible evidence shows net stretches and ripples backward.",
+            "negative": "A realistic close-up video of a still goal net hanging straight, visible evidence shows no net stretches and ripples backward."
+          }
+        ]
+      },
+      "phase_b_pair_count_per_link": 3
+    },
+    {
+      "probe_index": 3,
+      "pair_id": "v2_particle_dispersion_makeup_brush_a_pink_powder_cloud_blooms_upward_bright_244",
+      "source_index": "258",
+      "slice_index": 86,
+      "mechanism_type": "particle_dispersion",
+      "target_concept": "makeup brush",
+      "causal_footprint": "a pink powder cloud blooms upward",
+      "source_prompt": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a compact of pink powder, with no pre-existing powder cloud. A clearly visible makeup brush enters the frame and remains visible before contact. The makeup brush taps the powder only after the visible contact moment, causing a pink powder cloud blooms upward; the effect begins only after contact and remains visible for several frames.",
+      "generation_prompt": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a compact of pink powder, with no pre-existing powder cloud. makeup brush causes a pink powder cloud blooms upward.",
+      "counterfactual_prompt": "A realistic fixed-camera close-up video of the same scene before the event, with no makeup brush, no visible cause, and no a pink powder cloud blooms upward.",
+      "control_prompt": "A realistic fixed-camera close-up video showing a pink powder cloud blooms upward, with no makeup brush or other visible cause in the frame.",
+      "clean_video_path": "outputs/zeroscope_v2_candidates304_clean_step20_f24_320x576_8gpu_s3/clean_shards/prompt_258/videos/000_a-realistic-fixed-camera-close-up-video-under-bright-studio-lighting-the_seed9358.mp4",
+      "minimal_pairs": {
+        "cause": [
+          {
+            "positive": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a compact of pink powder, with no pre-existing powder cloud, with makeup brush.",
+            "negative": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a compact of pink powder, with no pre-existing powder cloud, without makeup brush."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a compact of pink powder, with no pre-existing powder cloud, makeup brush is visible in the scene.",
+            "negative": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a compact of pink powder, with no pre-existing powder cloud, makeup brush is absent from the scene."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a compact of pink powder, with no pre-existing powder cloud, the scene includes makeup brush.",
+            "negative": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a compact of pink powder, with no pre-existing powder cloud, the scene includes no makeup brush."
+          }
+        ],
+        "mechanism": [
+          {
+            "positive": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a compact of pink powder, with no pre-existing powder cloud, with makeup brush collision dispersing particles.",
+            "negative": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a compact of pink powder, with no pre-existing powder cloud, with no impact or causal disturbance."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a compact of pink powder, with no pre-existing powder cloud, makeup brush scatters nearby particles.",
+            "negative": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a compact of pink powder, with no pre-existing powder cloud, no impact or causal contact occurs."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a compact of pink powder, with no pre-existing powder cloud, the cause physically triggers the event.",
+            "negative": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a compact of pink powder, with no pre-existing powder cloud, the scene stays undisturbed with no causal trigger."
+          }
+        ],
+        "footprint": [
+          {
+            "positive": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a compact of pink powder, with no pre-existing powder cloud, with a pink powder cloud blooms upward.",
+            "negative": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a compact of pink powder, with no pre-existing powder cloud, with no pink powder cloud blooms upward."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a compact of pink powder, with no pre-existing powder cloud, the downstream effect is visible: a pink powder cloud blooms upward.",
+            "negative": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a compact of pink powder, with no pre-existing powder cloud, the downstream effect is absent."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a compact of pink powder, with no pre-existing powder cloud, visible evidence shows a pink powder cloud blooms upward.",
+            "negative": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a compact of pink powder, with no pre-existing powder cloud, visible evidence shows no a pink powder cloud blooms upward."
+          }
+        ]
+      },
+      "phase_b_pair_count_per_link": 3
+    },
+    {
+      "probe_index": 4,
+      "pair_id": "v2_surface_trace_garden_rake_parallel_grooves_remain_in_the_soil_side_123",
+      "source_index": "137",
+      "slice_index": 47,
+      "mechanism_type": "surface_trace",
+      "target_concept": "garden rake",
+      "causal_footprint": "parallel grooves remain in the soil",
+      "source_prompt": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a smooth soil bed, with no pre-existing groove. A clearly visible garden rake enters the frame and remains visible before contact. The garden rake pulls across the soil after the target is clearly visible, causing parallel grooves remain in the soil; the effect begins only after contact and remains visible for several frames.",
+      "generation_prompt": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a smooth soil bed, with no pre-existing groove. garden rake causes parallel grooves remain in the soil.",
+      "counterfactual_prompt": "A realistic fixed-camera close-up video of the same scene before the event, with no garden rake, no visible cause, and no parallel grooves remain in the soil.",
+      "control_prompt": "A realistic fixed-camera close-up video showing parallel grooves remain in the soil, with no garden rake or other visible cause in the frame.",
+      "clean_video_path": "outputs/zeroscope_v2_candidates304_clean_step20_f24_320x576_8gpu_s3/clean_shards/prompt_137/videos/000_a-realistic-fixed-camera-close-up-video-from-a-side-close-up-view-the-sc_seed9237.mp4",
+      "minimal_pairs": {
+        "cause": [
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a smooth soil bed, with no pre-existing groove, with garden rake.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a smooth soil bed, with no pre-existing groove, without garden rake."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a smooth soil bed, with no pre-existing groove, garden rake is visible in the scene.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a smooth soil bed, with no pre-existing groove, garden rake is absent from the scene."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a smooth soil bed, with no pre-existing groove, the scene includes garden rake.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a smooth soil bed, with no pre-existing groove, the scene includes no garden rake."
+          }
+        ],
+        "mechanism": [
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a smooth soil bed, with no pre-existing groove, with garden rake contact leaving a surface trace.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a smooth soil bed, with no pre-existing groove, with no impact or causal disturbance."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a smooth soil bed, with no pre-existing groove, garden rake contacts the surface.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a smooth soil bed, with no pre-existing groove, no impact or causal contact occurs."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a smooth soil bed, with no pre-existing groove, the cause physically triggers the event.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a smooth soil bed, with no pre-existing groove, the scene stays undisturbed with no causal trigger."
+          }
+        ],
+        "footprint": [
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a smooth soil bed, with no pre-existing groove, with parallel grooves remain in the soil.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a smooth soil bed, with no pre-existing groove, with no parallel grooves remain in the soil."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a smooth soil bed, with no pre-existing groove, the downstream effect is visible: parallel grooves remain in the soil.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a smooth soil bed, with no pre-existing groove, the downstream effect is absent."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a smooth soil bed, with no pre-existing groove, visible evidence shows parallel grooves remain in the soil.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a smooth soil bed, with no pre-existing groove, visible evidence shows no parallel grooves remain in the soil."
+          }
+        ]
+      },
+      "phase_b_pair_count_per_link": 3
+    },
+    {
+      "probe_index": 5,
+      "pair_id": "v2_field_mediated_red_balloon_hair_strands_lift_upward_and_cling_t_plain_260",
+      "source_index": "274",
+      "slice_index": 89,
+      "mechanism_type": "field_mediated",
+      "target_concept": "red balloon",
+      "causal_footprint": "hair strands lift upward and cling toward the balloon",
+      "source_prompt": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with loose hair strands on a white table, with no pre-existing lifted hair. A clearly visible red balloon enters the frame and remains visible before contact. The red balloon moves close to the hair in the middle of the clip, causing hair strands lift upward and cling toward the balloon; the effect begins only after contact and remains visible for several frames.",
+      "generation_prompt": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with loose hair strands on a white table, with no pre-existing lifted hair. red balloon causes hair strands lift upward and cling toward the balloon.",
+      "counterfactual_prompt": "A realistic fixed-camera close-up video of the same scene before the event, with no red balloon, no visible cause, and no hair strands lift upward and cling toward the balloon.",
+      "control_prompt": "A realistic fixed-camera close-up video showing hair strands lift upward and cling toward the balloon, with no red balloon or other visible cause in the frame.",
+      "clean_video_path": "outputs/zeroscope_v2_candidates304_clean_step20_f24_320x576_8gpu_s3/clean_shards/prompt_274/videos/000_a-realistic-fixed-camera-close-up-video-with-a-plain-high-contrast-backg_seed9374.mp4",
+      "minimal_pairs": {
+        "cause": [
+          {
+            "positive": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with loose hair strands on a white table, with no pre-existing lifted hair, with red balloon.",
+            "negative": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with loose hair strands on a white table, with no pre-existing lifted hair, without red balloon."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with loose hair strands on a white table, with no pre-existing lifted hair, red balloon is visible in the scene.",
+            "negative": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with loose hair strands on a white table, with no pre-existing lifted hair, red balloon is absent from the scene."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with loose hair strands on a white table, with no pre-existing lifted hair, the scene includes red balloon.",
+            "negative": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with loose hair strands on a white table, with no pre-existing lifted hair, the scene includes no red balloon."
+          }
+        ],
+        "mechanism": [
+          {
+            "positive": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with loose hair strands on a white table, with no pre-existing lifted hair, with red balloon field interaction.",
+            "negative": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with loose hair strands on a white table, with no pre-existing lifted hair, with no impact or causal disturbance."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with loose hair strands on a white table, with no pre-existing lifted hair, red balloon interacts through a visible field.",
+            "negative": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with loose hair strands on a white table, with no pre-existing lifted hair, no impact or causal contact occurs."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with loose hair strands on a white table, with no pre-existing lifted hair, the cause physically triggers the event.",
+            "negative": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with loose hair strands on a white table, with no pre-existing lifted hair, the scene stays undisturbed with no causal trigger."
+          }
+        ],
+        "footprint": [
+          {
+            "positive": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with loose hair strands on a white table, with no pre-existing lifted hair, with hair strands lift upward and cling toward the balloon.",
+            "negative": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with loose hair strands on a white table, with no pre-existing lifted hair, with no hair strands lift upward and cling toward the balloon."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with loose hair strands on a white table, with no pre-existing lifted hair, the downstream effect is visible: hair strands lift upward and cling toward the balloon.",
+            "negative": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with loose hair strands on a white table, with no pre-existing lifted hair, the downstream effect is absent."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with loose hair strands on a white table, with no pre-existing lifted hair, visible evidence shows hair strands lift upward and cling toward the balloon.",
+            "negative": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with loose hair strands on a white table, with no pre-existing lifted hair, visible evidence shows no hair strands lift upward and cling toward the balloon."
+          }
+        ]
+      },
+      "phase_b_pair_count_per_link": 3
+    },
+    {
+      "probe_index": 6,
+      "pair_id": "v2_fluid_impact_black_pebble_circular_ripples_spread_outward_from_plain_205",
+      "source_index": "219",
+      "slice_index": 74,
+      "mechanism_type": "fluid_impact",
+      "target_concept": "black pebble",
+      "causal_footprint": "circular ripples spread outward from the impact point",
+      "source_prompt": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with a shallow tray of still blue water, with no pre-existing ripple. A clearly visible black pebble enters the frame and remains visible before contact. The black pebble drops into the water in the middle of the clip, causing circular ripples spread outward from the impact point; the effect begins only after contact and remains visible for several frames.",
+      "generation_prompt": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with a shallow tray of still blue water, with no pre-existing ripple. black pebble causes circular ripples spread outward from the impact point.",
+      "counterfactual_prompt": "A realistic fixed-camera close-up video of the same scene before the event, with no black pebble, no visible cause, and no circular ripples spread outward from the impact point.",
+      "control_prompt": "A realistic fixed-camera close-up video showing circular ripples spread outward from the impact point, with no black pebble or other visible cause in the frame.",
+      "clean_video_path": "outputs/zeroscope_v2_candidates304_clean_step20_f24_320x576_8gpu_s3/clean_shards/prompt_219/videos/000_a-realistic-fixed-camera-close-up-video-with-a-plain-high-contrast-backg_seed9319.mp4",
+      "minimal_pairs": {
+        "cause": [
+          {
+            "positive": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, with black pebble.",
+            "negative": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, without black pebble."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, black pebble is visible in the scene.",
+            "negative": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, black pebble is absent from the scene."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, the scene includes black pebble.",
+            "negative": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, the scene includes no black pebble."
+          }
+        ],
+        "mechanism": [
+          {
+            "positive": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, with black pebble impact with water.",
+            "negative": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, with no impact or causal disturbance."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, black pebble strikes the water surface.",
+            "negative": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, no impact or causal contact occurs."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, the cause physically triggers the event.",
+            "negative": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, the scene stays undisturbed with no causal trigger."
+          }
+        ],
+        "footprint": [
+          {
+            "positive": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, with circular ripples spread outward from the impact point.",
+            "negative": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, with no circular ripples spread outward from the impact point."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, the downstream effect is visible: circular ripples spread outward from the impact point.",
+            "negative": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, the downstream effect is absent."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, visible evidence shows circular ripples spread outward from the impact point.",
+            "negative": "A realistic fixed-camera close-up video with a plain high-contrast background. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, visible evidence shows no circular ripples spread outward from the impact point."
+          }
+        ]
+      },
+      "phase_b_pair_count_per_link": 3
+    },
+    {
+      "probe_index": 7,
+      "pair_id": "v2_fracture_damage_ice_cube_branching_white_cracks_spread_throug_side_028",
+      "source_index": "42",
+      "slice_index": 18,
+      "mechanism_type": "fracture_damage",
+      "target_concept": "ice cube",
+      "causal_footprint": "branching white cracks spread through the ice",
+      "source_prompt": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a thin frozen puddle surface, with no pre-existing ice crack. A clearly visible ice cube enters the frame and remains visible before contact. The ice cube lands on the ice after the target is clearly visible, causing branching white cracks spread through the ice; the effect begins only after contact and remains visible for several frames.",
+      "generation_prompt": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a thin frozen puddle surface, with no pre-existing ice crack. ice cube causes branching white cracks spread through the ice.",
+      "counterfactual_prompt": "A realistic fixed-camera close-up video of the same scene before the event, with no ice cube, no visible cause, and no branching white cracks spread through the ice.",
+      "control_prompt": "A realistic fixed-camera close-up video showing branching white cracks spread through the ice, with no ice cube or other visible cause in the frame.",
+      "clean_video_path": "outputs/zeroscope_v2_candidates304_clean_step20_f24_320x576_8gpu_s3/clean_shards/prompt_042/videos/000_a-realistic-fixed-camera-close-up-video-from-a-side-close-up-view-the-sc_seed9142.mp4",
+      "minimal_pairs": {
+        "cause": [
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a thin frozen puddle surface, with no pre-existing ice crack, with ice cube.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a thin frozen puddle surface, with no pre-existing ice crack, without ice cube."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a thin frozen puddle surface, with no pre-existing ice crack, ice cube is visible in the scene.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a thin frozen puddle surface, with no pre-existing ice crack, ice cube is absent from the scene."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a thin frozen puddle surface, with no pre-existing ice crack, the scene includes ice cube.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a thin frozen puddle surface, with no pre-existing ice crack, the scene includes no ice cube."
+          }
+        ],
+        "mechanism": [
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a thin frozen puddle surface, with no pre-existing ice crack, with ice cube impact causing fracture.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a thin frozen puddle surface, with no pre-existing ice crack, with no impact or causal disturbance."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a thin frozen puddle surface, with no pre-existing ice crack, ice cube hits the mirror surface.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a thin frozen puddle surface, with no pre-existing ice crack, no impact or causal contact occurs."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a thin frozen puddle surface, with no pre-existing ice crack, the cause physically triggers the event.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a thin frozen puddle surface, with no pre-existing ice crack, the scene stays undisturbed with no causal trigger."
+          }
+        ],
+        "footprint": [
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a thin frozen puddle surface, with no pre-existing ice crack, with branching white cracks spread through the ice.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a thin frozen puddle surface, with no pre-existing ice crack, with no branching white cracks spread through the ice."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a thin frozen puddle surface, with no pre-existing ice crack, the downstream effect is visible: branching white cracks spread through the ice.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a thin frozen puddle surface, with no pre-existing ice crack, the downstream effect is absent."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a thin frozen puddle surface, with no pre-existing ice crack, visible evidence shows branching white cracks spread through the ice.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a thin frozen puddle surface, with no pre-existing ice crack, visible evidence shows no branching white cracks spread through the ice."
+          }
+        ]
+      },
+      "phase_b_pair_count_per_link": 3
+    },
+    {
+      "probe_index": 8,
+      "pair_id": "v2_elastic_deformation_hand_a_deep_pillow_dent_forms_and_remains_slow_176",
+      "source_index": "190",
+      "slice_index": 61,
+      "mechanism_type": "elastic_deformation",
+      "target_concept": "hand",
+      "causal_footprint": "a deep pillow dent forms and remains briefly",
+      "source_prompt": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a white pillow, with no pre-existing pillow dent. A clearly visible hand enters the frame and remains visible before contact. The hand presses into the pillow after a short still beginning, causing a deep pillow dent forms and remains briefly; the effect begins only after contact and remains visible for several frames.",
+      "generation_prompt": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a white pillow, with no pre-existing pillow dent. hand causes a deep pillow dent forms and remains briefly.",
+      "counterfactual_prompt": "A realistic fixed-camera close-up video of the same scene before the event, with no hand, no visible cause, and no a deep pillow dent forms and remains briefly.",
+      "control_prompt": "A realistic fixed-camera close-up video showing a deep pillow dent forms and remains briefly, with no hand or other visible cause in the frame.",
+      "clean_video_path": "outputs/zeroscope_v2_candidates304_clean_step20_f24_320x576_8gpu_s3/clean_shards/prompt_190/videos/000_a-realistic-fixed-camera-close-up-video-in-slow-motion-with-a-locked-cam_seed9290.mp4",
+      "minimal_pairs": {
+        "cause": [
+          {
+            "positive": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a white pillow, with no pre-existing pillow dent, with hand.",
+            "negative": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a white pillow, with no pre-existing pillow dent, without hand."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a white pillow, with no pre-existing pillow dent, hand is visible in the scene.",
+            "negative": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a white pillow, with no pre-existing pillow dent, hand is absent from the scene."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a white pillow, with no pre-existing pillow dent, the scene includes hand.",
+            "negative": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a white pillow, with no pre-existing pillow dent, the scene includes no hand."
+          }
+        ],
+        "mechanism": [
+          {
+            "positive": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a white pillow, with no pre-existing pillow dent, with hand collision causing elastic deformation.",
+            "negative": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a white pillow, with no pre-existing pillow dent, with no impact or causal disturbance."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a white pillow, with no pre-existing pillow dent, hand collides with the elastic net.",
+            "negative": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a white pillow, with no pre-existing pillow dent, no impact or causal contact occurs."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a white pillow, with no pre-existing pillow dent, the cause physically triggers the event.",
+            "negative": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a white pillow, with no pre-existing pillow dent, the scene stays undisturbed with no causal trigger."
+          }
+        ],
+        "footprint": [
+          {
+            "positive": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a white pillow, with no pre-existing pillow dent, with a deep pillow dent forms and remains briefly.",
+            "negative": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a white pillow, with no pre-existing pillow dent, with no deep pillow dent forms and remains briefly."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a white pillow, with no pre-existing pillow dent, the downstream effect is visible: a deep pillow dent forms and remains briefly.",
+            "negative": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a white pillow, with no pre-existing pillow dent, the downstream effect is absent."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a white pillow, with no pre-existing pillow dent, visible evidence shows a deep pillow dent forms and remains briefly.",
+            "negative": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a white pillow, with no pre-existing pillow dent, visible evidence shows no a deep pillow dent forms and remains briefly."
+          }
+        ]
+      },
+      "phase_b_pair_count_per_link": 3
+    },
+    {
+      "probe_index": 9,
+      "pair_id": "v2_particle_dispersion_makeup_brush_a_pink_powder_cloud_blooms_upward_slow_241",
+      "source_index": "255",
+      "slice_index": 84,
+      "mechanism_type": "particle_dispersion",
+      "target_concept": "makeup brush",
+      "causal_footprint": "a pink powder cloud blooms upward",
+      "source_prompt": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a compact of pink powder, with no pre-existing powder cloud. A clearly visible makeup brush enters the frame and remains visible before contact. The makeup brush taps the powder after a short still beginning, causing a pink powder cloud blooms upward; the effect begins only after contact and remains visible for several frames.",
+      "generation_prompt": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a compact of pink powder, with no pre-existing powder cloud. makeup brush causes a pink powder cloud blooms upward.",
+      "counterfactual_prompt": "A realistic fixed-camera close-up video of the same scene before the event, with no makeup brush, no visible cause, and no a pink powder cloud blooms upward.",
+      "control_prompt": "A realistic fixed-camera close-up video showing a pink powder cloud blooms upward, with no makeup brush or other visible cause in the frame.",
+      "clean_video_path": "outputs/zeroscope_v2_candidates304_clean_step20_f24_320x576_8gpu_s3/clean_shards/prompt_255/videos/000_a-realistic-fixed-camera-close-up-video-in-slow-motion-with-a-locked-cam_seed9355.mp4",
+      "minimal_pairs": {
+        "cause": [
+          {
+            "positive": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a compact of pink powder, with no pre-existing powder cloud, with makeup brush.",
+            "negative": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a compact of pink powder, with no pre-existing powder cloud, without makeup brush."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a compact of pink powder, with no pre-existing powder cloud, makeup brush is visible in the scene.",
+            "negative": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a compact of pink powder, with no pre-existing powder cloud, makeup brush is absent from the scene."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a compact of pink powder, with no pre-existing powder cloud, the scene includes makeup brush.",
+            "negative": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a compact of pink powder, with no pre-existing powder cloud, the scene includes no makeup brush."
+          }
+        ],
+        "mechanism": [
+          {
+            "positive": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a compact of pink powder, with no pre-existing powder cloud, with makeup brush collision dispersing particles.",
+            "negative": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a compact of pink powder, with no pre-existing powder cloud, with no impact or causal disturbance."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a compact of pink powder, with no pre-existing powder cloud, makeup brush scatters nearby particles.",
+            "negative": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a compact of pink powder, with no pre-existing powder cloud, no impact or causal contact occurs."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a compact of pink powder, with no pre-existing powder cloud, the cause physically triggers the event.",
+            "negative": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a compact of pink powder, with no pre-existing powder cloud, the scene stays undisturbed with no causal trigger."
+          }
+        ],
+        "footprint": [
+          {
+            "positive": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a compact of pink powder, with no pre-existing powder cloud, with a pink powder cloud blooms upward.",
+            "negative": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a compact of pink powder, with no pre-existing powder cloud, with no pink powder cloud blooms upward."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a compact of pink powder, with no pre-existing powder cloud, the downstream effect is visible: a pink powder cloud blooms upward.",
+            "negative": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a compact of pink powder, with no pre-existing powder cloud, the downstream effect is absent."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a compact of pink powder, with no pre-existing powder cloud, visible evidence shows a pink powder cloud blooms upward.",
+            "negative": "A realistic fixed-camera close-up video in slow motion with a locked camera. The scene starts with a compact of pink powder, with no pre-existing powder cloud, visible evidence shows no a pink powder cloud blooms upward."
+          }
+        ]
+      },
+      "phase_b_pair_count_per_link": 3
+    },
+    {
+      "probe_index": 10,
+      "pair_id": "v2_surface_trace_marker_pen_a_black_line_remains_on_the_whiteboa_bright_114",
+      "source_index": "128",
+      "slice_index": 43,
+      "mechanism_type": "surface_trace",
+      "target_concept": "marker pen",
+      "causal_footprint": "a black line remains on the whiteboard",
+      "source_prompt": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a clean whiteboard, with no pre-existing marker line. A clearly visible marker pen enters the frame and remains visible before contact. The marker pen draws a line across the board only after the visible contact moment, causing a black line remains on the whiteboard; the effect begins only after contact and remains visible for several frames.",
+      "generation_prompt": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a clean whiteboard, with no pre-existing marker line. marker pen causes a black line remains on the whiteboard.",
+      "counterfactual_prompt": "A realistic fixed-camera close-up video of the same scene before the event, with no marker pen, no visible cause, and no a black line remains on the whiteboard.",
+      "control_prompt": "A realistic fixed-camera close-up video showing a black line remains on the whiteboard, with no marker pen or other visible cause in the frame.",
+      "clean_video_path": "outputs/zeroscope_v2_candidates304_clean_step20_f24_320x576_8gpu_s3/clean_shards/prompt_128/videos/000_a-realistic-fixed-camera-close-up-video-under-bright-studio-lighting-the_seed9228.mp4",
+      "minimal_pairs": {
+        "cause": [
+          {
+            "positive": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a clean whiteboard, with no pre-existing marker line, with marker pen.",
+            "negative": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a clean whiteboard, with no pre-existing marker line, without marker pen."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a clean whiteboard, with no pre-existing marker line, marker pen is visible in the scene.",
+            "negative": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a clean whiteboard, with no pre-existing marker line, marker pen is absent from the scene."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a clean whiteboard, with no pre-existing marker line, the scene includes marker pen.",
+            "negative": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a clean whiteboard, with no pre-existing marker line, the scene includes no marker pen."
+          }
+        ],
+        "mechanism": [
+          {
+            "positive": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a clean whiteboard, with no pre-existing marker line, with marker pen contact leaving a surface trace.",
+            "negative": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a clean whiteboard, with no pre-existing marker line, with no impact or causal disturbance."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a clean whiteboard, with no pre-existing marker line, marker pen contacts the surface.",
+            "negative": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a clean whiteboard, with no pre-existing marker line, no impact or causal contact occurs."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a clean whiteboard, with no pre-existing marker line, the cause physically triggers the event.",
+            "negative": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a clean whiteboard, with no pre-existing marker line, the scene stays undisturbed with no causal trigger."
+          }
+        ],
+        "footprint": [
+          {
+            "positive": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a clean whiteboard, with no pre-existing marker line, with a black line remains on the whiteboard.",
+            "negative": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a clean whiteboard, with no pre-existing marker line, with no black line remains on the whiteboard."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a clean whiteboard, with no pre-existing marker line, the downstream effect is visible: a black line remains on the whiteboard.",
+            "negative": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a clean whiteboard, with no pre-existing marker line, the downstream effect is absent."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a clean whiteboard, with no pre-existing marker line, visible evidence shows a black line remains on the whiteboard.",
+            "negative": "A realistic fixed-camera close-up video under bright studio lighting. The scene starts with a clean whiteboard, with no pre-existing marker line, visible evidence shows no a black line remains on the whiteboard."
+          }
+        ]
+      },
+      "phase_b_pair_count_per_link": 3
+    },
+    {
+      "probe_index": 11,
+      "pair_id": "v2_fluid_impact_black_pebble_circular_ripples_spread_outward_from_side_208",
+      "source_index": "222",
+      "slice_index": 77,
+      "mechanism_type": "fluid_impact",
+      "target_concept": "black pebble",
+      "causal_footprint": "circular ripples spread outward from the impact point",
+      "source_prompt": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a shallow tray of still blue water, with no pre-existing ripple. A clearly visible black pebble enters the frame and remains visible before contact. The black pebble drops into the water after the target is clearly visible, causing circular ripples spread outward from the impact point; the effect begins only after contact and remains visible for several frames.",
+      "generation_prompt": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a shallow tray of still blue water, with no pre-existing ripple. black pebble causes circular ripples spread outward from the impact point.",
+      "counterfactual_prompt": "A realistic fixed-camera close-up video of the same scene before the event, with no black pebble, no visible cause, and no circular ripples spread outward from the impact point.",
+      "control_prompt": "A realistic fixed-camera close-up video showing circular ripples spread outward from the impact point, with no black pebble or other visible cause in the frame.",
+      "clean_video_path": "outputs/zeroscope_v2_candidates304_clean_step20_f24_320x576_8gpu_s3/clean_shards/prompt_222/videos/000_a-realistic-fixed-camera-close-up-video-from-a-side-close-up-view-the-sc_seed9322.mp4",
+      "minimal_pairs": {
+        "cause": [
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, with black pebble.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, without black pebble."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, black pebble is visible in the scene.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, black pebble is absent from the scene."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, the scene includes black pebble.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, the scene includes no black pebble."
+          }
+        ],
+        "mechanism": [
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, with black pebble impact with water.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, with no impact or causal disturbance."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, black pebble strikes the water surface.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, no impact or causal contact occurs."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, the cause physically triggers the event.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, the scene stays undisturbed with no causal trigger."
+          }
+        ],
+        "footprint": [
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, with circular ripples spread outward from the impact point.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, with no circular ripples spread outward from the impact point."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, the downstream effect is visible: circular ripples spread outward from the impact point.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, the downstream effect is absent."
+          },
+          {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, visible evidence shows circular ripples spread outward from the impact point.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with a shallow tray of still blue water, with no pre-existing ripple, visible evidence shows no circular ripples spread outward from the impact point."
+          }
+        ]
+      },
+      "phase_b_pair_count_per_link": 3
+    }
+  ],
+  "source_probe_name": "zeroscope_mvp0_causal_chain_probe",
+  "phase_b_method": "paraphrase_averaged_minimal_pairs",
+  "phase_b_pair_count_per_link": 3
+}

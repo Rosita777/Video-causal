@@ -1,0 +1,2 @@
+sample_id,pair_id,row_index,chunk_index,frame_start,frame_end,target_visible,target_frame_ids,effect_visible,effect_frame_ids,local_temporal_order,local_causal_transition,video_quality,confidence,reason
+case_114,v2_surface_trace_dog_paw_a_paw_print_remains_in_the_snow_plain_100,114,0,0,7,no,,yes,f000;f001;f002;f003;f004;f005;f006;f007,no,no,yes,0.9800,"All frames in this chunk already show a visible paw print in the snow, but no dog paw is visible entering or contacting the surface, so this chunk does not support target-before-effect or a causal transition."

@@ -2,9 +2,13 @@ from pathlib import Path
 import json
 import subprocess
 import sys
+from types import SimpleNamespace
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+
+from adapters.wan_adapter_common import select_prompt_encode_device  # noqa: E402
 
 
 def write_prompts(tmp_path: Path) -> Path:
@@ -82,3 +86,11 @@ def test_safree_wan_dry_run_records_proxy_contract(tmp_path):
     item = manifest["items"][0]
     assert item["safree"]["unsafe_concept"] == "pebble"
     assert item["safree"]["method"] == "concept_direction_subtraction"
+
+
+def test_wan_adapters_use_cpu_prompt_encoding_when_offloaded():
+    offloaded = SimpleNamespace(enable_sequential_cpu_offload=True, enable_model_cpu_offload=False)
+    not_offloaded = SimpleNamespace(enable_sequential_cpu_offload=False, enable_model_cpu_offload=False)
+
+    assert select_prompt_encode_device(offloaded, selected_device="cuda", cuda_available=True) == "cpu"
+    assert select_prompt_encode_device(not_offloaded, selected_device="cuda", cuda_available=True) == "cuda"

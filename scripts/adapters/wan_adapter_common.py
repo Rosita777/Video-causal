@@ -16,7 +16,13 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 from generate_cogvideox_clean import resolve_torch_dtype, slugify  # noqa: E402
-from generate_wan_clean import output_frames  # noqa: E402
+from generate_wan_clean import (  # noqa: E402
+    apply_device_strategy,
+    move_prompt_embeds,
+    output_frames,
+    select_prompt_encode_device,
+    selected_generation_device,
+)
 from run_pilot import parse_prompt_file  # noqa: E402
 
 
@@ -51,6 +57,7 @@ def generation_config(args: argparse.Namespace) -> dict[str, object]:
         "vae_slicing": args.vae_slicing,
         "vae_tiling": args.vae_tiling,
         "limit": args.limit,
+        "prompt_encode_device_policy": "cpu_when_offloaded_else_selected_device",
     }
 
 
@@ -150,17 +157,8 @@ def load_wan_pipe(args: argparse.Namespace):
     if args.vae_tiling and hasattr(pipe, "enable_vae_tiling"):
         pipe.enable_vae_tiling()
 
-    selected_device = args.device
-    if selected_device == "auto":
-        selected_device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    if args.enable_sequential_cpu_offload:
-        pipe.enable_sequential_cpu_offload()
-        selected_device = "cuda" if torch.cuda.is_available() else "cpu"
-    elif args.enable_model_cpu_offload:
-        pipe.enable_model_cpu_offload()
-        selected_device = "cuda" if torch.cuda.is_available() else "cpu"
-    else:
+    selected_device = selected_generation_device(args, torch)
+    if not (args.enable_sequential_cpu_offload or args.enable_model_cpu_offload):
         pipe.to(selected_device)
 
     return torch, torch_dtype, export_to_video, pipe, selected_device
@@ -192,9 +190,28 @@ def generate_encoded_videos(
 ) -> None:
     torch_module, torch_dtype, export_to_video, pipe, selected_device = load_wan_pipe(args)
     generator_device = "cuda" if str(selected_device).startswith("cuda") and torch_module.cuda.is_available() else "cpu"
+    encode_device = select_prompt_encode_device(
+        args,
+        selected_device=selected_device,
+        cuda_available=torch_module.cuda.is_available(),
+    )
 
+    encoded_items = []
     for item in items:
-        prompt_embeds, negative_prompt_embeds = encode_item(pipe, torch_module, torch_dtype, selected_device, item)
+        prompt_embeds, negative_prompt_embeds = encode_item(pipe, torch_module, torch_dtype, encode_device, item)
+        encoded_items.append((item, prompt_embeds, negative_prompt_embeds))
+
+    if args.enable_sequential_cpu_offload or args.enable_model_cpu_offload:
+        apply_device_strategy(args, pipe, selected_device)
+
+    for item, prompt_embeds, negative_prompt_embeds in encoded_items:
+        prompt_embeds, negative_prompt_embeds = move_prompt_embeds(
+            torch_module,
+            prompt_embeds,
+            negative_prompt_embeds,
+            device=selected_device if str(selected_device).startswith("cuda") else "cpu",
+            dtype=torch_dtype,
+        )
         video_path = Path(str(item["video_path"]))
         video_path.parent.mkdir(parents=True, exist_ok=True)
         generator = torch_module.Generator(device=generator_device).manual_seed(int(item["seed"]))

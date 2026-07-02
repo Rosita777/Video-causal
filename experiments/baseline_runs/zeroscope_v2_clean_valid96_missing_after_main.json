@@ -1,0 +1,70 @@
+{
+  "root": "outputs/zeroscope_v2_clean_valid96_baselines_step20_f24_320x576_8gpu_offload_s1_attached",
+  "missing": {
+    "negative_prompt": [
+      84
+    ],
+    "videoeraser": [
+      8,
+      13,
+      16,
+      24,
+      33,
+      41,
+      46,
+      59,
+      75,
+      83,
+      84,
+      85,
+      87,
+      88,
+      90,
+      93
+    ],
+    "t2vunlearning": [
+      0,
+      12,
+      14,
+      26,
+      61,
+      82,
+      86,
+      89,
+      91,
+      93
+    ],
+    "safree_zeroscope": [
+      5,
+      7,
+      11,
+      22,
+      31,
+      39,
+      43,
+      44,
+      50,
+      51,
+      56,
+      57,
+      60,
+      62,
+      63,
+      85,
+      86,
+      87,
+      88,
+      90,
+      91,
+      92,
+      94,
+      95
+    ]
+  },
+  "present_counts": {
+    "negative_prompt": 95,
+    "videoeraser": 80,
+    "t2vunlearning": 86,
+    "safree_zeroscope": 72
+  }
+}

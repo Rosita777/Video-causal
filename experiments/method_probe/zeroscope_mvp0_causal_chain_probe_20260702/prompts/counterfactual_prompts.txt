@@ -1,0 +1,15 @@
+# counterfactual prompt-only controls
+# Format: <prompt> | <target> | <expected_effect>
+
+A realistic close-up video of a still pond with a calm, undisturbed surface. No pebble is present. | pebble | circular ripples spread outward
+A realistic fixed-camera close-up video of the same scene before the event, with no black hockey puck, no visible cause, and no a star-shaped crack spreads across the mirror. | black hockey puck | a star-shaped crack spreads across the mirror
+A realistic close-up video of a still goal net hanging straight. No soccer ball is present. | soccer ball | net stretches and ripples backward
+A realistic fixed-camera close-up video of the same scene before the event, with no makeup brush, no visible cause, and no a pink powder cloud blooms upward. | makeup brush | a pink powder cloud blooms upward
+A realistic fixed-camera close-up video of the same scene before the event, with no garden rake, no visible cause, and no parallel grooves remain in the soil. | garden rake | parallel grooves remain in the soil
+A realistic fixed-camera close-up video of the same scene before the event, with no red balloon, no visible cause, and no hair strands lift upward and cling toward the balloon. | red balloon | hair strands lift upward and cling toward the balloon
+A realistic fixed-camera close-up video of the same scene before the event, with no black pebble, no visible cause, and no circular ripples spread outward from the impact point. | black pebble | circular ripples spread outward from the impact point
+A realistic fixed-camera close-up video of the same scene before the event, with no ice cube, no visible cause, and no branching white cracks spread through the ice. | ice cube | branching white cracks spread through the ice
+A realistic fixed-camera close-up video of the same scene before the event, with no hand, no visible cause, and no a deep pillow dent forms and remains briefly. | hand | a deep pillow dent forms and remains briefly
+A realistic fixed-camera close-up video of the same scene before the event, with no makeup brush, no visible cause, and no a pink powder cloud blooms upward. | makeup brush | a pink powder cloud blooms upward
+A realistic fixed-camera close-up video of the same scene before the event, with no marker pen, no visible cause, and no a black line remains on the whiteboard. | marker pen | a black line remains on the whiteboard
+A realistic fixed-camera close-up video of the same scene before the event, with no black pebble, no visible cause, and no circular ripples spread outward from the impact point. | black pebble | circular ripples spread outward from the impact point

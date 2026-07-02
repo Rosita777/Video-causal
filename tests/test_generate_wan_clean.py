@@ -1,10 +1,14 @@
 from pathlib import Path
 import json
+from types import SimpleNamespace
 import subprocess
 import sys
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+
+from generate_wan_clean import select_prompt_encode_device  # noqa: E402
 
 
 def test_generate_wan_clean_dry_run_writes_manifest(tmp_path):
@@ -56,3 +60,14 @@ def test_generate_wan_clean_dry_run_writes_manifest(tmp_path):
     assert manifest["generation"]["width"] == 576
     assert manifest["items"][0]["negative_prompt"] == "pebble"
     assert manifest["items"][0]["video_path"].endswith("_seed123.mp4")
+
+
+def test_wan_clean_uses_cpu_prompt_encoding_when_offloaded():
+    offloaded = SimpleNamespace(enable_sequential_cpu_offload=True, enable_model_cpu_offload=False)
+    model_offloaded = SimpleNamespace(enable_sequential_cpu_offload=False, enable_model_cpu_offload=True)
+    not_offloaded = SimpleNamespace(enable_sequential_cpu_offload=False, enable_model_cpu_offload=False)
+
+    assert select_prompt_encode_device(offloaded, selected_device="cuda", cuda_available=True) == "cpu"
+    assert select_prompt_encode_device(model_offloaded, selected_device="cuda", cuda_available=True) == "cpu"
+    assert select_prompt_encode_device(not_offloaded, selected_device="cuda", cuda_available=True) == "cuda"
+    assert select_prompt_encode_device(offloaded, selected_device="cpu", cuda_available=False) == "cpu"

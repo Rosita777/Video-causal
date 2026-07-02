@@ -32,11 +32,23 @@ experiments/*/*.gif
 .vscode/
 .idea/
 
+# Local secrets and access tokens
+fable.txt
+github.txt
+token.txt
+*token.txt
+.env
+.env.*
+
 # Temporary files
 tmp/
 temp/
 *.log
 *.out
+*.latest
+*.pid
+*.outdir
+logs/
 
 # Recovered-project policy: keep code/docs/CSV, not generated media or model artifacts
 *.mp4
@@ -59,6 +71,11 @@ experiments/**/*.png
 experiments/**/*.jpg
 experiments/**/*.jpeg
 experiments/**/*.gif
+experiments/**/chunk_payloads.jsonl
+experiments/**/vlm_payloads.jsonl
+experiments/**/raw_responses.jsonl
+experiments/**/vlm_raw_responses.jsonl
+experiments/**/attention_trace.jsonl
 
 # Large model/adapters/checkpoints anywhere
 *.pth

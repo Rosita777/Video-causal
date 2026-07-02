@@ -2517,3 +2517,1083 @@ safree_zeroscope: strict 3 / 96, target erased 81 / 96
 **By mechanism:** Strict leakage is most visible for `fluid_impact` (12 / 60) and `fracture_damage` (15 / 92). `surface_trace` has lower strict leakage (6 / 100) but many borderline rows, suggesting these prompts often produce ambiguous traces rather than clean source-target separation.
 
 **Conclusion:** ZeroScope is now closed for the v2 protocol. It gives a second model family beyond CogVideoX-2B where current erasure baselines can remove the target in many cases while still retaining a downstream footprint. The strongest ZeroScope baseline for this failure mode is the local VideoEraser adapter; SAFREE-ZeroScope appears cleaner on strict leakage but has more erased-clean and quality-failure outcomes.
+
+## 2026-07-02: ZeroScope MVP-0 Causal Chain Probe Dry-Run
+
+**Goal:** Validate the causal-chain steering idea before committing to it as a
+method. This step only builds the probe scaffold and dry-run generation matrix;
+it does not claim real denoising steering success.
+
+**Artifacts:**
+
+```text
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/probe_manifest.json
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/prompts/source_prompts.txt
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/prompts/counterfactual_prompts.txt
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/dry_run_generation_matrix/generation_manifest.json
+```
+
+**Probe construction:** 12 clean-valid ZeroScope v2 cases were selected from
+the existing evaluated slice, prioritizing strict causal-footprint leakage while
+round-robin balancing mechanism families. The selected slice covers
+`fluid_impact`, `fracture_damage`, `elastic_deformation`,
+`particle_dispersion`, `surface_trace`, and `field_mediated`.
+
+**Dry-run matrix:** 96 planned rows were emitted: 12 cases times 8 conditions
+(`target_negative`, `target_footprint_negative`,
+`monolithic_counterfactual`, `cause_steering`, `mechanism_steering`,
+`footprint_steering`, `full_chain_steering`, and `random_direction`).
+
+**Noise control added during validation:** The builder now extracts a neutral
+scene context from the source prompt when available and sanitizes
+counterfactual/control contexts before creating minimal pairs. This prevents
+obvious contradictions such as "no target is present, with target" or using a
+footprint-only control as the background for a no-footprint pair.
+
+**Gate:** Real ZeroScope steering is intentionally disabled in the runner until
+the denoising-loop insertion path is inspected and written down. The next
+scientific check is a one-prompt or few-prompt real steering smoke against the
+prompt-only and random-direction controls.
+
+## 2026-07-02: MVP-0 Real Runner Interface and Denoising-Loop Gate
+
+**Decision:** The installed generation environment is `dyme` with
+`diffusers==0.34.0`. Its `TextToVideoSDPipeline.__call__` exposes only the old
+post-step callback API, so the MVP-0 steering implementation uses a focused
+copied denoising loop. The steering insertion point is before
+`scheduler.step(...)`, after the guided `noise_pred` is computed.
+
+**Implemented support:** `scripts/adapters/run_mvp0_zeroscope_probe.py` now
+supports non-dry-run rows through a copied ZeroScope loop. It encodes the main
+prompt plus each selected cause/mechanism/footprint minimal pair, computes
+positive-minus-negative residual directions, applies them inside a configured
+timestep window, and records `alpha` plus `timestep_window` in the generation
+manifest.
+
+**Test coverage:**
+
+```text
+python -m pytest tests/test_run_mvp0_zeroscope_probe.py tests/test_build_mvp0_causal_chain_probe.py -q
+11 passed
+```
+
+The tests cover dry-run contracts, strict-leakage balanced selection,
+contradiction-free minimal-pair construction, pre-scheduler residual steering,
+and CFG-consistent minimal-pair residuals.
+
+**Ready smoke command once GPU memory is available:**
+
+```bash
+/home/deepseek_VG/.conda/envs/dyme/bin/python scripts/adapters/run_mvp0_zeroscope_probe.py \
+  --probe-manifest experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/probe_manifest.json \
+  --output-dir experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/real_smoke_full_chain_item0 \
+  --model models/zeroscope_v2_576w \
+  --seed 15000 \
+  --condition full_chain_steering \
+  --limit-items 1 \
+  --steps 20 \
+  --num-frames 24 \
+  --height 320 \
+  --width 576 \
+  --alpha 0.5 \
+  --timestep-window 4:14 \
+  --enable-model-cpu-offload
+```
+
+**Current blocker:** The 8 H800 GPUs were already using roughly 72-75GB each
+when this runner was prepared, so the real smoke was not launched in this
+step. This is an engineering availability blocker, not a method result.
+
+## 2026-07-02: Tiny Real Full-Chain Steering Smoke
+
+**Goal:** Try a minimal real generation path despite heavy GPU occupancy, only
+to check whether the copied ZeroScope steering loop can produce a readable
+video artifact.
+
+**Environment:** The first attempt in `dyme` failed before generation because
+ZeroScope is stored as `.bin` weights and `transformers` now requires
+`torch>=2.6` for this loading path. The successful attempt used `vcecf`
+(`torch==2.6.0+cu124`, `diffusers==0.34.0`) with `PYTHONNOUSERSITE=1`.
+
+**Command shape:** One item, one condition, reduced resolution and frame count:
+
+```bash
+PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=5 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/adapters/run_mvp0_zeroscope_probe.py \
+  --probe-manifest experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/probe_manifest.json \
+  --output-dir experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/real_smoke_full_chain_item0_tiny \
+  --model models/zeroscope_v2_576w \
+  --seed 15000 \
+  --condition full_chain_steering \
+  --limit-items 1 \
+  --steps 4 \
+  --num-frames 8 \
+  --height 160 \
+  --width 288 \
+  --alpha 0.5 \
+  --timestep-window 1:3 \
+  --enable-model-cpu-offload \
+  --vae-slicing
+```
+
+**Artifacts:**
+
+```text
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/real_smoke_full_chain_item0_tiny/generation_manifest.json
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/real_smoke_full_chain_item0_tiny/videos/000_fluid-impact-pebble-pond-002_full_chain_steering_seed15000.mp4
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/real_smoke_full_chain_item0_tiny/first_frame.jpg
+```
+
+**Sanity check:** OpenCV read the MP4 successfully: 8 frames, 288x160, 8 fps.
+The first frame was nonblank. This validates the runtime path only. The tiny
+settings are too low-quality to evaluate causal-footprint suppression.
+
+**Next gate:** Run a comparable four-condition smoke at standard ZeroScope
+settings or near-standard settings once GPU memory is available:
+`target_negative`, `target_footprint_negative`, `full_chain_steering`, and
+`random_direction` for the same item and seed.
+
+## 2026-07-02: Three-Condition Real Smoke on Least-Busy GPU
+
+**Goal:** Produce a small comparable set for one probe item after selecting the
+least memory-occupied GPU. This is still a runtime and visual sanity check, not
+a method result.
+
+**GPU selection:** `nvidia-smi` reported GPU 3 as the lowest-memory device at
+query time, with 72533 / 81559 MiB used and 76% utilization. All GPUs were
+heavily occupied, so this run used CPU offload and reduced video settings.
+
+**Command:**
+
+```bash
+PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=3 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/adapters/run_mvp0_zeroscope_probe.py \
+  --probe-manifest experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/probe_manifest.json \
+  --output-dir experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/real_smoke_item0_3cond_s8_f12_192x320 \
+  --model models/zeroscope_v2_576w \
+  --seed 15000 \
+  --condition target_negative \
+  --condition target_footprint_negative \
+  --condition full_chain_steering \
+  --limit-items 1 \
+  --steps 8 \
+  --num-frames 12 \
+  --height 192 \
+  --width 320 \
+  --alpha 0.5 \
+  --timestep-window 2:6 \
+  --enable-model-cpu-offload \
+  --vae-slicing
+```
+
+**Artifacts:**
+
+```text
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/real_smoke_item0_3cond_s8_f12_192x320/generation_manifest.json
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/real_smoke_item0_3cond_s8_f12_192x320/videos/000_fluid-impact-pebble-pond-002_target_negative_seed15000.mp4
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/real_smoke_item0_3cond_s8_f12_192x320/videos/000_fluid-impact-pebble-pond-002_target_footprint_negative_seed15000.mp4
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/real_smoke_item0_3cond_s8_f12_192x320/videos/000_fluid-impact-pebble-pond-002_full_chain_steering_seed15000.mp4
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/real_smoke_item0_3cond_s8_f12_192x320/contact_sheet.jpg
+```
+
+**Mechanical sanity check:** OpenCV loaded all three MP4 files. Each video has
+12 frames at 320x192 and 8 fps. First-frame means were nonzero:
+`target_negative=109.46`, `target_footprint_negative=122.25`,
+`full_chain_steering=120.96`.
+
+**Visual note:** At this low resolution the videos are semantically weak, but
+the contact sheet is usable for eyeballing. The `target_negative` sample shows
+stronger visible water/ripple texture, while `target_footprint_negative` and
+`full_chain_steering` look closer to a calmer water/reflection scene. This is
+only an informal observation and should not be treated as evidence of causal
+footprint suppression.
+
+**Next gate:** Run a stronger comparison at higher quality for 3-5 probe items,
+then evaluate with the VLM leakage labels. The `random_direction` condition
+should be implemented or audited before being used as a scientific control.
+
+## 2026-07-02: Three-Item Batch Smoke and Prompt-Length Finding
+
+**Goal:** Let the real runner "soak" on a slightly larger but still bounded
+comparison: 3 probe items x 3 conditions. The purpose was to check whether
+larger smoke runs are practical and whether the outputs are visually inspectable.
+
+**GPU selection:** `nvidia-smi` showed all GPUs at 100% utilization. GPU 3 still
+had the lowest memory usage at query time, so the run used GPU 3 with CPU
+offload.
+
+**Command shape:**
+
+```bash
+PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=3 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python scripts/adapters/run_mvp0_zeroscope_probe.py \
+  --probe-manifest experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/probe_manifest.json \
+  --output-dir experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/real_batch_3items_3cond_s10_f16_240x432 \
+  --model models/zeroscope_v2_576w \
+  --seed 15000 \
+  --condition target_negative \
+  --condition target_footprint_negative \
+  --condition full_chain_steering \
+  --limit-items 3 \
+  --steps 10 \
+  --num-frames 16 \
+  --height 240 \
+  --width 432 \
+  --alpha 0.5 \
+  --timestep-window 2:8 \
+  --enable-model-cpu-offload \
+  --vae-slicing
+```
+
+**Artifacts:**
+
+```text
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/real_batch_3items_3cond_s10_f16_240x432/generation_manifest.json
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/real_batch_3items_3cond_s10_f16_240x432/videos/*.mp4
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/real_batch_3items_3cond_s10_f16_240x432/contact_sheet.jpg
+```
+
+**Mechanical sanity check:** All 9 MP4 files loaded in OpenCV. Each has 16
+frames at 432x240 and 8 fps. First frames were nonblank.
+
+**Visual note:** The batch is useful for qualitative inspection. The first
+fluid-impact item again shows a strong water-ripple pattern in `target_negative`
+and a calmer water/reflection scene in the footprint-negative and steering
+conditions. The fracture and elastic-deformation items are less clean but still
+visually interpretable enough for manual triage. This remains a smoke result,
+not evidence of method effectiveness.
+
+**Important prompt-length finding:** During generation, CLIP warned that some
+prompts exceeded the 77-token limit. A follow-up tokenizer audit showed that
+only the long `source_prompt` fields exceed the limit: 10 of the 12 probe items
+have source prompts between 82 and 94 CLIP tokens. The counterfactual, control,
+and minimal-pair prompts are within the limit. This means the current
+`target_negative` baseline can be silently truncated for most items, while the
+steering residual prompts are not. Larger runs should wait until the source
+prompt template is compressed or a no-truncation item subset is selected.
+
+**Next gate:** Add a prompt-length audit to the probe-builder or runner, then
+either compress source prompts to fit CLIP's 77-token limit or run the next
+batch only on no-truncation items. After that, rerun the 3-item batch and send
+the outputs through the VLM leakage evaluator.
+
+## 2026-07-02: Compact Generation Prompts and Strict Audit
+
+**Fix:** The probe builder now preserves the original `source_prompt` for
+auditability and adds a compact `generation_prompt` for actual source-based
+generation. The compact prompt keeps the neutral scene context, target, and
+causal footprint, while removing long temporal scaffolding that was pushing
+many prompts past CLIP's 77-token limit. The runner now uses
+`generation_prompt` when present and keeps the original `source_prompt` in the
+generation manifest for traceability.
+
+**Guard:** The ZeroScope MVP-0 runner now supports strict prompt-length checks:
+
+```bash
+--strict-prompt-length --prompt-token-limit 77
+```
+
+The audit covers the main prompt, negative prompt, and active minimal-pair
+prompts. In strict mode, any over-limit prompt fails before generation.
+
+**Validation:**
+
+```text
+python -m pytest tests/test_build_mvp0_causal_chain_probe.py tests/test_run_mvp0_zeroscope_probe.py -q
+15 passed
+```
+
+Rebuilding the 12-item probe and running the strict dry-run matrix succeeded:
+
+```text
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/dry_run_generation_matrix_strict_prompt_audit/generation_manifest.json
+```
+
+The original source prompts remain long for audit purposes, but all compact
+generation prompts are below the CLIP limit:
+
+```text
+source range: 26-94 CLIP tokens
+generation range: 26-54 CLIP tokens
+```
+
+**Rerun after fix:** The 3-item x 3-condition smoke was rerun with compact
+prompts and `--strict-prompt-length`.
+
+```text
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/real_batch_3items_3cond_compact_s10_f16_240x432/generation_manifest.json
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/real_batch_3items_3cond_compact_s10_f16_240x432/videos/*.mp4
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/real_batch_3items_3cond_compact_s10_f16_240x432/contact_sheet.jpg
+```
+
+No CLIP truncation warnings appeared during this rerun. OpenCV loaded all 9
+videos successfully: each has 16 frames at 432x240 and 8 fps.
+
+**Visual note:** The compact rerun looks cleaner than the earlier long-source
+batch. On the fluid-impact item, `target_negative` still preserves a strong
+ripple pattern, while `target_footprint_negative` and `full_chain_steering`
+move toward pond vegetation/reflection scenes. The fracture and net examples
+also become visually more stable. This is still a smoke observation; the next
+real gate is VLM scoring.
+
+## 2026-07-02: Random and Orthogonal Control Pilot
+
+**Motivation:** Fable/reviewer feedback identified two non-negotiable controls:
+a norm-matched random direction and an unrelated semantic direction. Without
+these, a reviewer can argue that any residual perturbation of comparable norm
+reduces motion/detail and therefore removes footprints without causal repair.
+
+**Implementation:** The runner now includes:
+
+```text
+random_direction       -> gaussian_norm_matched control using the footprint residual norm
+orthogonal_semantic    -> unrelated semantic direction: birds flying vs no birds
+```
+
+The random control encodes the footprint pair as a reference, computes its
+residual norm per denoising step, samples a deterministic Gaussian direction
+from the row seed and step index, and rescales it to the same norm before
+applying the normal steering subtraction. The orthogonal control uses the same
+steering machinery as real links but with an unrelated fixed minimal pair.
+
+**Validation:**
+
+```text
+python -m pytest tests/test_run_mvp0_zeroscope_probe.py tests/test_build_mvp0_causal_chain_probe.py -q
+19 passed
+```
+
+Strict dry-run with controls succeeded:
+
+```text
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/dry_run_controls_strict_prompt_audit/generation_manifest.json
+```
+
+**Pilot run:** 3 items x 5 conditions, with strict prompt-length checking:
+
+```text
+target_negative
+target_footprint_negative
+full_chain_steering
+random_direction
+orthogonal_semantic
+```
+
+Artifacts:
+
+```text
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/real_pilot_3items_5cond_controls_s10_f16_240x432/generation_manifest.json
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/real_pilot_3items_5cond_controls_s10_f16_240x432/videos/*.mp4
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/real_pilot_3items_5cond_controls_s10_f16_240x432/contact_sheet.jpg
+```
+
+OpenCV loaded all 15 videos successfully: each has 16 frames at 432x240 and
+8 fps.
+
+**Visual note and risk:** The controls are informative but not yet favorable.
+For the three pilot items, `random_direction` and `orthogonal_semantic` often
+look close to `full_chain_steering` and `target_footprint_negative`. This may
+mean the current steering strength/window is dominated by generic perturbation
+or scene drift rather than causal-chain-specific repair. We should not scale or
+claim success until VLM/low-level metrics show that full-chain steering reduces
+footprint leakage more than both controls while preserving scene quality.
+
+**Next gate:** Run VLM scoring and simple low-level proxies on this 15-video
+pilot before launching a larger multi-seed batch. If controls match full-chain,
+reduce alpha/window, average paraphrased causal directions, or reframe this
+iteration as a leakage diagnostic rather than a repair result.
+
+## 2026-07-02: Fable VLM and Low-Level Proxy Gate for Control Pilot
+
+**Input:** The 3-item x 5-condition control pilot above was converted into
+frame strips and paired with the corresponding clean-reference strips.
+
+Artifacts:
+
+```text
+experiments/evaluation/mvp0_zeroscope_pilot_controls_fable_20260702/review.csv
+experiments/evaluation/mvp0_zeroscope_pilot_controls_fable_20260702/frame_strips/*.jpg
+experiments/evaluation/mvp0_zeroscope_pilot_controls_fable_20260702/fable_run/vlm_predictions.csv
+experiments/evaluation/mvp0_zeroscope_pilot_controls_fable_20260702/low_level_proxy.csv
+experiments/evaluation/mvp0_zeroscope_pilot_controls_fable_20260702/low_level_proxy_summary.csv
+```
+
+The dry-run produced 15 VLM payloads, and the fable run produced 15 prediction
+rows.
+
+**Fable summary:**
+
+```text
+target_negative:
+  target_leakage=1, strict_causal_footprint_leakage=1, erased_clean=1
+
+target_footprint_negative:
+  erased_clean=2, target_leakage=1
+
+full_chain_steering:
+  erased_clean=2, strict_causal_footprint_leakage=1
+
+random_direction:
+  erased_clean=2, strict_causal_footprint_leakage=1
+
+orthogonal_semantic:
+  erased_clean=2, strict_causal_footprint_leakage=1
+```
+
+This is a useful negative/diagnostic result. `full_chain_steering` did not
+separate from either norm-matched random steering or unrelated semantic
+steering. On the fracture item, fable still reports footprint leakage for all
+three steering/control conditions: no puck, but a crack remains. On the fluid
+and elastic-net items, all three steering/control conditions are judged clean.
+Thus the current pilot does not support a causal-specific repair claim.
+
+**Low-level proxy summary:** Mean motion and frame-difference proxies do not
+show a simple global-freezing explanation. Relative to `target_negative`,
+`full_chain_steering` has mean frame-difference ratio 0.995 and mean-flow ratio
+0.895, while `random_direction` has 1.098 and 0.986, and
+`orthogonal_semantic` has 1.047 and 0.933. The problem is therefore not merely
+that full-chain steering destroys all motion; the stronger issue is that its
+semantic effect is not better than the controls in this pilot.
+
+**Decision:** Do not scale this configuration as a positive method result.
+The next experiment should make the method more discriminative before another
+multi-seed run:
+
+```text
+1. Reduce alpha and/or narrow the denoising window.
+2. Build paraphrase-averaged causal directions instead of one brittle pair.
+3. Add a non-causal scene-preservation direction or regularizer.
+4. Keep random and orthogonal controls in every batch.
+5. Treat target-negative leakage as the main diagnostic, and require full-chain
+   to beat both controls before claiming causal repair.
+```
+
+## 2026-07-02: Phase A Conservative Sweep Orchestrator and First Cell
+
+**Implementation:** Added a Phase A sweep orchestrator for the MVP-0 ZeroScope
+probe. It expands alpha/window grids into calls to the existing runner, writes
+a `sweep_manifest.json`, and can execute all cells or a limited prefix. The
+core diffusion runner was not changed.
+
+Files:
+
+```text
+scripts/adapters/run_mvp0_zeroscope_sweep.py
+tests/test_run_mvp0_zeroscope_sweep.py
+docs/superpowers/specs/2026-07-02-causal-chain-steering-a-then-b-design.md
+docs/superpowers/plans/2026-07-02-causal-chain-steering-phase-a-sweep.md
+```
+
+Validation:
+
+```text
+python -m pytest tests/test_run_mvp0_zeroscope_sweep.py tests/test_run_mvp0_zeroscope_probe.py tests/test_build_mvp0_causal_chain_probe.py -q
+22 passed
+```
+
+The project directory is not a git repository, so there is no commit hash for
+this implementation checkpoint.
+
+**Dry-run sweep:** The 3 x 3 Phase A grid completed as dry-run:
+
+```text
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_a_sweep_dry_run/sweep_manifest.json
+```
+
+The manifest reports 9 total cells and 9 completed cells. Spot checks confirmed
+15 planned items per cell, default conditions correctly included in the runner
+argv, and the expected alpha/window metadata in generated manifests.
+
+**First real Phase A cell:** Ran the midpoint conservative setting:
+
+```text
+alpha = 0.25
+timestep_window = 3:6
+conditions = target_negative, target_footprint_negative, full_chain_steering,
+             random_direction, orthogonal_semantic
+```
+
+Artifacts:
+
+```text
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_a_real_alpha_0p25_window_3_6/generation_manifest.json
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_a_real_alpha_0p25_window_3_6/videos/*.mp4
+experiments/evaluation/mvp0_zeroscope_phase_a_alpha_0p25_window_3_6_fable_20260702/review.csv
+experiments/evaluation/mvp0_zeroscope_phase_a_alpha_0p25_window_3_6_fable_20260702/contact_sheet.jpg
+experiments/evaluation/mvp0_zeroscope_phase_a_alpha_0p25_window_3_6_fable_20260702/frame_strips/*.jpg
+experiments/evaluation/mvp0_zeroscope_phase_a_alpha_0p25_window_3_6_fable_20260702/fable_run/vlm_predictions.csv
+experiments/evaluation/mvp0_zeroscope_phase_a_alpha_0p25_window_3_6_fable_20260702/low_level_proxy.csv
+experiments/evaluation/mvp0_zeroscope_phase_a_alpha_0p25_window_3_6_fable_20260702/low_level_proxy_summary.csv
+```
+
+OpenCV loaded all 15 videos successfully: each has 16 frames at 432x240 and
+8 fps.
+
+**Fable summary:**
+
+```text
+target_negative:
+  borderline=3
+
+target_footprint_negative:
+  erased_clean=2, borderline=1
+
+full_chain_steering:
+  erased_clean=2, borderline=1
+
+random_direction:
+  erased_clean=2, borderline=1
+
+orthogonal_semantic:
+  erased_clean=2, borderline=1
+```
+
+The midpoint conservative cell improves the earlier fracture strict-leakage
+failure, but the improvement is not causal-specific: `full_chain_steering`,
+`random_direction`, and `orthogonal_semantic` still have the same label
+distribution. Fable marks all full-chain outputs as `video_quality=yes`, but
+the Phase A success gate is not met because full-chain does not beat either
+control.
+
+**Low-level proxy summary:** Full-chain does not look like global freezing in
+this cell. Relative to `target_negative`, full-chain has mean frame-difference
+ratio 1.192 and mean-flow ratio 1.034. Random has 1.096 and 0.983; orthogonal
+semantic has 1.090 and 0.993. This suggests the failure is not just collapse or
+motion suppression; the issue remains lack of semantic separation from
+controls.
+
+**Decision:** Do not scale this cell as a positive result. Continue Phase A
+with at least one lower-strength cell, especially `alpha=0.15/window=2:5` or
+`alpha=0.15/window=3:6`, before moving to Phase B paraphrase-averaged causal
+directions.
+
+## 2026-07-02: Phase A Low-Strength Cell and Stop Decision
+
+**Second real Phase A cell:** Ran the lower-strength setting:
+
+```text
+alpha = 0.15
+timestep_window = 2:5
+conditions = target_negative, target_footprint_negative, full_chain_steering,
+             random_direction, orthogonal_semantic
+```
+
+Artifacts:
+
+```text
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_a_real_alpha_0p15_window_2_5/generation_manifest.json
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_a_real_alpha_0p15_window_2_5/videos/*.mp4
+experiments/evaluation/mvp0_zeroscope_phase_a_alpha_0p15_window_2_5_fable_20260702/review.csv
+experiments/evaluation/mvp0_zeroscope_phase_a_alpha_0p15_window_2_5_fable_20260702/contact_sheet.jpg
+experiments/evaluation/mvp0_zeroscope_phase_a_alpha_0p15_window_2_5_fable_20260702/frame_strips/*.jpg
+experiments/evaluation/mvp0_zeroscope_phase_a_alpha_0p15_window_2_5_fable_20260702/fable_run/vlm_predictions.csv
+experiments/evaluation/mvp0_zeroscope_phase_a_alpha_0p15_window_2_5_fable_20260702/low_level_proxy.csv
+experiments/evaluation/mvp0_zeroscope_phase_a_alpha_0p15_window_2_5_fable_20260702/low_level_proxy_summary.csv
+```
+
+OpenCV loaded all 15 videos successfully: each has 16 frames at 432x240 and
+8 fps.
+
+**Fable summary:**
+
+```text
+target_negative:
+  borderline=1, strict_causal_footprint_leakage=2
+
+target_footprint_negative:
+  erased_clean=1, strict_causal_footprint_leakage=2
+
+full_chain_steering:
+  erased_clean=1, target_leakage=2
+
+random_direction:
+  erased_clean=1, strict_causal_footprint_leakage=2
+
+orthogonal_semantic:
+  erased_clean=1, target_leakage=2
+```
+
+This lower-strength cell does not meet the Phase A gate. It removes strict
+footprint leakage from full-chain only by reintroducing visible target leakage
+on the fracture and elastic-net items. The unrelated semantic control shows
+the same target-leakage pattern, while the random and target-footprint-negative
+conditions keep strict footprint leakage. Therefore alpha/window tuning alone
+does not produce a clean causal-specific separation.
+
+**Low-level proxy summary:** There is still no obvious global collapse:
+relative to `target_negative`, full-chain has mean frame-difference ratio
+1.078 and mean-flow ratio 0.961; random has 1.096 and 0.988; orthogonal
+semantic has 1.089 and 0.991. The failure is semantic, not a simple motion
+suppression artifact.
+
+**Decision:** Stop Phase A instead of sweeping all remaining cells. We now have
+two informative settings:
+
+```text
+alpha=0.25/window=3:6: full-chain improves with controls, no separation.
+alpha=0.15/window=2:5: full-chain avoids strict footprint leakage but leaks
+                       the target like the unrelated semantic control.
+```
+
+The next step should be Phase B: paraphrase-averaged causal directions. The
+implementation should preserve the same random and orthogonal controls, and
+random should be norm-matched to the averaged footprint direction.
+
+## 2026-07-02: Phase B Paraphrase-Averaged Causal Directions
+
+**Implementation:** Added a Phase B manifest builder and runner support for
+multi-pair link prompts. Each causal link now carries three minimal-pair
+directions: the original pair plus two deterministic paraphrases. The runner
+encodes every pair, predicts each residual direction, averages the
+`positive - negative` directions, and applies the averaged link residual. The
+old single-pair manifest shape remains supported.
+
+Artifacts:
+
+```text
+docs/superpowers/plans/2026-07-02-causal-chain-steering-phase-b-paraphrase-averaging.md
+scripts/build_mvp0_phase_b_paraphrase_probe.py
+scripts/adapters/run_mvp0_zeroscope_probe.py
+tests/test_build_mvp0_phase_b_paraphrase_probe.py
+tests/test_run_mvp0_zeroscope_probe.py
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_b_paraphrase_probe_manifest.json
+```
+
+**Dry run:** The Phase B dry run passed on the first three items with strict
+prompt-length checking:
+
+```text
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_b_dry_run/generation_manifest.json
+```
+
+The dry-run manifest confirms that `full_chain_steering` uses three prompt
+pairs for cause, mechanism, and footprint. The random control also uses the
+three footprint paraphrases as its norm/source reference. The orthogonal
+semantic control remains the original single unrelated semantic direction.
+
+**Real cell:** Ran the same midpoint setting as the first Phase A cell:
+
+```text
+alpha = 0.25
+timestep_window = 3:6
+conditions = target_negative, target_footprint_negative, full_chain_steering,
+             random_direction, orthogonal_semantic
+limit_items = 3
+```
+
+Artifacts:
+
+```text
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_b_real_alpha_0p25_window_3_6/generation_manifest.json
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_b_real_alpha_0p25_window_3_6/videos/*.mp4
+experiments/evaluation/mvp0_zeroscope_phase_b_alpha_0p25_window_3_6_fable_20260702/review.csv
+experiments/evaluation/mvp0_zeroscope_phase_b_alpha_0p25_window_3_6_fable_20260702/contact_sheet.jpg
+experiments/evaluation/mvp0_zeroscope_phase_b_alpha_0p25_window_3_6_fable_20260702/frame_strips/*.jpg
+experiments/evaluation/mvp0_zeroscope_phase_b_alpha_0p25_window_3_6_fable_20260702/fable_run/vlm_predictions.csv
+experiments/evaluation/mvp0_zeroscope_phase_b_alpha_0p25_window_3_6_fable_20260702/low_level_proxy.csv
+experiments/evaluation/mvp0_zeroscope_phase_b_alpha_0p25_window_3_6_fable_20260702/low_level_proxy_summary.csv
+```
+
+OpenCV loaded all 15 generated videos successfully: each has 16 frames at
+432x240 and 8 fps.
+
+**Fable summary:**
+
+```text
+target_negative:
+  borderline=2, strict_causal_footprint_leakage=1
+
+target_footprint_negative:
+  borderline=1, strict_causal_footprint_leakage=2
+
+full_chain_steering:
+  erased_clean=1, strict_causal_footprint_leakage=2
+
+random_direction:
+  erased_clean=2, target_leakage=1
+
+orthogonal_semantic:
+  erased_clean=2, strict_causal_footprint_leakage=1
+```
+
+This is the first partial positive signal. Compared with the Phase A midpoint
+cell, paraphrase averaging separates full-chain from the random control:
+`full_chain_steering` preserves the causal footprint in two of three items,
+while `random_direction` preserves it in zero of three and leaks the target on
+one item. However, the signal is not yet robust enough to claim a causal method:
+the unrelated semantic control still produces one strict footprint-leakage
+case, and the sample size is only three items. The current orthogonal control
+also has a weaker construction than full-chain because it remains a single
+semantic direction rather than a paraphrase-averaged, norm-matched control.
+
+**Low-level proxy summary:** Phase B does not look like a simple global-motion
+artifact. Relative to `target_negative`, full-chain has mean frame-difference
+ratio 1.207 and mean-flow ratio 1.025. Random has 1.114 and 0.954; orthogonal
+semantic has 1.090 and 0.938. The strongest full-chain semantic wins occur on
+fluid impact and fracture damage; elastic deformation remains clean across
+full-chain, random, and orthogonal controls.
+
+**Decision:** Treat Phase B as promising but not paper-ready. The next
+experiment should be B+ rather than immediate scaling: make the orthogonal
+semantic control equally strong by paraphrase-averaging and norm-matching it,
+then rerun the same `alpha=0.25/window=3:6` cell before expanding beyond three
+items. A defensible success gate is: full-chain strict footprint leakage must
+exceed both random and paraphrase-averaged orthogonal controls, with no
+increase in target leakage and no large low-level proxy imbalance.
+
+## 2026-07-02: Phase B+ Fair Orthogonal Control
+
+**Implementation:** B+ keeps Phase B full-chain steering unchanged, but makes
+the orthogonal semantic control fairer. The Phase B manifest builder now adds
+three unrelated semantic minimal pairs under `orthogonal_semantic`. The runner
+preserves manifest-provided orthogonal pairs, averages their residual
+directions, encodes the averaged footprint direction as a reference, and scales
+the orthogonal direction to that footprint-reference norm before applying
+steering.
+
+Artifacts:
+
+```text
+docs/superpowers/specs/2026-07-02-causal-chain-steering-b-plus-fair-controls-design.md
+docs/superpowers/plans/2026-07-02-causal-chain-steering-b-plus-fair-controls.md
+scripts/build_mvp0_phase_b_paraphrase_probe.py
+scripts/adapters/run_mvp0_zeroscope_probe.py
+tests/test_build_mvp0_phase_b_paraphrase_probe.py
+tests/test_run_mvp0_zeroscope_probe.py
+```
+
+Focused tests pass:
+
+```text
+python -m pytest tests/test_run_mvp0_zeroscope_probe.py \
+  tests/test_build_mvp0_causal_chain_probe.py \
+  tests/test_run_mvp0_zeroscope_sweep.py \
+  tests/test_build_mvp0_phase_b_paraphrase_probe.py -q
+
+31 passed, 1 warning
+```
+
+**Dry run:** The B+ manifest and dry-run rows were generated successfully:
+
+```text
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_b_plus_fair_controls_probe_manifest.json
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_b_plus_dry_run/generation_manifest.json
+```
+
+The dry-run manifest confirms that `orthogonal_semantic` rows now use three
+orthogonal pairs and `control_reference=footprint`.
+
+**Real cell:** Ran the same settings as Phase B:
+
+```text
+alpha = 0.25
+timestep_window = 3:6
+conditions = target_negative, target_footprint_negative, full_chain_steering,
+             random_direction, orthogonal_semantic
+limit_items = 3
+```
+
+Artifacts:
+
+```text
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_b_plus_real_alpha_0p25_window_3_6/generation_manifest.json
+experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_b_plus_real_alpha_0p25_window_3_6/videos/*.mp4
+experiments/evaluation/mvp0_zeroscope_phase_b_plus_alpha_0p25_window_3_6_fable_20260702/review.csv
+experiments/evaluation/mvp0_zeroscope_phase_b_plus_alpha_0p25_window_3_6_fable_20260702/contact_sheet.jpg
+experiments/evaluation/mvp0_zeroscope_phase_b_plus_alpha_0p25_window_3_6_fable_20260702/frame_strips/*.jpg
+experiments/evaluation/mvp0_zeroscope_phase_b_plus_alpha_0p25_window_3_6_fable_20260702/fable_run/vlm_predictions.csv
+experiments/evaluation/mvp0_zeroscope_phase_b_plus_alpha_0p25_window_3_6_fable_20260702/fable_run/vlm_raw_responses.jsonl
+experiments/evaluation/mvp0_zeroscope_phase_b_plus_alpha_0p25_window_3_6_fable_20260702/low_level_proxy.csv
+experiments/evaluation/mvp0_zeroscope_phase_b_plus_alpha_0p25_window_3_6_fable_20260702/low_level_proxy_summary.csv
+```
+
+OpenCV loaded all 15 generated videos successfully: each has 16 frames at
+432x240 and 8 fps. The first full fable batch stalled on two HTTPS responses;
+those two rows were rerun individually and succeeded. The final merged
+prediction file has 15 valid rows.
+
+**Fable summary:**
+
+```text
+target_negative:
+  erased_clean=1, strict_causal_footprint_leakage=2
+
+target_footprint_negative:
+  erased_clean=2, strict_causal_footprint_leakage=1
+
+full_chain_steering:
+  erased_clean=2, strict_causal_footprint_leakage=1
+
+random_direction:
+  erased_clean=2, strict_causal_footprint_leakage=1
+
+orthogonal_semantic:
+  erased_clean=2, strict_causal_footprint_leakage=1
+```
+
+This fails the B+ success gate. Once the orthogonal semantic control is
+paraphrase-averaged and norm-matched, `full_chain_steering`,
+`random_direction`, and `orthogonal_semantic` have the same label distribution.
+The only strict footprint-leakage case for all three controls is the fracture
+damage item; the fluid-impact and elastic-deformation items are erased cleanly
+for all three. Therefore the Phase B signal was likely a control-strength
+artifact rather than a causal-chain-specific effect.
+
+**Low-level proxy summary:** Relative to `target_negative`, full-chain has mean
+frame-difference ratio 1.207 and mean-flow ratio 1.025. Random has 1.097 and
+0.941; fair orthogonal has 1.085 and 0.930. Full-chain is somewhat stronger in
+low-level motion/appearance perturbation, but that extra perturbation does not
+produce a semantic win over controls.
+
+**Decision:** Do not scale Phase B/B+ as a positive method result. The fair
+control check is useful: it prevents an overclaim. The next method iteration
+should change the intervention mechanism, not just add more paraphrases or
+more items. Plausible next directions are a localized/cross-attention-gated
+intervention, a temporal-windowed footprint-only residual, or a verifier-guided
+selection loop that accepts only edits preserving target absence while
+separating full-chain from matched controls.
+
+## 2026-07-02: Method B Attention Dependency Probe
+
+**Implementation:** Built a white-box ZeroScope cross-attention dependency
+probe as a diagnostic replacement for failed residual steering. The probe
+resolves CLIP token spans for the target concept and causal footprint, wraps
+UNet `attn2` cross-attention processors, records compact attention summaries
+instead of full maps, and writes per-item JSONL/CSV traces.
+
+Artifacts:
+
+```text
+docs/superpowers/specs/2026-07-02-causal-attention-dependency-probe-design.md
+docs/superpowers/plans/2026-07-02-causal-attention-dependency-probe.md
+scripts/adapters/run_zeroscope_attention_probe.py
+tests/test_run_zeroscope_attention_probe.py
+experiments/method_probe/zeroscope_attention_dependency_probe_20260702_dryrun/generation_manifest.json
+experiments/method_probe/zeroscope_attention_dependency_probe_20260702_smoke_textcfg_v2/
+experiments/method_probe/zeroscope_attention_dependency_probe_20260702_diag3_textcfg/
+```
+
+Focused tests pass in the `vcecf` environment:
+
+```text
+PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python \
+  -m pytest tests/test_run_zeroscope_attention_probe.py -q
+
+10 passed
+```
+
+**Important measurement fix:** The first smoke run mixed classifier-free
+guidance unconditional and text-conditioned attention batches. The processor
+now slices the text-conditioned half of the expanded video batch before
+recording, so token masses correspond to the actual positive prompt branch.
+
+**Dry run:** The first three MVP-0 items resolved target and footprint spans,
+including BPE fragments such as `ripp` + `les</w>` and `outw` + `ard</w>`.
+A full 12-item dry run also completed successfully:
+
+```text
+experiments/method_probe/zeroscope_attention_dependency_probe_20260702_dryrun_all/generation_manifest.json
+```
+
+**Smoke run:** Ran one item on GPU 3 with `steps=2`, `num_frames=4`,
+`160x288`, `fp16`, and `--skip-video-export`. The run completed and produced
+32 cross-attention records: 16 modules over 2 denoising steps.
+
+**Three-item diagnostic:** Ran three MVP-0 items with `steps=4`, `num_frames=4`,
+`160x288`, `fp16`, and `--skip-video-export`. Each item produced 64 records:
+16 cross-attention modules over 4 denoising steps.
+
+Mean text-conditioned attention mass:
+
+```text
+fluid_impact_pebble_pond_002:
+  target=0.00368, footprint=0.00304, comparison=0.00451,
+  chain/comparison=1.49
+
+v2_fracture_damage_black_hockey_puck...:
+  target=0.00493, footprint=0.00230, comparison=0.00417,
+  chain/comparison=1.73
+
+elastic_deformation_soccer_net_001:
+  target=0.00415, footprint=0.00278, comparison=0.00475,
+  chain/comparison=1.46
+```
+
+**Decision:** Method B passes the instrumentation gate and shows a weak but
+consistent chain-token signal: target plus footprint mass exceeds matched
+comparison-token mass in all three diagnostic items. This is not a repair or
+editing result. It justifies one next intervention pass: attention masking or
+reweighting on target+footprint tokens, with matched random-token and
+matched layer/head controls. Do not claim causal repair until masking beats
+those controls on generated-video evaluation.
+
+## 2026-07-02: Method B2 Attention Mask Intervention
+
+**Implementation:** Extended the ZeroScope attention probe into an
+intervention runner. The processor can now multiplicatively suppress selected
+cross-attention token columns, renormalize attention rows, and apply the
+intervention only to the text-conditioned CFG half. Conditions currently
+include `baseline`, `target_mask`, `footprint_mask`, `chain_mask`,
+`comparison_token_mask`, and `random_token_mask`.
+
+Artifacts:
+
+```text
+docs/superpowers/specs/2026-07-02-causal-attention-mask-b2-design.md
+docs/superpowers/plans/2026-07-02-causal-attention-mask-b2.md
+scripts/adapters/run_zeroscope_attention_probe.py
+tests/test_run_zeroscope_attention_probe.py
+experiments/method_probe/zeroscope_attention_mask_b2_20260702_dryrun/generation_manifest.json
+experiments/method_probe/zeroscope_attention_mask_b2_20260702_smoke/
+experiments/method_probe/zeroscope_attention_mask_b2_20260702_compact3/
+experiments/evaluation/zeroscope_attention_mask_b2_compact3_fable_20260702/
+```
+
+Focused tests pass:
+
+```text
+PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python \
+  -m pytest tests/test_run_zeroscope_attention_probe.py -q
+
+14 passed
+```
+
+**Dry run:** Three items over six conditions produced 18 manifest rows. Token
+counts are matched for `chain_mask`, `comparison_token_mask`, and
+`random_token_mask`; the fracture case masks 11 tokens in each matched-control
+condition.
+
+**Smoke:** One-item real smoke over `baseline`, `chain_mask`, and
+`random_token_mask` completed with MP4s and attention traces. All videos are
+decodable with 4 frames at 288x160. `chain_mask` drove both target and footprint
+attention mass to zero while `random_token_mask` left chain-token mass nonzero.
+
+**Compact 3-item matrix:** Ran three items over six B2 conditions with
+`steps=4`, `num_frames=4`, `height=160`, `width=288`, and `mask_scale=0.0`.
+All 18 videos are decodable and each row produced 64 cross-attention records.
+Attention sanity checks passed:
+
+```text
+target_mask: target mass = 0 for all items
+footprint_mask: footprint mass = 0 for all items
+chain_mask: target mass = 0 and footprint mass = 0 for all items
+random_token_mask: target/footprint masses remain nonzero
+```
+
+**Fable evaluation:** The first fable run used the proxy URL without `/v1` and
+returned HTTP 403 fallbacks. Retried with the corrected `/v1` base URL and got
+18 valid responses from `claude-fable-5`.
+
+Label summary:
+
+```text
+baseline:              other_failure=2, strict_causal_footprint_leakage=1
+target_mask:           other_failure=1, erased_clean=1, strict_causal_footprint_leakage=1
+footprint_mask:        erased_clean=1, strict_causal_footprint_leakage=1, other_failure=1
+chain_mask:            erased_clean=2, other_failure=1
+comparison_token_mask: erased_clean=1, strict_causal_footprint_leakage=1, other_failure=1
+random_token_mask:     other_failure=2, strict_causal_footprint_leakage=1
+```
+
+**Decision:** B2 hard attention masking works mechanically, but this compact
+run is not a method result. The compact generation setting is too weak:
+baseline is already judged `other_failure` in two of three items. The next B2
+variant should keep the matched controls but use higher-quality generation and
+a softer intervention, such as `mask_scale=0.25`, before making any claim about
+chain-specific repair.
+
+## 2026-07-02: Method B2 Soft Mask Quality Check
+
+**Implementation note:** The attention recorder was optimized before this run.
+The old summary path converted selected attention columns to Python lists,
+which made quality-resolution runs extremely slow. The recorder now computes
+the selected-column mean with tensor operations before calling `.item()`.
+
+Focused tests pass:
+
+```text
+PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python \
+  -m pytest tests/test_run_zeroscope_attention_probe.py -q
+
+15 passed
+```
+
+Artifacts:
+
+```text
+experiments/method_probe/zeroscope_attention_mask_b2_soft025_quality3_fast_20260702/
+experiments/evaluation/zeroscope_attention_mask_b2_soft025_quality3_fable_20260702/
+```
+
+**Run:** Re-ran the first three MVP-0 items at higher quality than the compact
+matrix: `steps=10`, `num_frames=16`, `height=240`, `width=432`, `fps=8`,
+`guidance_scale=9.0`, `dtype=fp16`, and `mask_scale=0.25`. Conditions were
+`baseline`, `chain_mask`, `comparison_token_mask`, and `random_token_mask`.
+All 12 MP4s are decodable with 16 frames at 432x240. Each condition produced
+160 attention-summary records.
+
+**Attention sanity:** The intervention behaved mechanically as intended.
+`chain_mask` reduced target and footprint attention mass to roughly one
+quarter of baseline, while `comparison_token_mask` mainly reduced comparison
+token mass and `random_token_mask` left target/footprint mass nonzero.
+
+```text
+fluid_impact_pebble_pond_002:
+  baseline:              target=0.003476, footprint=0.002438, comparison=0.002959
+  chain_mask:            target=0.000871, footprint=0.000609, comparison=0.002837
+  comparison_token_mask: target=0.003498, footprint=0.002543, comparison=0.001720
+  random_token_mask:     target=0.003781, footprint=0.002591, comparison=0.002122
+
+v2_fracture_damage_black_hockey_puck...:
+  baseline:              target=0.003771, footprint=0.001814, comparison=0.002554
+  chain_mask:            target=0.001006, footprint=0.000480, comparison=0.002619
+  comparison_token_mask: target=0.003896, footprint=0.001884, comparison=0.001183
+  random_token_mask:     target=0.003879, footprint=0.001865, comparison=0.002148
+
+elastic_deformation_soccer_net_001:
+  baseline:              target=0.003098, footprint=0.002010, comparison=0.003321
+  chain_mask:            target=0.000813, footprint=0.000525, comparison=0.003401
+  comparison_token_mask: target=0.003215, footprint=0.002112, comparison=0.002218
+  random_token_mask:     target=0.003278, footprint=0.002107, comparison=0.002269
+```
+
+**Fable evaluation:** The evaluator produced 12 valid predictions from
+`claude-fable-5`.
+
+Label summary:
+
+```text
+baseline:              target_leakage=1, strict_causal_footprint_leakage=1, erased_clean=1
+chain_mask:            target_leakage=1, strict_causal_footprint_leakage=1, erased_clean=1
+comparison_token_mask: target_leakage=1, strict_causal_footprint_leakage=1, erased_clean=1
+random_token_mask:     strict_causal_footprint_leakage=3
+```
+
+Pair-level pattern:
+
+```text
+fluid_impact_pebble_pond_002:
+  baseline / chain / comparison = target_leakage
+  random = strict_causal_footprint_leakage
+
+v2_fracture_damage_black_hockey_puck...:
+  all four conditions = strict_causal_footprint_leakage
+
+elastic_deformation_soccer_net_001:
+  baseline / chain / comparison = erased_clean
+  random = strict_causal_footprint_leakage
+```
+
+**Decision:** B2-soft is a useful negative result, not a repair result. The
+white-box intervention is real, because chain-token attention is suppressed
+while matched controls preserve it. However, the semantic outcome is not
+chain-specific: `chain_mask` ties `baseline` and `comparison_token_mask`, and
+`random_token_mask` even preserves the causal footprint in all three items.
+Therefore simple cross-attention token-column reweighting is not sufficient as
+the core method. The next method should move from "mask chain tokens" to a
+stronger counterfactual or verifier-guided intervention: paired seed/noise
+controls, explicit target-removal and footprint-removal objectives, and a
+semantic verifier that rejects target leakage and footprint leakage separately.

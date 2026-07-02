@@ -39,6 +39,7 @@ def build_generation_config(args: argparse.Namespace) -> dict[str, object]:
         "enable_sequential_cpu_offload": args.enable_sequential_cpu_offload,
         "vae_slicing": args.vae_slicing,
         "vae_tiling": args.vae_tiling,
+        "prompt_encode_device_policy": "cpu_when_offloaded_else_selected_device",
     }
 
 
@@ -104,6 +105,39 @@ def output_frames(result: object) -> object:
     return frames[0]
 
 
+def select_prompt_encode_device(args: argparse.Namespace, *, selected_device: str, cuda_available: bool) -> str:
+    if selected_device.startswith("cuda") and cuda_available:
+        if args.enable_sequential_cpu_offload or args.enable_model_cpu_offload:
+            return "cpu"
+    return selected_device
+
+
+def move_prompt_embeds(torch_module, embeds, negative_embeds, *, device: str, dtype):
+    prompt_embeds = embeds.to(device=torch_module.device(device), dtype=dtype)
+    negative_prompt_embeds = None
+    if negative_embeds is not None:
+        negative_prompt_embeds = negative_embeds.to(device=torch_module.device(device), dtype=dtype)
+    return prompt_embeds, negative_prompt_embeds
+
+
+def selected_generation_device(args: argparse.Namespace, torch_module) -> str:
+    selected_device = args.device
+    if selected_device == "auto":
+        selected_device = "cuda" if torch_module.cuda.is_available() else "cpu"
+    if (args.enable_sequential_cpu_offload or args.enable_model_cpu_offload) and torch_module.cuda.is_available():
+        selected_device = "cuda"
+    return selected_device
+
+
+def apply_device_strategy(args: argparse.Namespace, pipe, selected_device: str) -> None:
+    if args.enable_sequential_cpu_offload:
+        pipe.enable_sequential_cpu_offload()
+    elif args.enable_model_cpu_offload:
+        pipe.enable_model_cpu_offload()
+    else:
+        pipe.to(selected_device)
+
+
 def generate_videos(args: argparse.Namespace, items: list[dict[str, object]]) -> None:
     try:
         import torch
@@ -123,26 +157,52 @@ def generate_videos(args: argparse.Namespace, items: list[dict[str, object]]) ->
     if args.vae_tiling and hasattr(pipe, "enable_vae_tiling"):
         pipe.enable_vae_tiling()
 
-    if args.enable_sequential_cpu_offload:
-        pipe.enable_sequential_cpu_offload()
-        selected_device = "cuda" if torch.cuda.is_available() else "cpu"
-    elif args.enable_model_cpu_offload:
-        pipe.enable_model_cpu_offload()
-        selected_device = "cuda" if torch.cuda.is_available() else "cpu"
-    else:
-        selected_device = args.device
-        if selected_device == "auto":
-            selected_device = "cuda" if torch.cuda.is_available() else "cpu"
-        pipe.to(selected_device)
+    selected_device = selected_generation_device(args, torch)
+    encode_device = select_prompt_encode_device(
+        args,
+        selected_device=selected_device,
+        cuda_available=torch.cuda.is_available(),
+    )
+    encoded_items: dict[int, tuple[object, object]] = {}
+    if encode_device != selected_device:
+        for item in items:
+            prompt_embeds, negative_prompt_embeds = pipe.encode_prompt(
+                prompt=str(item["prompt"]),
+                negative_prompt=item.get("negative_prompt"),
+                do_classifier_free_guidance=args.guidance_scale > 1.0,
+                num_videos_per_prompt=1,
+                device=torch.device(encode_device),
+                dtype=torch_dtype,
+            )
+            encoded_items[int(item["index"])] = (prompt_embeds, negative_prompt_embeds)
+
+    apply_device_strategy(args, pipe, selected_device)
 
     for item in items:
         video_path = Path(str(item["video_path"]))
         video_path.parent.mkdir(parents=True, exist_ok=True)
         generator_device = "cuda" if selected_device.startswith("cuda") and torch.cuda.is_available() else "cpu"
         generator = torch.Generator(device=generator_device).manual_seed(int(item["seed"]))
+        prompt = str(item["prompt"])
+        negative_prompt = item.get("negative_prompt")
+        prompt_embeds = None
+        negative_prompt_embeds = None
+        if int(item["index"]) in encoded_items:
+            prompt_embeds, negative_prompt_embeds = encoded_items[int(item["index"])]
+            prompt_embeds, negative_prompt_embeds = move_prompt_embeds(
+                torch,
+                prompt_embeds,
+                negative_prompt_embeds,
+                device=selected_device if selected_device.startswith("cuda") else "cpu",
+                dtype=torch_dtype,
+            )
+            prompt = None
+            negative_prompt = None
         result = pipe(
-            prompt=str(item["prompt"]),
-            negative_prompt=item.get("negative_prompt"),
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            prompt_embeds=prompt_embeds,
+            negative_prompt_embeds=negative_prompt_embeds,
             num_inference_steps=args.steps,
             num_frames=args.num_frames,
             guidance_scale=args.guidance_scale,

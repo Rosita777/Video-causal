@@ -1,0 +1,672 @@
+{
+  "created_at_utc": "2026-07-02T08:17:44.516817+00:00",
+  "baseline": "mvp0_causal_chain_probe",
+  "model": "models/zeroscope_v2_576w",
+  "dry_run": true,
+  "probe_manifest": "experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/probe_manifest.json",
+  "source_probe_name": "zeroscope_mvp0_causal_chain_probe",
+  "conditions": [
+    "target_negative",
+    "target_footprint_negative",
+    "full_chain_steering",
+    "random_direction",
+    "orthogonal_semantic"
+  ],
+  "generation": {
+    "seed": 15000,
+    "num_inference_steps": 10,
+    "guidance_scale": 9.0,
+    "num_frames": 16,
+    "fps": 8,
+    "height": 240,
+    "width": 432,
+    "dtype": "fp16",
+    "device": "auto",
+    "enable_model_cpu_offload": false,
+    "enable_sequential_cpu_offload": false,
+    "vae_slicing": false,
+    "steering_alpha": 0.15,
+    "timestep_window": [
+      4,
+      7
+    ]
+  },
+  "items": [
+    {
+      "probe_index": 0,
+      "pair_id": "fluid_impact_pebble_pond_002",
+      "slice_index": 0,
+      "mechanism_type": "fluid_impact",
+      "condition": "target_negative",
+      "prompt": "A realistic close-up video of a still pond with a calm, undisturbed surface. pebble causes circular ripples spread outward.",
+      "negative_prompt": "pebble",
+      "source_prompt": "A realistic close-up video of a small pebble dropping into a still pond, causing circular ripples to spread outward across the water.",
+      "generation_prompt": "A realistic close-up video of a still pond with a calm, undisturbed surface. pebble causes circular ripples spread outward.",
+      "target_concept": "pebble",
+      "causal_footprint": "circular ripples spread outward",
+      "seed": 15000,
+      "video_path": "experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_a_sweep_dry_run/alpha_0p15_window_4_7/videos/000_fluid-impact-pebble-pond-002_target_negative_seed15000.mp4",
+      "steering": {
+        "enabled": false,
+        "links": [],
+        "minimal_pairs": {
+          "cause": {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, with pebble.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, without pebble."
+          },
+          "mechanism": {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, with pebble impact with water.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, with no impact or causal disturbance."
+          },
+          "footprint": {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, with circular ripples spread outward.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, with no circular ripples spread outward."
+          }
+        },
+        "control_type": "",
+        "control_reference": "",
+        "alpha": 0.15,
+        "timestep_window": [
+          4,
+          7
+        ]
+      }
+    },
+    {
+      "probe_index": 0,
+      "pair_id": "fluid_impact_pebble_pond_002",
+      "slice_index": 0,
+      "mechanism_type": "fluid_impact",
+      "condition": "target_footprint_negative",
+      "prompt": "A realistic close-up video of a still pond with a calm, undisturbed surface. pebble causes circular ripples spread outward.",
+      "negative_prompt": "pebble, circular ripples spread outward",
+      "source_prompt": "A realistic close-up video of a small pebble dropping into a still pond, causing circular ripples to spread outward across the water.",
+      "generation_prompt": "A realistic close-up video of a still pond with a calm, undisturbed surface. pebble causes circular ripples spread outward.",
+      "target_concept": "pebble",
+      "causal_footprint": "circular ripples spread outward",
+      "seed": 15000,
+      "video_path": "experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_a_sweep_dry_run/alpha_0p15_window_4_7/videos/000_fluid-impact-pebble-pond-002_target_footprint_negative_seed15000.mp4",
+      "steering": {
+        "enabled": false,
+        "links": [],
+        "minimal_pairs": {
+          "cause": {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, with pebble.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, without pebble."
+          },
+          "mechanism": {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, with pebble impact with water.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, with no impact or causal disturbance."
+          },
+          "footprint": {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, with circular ripples spread outward.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, with no circular ripples spread outward."
+          }
+        },
+        "control_type": "",
+        "control_reference": "",
+        "alpha": 0.15,
+        "timestep_window": [
+          4,
+          7
+        ]
+      }
+    },
+    {
+      "probe_index": 0,
+      "pair_id": "fluid_impact_pebble_pond_002",
+      "slice_index": 0,
+      "mechanism_type": "fluid_impact",
+      "condition": "full_chain_steering",
+      "prompt": "A realistic close-up video of a still pond with a calm, undisturbed surface. pebble causes circular ripples spread outward.",
+      "negative_prompt": "pebble, circular ripples spread outward",
+      "source_prompt": "A realistic close-up video of a small pebble dropping into a still pond, causing circular ripples to spread outward across the water.",
+      "generation_prompt": "A realistic close-up video of a still pond with a calm, undisturbed surface. pebble causes circular ripples spread outward.",
+      "target_concept": "pebble",
+      "causal_footprint": "circular ripples spread outward",
+      "seed": 15000,
+      "video_path": "experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_a_sweep_dry_run/alpha_0p15_window_4_7/videos/000_fluid-impact-pebble-pond-002_full_chain_steering_seed15000.mp4",
+      "steering": {
+        "enabled": true,
+        "links": [
+          "cause",
+          "mechanism",
+          "footprint"
+        ],
+        "minimal_pairs": {
+          "cause": {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, with pebble.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, without pebble."
+          },
+          "mechanism": {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, with pebble impact with water.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, with no impact or causal disturbance."
+          },
+          "footprint": {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, with circular ripples spread outward.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, with no circular ripples spread outward."
+          }
+        },
+        "control_type": "",
+        "control_reference": "",
+        "alpha": 0.15,
+        "timestep_window": [
+          4,
+          7
+        ]
+      }
+    },
+    {
+      "probe_index": 0,
+      "pair_id": "fluid_impact_pebble_pond_002",
+      "slice_index": 0,
+      "mechanism_type": "fluid_impact",
+      "condition": "random_direction",
+      "prompt": "A realistic close-up video of a still pond with a calm, undisturbed surface. pebble causes circular ripples spread outward.",
+      "negative_prompt": "pebble, circular ripples spread outward",
+      "source_prompt": "A realistic close-up video of a small pebble dropping into a still pond, causing circular ripples to spread outward across the water.",
+      "generation_prompt": "A realistic close-up video of a still pond with a calm, undisturbed surface. pebble causes circular ripples spread outward.",
+      "target_concept": "pebble",
+      "causal_footprint": "circular ripples spread outward",
+      "seed": 15000,
+      "video_path": "experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_a_sweep_dry_run/alpha_0p15_window_4_7/videos/000_fluid-impact-pebble-pond-002_random_direction_seed15000.mp4",
+      "steering": {
+        "enabled": true,
+        "links": [
+          "random"
+        ],
+        "minimal_pairs": {
+          "cause": {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, with pebble.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, without pebble."
+          },
+          "mechanism": {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, with pebble impact with water.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, with no impact or causal disturbance."
+          },
+          "footprint": {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, with circular ripples spread outward.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, with no circular ripples spread outward."
+          }
+        },
+        "control_type": "gaussian_norm_matched",
+        "control_reference": "footprint",
+        "alpha": 0.15,
+        "timestep_window": [
+          4,
+          7
+        ]
+      }
+    },
+    {
+      "probe_index": 0,
+      "pair_id": "fluid_impact_pebble_pond_002",
+      "slice_index": 0,
+      "mechanism_type": "fluid_impact",
+      "condition": "orthogonal_semantic",
+      "prompt": "A realistic close-up video of a still pond with a calm, undisturbed surface. pebble causes circular ripples spread outward.",
+      "negative_prompt": "pebble, circular ripples spread outward",
+      "source_prompt": "A realistic close-up video of a small pebble dropping into a still pond, causing circular ripples to spread outward across the water.",
+      "generation_prompt": "A realistic close-up video of a still pond with a calm, undisturbed surface. pebble causes circular ripples spread outward.",
+      "target_concept": "pebble",
+      "causal_footprint": "circular ripples spread outward",
+      "seed": 15000,
+      "video_path": "experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_a_sweep_dry_run/alpha_0p15_window_4_7/videos/000_fluid-impact-pebble-pond-002_orthogonal_semantic_seed15000.mp4",
+      "steering": {
+        "enabled": true,
+        "links": [
+          "orthogonal_semantic"
+        ],
+        "minimal_pairs": {
+          "cause": {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, with pebble.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, without pebble."
+          },
+          "mechanism": {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, with pebble impact with water.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, with no impact or causal disturbance."
+          },
+          "footprint": {
+            "positive": "A realistic close-up video of a still pond with a calm, undisturbed surface, with circular ripples spread outward.",
+            "negative": "A realistic close-up video of a still pond with a calm, undisturbed surface, with no circular ripples spread outward."
+          },
+          "orthogonal_semantic": {
+            "positive": "A realistic video with birds flying across the sky.",
+            "negative": "A realistic video with no birds in the sky."
+          }
+        },
+        "control_type": "unrelated_semantic_direction",
+        "control_reference": "",
+        "alpha": 0.15,
+        "timestep_window": [
+          4,
+          7
+        ]
+      }
+    },
+    {
+      "probe_index": 1,
+      "pair_id": "v2_fracture_damage_black_hockey_puck_a_star_shaped_crack_spreads_across_t_side_033",
+      "slice_index": 20,
+      "mechanism_type": "fracture_damage",
+      "condition": "target_negative",
+      "prompt": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack. black hockey puck causes a star-shaped crack spreads across the mirror.",
+      "negative_prompt": "black hockey puck",
+      "source_prompt": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack. A clearly visible black hockey puck enters the frame and remains visible before contact. The black hockey puck slides into the mirror tile after the target is clearly visible, causing a star-shaped crack spreads across the mirror; the effect begins only after contact and remains visible for several frames.",
+      "generation_prompt": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack. black hockey puck causes a star-shaped crack spreads across the mirror.",
+      "target_concept": "black hockey puck",
+      "causal_footprint": "a star-shaped crack spreads across the mirror",
+      "seed": 15001,
+      "video_path": "experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_a_sweep_dry_run/alpha_0p15_window_4_7/videos/001_v2-fracture-damage-black-hockey-puck-a-star-shaped-crack-spreads-across_target_negative_seed15001.mp4",
+      "steering": {
+        "enabled": false,
+        "links": [],
+        "minimal_pairs": {
+          "cause": {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with black hockey puck.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, without black hockey puck."
+          },
+          "mechanism": {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with black hockey puck impact causing fracture.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with no impact or causal disturbance."
+          },
+          "footprint": {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with a star-shaped crack spreads across the mirror.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with no star-shaped crack spreads across the mirror."
+          }
+        },
+        "control_type": "",
+        "control_reference": "",
+        "alpha": 0.15,
+        "timestep_window": [
+          4,
+          7
+        ]
+      }
+    },
+    {
+      "probe_index": 1,
+      "pair_id": "v2_fracture_damage_black_hockey_puck_a_star_shaped_crack_spreads_across_t_side_033",
+      "slice_index": 20,
+      "mechanism_type": "fracture_damage",
+      "condition": "target_footprint_negative",
+      "prompt": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack. black hockey puck causes a star-shaped crack spreads across the mirror.",
+      "negative_prompt": "black hockey puck, a star-shaped crack spreads across the mirror",
+      "source_prompt": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack. A clearly visible black hockey puck enters the frame and remains visible before contact. The black hockey puck slides into the mirror tile after the target is clearly visible, causing a star-shaped crack spreads across the mirror; the effect begins only after contact and remains visible for several frames.",
+      "generation_prompt": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack. black hockey puck causes a star-shaped crack spreads across the mirror.",
+      "target_concept": "black hockey puck",
+      "causal_footprint": "a star-shaped crack spreads across the mirror",
+      "seed": 15001,
+      "video_path": "experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_a_sweep_dry_run/alpha_0p15_window_4_7/videos/001_v2-fracture-damage-black-hockey-puck-a-star-shaped-crack-spreads-across_target_footprint_negative_seed15001.mp4",
+      "steering": {
+        "enabled": false,
+        "links": [],
+        "minimal_pairs": {
+          "cause": {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with black hockey puck.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, without black hockey puck."
+          },
+          "mechanism": {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with black hockey puck impact causing fracture.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with no impact or causal disturbance."
+          },
+          "footprint": {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with a star-shaped crack spreads across the mirror.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with no star-shaped crack spreads across the mirror."
+          }
+        },
+        "control_type": "",
+        "control_reference": "",
+        "alpha": 0.15,
+        "timestep_window": [
+          4,
+          7
+        ]
+      }
+    },
+    {
+      "probe_index": 1,
+      "pair_id": "v2_fracture_damage_black_hockey_puck_a_star_shaped_crack_spreads_across_t_side_033",
+      "slice_index": 20,
+      "mechanism_type": "fracture_damage",
+      "condition": "full_chain_steering",
+      "prompt": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack. black hockey puck causes a star-shaped crack spreads across the mirror.",
+      "negative_prompt": "black hockey puck, a star-shaped crack spreads across the mirror",
+      "source_prompt": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack. A clearly visible black hockey puck enters the frame and remains visible before contact. The black hockey puck slides into the mirror tile after the target is clearly visible, causing a star-shaped crack spreads across the mirror; the effect begins only after contact and remains visible for several frames.",
+      "generation_prompt": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack. black hockey puck causes a star-shaped crack spreads across the mirror.",
+      "target_concept": "black hockey puck",
+      "causal_footprint": "a star-shaped crack spreads across the mirror",
+      "seed": 15001,
+      "video_path": "experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_a_sweep_dry_run/alpha_0p15_window_4_7/videos/001_v2-fracture-damage-black-hockey-puck-a-star-shaped-crack-spreads-across_full_chain_steering_seed15001.mp4",
+      "steering": {
+        "enabled": true,
+        "links": [
+          "cause",
+          "mechanism",
+          "footprint"
+        ],
+        "minimal_pairs": {
+          "cause": {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with black hockey puck.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, without black hockey puck."
+          },
+          "mechanism": {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with black hockey puck impact causing fracture.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with no impact or causal disturbance."
+          },
+          "footprint": {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with a star-shaped crack spreads across the mirror.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with no star-shaped crack spreads across the mirror."
+          }
+        },
+        "control_type": "",
+        "control_reference": "",
+        "alpha": 0.15,
+        "timestep_window": [
+          4,
+          7
+        ]
+      }
+    },
+    {
+      "probe_index": 1,
+      "pair_id": "v2_fracture_damage_black_hockey_puck_a_star_shaped_crack_spreads_across_t_side_033",
+      "slice_index": 20,
+      "mechanism_type": "fracture_damage",
+      "condition": "random_direction",
+      "prompt": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack. black hockey puck causes a star-shaped crack spreads across the mirror.",
+      "negative_prompt": "black hockey puck, a star-shaped crack spreads across the mirror",
+      "source_prompt": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack. A clearly visible black hockey puck enters the frame and remains visible before contact. The black hockey puck slides into the mirror tile after the target is clearly visible, causing a star-shaped crack spreads across the mirror; the effect begins only after contact and remains visible for several frames.",
+      "generation_prompt": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack. black hockey puck causes a star-shaped crack spreads across the mirror.",
+      "target_concept": "black hockey puck",
+      "causal_footprint": "a star-shaped crack spreads across the mirror",
+      "seed": 15001,
+      "video_path": "experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_a_sweep_dry_run/alpha_0p15_window_4_7/videos/001_v2-fracture-damage-black-hockey-puck-a-star-shaped-crack-spreads-across_random_direction_seed15001.mp4",
+      "steering": {
+        "enabled": true,
+        "links": [
+          "random"
+        ],
+        "minimal_pairs": {
+          "cause": {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with black hockey puck.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, without black hockey puck."
+          },
+          "mechanism": {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with black hockey puck impact causing fracture.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with no impact or causal disturbance."
+          },
+          "footprint": {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with a star-shaped crack spreads across the mirror.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with no star-shaped crack spreads across the mirror."
+          }
+        },
+        "control_type": "gaussian_norm_matched",
+        "control_reference": "footprint",
+        "alpha": 0.15,
+        "timestep_window": [
+          4,
+          7
+        ]
+      }
+    },
+    {
+      "probe_index": 1,
+      "pair_id": "v2_fracture_damage_black_hockey_puck_a_star_shaped_crack_spreads_across_t_side_033",
+      "slice_index": 20,
+      "mechanism_type": "fracture_damage",
+      "condition": "orthogonal_semantic",
+      "prompt": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack. black hockey puck causes a star-shaped crack spreads across the mirror.",
+      "negative_prompt": "black hockey puck, a star-shaped crack spreads across the mirror",
+      "source_prompt": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack. A clearly visible black hockey puck enters the frame and remains visible before contact. The black hockey puck slides into the mirror tile after the target is clearly visible, causing a star-shaped crack spreads across the mirror; the effect begins only after contact and remains visible for several frames.",
+      "generation_prompt": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack. black hockey puck causes a star-shaped crack spreads across the mirror.",
+      "target_concept": "black hockey puck",
+      "causal_footprint": "a star-shaped crack spreads across the mirror",
+      "seed": 15001,
+      "video_path": "experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_a_sweep_dry_run/alpha_0p15_window_4_7/videos/001_v2-fracture-damage-black-hockey-puck-a-star-shaped-crack-spreads-across_orthogonal_semantic_seed15001.mp4",
+      "steering": {
+        "enabled": true,
+        "links": [
+          "orthogonal_semantic"
+        ],
+        "minimal_pairs": {
+          "cause": {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with black hockey puck.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, without black hockey puck."
+          },
+          "mechanism": {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with black hockey puck impact causing fracture.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with no impact or causal disturbance."
+          },
+          "footprint": {
+            "positive": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with a star-shaped crack spreads across the mirror.",
+            "negative": "A realistic fixed-camera close-up video from a side close-up view. The scene starts with an intact mirror tile, with no pre-existing mirror crack, with no star-shaped crack spreads across the mirror."
+          },
+          "orthogonal_semantic": {
+            "positive": "A realistic video with birds flying across the sky.",
+            "negative": "A realistic video with no birds in the sky."
+          }
+        },
+        "control_type": "unrelated_semantic_direction",
+        "control_reference": "",
+        "alpha": 0.15,
+        "timestep_window": [
+          4,
+          7
+        ]
+      }
+    },
+    {
+      "probe_index": 2,
+      "pair_id": "elastic_deformation_soccer_net_001",
+      "slice_index": 1,
+      "mechanism_type": "elastic_deformation",
+      "condition": "target_negative",
+      "prompt": "A realistic close-up video of a still goal net hanging straight. soccer ball causes net stretches and ripples backward.",
+      "negative_prompt": "soccer ball",
+      "source_prompt": "A realistic close-up video of a soccer ball hitting a goal net, causing the net to stretch and ripple backward.",
+      "generation_prompt": "A realistic close-up video of a still goal net hanging straight. soccer ball causes net stretches and ripples backward.",
+      "target_concept": "soccer ball",
+      "causal_footprint": "net stretches and ripples backward",
+      "seed": 15002,
+      "video_path": "experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_a_sweep_dry_run/alpha_0p15_window_4_7/videos/002_elastic-deformation-soccer-net-001_target_negative_seed15002.mp4",
+      "steering": {
+        "enabled": false,
+        "links": [],
+        "minimal_pairs": {
+          "cause": {
+            "positive": "A realistic close-up video of a still goal net hanging straight, with soccer ball.",
+            "negative": "A realistic close-up video of a still goal net hanging straight, without soccer ball."
+          },
+          "mechanism": {
+            "positive": "A realistic close-up video of a still goal net hanging straight, with soccer ball collision causing elastic deformation.",
+            "negative": "A realistic close-up video of a still goal net hanging straight, with no impact or causal disturbance."
+          },
+          "footprint": {
+            "positive": "A realistic close-up video of a still goal net hanging straight, with net stretches and ripples backward.",
+            "negative": "A realistic close-up video of a still goal net hanging straight, with no net stretches and ripples backward."
+          }
+        },
+        "control_type": "",
+        "control_reference": "",
+        "alpha": 0.15,
+        "timestep_window": [
+          4,
+          7
+        ]
+      }
+    },
+    {
+      "probe_index": 2,
+      "pair_id": "elastic_deformation_soccer_net_001",
+      "slice_index": 1,
+      "mechanism_type": "elastic_deformation",
+      "condition": "target_footprint_negative",
+      "prompt": "A realistic close-up video of a still goal net hanging straight. soccer ball causes net stretches and ripples backward.",
+      "negative_prompt": "soccer ball, net stretches and ripples backward",
+      "source_prompt": "A realistic close-up video of a soccer ball hitting a goal net, causing the net to stretch and ripple backward.",
+      "generation_prompt": "A realistic close-up video of a still goal net hanging straight. soccer ball causes net stretches and ripples backward.",
+      "target_concept": "soccer ball",
+      "causal_footprint": "net stretches and ripples backward",
+      "seed": 15002,
+      "video_path": "experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_a_sweep_dry_run/alpha_0p15_window_4_7/videos/002_elastic-deformation-soccer-net-001_target_footprint_negative_seed15002.mp4",
+      "steering": {
+        "enabled": false,
+        "links": [],
+        "minimal_pairs": {
+          "cause": {
+            "positive": "A realistic close-up video of a still goal net hanging straight, with soccer ball.",
+            "negative": "A realistic close-up video of a still goal net hanging straight, without soccer ball."
+          },
+          "mechanism": {
+            "positive": "A realistic close-up video of a still goal net hanging straight, with soccer ball collision causing elastic deformation.",
+            "negative": "A realistic close-up video of a still goal net hanging straight, with no impact or causal disturbance."
+          },
+          "footprint": {
+            "positive": "A realistic close-up video of a still goal net hanging straight, with net stretches and ripples backward.",
+            "negative": "A realistic close-up video of a still goal net hanging straight, with no net stretches and ripples backward."
+          }
+        },
+        "control_type": "",
+        "control_reference": "",
+        "alpha": 0.15,
+        "timestep_window": [
+          4,
+          7
+        ]
+      }
+    },
+    {
+      "probe_index": 2,
+      "pair_id": "elastic_deformation_soccer_net_001",
+      "slice_index": 1,
+      "mechanism_type": "elastic_deformation",
+      "condition": "full_chain_steering",
+      "prompt": "A realistic close-up video of a still goal net hanging straight. soccer ball causes net stretches and ripples backward.",
+      "negative_prompt": "soccer ball, net stretches and ripples backward",
+      "source_prompt": "A realistic close-up video of a soccer ball hitting a goal net, causing the net to stretch and ripple backward.",
+      "generation_prompt": "A realistic close-up video of a still goal net hanging straight. soccer ball causes net stretches and ripples backward.",
+      "target_concept": "soccer ball",
+      "causal_footprint": "net stretches and ripples backward",
+      "seed": 15002,
+      "video_path": "experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_a_sweep_dry_run/alpha_0p15_window_4_7/videos/002_elastic-deformation-soccer-net-001_full_chain_steering_seed15002.mp4",
+      "steering": {
+        "enabled": true,
+        "links": [
+          "cause",
+          "mechanism",
+          "footprint"
+        ],
+        "minimal_pairs": {
+          "cause": {
+            "positive": "A realistic close-up video of a still goal net hanging straight, with soccer ball.",
+            "negative": "A realistic close-up video of a still goal net hanging straight, without soccer ball."
+          },
+          "mechanism": {
+            "positive": "A realistic close-up video of a still goal net hanging straight, with soccer ball collision causing elastic deformation.",
+            "negative": "A realistic close-up video of a still goal net hanging straight, with no impact or causal disturbance."
+          },
+          "footprint": {
+            "positive": "A realistic close-up video of a still goal net hanging straight, with net stretches and ripples backward.",
+            "negative": "A realistic close-up video of a still goal net hanging straight, with no net stretches and ripples backward."
+          }
+        },
+        "control_type": "",
+        "control_reference": "",
+        "alpha": 0.15,
+        "timestep_window": [
+          4,
+          7
+        ]
+      }
+    },
+    {
+      "probe_index": 2,
+      "pair_id": "elastic_deformation_soccer_net_001",
+      "slice_index": 1,
+      "mechanism_type": "elastic_deformation",
+      "condition": "random_direction",
+      "prompt": "A realistic close-up video of a still goal net hanging straight. soccer ball causes net stretches and ripples backward.",
+      "negative_prompt": "soccer ball, net stretches and ripples backward",
+      "source_prompt": "A realistic close-up video of a soccer ball hitting a goal net, causing the net to stretch and ripple backward.",
+      "generation_prompt": "A realistic close-up video of a still goal net hanging straight. soccer ball causes net stretches and ripples backward.",
+      "target_concept": "soccer ball",
+      "causal_footprint": "net stretches and ripples backward",
+      "seed": 15002,
+      "video_path": "experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_a_sweep_dry_run/alpha_0p15_window_4_7/videos/002_elastic-deformation-soccer-net-001_random_direction_seed15002.mp4",
+      "steering": {
+        "enabled": true,
+        "links": [
+          "random"
+        ],
+        "minimal_pairs": {
+          "cause": {
+            "positive": "A realistic close-up video of a still goal net hanging straight, with soccer ball.",
+            "negative": "A realistic close-up video of a still goal net hanging straight, without soccer ball."
+          },
+          "mechanism": {
+            "positive": "A realistic close-up video of a still goal net hanging straight, with soccer ball collision causing elastic deformation.",
+            "negative": "A realistic close-up video of a still goal net hanging straight, with no impact or causal disturbance."
+          },
+          "footprint": {
+            "positive": "A realistic close-up video of a still goal net hanging straight, with net stretches and ripples backward.",
+            "negative": "A realistic close-up video of a still goal net hanging straight, with no net stretches and ripples backward."
+          }
+        },
+        "control_type": "gaussian_norm_matched",
+        "control_reference": "footprint",
+        "alpha": 0.15,
+        "timestep_window": [
+          4,
+          7
+        ]
+      }
+    },
+    {
+      "probe_index": 2,
+      "pair_id": "elastic_deformation_soccer_net_001",
+      "slice_index": 1,
+      "mechanism_type": "elastic_deformation",
+      "condition": "orthogonal_semantic",
+      "prompt": "A realistic close-up video of a still goal net hanging straight. soccer ball causes net stretches and ripples backward.",
+      "negative_prompt": "soccer ball, net stretches and ripples backward",
+      "source_prompt": "A realistic close-up video of a soccer ball hitting a goal net, causing the net to stretch and ripple backward.",
+      "generation_prompt": "A realistic close-up video of a still goal net hanging straight. soccer ball causes net stretches and ripples backward.",
+      "target_concept": "soccer ball",
+      "causal_footprint": "net stretches and ripples backward",
+      "seed": 15002,
+      "video_path": "experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/phase_a_sweep_dry_run/alpha_0p15_window_4_7/videos/002_elastic-deformation-soccer-net-001_orthogonal_semantic_seed15002.mp4",
+      "steering": {
+        "enabled": true,
+        "links": [
+          "orthogonal_semantic"
+        ],
+        "minimal_pairs": {
+          "cause": {
+            "positive": "A realistic close-up video of a still goal net hanging straight, with soccer ball.",
+            "negative": "A realistic close-up video of a still goal net hanging straight, without soccer ball."
+          },
+          "mechanism": {
+            "positive": "A realistic close-up video of a still goal net hanging straight, with soccer ball collision causing elastic deformation.",
+            "negative": "A realistic close-up video of a still goal net hanging straight, with no impact or causal disturbance."
+          },
+          "footprint": {
+            "positive": "A realistic close-up video of a still goal net hanging straight, with net stretches and ripples backward.",
+            "negative": "A realistic close-up video of a still goal net hanging straight, with no net stretches and ripples backward."
+          },
+          "orthogonal_semantic": {
+            "positive": "A realistic video with birds flying across the sky.",
+            "negative": "A realistic video with no birds in the sky."
+          }
+        },
+        "control_type": "unrelated_semantic_direction",
+        "control_reference": "",
+        "alpha": 0.15,
+        "timestep_window": [
+          4,
+          7
+        ]
+      }
+    }
+  ]
+}
