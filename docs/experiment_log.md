@@ -3883,3 +3883,57 @@ PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
 
 10 passed
 ```
+
+### 2026-07-03 C0.1 real 60-video pilot generation
+
+**Run:** Generated the real C0.1 seed-matched factorial gate pilot on physical
+GPU 4 using `CUDA_VISIBLE_DEVICES=4`, ZeroScope, `steps=10`, `num_frames=16`,
+`240x432`, `fp16`, model CPU offload, and VAE slicing.
+
+```text
+experiments/method_probe/c01_factorial_gate_20260703_real_s10_f16_240x432/
+```
+
+The run completed successfully and wrote:
+
+```text
+experiments/method_probe/c01_factorial_gate_20260703_real_s10_f16_240x432/generation_manifest.json
+```
+
+The manifest contains 60 planned/generated rows:
+
+```text
+3 items x 5 seeds x 4 cells = 60 videos
+```
+
+The four cells are balanced with 15 rows each for `original`,
+`remove_target`, `footprint_only`, and `target_only`. All 60 referenced local
+video files exist in the ignored `videos/` directory.
+
+**Blinded review package:** Built the human review package with five-frame
+strips:
+
+```text
+experiments/evaluation/c01_factorial_gate_20260703_real_s10_f16_240x432/blind_review.csv
+experiments/evaluation/c01_factorial_gate_20260703_real_s10_f16_240x432/answer_key.csv
+experiments/evaluation/c01_factorial_gate_20260703_real_s10_f16_240x432/review_manifest.json
+experiments/evaluation/c01_factorial_gate_20260703_real_s10_f16_240x432/frame_strips/
+```
+
+Integrity checks:
+
+```text
+review_rows=60
+answer_key_rows=60
+frame_strip_count=60
+variant_label_leaks_in_blind_review=0
+nonempty_video_path_in_blind_review=0
+review_ids_unique=true
+review_and_key_ids_match=true
+missing_frame_strips=0
+```
+
+**Next gate:** Do not score this as C0.1 yet. Per the fable method review, the
+next step is a human spot-check of 10 to 15 generated rows before bulk review,
+then reviewer labeling with `uncertain` tracking and at least 10 overlapping
+rows for inter-rater agreement.
