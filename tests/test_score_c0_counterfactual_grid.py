@@ -162,9 +162,45 @@ def test_cli_writes_variant_item_and_summary_outputs(tmp_path):
     assert result.returncode == 0, result.stderr
     assert (output_dir / "c0_variant_scores.csv").exists()
     assert (output_dir / "c0_item_scores.csv").exists()
+    valid_originals = output_dir / "c0_valid_originals.csv"
+    assert valid_originals.exists()
+    valid_text = valid_originals.read_text(encoding="utf-8")
+    assert "good_item" in valid_text
+    assert "failed_item" in valid_text
     summary = json.loads((output_dir / "c0_summary.json").read_text(encoding="utf-8"))
     assert summary["total_items"] == 2
     assert summary["original_valid_items"] == 2
     assert summary["counterfactual_pass_items"] == 1
     assert summary["c0_grid_pass_items"] == 1
     assert summary["variant_pass_counts"]["target_only"] == 1
+
+
+def test_cli_valid_originals_export_excludes_invalid_original_items(tmp_path):
+    rows = []
+    rows.extend(complete_item_rows("good_item", item_index=0))
+    invalid = complete_item_rows("invalid_original", item_index=1)
+    invalid[0]["target_visible"] = "no"
+    rows.extend(invalid)
+    predictions = tmp_path / "vlm_predictions.csv"
+    output_dir = tmp_path / "scores"
+    write_predictions_csv(predictions, rows)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(SCORER_PATH),
+            "--predictions-csv",
+            str(predictions),
+            "--output-dir",
+            str(output_dir),
+        ],
+        cwd=PROJECT_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    with (output_dir / "c0_valid_originals.csv").open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert [row["pair_id"] for row in rows] == ["good_item"]
+    assert rows[0]["original_valid"] == "true"

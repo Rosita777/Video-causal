@@ -3383,6 +3383,66 @@ PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
 10 passed
 ```
 
+### 2026-07-03 C0.1 factorial gate dry run
+
+**Implementation:** Added the C0.1 seed-matched factorial gate infrastructure.
+The C0 runner now supports `--seeds-per-item`; the C0.1 review builder writes
+a blinded human-review CSV plus a separate answer key; and the C0.1 scorer
+joins human labels to the answer key and applies the 4/5 and 3/5 gate
+thresholds.
+
+The blind review artifact intentionally does not expose the variant label,
+expected target/footprint states, prompt text, or raw video path. The answer key
+keeps those fields for later scoring.
+
+**Dry-run artifacts:**
+
+```text
+experiments/method_probe/c01_factorial_gate_20260703_dryrun/generation_manifest.json
+experiments/evaluation/c01_factorial_gate_20260703_dryrun/blind_review.csv
+experiments/evaluation/c01_factorial_gate_20260703_dryrun/answer_key.csv
+experiments/evaluation/c01_factorial_gate_20260703_dryrun/synthetic_scores/
+```
+
+The dry run expanded 3 MVP-0 items into 60 planned rows:
+
+```text
+3 items x 5 seeds x 4 cells = 60 rows
+```
+
+Variant distribution is balanced: 15 rows each for `original`,
+`remove_target`, `footprint_only`, and `target_only`. A leakage check over the
+blind review CSV found zero exposed cell labels. A synthetic completed-review
+smoke, with labels copied from the answer key, produced `3/3` gate passes as
+expected.
+
+**Tests:**
+
+```text
+PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python -m pytest \
+  tests/test_run_c0_counterfactual_grid.py \
+  tests/test_build_c01_factorial_gate_review.py \
+  tests/test_score_c01_factorial_gate.py \
+  tests/test_build_c0_counterfactual_review.py \
+  tests/test_run_zeroscope_attention_probe.py -q
+
+26 passed
+```
+
+**Fable implementation review:** After implementation, `claude-fable-5`
+reviewed C0.1 as a method and engineering advisor, not as a video judge. It
+found no blocking issue before the real 60-video pilot, provided the result is
+framed only as a generation-validity gate. The required pilot guardrails are:
+manually spot-check 10 to 15 generated videos before bulk review, track
+`uncertain` labels by reviewer and cell type, and include at least 10
+overlapping rows for inter-rater agreement. Full notes are in
+`docs/fable_c01_implementation_review_2026-07-03.md`.
+
+**Decision:** The C0.1 gate infrastructure is ready for a real 60-video pilot,
+but no GPU generation or C1 repair claim is made in this step. The real pilot
+should run only after confirming the GPU and review plan.
+
 **Important measurement fix:** The first smoke run mixed classifier-free
 guidance unconditional and text-conditioned attention batches. The processor
 now slices the text-conditioned half of the expanded video batch before
@@ -3709,6 +3769,7 @@ writes:
 ```text
 experiments/evaluation/c0_counterfactual_grid_quality3_fable_20260703/c0_scores/c0_variant_scores.csv
 experiments/evaluation/c0_counterfactual_grid_quality3_fable_20260703/c0_scores/c0_item_scores.csv
+experiments/evaluation/c0_counterfactual_grid_quality3_fable_20260703/c0_scores/c0_valid_originals.csv
 experiments/evaluation/c0_counterfactual_grid_quality3_fable_20260703/c0_scores/c0_summary.json
 ```
 
@@ -3749,4 +3810,76 @@ PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
   tests/test_build_c0_counterfactual_review.py -q
 
 8 passed
+```
+
+### 2026-07-03 C0 base-validity screening setup
+
+**Implementation:** Added original-only screening support to
+`scripts/adapters/run_c0_counterfactual_grid.py` via `--variant-set original`.
+This preserves the default four-cell grid, but lets us generate only the base
+`original` cell for a larger candidate set. The scorer now also writes
+`c0_valid_originals.csv`, which is the handoff list for full-grid follow-up.
+
+**Dry-run screen:** Built an original-only screening manifest for all 12 current
+MVP-0 candidates:
+
+```text
+experiments/method_probe/c0_base_validity_screen_20260703_dryrun/generation_manifest.json
+experiments/evaluation/c0_base_validity_screen_20260703_dryrun/review.csv
+```
+
+The manifest contains 12 generation rows and `variant_grid=["original"]`.
+
+**Pilot valid-original export:** Re-running the scorer on the existing 3-item
+pilot exports one valid original item:
+
+```text
+v2_fracture_damage_black_hockey_puck_a_star_shaped_crack_spreads_across_t_side_033
+```
+
+**Next real screening command:**
+
+```text
+PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python \
+  scripts/adapters/run_c0_counterfactual_grid.py \
+  --probe-manifest experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/probe_manifest.json \
+  --output-dir experiments/method_probe/c0_base_validity_screen_20260703_real_s10_f16_240x432 \
+  --seed 34000 \
+  --variant-set original \
+  --steps 10 \
+  --num-frames 16 \
+  --height 240 \
+  --width 432 \
+  --guidance-scale 9.0 \
+  --dtype fp16 \
+  --device cuda:0
+```
+
+Then build review rows, run fable, and score:
+
+```text
+PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python \
+  scripts/build_c0_counterfactual_review.py \
+  --generation-manifest experiments/method_probe/c0_base_validity_screen_20260703_real_s10_f16_240x432/generation_manifest.json \
+  --output-dir experiments/evaluation/c0_base_validity_screen_20260703_real_s10_f16_240x432_fable
+
+PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python \
+  scripts/score_c0_counterfactual_grid.py \
+  --predictions-csv experiments/evaluation/c0_base_validity_screen_20260703_real_s10_f16_240x432_fable/fable_run/vlm_predictions.csv \
+  --output-dir experiments/evaluation/c0_base_validity_screen_20260703_real_s10_f16_240x432_fable/c0_scores
+```
+
+**Tests:**
+
+```text
+PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python -m pytest \
+  tests/test_score_c0_counterfactual_grid.py \
+  tests/test_run_c0_counterfactual_grid.py \
+  tests/test_build_c0_counterfactual_review.py -q
+
+10 passed
 ```

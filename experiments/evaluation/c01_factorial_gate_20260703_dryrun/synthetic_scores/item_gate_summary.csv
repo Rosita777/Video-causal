@@ -1,0 +1,4 @@
+pair_id,item_index,total_cells,missing_variants,original_total,original_successes,original_threshold,remove_target_total,remove_target_successes,remove_target_threshold,footprint_only_total,footprint_only_successes,footprint_only_threshold,target_only_total,target_only_successes,target_only_threshold,gate_status,rejection_reasons
+fluid_impact_pebble_pond_002,0,20,,5,5,4,5,5,4,5,5,3,5,5,4,pass,
+v2_fracture_damage_black_hockey_puck_a_star_shaped_crack_spreads_across_t_side_033,1,20,,5,5,4,5,5,4,5,5,3,5,5,4,pass,
+elastic_deformation_soccer_net_001,2,20,,5,5,4,5,5,4,5,5,3,5,5,4,pass,

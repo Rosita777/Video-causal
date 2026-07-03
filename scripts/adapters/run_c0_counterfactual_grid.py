@@ -23,6 +23,10 @@ from build_mvp0_causal_chain_probe import scene_context  # noqa: E402
 
 BASELINE = "c0_counterfactual_grid"
 VARIANTS = ["original", "remove_target", "footprint_only", "target_only"]
+VARIANT_SETS = {
+    "all": VARIANTS,
+    "original": ["original"],
+}
 VARIANT_LABELS = {
     "original": "original target plus footprint",
     "remove_target": "remove target and footprint",
@@ -62,7 +66,8 @@ def generation_config(args: argparse.Namespace) -> dict[str, object]:
         "enable_model_cpu_offload": args.enable_model_cpu_offload,
         "enable_sequential_cpu_offload": args.enable_sequential_cpu_offload,
         "vae_slicing": args.vae_slicing,
-        "variant_grid": list(VARIANTS),
+        "seeds_per_item": args.seeds_per_item,
+        "variant_grid": selected_variants(args),
     }
 
 
@@ -124,48 +129,58 @@ def variant_prompt(item: dict[str, object], variant: str) -> tuple[str, str]:
     raise ValueError(f"unknown variant: {variant}")
 
 
+def selected_variants(args: argparse.Namespace) -> list[str]:
+    return list(VARIANT_SETS[str(args.variant_set)])
+
+
 def build_items(args: argparse.Namespace, probe_items: Sequence[dict]) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
+    variants = selected_variants(args)
     for item in probe_items:
         probe_index = int(item.get("probe_index", len(rows)))
-        seed = args.seed + probe_index
         pair_id = str(item.get("pair_id", f"item_{probe_index}"))
         slug = slugify(pair_id)
-        for variant in VARIANTS:
-            prompt, negative_prompt = variant_prompt(item, variant)
-            expected_target, expected_footprint = EXPECTED_STATES[variant]
-            video_path = (
-                args.output_dir
-                / "videos"
-                / f"{probe_index:03d}_{slug}_{variant}_seed{seed}.mp4"
-            )
-            rows.append(
-                {
-                    "probe_index": probe_index,
-                    "pair_id": pair_id,
-                    "slice_index": item.get("slice_index", probe_index),
-                    "source_index": str(item.get("source_index", "")),
-                    "mechanism_type": str(item.get("mechanism_type", "")),
-                    "variant": variant,
-                    "variant_label": VARIANT_LABELS[variant],
-                    "variant_role": variant,
-                    "prompt": prompt,
-                    "negative_prompt": negative_prompt,
-                    "source_prompt": str(item.get("source_prompt", "")),
-                    "generation_prompt": str(
-                        item.get("generation_prompt") or item.get("source_prompt", "")
-                    ),
-                    "counterfactual_prompt": str(item.get("counterfactual_prompt", "")),
-                    "control_prompt": str(item.get("control_prompt", "")),
-                    "target_concept": str(item.get("target_concept", "")),
-                    "causal_footprint": str(item.get("causal_footprint", "")),
-                    "expected_target_visible": expected_target,
-                    "expected_footprint_visible": expected_footprint,
-                    "seed": seed,
-                    "video_path": str(video_path),
-                    "clean_video_path": str(item.get("clean_video_path", "")),
-                }
-            )
+        for seed_index in range(args.seeds_per_item):
+            seed = args.seed + probe_index + seed_index
+            for variant in variants:
+                prompt, negative_prompt = variant_prompt(item, variant)
+                expected_target, expected_footprint = EXPECTED_STATES[variant]
+                if args.seeds_per_item == 1:
+                    video_name = f"{probe_index:03d}_{slug}_{variant}_seed{seed}.mp4"
+                else:
+                    video_name = (
+                        f"{probe_index:03d}_{slug}_seed{seed_index:02d}_"
+                        f"{variant}_seed{seed}.mp4"
+                    )
+                video_path = args.output_dir / "videos" / video_name
+                rows.append(
+                    {
+                        "probe_index": probe_index,
+                        "pair_id": pair_id,
+                        "slice_index": item.get("slice_index", probe_index),
+                        "source_index": str(item.get("source_index", "")),
+                        "mechanism_type": str(item.get("mechanism_type", "")),
+                        "seed_index": seed_index,
+                        "variant": variant,
+                        "variant_label": VARIANT_LABELS[variant],
+                        "variant_role": variant,
+                        "prompt": prompt,
+                        "negative_prompt": negative_prompt,
+                        "source_prompt": str(item.get("source_prompt", "")),
+                        "generation_prompt": str(
+                            item.get("generation_prompt") or item.get("source_prompt", "")
+                        ),
+                        "counterfactual_prompt": str(item.get("counterfactual_prompt", "")),
+                        "control_prompt": str(item.get("control_prompt", "")),
+                        "target_concept": str(item.get("target_concept", "")),
+                        "causal_footprint": str(item.get("causal_footprint", "")),
+                        "expected_target_visible": expected_target,
+                        "expected_footprint_visible": expected_footprint,
+                        "seed": seed,
+                        "video_path": str(video_path),
+                        "clean_video_path": str(item.get("clean_video_path", "")),
+                    }
+                )
     return rows
 
 
@@ -183,7 +198,7 @@ def write_manifest(
         "dry_run": args.dry_run,
         "probe_manifest": str(args.probe_manifest),
         "source_probe_name": source_manifest.get("probe_name", ""),
-        "variant_grid": list(VARIANTS),
+        "variant_grid": selected_variants(args),
         "generation": generation_config(args),
         "items": list(rows),
     }
@@ -246,6 +261,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--enable-sequential-cpu-offload", action="store_true")
     parser.add_argument("--vae-slicing", action="store_true")
     parser.add_argument("--limit-items", type=int)
+    parser.add_argument("--seeds-per-item", type=int, default=1)
+    parser.add_argument("--variant-set", choices=sorted(VARIANT_SETS), default="all")
     parser.add_argument("--dry-run", action="store_true")
     return parser
 
@@ -255,6 +272,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.limit_items is not None and args.limit_items <= 0:
         parser.error("--limit-items must be positive")
+    if args.seeds_per_item <= 0:
+        parser.error("--seeds-per-item must be positive")
     if args.steps <= 0:
         parser.error("--steps must be positive")
     if args.num_frames <= 0:

@@ -119,6 +119,66 @@ def test_c0_counterfactual_grid_dry_run_writes_manifest(tmp_path):
     assert len(manifest["items"]) == 4
 
 
+def test_c0_counterfactual_grid_original_only_dry_run_writes_screening_manifest(tmp_path):
+    probe_manifest = write_probe_manifest(tmp_path)
+    output_dir = tmp_path / "c0_screen"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(RUNNER_PATH),
+            "--probe-manifest",
+            str(probe_manifest),
+            "--output-dir",
+            str(output_dir),
+            "--seed",
+            "33000",
+            "--variant-set",
+            "original",
+            "--dry-run",
+        ],
+        cwd=PROJECT_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    manifest = json.loads((output_dir / "generation_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["variant_grid"] == ["original"]
+    assert len(manifest["items"]) == 1
+    assert manifest["items"][0]["variant"] == "original"
+    assert manifest["items"][0]["expected_target_visible"] == "yes"
+    assert manifest["items"][0]["expected_footprint_visible"] == "yes"
+
+
+def test_build_items_expands_each_probe_item_over_multiple_seeds(tmp_path):
+    module = load_runner_module()
+    probe_manifest = write_probe_manifest(tmp_path)
+    args = module.build_parser().parse_args(
+        [
+            "--probe-manifest",
+            str(probe_manifest),
+            "--output-dir",
+            str(tmp_path / "out"),
+            "--seed",
+            "40000",
+            "--seeds-per-item",
+            "3",
+        ]
+    )
+
+    rows = module.build_items(args, json.loads(probe_manifest.read_text())["items"])
+
+    assert len(rows) == 12
+    assert [row["seed_index"] for row in rows[:4]] == [0, 0, 0, 0]
+    assert [row["seed_index"] for row in rows[4:8]] == [1, 1, 1, 1]
+    assert [row["seed_index"] for row in rows[8:12]] == [2, 2, 2, 2]
+    assert {row["seed"] for row in rows[:4]} == {40002}
+    assert {row["seed"] for row in rows[4:8]} == {40003}
+    assert {row["seed"] for row in rows[8:12]} == {40004}
+    assert rows[4]["video_path"].endswith("_seed01_original_seed40003.mp4")
+
+
 def test_c0_counterfactual_grid_real_mode_calls_generator(tmp_path, monkeypatch):
     module = load_runner_module()
     probe_manifest = write_probe_manifest(tmp_path)

@@ -286,6 +286,8 @@ def write_outputs(
     output_dir.mkdir(parents=True, exist_ok=True)
     write_csv(output_dir / "c0_variant_scores.csv", variant_scores, VARIANT_SCORE_FIELDS)
     write_csv(output_dir / "c0_item_scores.csv", item_scores, ITEM_SCORE_FIELDS)
+    valid_originals = [row for row in item_scores if row.get("original_valid") is True]
+    write_csv(output_dir / "c0_valid_originals.csv", valid_originals, ITEM_SCORE_FIELDS)
     (output_dir / "c0_summary.json").write_text(
         json.dumps(summary, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
