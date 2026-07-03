@@ -3597,3 +3597,105 @@ the core method. The next method should move from "mask chain tokens" to a
 stronger counterfactual or verifier-guided intervention: paired seed/noise
 controls, explicit target-removal and footprint-removal objectives, and a
 semantic verifier that rejects target leakage and footprint leakage separately.
+
+## 2026-07-03: Method C0 Counterfactual Grid Pilot
+
+**Fable pre-review:** Before implementing C0, `claude-fable-5` reviewed the
+method shape. The critique is saved in
+`docs/fable_c_method_review_2026-07-03.md`. The main concerns were VLM
+circularity, same-seed comparisons not guaranteeing semantic control,
+counterfactual prompt noise, weak negative controls, and verifier-guided search
+turning into prompt hacking. The implemented C0 pilot therefore treats the
+method as a counterfactual controllability audit, not as a repair claim.
+
+**Implementation:** Added a four-cell counterfactual grid runner and review
+builder:
+
+```text
+scripts/adapters/run_c0_counterfactual_grid.py
+scripts/build_c0_counterfactual_review.py
+```
+
+For each item, the runner generates `original`, `remove_target`,
+`footprint_only`, and `target_only` with the same seed. The expected target /
+footprint states are:
+
+```text
+original:       yes / yes
+remove_target:  no / no
+footprint_only: no / yes
+target_only:    yes / no
+```
+
+Focused and regression tests pass:
+
+```text
+PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python -m pytest \
+  tests/test_run_c0_counterfactual_grid.py \
+  tests/test_build_c0_counterfactual_review.py \
+  tests/test_run_zeroscope_attention_probe.py \
+  tests/test_build_mvp0_causal_chain_probe.py \
+  tests/test_build_mvp0_phase_b_paraphrase_probe.py \
+  tests/test_run_mvp0_zeroscope_probe.py \
+  tests/test_run_mvp0_zeroscope_sweep.py -q
+
+51 passed
+```
+
+Artifacts:
+
+```text
+experiments/method_probe/c0_counterfactual_grid_20260703_dryrun/
+experiments/method_probe/c0_counterfactual_grid_20260703_quality3/
+experiments/evaluation/c0_counterfactual_grid_quality3_fable_20260703/
+```
+
+**Run:** Generated the first three MVP-0 items with `steps=10`,
+`num_frames=16`, `height=240`, `width=432`, `fps=8`, `guidance_scale=9.0`,
+`dtype=fp16`, and GPU 0. The dry run expanded 3 source items into 12 variant
+items with a balanced four-cell grid. The real run produced 12 MP4s, and the
+review builder produced 12 VLM input rows.
+
+**Fable evaluation:** `claude-fable-5` returned 12 valid predictions. The old
+erasure-oriented labels are not direct success/failure labels for C0, because
+`target_only` intentionally keeps the target visible. Interpreted against the
+C0 expected target/footprint states, the pass counts were:
+
+```text
+original:       1/3
+remove_target:  1/3
+footprint_only: 2/3
+target_only:    2/3
+```
+
+Pair-level pattern:
+
+```text
+fluid_impact_pebble_pond_002:
+  original misses the pebble but keeps ripples.
+  remove_target is clean.
+  footprint_only keeps ripples without pebble.
+  target_only removes both, so target retention fails.
+
+v2_fracture_damage_black_hockey_puck...:
+  original succeeds.
+  remove_target keeps the puck, so target removal fails.
+  footprint_only gives cracks without puck.
+  target_only gives puck without cracks.
+
+elastic_deformation_soccer_net_001:
+  original keeps the ball but does not generate net deformation.
+  remove_target and footprint_only still show the ball.
+  target_only gives ball without deformation.
+```
+
+**Decision:** C0 is a useful audit protocol and a better experimental direction
+than B2 masking, but the first pilot is not a complete method. It demonstrates
+that some chains can be separated by prompt-level counterfactuals, especially
+the hockey-puck crack case, while other items expose base-model controllability
+failures. The next C step should add a C0 scorer that selects items whose
+`original` cell is valid before testing repair, then run verifier-guided prompt
+search only within the four expected state constraints. This addresses fable's
+critique by making prompt generation accountable to explicit target/footprint
+state checks rather than relying on a single edited prompt.

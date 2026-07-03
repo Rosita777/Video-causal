@@ -1,0 +1,282 @@
+#!/usr/bin/env python3
+"""Run the Method C0 paired counterfactual prompt grid."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Sequence
+
+
+SCRIPTS_DIR = Path(__file__).resolve().parents[1]
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+from adapters.zeroscope_adapter_common import encode_cfg, load_zeroscope_pipe  # noqa: E402
+from adapters.run_zeroscope_attention_probe import run_attention_recording_pipeline  # noqa: E402
+from build_mvp0_causal_chain_probe import scene_context  # noqa: E402
+
+
+BASELINE = "c0_counterfactual_grid"
+VARIANTS = ["original", "remove_target", "footprint_only", "target_only"]
+VARIANT_LABELS = {
+    "original": "original target plus footprint",
+    "remove_target": "remove target and footprint",
+    "footprint_only": "footprint without target",
+    "target_only": "target without footprint",
+}
+EXPECTED_STATES = {
+    "original": ("yes", "yes"),
+    "remove_target": ("no", "no"),
+    "footprint_only": ("no", "yes"),
+    "target_only": ("yes", "no"),
+}
+
+
+def read_json(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def slugify(text: str, max_length: int = 72) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+    if not slug:
+        return "prompt"
+    return slug[:max_length].rstrip("-") or "prompt"
+
+
+def generation_config(args: argparse.Namespace) -> dict[str, object]:
+    return {
+        "seed": args.seed,
+        "num_inference_steps": args.steps,
+        "guidance_scale": args.guidance_scale,
+        "num_frames": args.num_frames,
+        "fps": args.fps,
+        "height": args.height,
+        "width": args.width,
+        "dtype": args.dtype,
+        "device": args.device,
+        "enable_model_cpu_offload": args.enable_model_cpu_offload,
+        "enable_sequential_cpu_offload": args.enable_sequential_cpu_offload,
+        "vae_slicing": args.vae_slicing,
+        "variant_grid": list(VARIANTS),
+    }
+
+
+def normalize_space(text: str) -> str:
+    return re.sub(r"\s+", " ", str(text)).strip()
+
+
+def phrase_key(text: str) -> str:
+    return "".join(char for char in str(text).lower() if char.isalnum())
+
+
+def append_absence_if_missing(prompt: str, phrase: str) -> str:
+    prompt = normalize_space(prompt).rstrip(".")
+    phrase = normalize_space(phrase).rstrip(".")
+    if not phrase:
+        return prompt + "."
+    if phrase_key(phrase) in phrase_key(prompt):
+        return prompt + "."
+    return f"{prompt}. The scene has no {phrase}."
+
+
+def target_only_prompt(item: dict[str, object]) -> str:
+    context = scene_context(item).rstrip(".")
+    target = normalize_space(str(item.get("target_concept", "target")))
+    footprint = normalize_space(str(item.get("causal_footprint", "causal footprint")))
+    if not context:
+        context = "A realistic fixed-camera video of the same scene"
+    return normalize_space(
+        f"{context}. The {target} is clearly visible but does not touch, strike, "
+        f"collide with, or disturb the scene. The scene has no {footprint}."
+    )
+
+
+def variant_prompt(item: dict[str, object], variant: str) -> tuple[str, str]:
+    target = str(item.get("target_concept", ""))
+    footprint = str(item.get("causal_footprint", ""))
+    if variant == "original":
+        return normalize_space(item.get("generation_prompt") or item.get("source_prompt") or ""), ""
+    if variant == "remove_target":
+        prompt = normalize_space(item.get("counterfactual_prompt") or "")
+        if not prompt:
+            context = scene_context(item).rstrip(".")
+            prompt = f"{context}. No {target} is present."
+        prompt = append_absence_if_missing(prompt, footprint)
+        return prompt, ""
+    if variant == "footprint_only":
+        prompt = normalize_space(item.get("control_prompt") or "")
+        if not prompt:
+            context = scene_context(item).rstrip(".")
+            prompt = (
+                f"{context}. {footprint} is visible, with no {target} or visible cause "
+                "in the frame."
+            )
+        if target and phrase_key(target) not in phrase_key(prompt):
+            prompt = append_absence_if_missing(prompt, target)
+        return normalize_space(prompt), ""
+    if variant == "target_only":
+        return target_only_prompt(item), ""
+    raise ValueError(f"unknown variant: {variant}")
+
+
+def build_items(args: argparse.Namespace, probe_items: Sequence[dict]) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for item in probe_items:
+        probe_index = int(item.get("probe_index", len(rows)))
+        seed = args.seed + probe_index
+        pair_id = str(item.get("pair_id", f"item_{probe_index}"))
+        slug = slugify(pair_id)
+        for variant in VARIANTS:
+            prompt, negative_prompt = variant_prompt(item, variant)
+            expected_target, expected_footprint = EXPECTED_STATES[variant]
+            video_path = (
+                args.output_dir
+                / "videos"
+                / f"{probe_index:03d}_{slug}_{variant}_seed{seed}.mp4"
+            )
+            rows.append(
+                {
+                    "probe_index": probe_index,
+                    "pair_id": pair_id,
+                    "slice_index": item.get("slice_index", probe_index),
+                    "source_index": str(item.get("source_index", "")),
+                    "mechanism_type": str(item.get("mechanism_type", "")),
+                    "variant": variant,
+                    "variant_label": VARIANT_LABELS[variant],
+                    "variant_role": variant,
+                    "prompt": prompt,
+                    "negative_prompt": negative_prompt,
+                    "source_prompt": str(item.get("source_prompt", "")),
+                    "generation_prompt": str(
+                        item.get("generation_prompt") or item.get("source_prompt", "")
+                    ),
+                    "counterfactual_prompt": str(item.get("counterfactual_prompt", "")),
+                    "control_prompt": str(item.get("control_prompt", "")),
+                    "target_concept": str(item.get("target_concept", "")),
+                    "causal_footprint": str(item.get("causal_footprint", "")),
+                    "expected_target_visible": expected_target,
+                    "expected_footprint_visible": expected_footprint,
+                    "seed": seed,
+                    "video_path": str(video_path),
+                    "clean_video_path": str(item.get("clean_video_path", "")),
+                }
+            )
+    return rows
+
+
+def write_manifest(
+    args: argparse.Namespace,
+    *,
+    source_manifest: dict,
+    rows: Sequence[dict[str, object]],
+) -> Path:
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    manifest = {
+        "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "baseline": BASELINE,
+        "model": args.model,
+        "dry_run": args.dry_run,
+        "probe_manifest": str(args.probe_manifest),
+        "source_probe_name": source_manifest.get("probe_name", ""),
+        "variant_grid": list(VARIANTS),
+        "generation": generation_config(args),
+        "items": list(rows),
+    }
+    out = args.output_dir / "generation_manifest.json"
+    out.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return out
+
+
+def generate_counterfactual_videos(args: argparse.Namespace, rows: Sequence[dict[str, object]]) -> None:
+    torch_module, export_to_video, pipe, selected_device = load_zeroscope_pipe(args)
+    generator_device = (
+        "cuda"
+        if str(selected_device).startswith("cuda") and torch_module.cuda.is_available()
+        else "cpu"
+    )
+    for row in rows:
+        video_path = Path(str(row["video_path"]))
+        video_path.parent.mkdir(parents=True, exist_ok=True)
+        prompt_embeds, negative_prompt_embeds = encode_cfg(
+            pipe,
+            torch_module,
+            prompt=str(row["prompt"]),
+            negative_prompt=str(row.get("negative_prompt", "")),
+            device=selected_device,
+        )
+        generator = torch_module.Generator(device=generator_device).manual_seed(int(row["seed"]))
+        frames = run_attention_recording_pipeline(
+            pipe,
+            torch_module,
+            prompt_embeds=prompt_embeds,
+            negative_prompt_embeds=negative_prompt_embeds,
+            generator=generator,
+            steps=args.steps,
+            num_frames=args.num_frames,
+            guidance_scale=args.guidance_scale,
+            height=args.height,
+            width=args.width,
+            step_state={"index": -1},
+            output_type="np",
+            decode_video=True,
+        )
+        export_to_video(frames[0], str(video_path), fps=args.fps)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
+    parser.add_argument("--probe-manifest", type=Path, required=True)
+    parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--model", default="models/zeroscope_v2_576w")
+    parser.add_argument("--seed", type=int, default=30000)
+    parser.add_argument("--steps", type=int, default=10)
+    parser.add_argument("--guidance-scale", type=float, default=9.0)
+    parser.add_argument("--num-frames", type=int, default=16)
+    parser.add_argument("--fps", type=int, default=8)
+    parser.add_argument("--height", type=int, default=240)
+    parser.add_argument("--width", type=int, default=432)
+    parser.add_argument("--dtype", choices=["fp16", "bf16", "fp32"], default="fp16")
+    parser.add_argument("--device", default="auto")
+    parser.add_argument("--enable-model-cpu-offload", action="store_true")
+    parser.add_argument("--enable-sequential-cpu-offload", action="store_true")
+    parser.add_argument("--vae-slicing", action="store_true")
+    parser.add_argument("--limit-items", type=int)
+    parser.add_argument("--dry-run", action="store_true")
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.limit_items is not None and args.limit_items <= 0:
+        parser.error("--limit-items must be positive")
+    if args.steps <= 0:
+        parser.error("--steps must be positive")
+    if args.num_frames <= 0:
+        parser.error("--num-frames must be positive")
+    if args.fps <= 0:
+        parser.error("--fps must be positive")
+    if args.height <= 0 or args.width <= 0:
+        parser.error("--height and --width must be positive")
+
+    source_manifest = read_json(args.probe_manifest)
+    probe_items = source_manifest.get("items")
+    if not isinstance(probe_items, list):
+        parser.exit(2, f"{args.probe_manifest}: missing list field 'items'\n")
+    if args.limit_items is not None:
+        probe_items = probe_items[: args.limit_items]
+    rows = build_items(args, probe_items)
+    if not args.dry_run:
+        generate_counterfactual_videos(args, rows)
+    out = write_manifest(args, source_manifest=source_manifest, rows=rows)
+    print(f"C0 counterfactual grid manifest written: {out}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
