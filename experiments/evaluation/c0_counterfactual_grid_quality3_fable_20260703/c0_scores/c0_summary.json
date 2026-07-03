@@ -1,0 +1,24 @@
+{
+  "total_variant_rows": 12,
+  "total_items": 3,
+  "original_valid_items": 1,
+  "counterfactual_pass_items": 0,
+  "c0_grid_pass_items": 0,
+  "variant_total_counts": {
+    "original": 3,
+    "remove_target": 3,
+    "footprint_only": 3,
+    "target_only": 3
+  },
+  "variant_pass_counts": {
+    "original": 1,
+    "remove_target": 1,
+    "footprint_only": 2,
+    "target_only": 2
+  },
+  "failure_mode_counts": {
+    "failed:remove_target": 1,
+    "invalid_original": 2
+  },
+  "require_video_quality": true
+}

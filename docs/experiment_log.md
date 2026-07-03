@@ -3699,3 +3699,54 @@ failures. The next C step should add a C0 scorer that selects items whose
 search only within the four expected state constraints. This addresses fable's
 critique by making prompt generation accountable to explicit target/footprint
 state checks rather than relying on a single edited prompt.
+
+### 2026-07-03 C0 scorer
+
+**Implementation:** Added `scripts/score_c0_counterfactual_grid.py` with
+variant-level and item-level scoring for the four C0 expected states. The scorer
+writes:
+
+```text
+experiments/evaluation/c0_counterfactual_grid_quality3_fable_20260703/c0_scores/c0_variant_scores.csv
+experiments/evaluation/c0_counterfactual_grid_quality3_fable_20260703/c0_scores/c0_item_scores.csv
+experiments/evaluation/c0_counterfactual_grid_quality3_fable_20260703/c0_scores/c0_summary.json
+```
+
+**Pilot score:**
+
+```text
+total items:              3
+original valid:           1/3
+counterfactual pass:      0/3
+full C0 grid pass:        0/3
+
+variant pass counts:
+  original:       1/3
+  remove_target:  1/3
+  footprint_only: 2/3
+  target_only:    2/3
+
+failure modes:
+  invalid_original:      2
+  failed:remove_target:  1
+```
+
+**Interpretation:** The scorer makes the next experiment clear. We should not
+scale by running full four-cell grids on arbitrary items. First run a
+base-validity screen to find items where `original` reliably contains both the
+target and the footprint. Only those items should enter the full C0 grid and any
+verifier-guided prompt search. In this pilot, the hockey-puck crack item is the
+only valid starting point; it then fails specifically because `remove_target`
+keeps the puck.
+
+**Tests:**
+
+```text
+PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python -m pytest \
+  tests/test_score_c0_counterfactual_grid.py \
+  tests/test_run_c0_counterfactual_grid.py \
+  tests/test_build_c0_counterfactual_review.py -q
+
+8 passed
+```
