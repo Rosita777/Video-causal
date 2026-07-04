@@ -39,6 +39,19 @@ EXPECTED_STATES = {
     "footprint_only": ("no", "yes"),
     "target_only": ("yes", "no"),
 }
+PROMPT_TEMPLATES = ["legacy", "c02_discrete"]
+C02_SURFACE_OVERRIDES = {
+    "makeup brush": "compact of pink powder",
+    "garden rake": "smooth soil bed",
+    "hand": "pillow surface",
+    "marker pen": "whiteboard surface",
+}
+C02_FOOTPRINT_OVERRIDES = {
+    "makeup brush": ("a pink powder cloud", "pink powder cloud"),
+    "garden rake": ("parallel grooves in the soil", "parallel grooves in the soil"),
+    "hand": ("a deep dent in the pillow", "deep dent in the pillow"),
+    "marker pen": ("a black line on the whiteboard", "black line on the whiteboard"),
+}
 
 
 def read_json(path: Path) -> dict:
@@ -68,6 +81,8 @@ def generation_config(args: argparse.Namespace) -> dict[str, object]:
         "vae_slicing": args.vae_slicing,
         "seeds_per_item": args.seeds_per_item,
         "variant_grid": selected_variants(args),
+        "item_indices": args.item_indices,
+        "prompt_template": args.prompt_template,
     }
 
 
@@ -101,7 +116,62 @@ def target_only_prompt(item: dict[str, object]) -> str:
     )
 
 
-def variant_prompt(item: dict[str, object], variant: str) -> tuple[str, str]:
+def c02_surface_for(item: dict[str, object]) -> str:
+    target = normalize_space(str(item.get("target_concept", ""))).lower()
+    return C02_SURFACE_OVERRIDES.get(target, "surface")
+
+
+def c02_footprints_for(item: dict[str, object]) -> tuple[str, str]:
+    target = normalize_space(str(item.get("target_concept", ""))).lower()
+    default = normalize_space(str(item.get("causal_footprint", "causal footprint")))
+    return C02_FOOTPRINT_OVERRIDES.get(target, (default, default))
+
+
+def c02_scene_anchor() -> str:
+    return normalize_space(
+        "A realistic fixed-camera close-up video of the same simple scene. "
+        "The background, camera framing, and surface stay consistent across the clip."
+    )
+
+
+def c02_discrete_prompt(item: dict[str, object], variant: str) -> tuple[str, str]:
+    target = normalize_space(str(item.get("target_concept", "target")))
+    visible_footprint, absence_footprint = c02_footprints_for(item)
+    surface = c02_surface_for(item)
+    anchor = c02_scene_anchor()
+    if variant == "original":
+        return normalize_space(
+            f"{anchor} The {target} is clearly visible and contacts the {surface}. "
+            f"After contact, {visible_footprint} is clearly visible."
+        ), ""
+    if variant == "remove_target":
+        return normalize_space(
+            f"{anchor} No {target} is present. No visible cause is present. "
+            f"The {surface} stays clean and unchanged. There is no {absence_footprint}."
+        ), ""
+    if variant == "footprint_only":
+        return normalize_space(
+            f"{anchor} No {target} is present and no visible cause appears in the frame. "
+            f"{visible_footprint.capitalize()} is clearly visible on the {surface}. "
+            "The scene otherwise stays the same."
+        ), ""
+    if variant == "target_only":
+        return normalize_space(
+            f"{anchor} The {target} is clearly visible, but it is separated from the "
+            f"{surface} and does not touch, strike, mark, press, disturb, or change it. "
+            f"There is no {absence_footprint}."
+        ), ""
+    raise ValueError(f"unknown variant: {variant}")
+
+
+def variant_prompt(
+    item: dict[str, object],
+    variant: str,
+    *,
+    prompt_template: str = "legacy",
+) -> tuple[str, str]:
+    if prompt_template == "c02_discrete":
+        return c02_discrete_prompt(item, variant)
     target = str(item.get("target_concept", ""))
     footprint = str(item.get("causal_footprint", ""))
     if variant == "original":
@@ -133,6 +203,31 @@ def selected_variants(args: argparse.Namespace) -> list[str]:
     return list(VARIANT_SETS[str(args.variant_set)])
 
 
+def parse_item_indices(text: str) -> list[int]:
+    text = normalize_space(text)
+    if not text:
+        return []
+    values: list[int] = []
+    for part in text.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        values.append(int(part))
+    return values
+
+
+def select_probe_items(probe_items: Sequence[dict], args: argparse.Namespace) -> list[dict]:
+    requested = parse_item_indices(str(args.item_indices))
+    if not requested:
+        return list(probe_items)
+    requested_set = set(requested)
+    selected = [
+        item for item in probe_items if int(item.get("probe_index", -1)) in requested_set
+    ]
+    order = {probe_index: index for index, probe_index in enumerate(requested)}
+    return sorted(selected, key=lambda item: order[int(item.get("probe_index", -1))])
+
+
 def build_items(args: argparse.Namespace, probe_items: Sequence[dict]) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     variants = selected_variants(args)
@@ -143,7 +238,11 @@ def build_items(args: argparse.Namespace, probe_items: Sequence[dict]) -> list[d
         for seed_index in range(args.seeds_per_item):
             seed = args.seed + probe_index + seed_index
             for variant in variants:
-                prompt, negative_prompt = variant_prompt(item, variant)
+                prompt, negative_prompt = variant_prompt(
+                    item,
+                    variant,
+                    prompt_template=str(args.prompt_template),
+                )
                 expected_target, expected_footprint = EXPECTED_STATES[variant]
                 if args.seeds_per_item == 1:
                     video_name = f"{probe_index:03d}_{slug}_{variant}_seed{seed}.mp4"
@@ -263,6 +362,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--limit-items", type=int)
     parser.add_argument("--seeds-per-item", type=int, default=1)
     parser.add_argument("--variant-set", choices=sorted(VARIANT_SETS), default="all")
+    parser.add_argument("--item-indices", default="")
+    parser.add_argument("--prompt-template", choices=PROMPT_TEMPLATES, default="legacy")
     parser.add_argument("--dry-run", action="store_true")
     return parser
 
@@ -282,11 +383,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.error("--fps must be positive")
     if args.height <= 0 or args.width <= 0:
         parser.error("--height and --width must be positive")
+    try:
+        parse_item_indices(str(args.item_indices))
+    except ValueError:
+        parser.error("--item-indices must be a comma-separated list of integers")
 
     source_manifest = read_json(args.probe_manifest)
     probe_items = source_manifest.get("items")
     if not isinstance(probe_items, list):
         parser.exit(2, f"{args.probe_manifest}: missing list field 'items'\n")
+    probe_items = select_probe_items(probe_items, args)
     if args.limit_items is not None:
         probe_items = probe_items[: args.limit_items]
     rows = build_items(args, probe_items)

@@ -3937,3 +3937,57 @@ missing_frame_strips=0
 next step is a human spot-check of 10 to 15 generated rows before bulk review,
 then reviewer labeling with `uncertain` tracking and at least 10 overlapping
 rows for inter-rater agreement.
+
+### 2026-07-04 C0.2 discrete factorial gate dry run
+
+**Run:** Added a C0.2 prompt-template mode to the C0 runner and validated the
+planned discrete-item pilot as a dry run.
+
+```text
+experiments/method_probe/c02_discrete_factorial_gate_20260704_dryrun/generation_manifest.json
+```
+
+Configuration:
+
+```text
+item_indices=3,4,8,10
+prompt_template=c02_discrete
+seed=52000
+seeds_per_item=3
+variant_grid=original,remove_target,footprint_only,target_only
+```
+
+Integrity checks:
+
+```text
+rows=48
+probe_indices=3,4,8,10
+variant_counts=12 each
+seed_indices=0,1,2
+dry_run=true
+prompt_template_recorded=true
+```
+
+The C0.2 template uses item-specific surface and footprint phrase overrides so
+each cell explicitly states target presence/absence and footprint
+presence/absence. This is only a generation-validity pilot.
+
+Real run command:
+
+```text
+CUDA_VISIBLE_DEVICES=4 PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python \
+  scripts/adapters/run_c0_counterfactual_grid.py \
+  --probe-manifest experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/probe_manifest.json \
+  --output-dir experiments/method_probe/c02_discrete_factorial_gate_20260704_real_s10_f16_240x432 \
+  --item-indices 3,4,8,10 \
+  --prompt-template c02_discrete \
+  --seed 52000 \
+  --seeds-per-item 3 \
+  --steps 10 \
+  --num-frames 16 \
+  --height 240 \
+  --width 432 \
+  --enable-model-cpu-offload \
+  --vae-slicing
+```
