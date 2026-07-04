@@ -1,0 +1,167 @@
+{
+  "item_count": 8,
+  "items": [
+    {
+      "item_index": "0",
+      "missing_strips": [],
+      "pair_id": "c03_surface_trace_00_metal_comb_parallel_grooves_in_the_sand",
+      "row_count": 20,
+      "seed_indices": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "sheet_path": "experiments/evaluation/c03_scope_locked_gate_20260704_real_s10_f16_240x432/spotcheck_contact_sheets/item_0_all_seeds_four_cells.jpg",
+      "variants": [
+        "original",
+        "remove_target",
+        "footprint_only",
+        "target_only"
+      ]
+    },
+    {
+      "item_index": "1",
+      "missing_strips": [],
+      "pair_id": "c03_surface_trace_01_toy_car_two_tire_tracks_in_the_soft_clay",
+      "row_count": 20,
+      "seed_indices": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "sheet_path": "experiments/evaluation/c03_scope_locked_gate_20260704_real_s10_f16_240x432/spotcheck_contact_sheets/item_1_all_seeds_four_cells.jpg",
+      "variants": [
+        "original",
+        "remove_target",
+        "footprint_only",
+        "target_only"
+      ]
+    },
+    {
+      "item_index": "2",
+      "missing_strips": [],
+      "pair_id": "c03_surface_trace_02_rubber_stamp_a_square_ink_stamp_mark_on_the_paper",
+      "row_count": 20,
+      "seed_indices": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "sheet_path": "experiments/evaluation/c03_scope_locked_gate_20260704_real_s10_f16_240x432/spotcheck_contact_sheets/item_2_all_seeds_four_cells.jpg",
+      "variants": [
+        "original",
+        "remove_target",
+        "footprint_only",
+        "target_only"
+      ]
+    },
+    {
+      "item_index": "3",
+      "missing_strips": [],
+      "pair_id": "c03_surface_trace_03_piece_of_chalk_a_white_chalk_line_on_the_blackboard",
+      "row_count": 20,
+      "seed_indices": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "sheet_path": "experiments/evaluation/c03_scope_locked_gate_20260704_real_s10_f16_240x432/spotcheck_contact_sheets/item_3_all_seeds_four_cells.jpg",
+      "variants": [
+        "original",
+        "remove_target",
+        "footprint_only",
+        "target_only"
+      ]
+    },
+    {
+      "item_index": "4",
+      "missing_strips": [],
+      "pair_id": "c03_surface_trace_04_wooden_block_a_square_imprint_in_the_clay",
+      "row_count": 20,
+      "seed_indices": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "sheet_path": "experiments/evaluation/c03_scope_locked_gate_20260704_real_s10_f16_240x432/spotcheck_contact_sheets/item_4_all_seeds_four_cells.jpg",
+      "variants": [
+        "original",
+        "remove_target",
+        "footprint_only",
+        "target_only"
+      ]
+    },
+    {
+      "item_index": "5",
+      "missing_strips": [],
+      "pair_id": "c03_surface_trace_05_hiking_boot_a_single_boot_print_in_the_wet_sand",
+      "row_count": 20,
+      "seed_indices": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "sheet_path": "experiments/evaluation/c03_scope_locked_gate_20260704_real_s10_f16_240x432/spotcheck_contact_sheets/item_5_all_seeds_four_cells.jpg",
+      "variants": [
+        "original",
+        "remove_target",
+        "footprint_only",
+        "target_only"
+      ]
+    },
+    {
+      "item_index": "6",
+      "missing_strips": [],
+      "pair_id": "c03_surface_trace_06_paint_roller_a_blue_paint_stripe_on_the_paper",
+      "row_count": 20,
+      "seed_indices": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "sheet_path": "experiments/evaluation/c03_scope_locked_gate_20260704_real_s10_f16_240x432/spotcheck_contact_sheets/item_6_all_seeds_four_cells.jpg",
+      "variants": [
+        "original",
+        "remove_target",
+        "footprint_only",
+        "target_only"
+      ]
+    },
+    {
+      "item_index": "7",
+      "missing_strips": [],
+      "pair_id": "c03_surface_trace_07_wooden_stylus_a_thin_carved_line_in_the_wax",
+      "row_count": 20,
+      "seed_indices": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "sheet_path": "experiments/evaluation/c03_scope_locked_gate_20260704_real_s10_f16_240x432/spotcheck_contact_sheets/item_7_all_seeds_four_cells.jpg",
+      "variants": [
+        "original",
+        "remove_target",
+        "footprint_only",
+        "target_only"
+      ]
+    }
+  ],
+  "missing_strip_count": 0,
+  "sheet_count": 8
+}

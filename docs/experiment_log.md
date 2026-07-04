@@ -4113,3 +4113,81 @@ a compatibility alias, and adding an explicit `factorial_cells` map to the
 candidate manifest. No new real videos were generated in this step. The next
 gate is human approval of the pre-registered candidate manifest before
 launching the 160-video real run.
+
+### 2026-07-04 C0.3 scope-locked validity gate real run
+
+**Run:** Launched the approved C0.3 160-video panel on physical GPU 1. The
+machine had no empty GPU; all eight H800s were occupied by a separate 8-GPU
+Python job. GPU 1 was selected because it was the lightest available card under
+the `nvidia-smi` query at launch. The run completed without OOM.
+
+Command:
+
+```text
+CUDA_VISIBLE_DEVICES=1 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+  PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
+  /home/deepseek_VG/.conda/envs/vcecf/bin/python \
+  scripts/adapters/run_c0_counterfactual_grid.py \
+  --probe-manifest experiments/method_probe/c03_scope_locked_candidates_20260704/candidate_manifest.json \
+  --output-dir experiments/method_probe/c03_scope_locked_gate_20260704_real_s10_f16_240x432 \
+  --prompt-template c03_scope_locked \
+  --seed 53000 \
+  --seeds-per-item 5 \
+  --steps 10 \
+  --num-frames 16 \
+  --height 240 \
+  --width 432 \
+  --guidance-scale 9.0 \
+  --dtype fp16 \
+  --device cuda:0 \
+  --enable-model-cpu-offload \
+  --vae-slicing
+```
+
+Generation artifacts:
+
+```text
+experiments/method_probe/c03_scope_locked_gate_20260704_real_s10_f16_240x432/generation_manifest.json
+experiments/method_probe/c03_scope_locked_gate_20260704_real_s10_f16_240x432/videos/
+```
+
+Generation integrity:
+
+```text
+manifest_rows=160
+video_files=160
+dry_run=false
+prompt_template=c03_scope_locked
+variants=40 each
+seed_indices=0..4
+```
+
+Blinded review and spot-check artifacts:
+
+```text
+experiments/evaluation/c03_scope_locked_gate_20260704_real_s10_f16_240x432/blind_review.csv
+experiments/evaluation/c03_scope_locked_gate_20260704_real_s10_f16_240x432/answer_key.csv
+experiments/evaluation/c03_scope_locked_gate_20260704_real_s10_f16_240x432/review_manifest.json
+experiments/evaluation/c03_scope_locked_gate_20260704_real_s10_f16_240x432/frame_strips/
+experiments/evaluation/c03_scope_locked_gate_20260704_real_s10_f16_240x432/spotcheck_contact_sheets/
+```
+
+Review package integrity:
+
+```text
+blind_rows=160
+answer_key_rows=160
+ids_match=true
+frame_strip_count=160
+frame_strip_files=160
+blind_video_path_empty=true
+spotcheck_item_count=8
+spotcheck_sheets=8
+spotcheck_missing_strip_count=0
+```
+
+The videos and frame-strip JPGs are local generated media and remain ignored by
+git under the repository policy. The tracked artifacts are the JSON/CSV
+manifests and review metadata. No C0.3 success claim is made yet; the next step
+is blind human scoring of the 160 rows, followed by the strict C0.3 gate
+aggregation.

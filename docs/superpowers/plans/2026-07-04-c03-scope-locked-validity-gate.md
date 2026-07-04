@@ -795,12 +795,12 @@ PY
 
 Expected: eight prior-unseen low-entanglement surface-trace candidates.
 
-- [ ] **Step 2: Ask for approval before GPU generation**
+- [x] **Step 2: Ask for approval before GPU generation**
 
 Report the candidate list and ask whether to run the real 160-video C0.3 panel.
 Do not launch GPU generation until the user approves the denominator.
 
-- [ ] **Step 3: If approved, run the real C0.3 panel**
+- [x] **Step 3: If approved, run the real C0.3 panel**
 
 Use the least-loaded GPU from:
 
