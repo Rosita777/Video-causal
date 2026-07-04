@@ -115,9 +115,16 @@ as a manifest before generation. Each row must include:
 - `target_concept`
 - `surface_or_object`
 - `causal_footprint`
+- `causal_footprint_absence`
 - `scope_predicates_met`
 - `prompt_template_id`
 - `prior_seen=false`
+
+`causal_footprint` is the visible phrase used in positive cells, such as
+`a white chalk line on the blackboard`. `causal_footprint_absence` is the
+article-free phrase used in negative cells, such as `white chalk line on the
+blackboard`. This avoids prompt noise such as "no a line" or singular/plural
+grammar errors.
 
 The prior C0.2 item 4 can appear in a separate `debug_exemplar` split, but not
 in the C0.3 denominator.
