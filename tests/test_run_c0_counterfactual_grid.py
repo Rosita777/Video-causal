@@ -270,6 +270,39 @@ def test_c02_discrete_prompt_template_makes_all_factors_explicit(tmp_path):
     assert all("The a " not in prompt and "The an " not in prompt for prompt in prompts.values())
 
 
+def test_c03_scope_locked_prompt_template_uses_manifest_surface_and_footprint():
+    module = load_runner_module()
+    item = {
+        "target_concept": "metal comb",
+        "surface_or_object": "smooth sand tray",
+        "causal_footprint": "parallel grooves in the sand",
+        "causal_footprint_absence": "parallel grooves in the sand",
+    }
+
+    original, _ = module.variant_prompt(item, "original", prompt_template="c03_scope_locked")
+    remove_target, _ = module.variant_prompt(
+        item,
+        "remove_target",
+        prompt_template="c03_scope_locked",
+    )
+    footprint_only, _ = module.variant_prompt(
+        item,
+        "footprint_only",
+        prompt_template="c03_scope_locked",
+    )
+    target_only, _ = module.variant_prompt(item, "target_only", prompt_template="c03_scope_locked")
+
+    assert "metal comb" in original
+    assert "smooth sand tray" in original
+    assert "parallel grooves in the sand" in original
+    assert "No metal comb is present" in remove_target
+    assert "The scene shows no parallel grooves in the sand" in remove_target
+    assert "No metal comb is present" in footprint_only
+    assert "Parallel grooves in the sand is clearly visible" in footprint_only
+    assert "does not touch, strike, mark, press, disturb, or change it" in target_only
+    assert "The scene shows no parallel grooves in the sand" in target_only
+
+
 def test_build_items_expands_each_probe_item_over_multiple_seeds(tmp_path):
     module = load_runner_module()
     probe_manifest = write_probe_manifest(tmp_path)

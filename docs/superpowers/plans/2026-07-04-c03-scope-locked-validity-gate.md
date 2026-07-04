@@ -495,7 +495,7 @@ git commit -m "add c03 scope locked candidate manifest"
 - Modify: `scripts/adapters/run_c0_counterfactual_grid.py`
 - Modify: `tests/test_run_c0_counterfactual_grid.py`
 
-- [ ] **Step 1: Add failing runner prompt-template test**
+- [x] **Step 1: Add failing runner prompt-template test**
 
 Append this test to `tests/test_run_c0_counterfactual_grid.py`:
 
@@ -533,7 +533,7 @@ def test_c03_scope_locked_prompt_template_uses_manifest_surface_and_footprint():
     assert "The scene shows no parallel grooves in the sand" in target_only
 ```
 
-- [ ] **Step 2: Run tests and verify failure**
+- [x] **Step 2: Run tests and verify failure**
 
 Run:
 
@@ -545,7 +545,7 @@ PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
 
 Expected: fail because `c03_scope_locked` is not an allowed prompt template.
 
-- [ ] **Step 3: Implement C0.3 prompt template**
+- [x] **Step 3: Implement C0.3 prompt template**
 
 In `scripts/adapters/run_c0_counterfactual_grid.py`, change:
 
@@ -611,7 +611,7 @@ if prompt_template == "c03_scope_locked":
     return c03_scope_locked_prompt(item, variant)
 ```
 
-- [ ] **Step 4: Run tests and verify they pass**
+- [x] **Step 4: Run tests and verify they pass**
 
 Run:
 
@@ -623,7 +623,7 @@ PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit C0.3 prompt template**
+- [x] **Step 5: Commit C0.3 prompt template**
 
 ```bash
 git add scripts/adapters/run_c0_counterfactual_grid.py tests/test_run_c0_counterfactual_grid.py

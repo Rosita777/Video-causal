@@ -39,7 +39,7 @@ EXPECTED_STATES = {
     "footprint_only": ("no", "yes"),
     "target_only": ("yes", "no"),
 }
-PROMPT_TEMPLATES = ["legacy", "c02_discrete"]
+PROMPT_TEMPLATES = ["legacy", "c02_discrete", "c03_scope_locked"]
 C02_SURFACE_OVERRIDES = {
     "makeup brush": "compact of pink powder",
     "garden rake": "smooth soil bed",
@@ -164,6 +164,48 @@ def c02_discrete_prompt(item: dict[str, object], variant: str) -> tuple[str, str
     raise ValueError(f"unknown variant: {variant}")
 
 
+def c03_surface_for(item: dict[str, object]) -> str:
+    surface = normalize_space(str(item.get("surface_or_object", "")))
+    return surface or c02_surface_for(item)
+
+
+def c03_footprints_for(item: dict[str, object]) -> tuple[str, str]:
+    footprint = normalize_space(str(item.get("causal_footprint", "causal footprint")))
+    absence = normalize_space(str(item.get("causal_footprint_absence", "")))
+    return footprint, absence or footprint
+
+
+def c03_scope_locked_prompt(item: dict[str, object], variant: str) -> tuple[str, str]:
+    target = normalize_space(str(item.get("target_concept", "target")))
+    visible_footprint, absence_footprint = c03_footprints_for(item)
+    surface = c03_surface_for(item)
+    anchor = c02_scene_anchor()
+    if variant == "original":
+        return normalize_space(
+            f"{anchor} The {target} is clearly visible and contacts the {surface}. "
+            f"After contact, {visible_footprint} is clearly visible."
+        ), ""
+    if variant == "remove_target":
+        return normalize_space(
+            f"{anchor} No {target} is present. No visible cause is present. "
+            f"The {surface} stays clean and unchanged. "
+            f"The scene shows no {absence_footprint}."
+        ), ""
+    if variant == "footprint_only":
+        return normalize_space(
+            f"{anchor} No {target} is present and no visible cause appears in the frame. "
+            f"{visible_footprint.capitalize()} is clearly visible on the {surface}. "
+            "The scene otherwise stays the same."
+        ), ""
+    if variant == "target_only":
+        return normalize_space(
+            f"{anchor} The {target} is clearly visible, but it is separated from the "
+            f"{surface} and does not touch, strike, mark, press, disturb, or change it. "
+            f"The scene shows no {absence_footprint}."
+        ), ""
+    raise ValueError(f"unknown variant: {variant}")
+
+
 def variant_prompt(
     item: dict[str, object],
     variant: str,
@@ -172,6 +214,8 @@ def variant_prompt(
 ) -> tuple[str, str]:
     if prompt_template == "c02_discrete":
         return c02_discrete_prompt(item, variant)
+    if prompt_template == "c03_scope_locked":
+        return c03_scope_locked_prompt(item, variant)
     target = str(item.get("target_concept", ""))
     footprint = str(item.get("causal_footprint", ""))
     if variant == "original":
