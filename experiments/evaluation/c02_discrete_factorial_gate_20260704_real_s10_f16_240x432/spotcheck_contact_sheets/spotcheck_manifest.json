@@ -1,0 +1,79 @@
+{
+  "item_count": 4,
+  "items": [
+    {
+      "item_index": "3",
+      "missing_strips": [],
+      "pair_id": "v2_particle_dispersion_makeup_brush_a_pink_powder_cloud_blooms_upward_bright_244",
+      "row_count": 12,
+      "seed_indices": [
+        "0",
+        "1",
+        "2"
+      ],
+      "sheet_path": "experiments/evaluation/c02_discrete_factorial_gate_20260704_real_s10_f16_240x432/spotcheck_contact_sheets/item_3_all_seeds_four_cells.jpg",
+      "variants": [
+        "original",
+        "remove_target",
+        "footprint_only",
+        "target_only"
+      ]
+    },
+    {
+      "item_index": "4",
+      "missing_strips": [],
+      "pair_id": "v2_surface_trace_garden_rake_parallel_grooves_remain_in_the_soil_side_123",
+      "row_count": 12,
+      "seed_indices": [
+        "0",
+        "1",
+        "2"
+      ],
+      "sheet_path": "experiments/evaluation/c02_discrete_factorial_gate_20260704_real_s10_f16_240x432/spotcheck_contact_sheets/item_4_all_seeds_four_cells.jpg",
+      "variants": [
+        "original",
+        "remove_target",
+        "footprint_only",
+        "target_only"
+      ]
+    },
+    {
+      "item_index": "8",
+      "missing_strips": [],
+      "pair_id": "v2_elastic_deformation_hand_a_deep_pillow_dent_forms_and_remains_slow_176",
+      "row_count": 12,
+      "seed_indices": [
+        "0",
+        "1",
+        "2"
+      ],
+      "sheet_path": "experiments/evaluation/c02_discrete_factorial_gate_20260704_real_s10_f16_240x432/spotcheck_contact_sheets/item_8_all_seeds_four_cells.jpg",
+      "variants": [
+        "original",
+        "remove_target",
+        "footprint_only",
+        "target_only"
+      ]
+    },
+    {
+      "item_index": "10",
+      "missing_strips": [],
+      "pair_id": "v2_surface_trace_marker_pen_a_black_line_remains_on_the_whiteboa_bright_114",
+      "row_count": 12,
+      "seed_indices": [
+        "0",
+        "1",
+        "2"
+      ],
+      "sheet_path": "experiments/evaluation/c02_discrete_factorial_gate_20260704_real_s10_f16_240x432/spotcheck_contact_sheets/item_10_all_seeds_four_cells.jpg",
+      "variants": [
+        "original",
+        "remove_target",
+        "footprint_only",
+        "target_only"
+      ]
+    }
+  ],
+  "missing_strip_count": 0,
+  "sheet_count": 4
+}

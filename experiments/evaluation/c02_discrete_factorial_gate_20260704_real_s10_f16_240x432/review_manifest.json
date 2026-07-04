@@ -1,0 +1,9 @@
+{
+  "answer_key_csv": "experiments/evaluation/c02_discrete_factorial_gate_20260704_real_s10_f16_240x432/answer_key.csv",
+  "answer_key_row_count": 48,
+  "blind_review_csv": "experiments/evaluation/c02_discrete_factorial_gate_20260704_real_s10_f16_240x432/blind_review.csv",
+  "frame_strip_count": 48,
+  "generation_manifest": "experiments/method_probe/c02_discrete_factorial_gate_20260704_real_s10_f16_240x432/generation_manifest.json",
+  "review_row_count": 48,
+  "shuffle_seed": 23
+}

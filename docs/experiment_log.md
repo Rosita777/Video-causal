@@ -3972,10 +3972,11 @@ The C0.2 template uses item-specific surface and footprint phrase overrides so
 each cell explicitly states target presence/absence and footprint
 presence/absence. This is only a generation-validity pilot.
 
-Real run command:
+Real run command, completed on physical GPU 7:
 
 ```text
-CUDA_VISIBLE_DEVICES=4 PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
+CUDA_VISIBLE_DEVICES=7 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+  PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
   /home/deepseek_VG/.conda/envs/vcecf/bin/python \
   scripts/adapters/run_c0_counterfactual_grid.py \
   --probe-manifest experiments/method_probe/zeroscope_mvp0_causal_chain_probe_20260702/probe_manifest.json \
@@ -3988,6 +3989,73 @@ CUDA_VISIBLE_DEVICES=4 PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
   --num-frames 16 \
   --height 240 \
   --width 432 \
+  --guidance-scale 9.0 \
+  --dtype fp16 \
+  --device cuda:0 \
   --enable-model-cpu-offload \
   --vae-slicing
 ```
+
+Generated manifest:
+
+```text
+experiments/method_probe/c02_discrete_factorial_gate_20260704_real_s10_f16_240x432/generation_manifest.json
+```
+
+Generation integrity checks:
+
+```text
+rows=48
+videos=48
+probe_indices=3,4,8,10
+variant_counts=12 each
+seed_indices=0,1,2
+prompt_template=c02_discrete
+dry_run=false
+```
+
+Blinded review and spot-check package:
+
+```text
+experiments/evaluation/c02_discrete_factorial_gate_20260704_real_s10_f16_240x432/blind_review.csv
+experiments/evaluation/c02_discrete_factorial_gate_20260704_real_s10_f16_240x432/answer_key.csv
+experiments/evaluation/c02_discrete_factorial_gate_20260704_real_s10_f16_240x432/review_manifest.json
+experiments/evaluation/c02_discrete_factorial_gate_20260704_real_s10_f16_240x432/frame_strips/
+experiments/evaluation/c02_discrete_factorial_gate_20260704_real_s10_f16_240x432/spotcheck_contact_sheets/
+```
+
+Review package integrity checks:
+
+```text
+blind_rows=48
+answer_key_rows=48
+ids_match=true
+frame_strips=48
+blind_variant_leaks=0
+blind_video_path_empty=true
+missing_frame_strips=0
+spotcheck_item_count=4
+spotcheck_missing_strip_count=0
+spotcheck_sheets=4
+```
+
+Non-blind visual spot-check summary:
+
+```text
+item_3 makeup brush / pink powder cloud: weak; target and footprint collapse
+  into general pink material/style.
+item_4 garden rake / soil grooves: strongest; grooves are visible and discrete,
+  though footprint-only sometimes grows tool-like structures.
+item_8 hand / pillow dent: weak; hands and pillow texture drift, and the dent is
+  not isolated cleanly.
+item_10 marker / black whiteboard line: mixed; many cells contain general
+  sketch/diagram lines, so target and footprint are not yet separated.
+```
+
+Interpretation: C0.2 succeeded mechanically and gave a useful validity gate,
+but it does not yet justify a causal-method claim. The only promising cell
+family is item 4, with item 10 as a possible narrower follow-up if the prompt is
+made much simpler. Items 3 and 8 should be treated as negative evidence for
+this generator/prompt regime. The next method step should either manually score
+the blind rows for auditability or run a C0.3 narrowed gate over item 4, and
+possibly a simplified item 10, before writing any stronger claim.
