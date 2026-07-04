@@ -266,7 +266,7 @@ git commit -m "add factorial gate scoring profiles"
 - Create: `tests/test_build_c03_scope_locked_candidates.py`
 - Create: `experiments/method_probe/c03_scope_locked_candidates_20260704/candidate_manifest.json`
 
-- [ ] **Step 1: Write failing tests for the candidate builder**
+- [x] **Step 1: Write failing tests for the candidate builder**
 
 Create `tests/test_build_c03_scope_locked_candidates.py`:
 
@@ -329,7 +329,7 @@ def test_candidate_manifest_is_runner_compatible(tmp_path):
         assert required <= set(item)
 ```
 
-- [ ] **Step 2: Run tests and verify they fail**
+- [x] **Step 2: Run tests and verify they fail**
 
 Run:
 
@@ -341,7 +341,7 @@ PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
 
 Expected: fail because the script does not exist.
 
-- [ ] **Step 3: Create the candidate builder**
+- [x] **Step 3: Create the candidate builder**
 
 Create `scripts/build_c03_scope_locked_candidates.py`:
 
@@ -455,7 +455,7 @@ if __name__ == "__main__":
     raise SystemExit(main())
 ```
 
-- [ ] **Step 4: Run tests and verify they pass**
+- [x] **Step 4: Run tests and verify they pass**
 
 Run:
 
@@ -467,7 +467,7 @@ PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Generate and commit the pre-registered candidate manifest**
+- [x] **Step 5: Generate and commit the pre-registered candidate manifest**
 
 Run:
 
