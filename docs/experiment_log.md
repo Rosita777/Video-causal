@@ -4059,3 +4059,17 @@ made much simpler. Items 3 and 8 should be treated as negative evidence for
 this generator/prompt regime. The next method step should either manually score
 the blind rows for auditability or run a C0.3 narrowed gate over item 4, and
 possibly a simplified item 10, before writing any stronger claim.
+
+Fable method-advisor critique after the run: the conservative interpretation is
+right, but the next step must avoid post-hoc cherry-picking. If we narrow only
+to item 4 after seeing the sheets, the result is a demo unless the paper defines
+an explicit target regime, such as low-entanglement rigid-object surface traces,
+or pre-registers a larger item set and reports the full success rate. The main
+attack points are selection bias, lack of ground-truth causal structure, lack of
+quantitative counterfactual metrics, and the fact that entanglement failures in
+items 3 and 8 are substantive negative evidence rather than small noise. Before
+another generation pass, record success criteria for the gate and decide between
+two honest paths: expand to a larger diverse item set, or make the method scope
+narrow and test that scope directly. A stronger publishable version likely
+needs a synthetic or controlled benchmark with known masks/causal structure plus
+a re-insertion or consistency test, not only visual plausibility.
