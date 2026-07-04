@@ -63,6 +63,49 @@ def make_rows(pair_id: str = "pair_a") -> tuple[list[dict[str, str]], list[dict[
     return review_rows, key_rows
 
 
+def make_rows_with_seed_count(
+    pair_id: str,
+    seed_count: int,
+) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    review_rows = []
+    key_rows = []
+    expected = {
+        "original": ("yes", "yes"),
+        "remove_target": ("no", "no"),
+        "footprint_only": ("no", "yes"),
+        "target_only": ("yes", "no"),
+    }
+    for seed_index in range(seed_count):
+        for variant, (target_expected, footprint_expected) in expected.items():
+            review_id = f"c03_000_s{seed_index:02d}_{variant}"
+            target_label = "present" if target_expected == "yes" else "absent"
+            footprint_label = "present" if footprint_expected == "yes" else "absent"
+            review_rows.append(
+                {
+                    "review_id": review_id,
+                    "target_visible": target_label,
+                    "footprint_visible": footprint_label,
+                    "scene_structure_preserved": "yes",
+                    "cells_distinguishable": "yes",
+                    "generation_failure": "no",
+                    "mode_collapse": "no",
+                    "notes": "",
+                }
+            )
+            key_rows.append(
+                {
+                    "review_id": review_id,
+                    "pair_id": pair_id,
+                    "item_index": "0",
+                    "seed_index": str(seed_index),
+                    "variant": variant,
+                    "expected_target_visible": target_expected,
+                    "expected_footprint_visible": footprint_expected,
+                }
+            )
+    return review_rows, key_rows
+
+
 def test_score_gate_passes_clean_item(tmp_path):
     module = load_module()
     review_rows, key_rows = make_rows()
@@ -129,3 +172,71 @@ def test_score_gate_fails_when_variant_success_count_misses_threshold(tmp_path):
         for row in cell_rows
         if row["variant"] == "target_only" and row["cell_success"] == "false"
     } == {"target_only_preserves_footprint"}
+
+
+def test_c02_diagnostic_profile_uses_two_of_three_thresholds(tmp_path):
+    review_rows, key_rows = make_rows_with_seed_count("c02_pair", 3)
+    target_only_rows = [
+        row for row in review_rows if row["review_id"].endswith("_target_only")
+    ]
+    target_only_rows[0]["footprint_visible"] = "present"
+    review_csv = tmp_path / "blind_review.csv"
+    key_csv = tmp_path / "answer_key.csv"
+    write_csv(review_csv, review_rows)
+    write_csv(key_csv, key_rows)
+
+    module = load_module()
+    output_dir = tmp_path / "scores"
+    module.main(
+        [
+            "--review-csv",
+            str(review_csv),
+            "--answer-key",
+            str(key_csv),
+            "--output-dir",
+            str(output_dir),
+            "--profile",
+            "c02_diagnostic",
+        ]
+    )
+
+    item_rows = list(csv.DictReader((output_dir / "item_gate_summary.csv").open()))
+    assert item_rows[0]["gate_status"] == "diagnostic_promising"
+    assert item_rows[0]["target_only_successes"] == "2"
+    assert item_rows[0]["target_only_threshold"] == "2"
+
+
+def test_c03_profile_preserves_five_seed_thresholds(tmp_path):
+    review_rows, key_rows = make_rows_with_seed_count("c03_pair", 5)
+    footprint_rows = [
+        row for row in review_rows if row["review_id"].endswith("_footprint_only")
+    ]
+    footprint_rows[0]["footprint_visible"] = "absent"
+    footprint_rows[1]["footprint_visible"] = "absent"
+    footprint_rows[2]["footprint_visible"] = "absent"
+    review_csv = tmp_path / "blind_review.csv"
+    key_csv = tmp_path / "answer_key.csv"
+    write_csv(review_csv, review_rows)
+    write_csv(key_csv, key_rows)
+
+    module = load_module()
+    output_dir = tmp_path / "scores"
+    module.main(
+        [
+            "--review-csv",
+            str(review_csv),
+            "--answer-key",
+            str(key_csv),
+            "--output-dir",
+            str(output_dir),
+            "--profile",
+            "c03",
+        ]
+    )
+
+    item_rows = list(csv.DictReader((output_dir / "item_gate_summary.csv").open()))
+    assert item_rows[0]["gate_status"] == "fail"
+    assert item_rows[0]["footprint_only_successes"] == "2"
+    assert item_rows[0]["footprint_only_threshold"] == "3"
+    assert "footprint_only_below_threshold" in item_rows[0]["rejection_reasons"]
+    assert "footprint_only_incoherent" in item_rows[0]["rejection_reasons"]

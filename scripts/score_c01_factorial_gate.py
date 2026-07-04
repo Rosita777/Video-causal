@@ -10,11 +10,34 @@ from pathlib import Path
 from typing import Any, Iterable, Sequence
 
 
-THRESHOLDS = {
-    "original": 4,
-    "remove_target": 4,
-    "target_only": 4,
-    "footprint_only": 3,
+THRESHOLD_PROFILES = {
+    "c01": {
+        "status_on_pass": "pass",
+        "thresholds": {
+            "original": 4,
+            "remove_target": 4,
+            "target_only": 4,
+            "footprint_only": 3,
+        },
+    },
+    "c02_diagnostic": {
+        "status_on_pass": "diagnostic_promising",
+        "thresholds": {
+            "original": 2,
+            "remove_target": 2,
+            "target_only": 2,
+            "footprint_only": 2,
+        },
+    },
+    "c03": {
+        "status_on_pass": "pass",
+        "thresholds": {
+            "original": 4,
+            "remove_target": 4,
+            "target_only": 4,
+            "footprint_only": 3,
+        },
+    },
 }
 
 EXPECTED_VARIANTS = ["original", "remove_target", "footprint_only", "target_only"]
@@ -63,6 +86,14 @@ ITEM_GATE_FIELDS = [
 
 FALSE_FLAGS = {"no", "false", "0"}
 TRUE_FLAGS = {"yes", "true", "1"}
+THRESHOLD_COUNTED_REASONS = {
+    "original_unreliable",
+    "remove_target_failed",
+    "target_only_preserves_footprint",
+    "target_only_target_mismatch",
+    "footprint_only_incoherent",
+    "footprint_only_target_mismatch",
+}
 
 
 def normalize_presence(value: str) -> str:
@@ -248,7 +279,12 @@ def cell_sort_key(row: dict[str, Any]) -> tuple[int, str, int, int, str]:
     )
 
 
-def aggregate_item_scores(cell_rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+def aggregate_item_scores(
+    cell_rows: Sequence[dict[str, Any]],
+    *,
+    thresholds: dict[str, int],
+    status_on_pass: str = "pass",
+) -> list[dict[str, Any]]:
     groups: OrderedDict[str, list[dict[str, Any]]] = OrderedDict()
     for row in sorted(cell_rows, key=cell_sort_key):
         groups.setdefault(item_key(row), []).append(row)
@@ -268,7 +304,7 @@ def aggregate_item_scores(cell_rows: Sequence[dict[str, Any]]) -> list[dict[str,
                 reason
                 for row in rows
                 for reason in str(row.get("rejection_reasons", "")).split(",")
-                if reason
+                if reason and reason not in THRESHOLD_COUNTED_REASONS
             }
         )
         summary: dict[str, Any] = {
@@ -281,14 +317,24 @@ def aggregate_item_scores(cell_rows: Sequence[dict[str, Any]]) -> list[dict[str,
         for variant in EXPECTED_VARIANTS:
             variant_rows = by_variant[variant]
             successes = sum(bool(row.get("cell_success")) for row in variant_rows)
-            threshold = THRESHOLDS[variant]
+            threshold = thresholds[variant]
             summary[f"{variant}_total"] = len(variant_rows)
             summary[f"{variant}_successes"] = successes
             summary[f"{variant}_threshold"] = threshold
             if successes < threshold:
                 threshold_failures.append(f"{variant}_below_threshold")
+                threshold_failures.extend(
+                    sorted(
+                        {
+                            reason
+                            for row in variant_rows
+                            for reason in str(row.get("rejection_reasons", "")).split(",")
+                            if reason in THRESHOLD_COUNTED_REASONS
+                        }
+                    )
+                )
         all_reasons = sorted(set(item_reasons + threshold_failures + missing_variants))
-        summary["gate_status"] = "pass" if not all_reasons else "fail"
+        summary["gate_status"] = status_on_pass if not all_reasons else "fail"
         summary["rejection_reasons"] = ",".join(all_reasons)
         item_scores.append(summary)
     return sorted(item_scores, key=item_sort_key)
@@ -316,6 +362,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--review-csv", type=Path, required=True)
     parser.add_argument("--answer-key", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument(
+        "--profile",
+        choices=sorted(THRESHOLD_PROFILES),
+        default="c01",
+        help="threshold profile: c01, c02_diagnostic, or c03",
+    )
     return parser
 
 
@@ -329,13 +381,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     review_rows = read_csv(args.review_csv)
     key_rows = read_csv(args.answer_key)
     cell_rows = score_cell_rows(review_rows, key_rows)
-    item_rows = aggregate_item_scores(cell_rows)
+    profile = THRESHOLD_PROFILES[str(args.profile)]
+    item_rows = aggregate_item_scores(
+        cell_rows,
+        thresholds=profile["thresholds"],
+        status_on_pass=str(profile["status_on_pass"]),
+    )
     write_outputs(args.output_dir, cell_rows, item_rows)
-    passed = sum(1 for row in item_rows if row.get("gate_status") == "pass")
+    passed = sum(1 for row in item_rows if row.get("gate_status") != "fail")
     print(
         f"Wrote {len(cell_rows)} cell rows and {len(item_rows)} item rows to {args.output_dir}"
     )
-    print(f"C0.1 gate pass: {passed}/{len(item_rows)} items")
+    print(f"{args.profile} gate non-fail: {passed}/{len(item_rows)} items")
     return 0
 
 

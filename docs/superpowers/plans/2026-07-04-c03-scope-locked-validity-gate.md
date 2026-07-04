@@ -33,7 +33,7 @@
 - Modify: `scripts/score_c01_factorial_gate.py`
 - Modify: `tests/test_score_c01_factorial_gate.py`
 
-- [ ] **Step 1: Add failing tests for diagnostic and strict profiles**
+- [x] **Step 1: Add failing tests for diagnostic and strict profiles**
 
 Append these tests to `tests/test_score_c01_factorial_gate.py`:
 
@@ -120,6 +120,7 @@ def test_c03_profile_preserves_c01_five_seed_thresholds(tmp_path):
     ]
     footprint_rows[0]["footprint_visible"] = "absent"
     footprint_rows[1]["footprint_visible"] = "absent"
+    footprint_rows[2]["footprint_visible"] = "absent"
     review_csv = tmp_path / "blind_review.csv"
     key_csv = tmp_path / "answer_key.csv"
     write_csv(review_csv, review_rows)
@@ -142,12 +143,13 @@ def test_c03_profile_preserves_c01_five_seed_thresholds(tmp_path):
 
     item_rows = list(csv.DictReader((output_dir / "item_gate_summary.csv").open()))
     assert item_rows[0]["gate_status"] == "fail"
-    assert item_rows[0]["footprint_only_successes"] == "3"
+    assert item_rows[0]["footprint_only_successes"] == "2"
     assert item_rows[0]["footprint_only_threshold"] == "3"
+    assert "footprint_only_below_threshold" in item_rows[0]["rejection_reasons"]
     assert "footprint_only_incoherent" in item_rows[0]["rejection_reasons"]
 ```
 
-- [ ] **Step 2: Run tests and verify they fail**
+- [x] **Step 2: Run tests and verify they fail**
 
 Run:
 
@@ -159,7 +161,7 @@ PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
 
 Expected: fail because `--profile` is not implemented.
 
-- [ ] **Step 3: Add named threshold profiles**
+- [x] **Step 3: Add named threshold profiles**
 
 In `scripts/score_c01_factorial_gate.py`, replace the single `THRESHOLDS`
 constant with:
@@ -236,7 +238,7 @@ item_rows = aggregate_item_scores(
 )
 ```
 
-- [ ] **Step 4: Run tests and verify they pass**
+- [x] **Step 4: Run tests and verify they pass**
 
 Run:
 
@@ -248,7 +250,7 @@ PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit scorer profiles**
+- [x] **Step 5: Commit scorer profiles**
 
 ```bash
 git add scripts/score_c01_factorial_gate.py tests/test_score_c01_factorial_gate.py
