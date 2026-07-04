@@ -778,7 +778,7 @@ git commit -m "prepare c03 scope locked dry run"
 - Read: `experiments/method_probe/c03_scope_locked_candidates_20260704/candidate_manifest.json`
 - Read: `docs/experiment_log.md`
 
-- [ ] **Step 1: Review the pre-registered candidate manifest**
+- [x] **Step 1: Review the pre-registered candidate manifest**
 
 Open:
 
