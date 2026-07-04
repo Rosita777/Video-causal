@@ -22,6 +22,13 @@ def test_candidate_builder_writes_pre_registered_manifest(tmp_path):
     assert manifest["probe_name"] == "c03_scope_locked_surface_trace_candidates"
     assert manifest["count"] == 8
     assert manifest["candidate_scope"] == "low_entanglement_rigid_object_surface_trace"
+    assert "not a factorial cell" in manifest["field_notes"]["causal_footprint_absence_phrase"]
+    assert manifest["factorial_cells"] == {
+        "original": {"target_visible": "yes", "footprint_visible": "yes"},
+        "remove_target": {"target_visible": "no", "footprint_visible": "no"},
+        "footprint_only": {"target_visible": "no", "footprint_visible": "yes"},
+        "target_only": {"target_visible": "yes", "footprint_visible": "no"},
+    }
     assert [item["probe_index"] for item in manifest["items"]] == list(range(8))
     assert all(item["prior_seen"] is False for item in manifest["items"])
     assert all(
@@ -31,6 +38,7 @@ def test_candidate_builder_writes_pre_registered_manifest(tmp_path):
     assert all(item["surface_or_object"] for item in manifest["items"])
     assert all(item["causal_footprint"] for item in manifest["items"])
     assert all(item["causal_footprint_absence"] for item in manifest["items"])
+    assert all(item["causal_footprint_absence_phrase"] for item in manifest["items"])
     assert all("scope_predicates_met" in item for item in manifest["items"])
 
 
@@ -53,6 +61,7 @@ def test_candidate_manifest_is_runner_compatible(tmp_path):
         "target_concept",
         "causal_footprint",
         "causal_footprint_absence",
+        "causal_footprint_absence_phrase",
         "surface_or_object",
     }
     for item in manifest["items"]:

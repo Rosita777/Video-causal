@@ -276,7 +276,8 @@ def test_c03_scope_locked_prompt_template_uses_manifest_surface_and_footprint():
         "target_concept": "metal comb",
         "surface_or_object": "smooth sand tray",
         "causal_footprint": "parallel grooves in the sand",
-        "causal_footprint_absence": "parallel grooves in the sand",
+        "causal_footprint_absence": "legacy ambiguous phrase",
+        "causal_footprint_absence_phrase": "parallel grooves in the sand",
     }
 
     original, _ = module.variant_prompt(item, "original", prompt_template="c03_scope_locked")

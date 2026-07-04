@@ -6,6 +6,8 @@
 
 **Architecture:** Extend existing C0/C0.1 tooling instead of adding a parallel pipeline. `score_c01_factorial_gate.py` gains named threshold profiles; a new candidate-builder script emits a runner-compatible pre-registered manifest; `run_c0_counterfactual_grid.py` gains a `c03_scope_locked` prompt template that reads item-level surface/footprint fields.
 
+**Revision note:** After method-advisor review, C0.3 treats `causal_footprint_absence_phrase` as the primary grammar-safe phrase for negative prompts and keeps `causal_footprint_absence` only as a compatibility alias. The candidate manifest also records an explicit `factorial_cells` map so `remove_target` and `footprint_only` cannot be confused.
+
 **Tech Stack:** Python standard library, existing ZeroScope runner, existing C0.1 review builder, pytest.
 
 ---

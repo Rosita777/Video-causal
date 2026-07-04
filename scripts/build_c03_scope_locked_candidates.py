@@ -19,6 +19,18 @@ PREDICATES = [
     "target_footprint_text_separable",
     "stable_background_and_camera",
 ]
+FACTORIAL_CELLS = {
+    "original": {"target_visible": "yes", "footprint_visible": "yes"},
+    "remove_target": {"target_visible": "no", "footprint_visible": "no"},
+    "footprint_only": {"target_visible": "no", "footprint_visible": "yes"},
+    "target_only": {"target_visible": "yes", "footprint_visible": "no"},
+}
+FIELD_NOTES = {
+    "causal_footprint_absence_phrase": (
+        "Grammar-safe noun phrase used after 'no' in absence prompts; "
+        "not a factorial cell or a distinct experimental condition."
+    ),
+}
 
 CANDIDATES = [
     (
@@ -103,6 +115,7 @@ def item_row(
         "surface_or_object": surface,
         "causal_footprint": footprint,
         "causal_footprint_absence": absence_footprint,
+        "causal_footprint_absence_phrase": absence_footprint,
         "source_prompt": source_prompt,
         "generation_prompt": source_prompt,
         "counterfactual_prompt": (
@@ -128,6 +141,8 @@ def build_manifest() -> dict[str, object]:
         "probe_name": "c03_scope_locked_surface_trace_candidates",
         "dry_run": False,
         "candidate_scope": SCOPE,
+        "factorial_cells": FACTORIAL_CELLS,
+        "field_notes": FIELD_NOTES,
         "count": len(items),
         "items": items,
     }

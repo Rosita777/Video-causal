@@ -115,16 +115,23 @@ as a manifest before generation. Each row must include:
 - `target_concept`
 - `surface_or_object`
 - `causal_footprint`
-- `causal_footprint_absence`
+- `causal_footprint_absence_phrase`
+- `factorial_cells`
+- `field_notes`
 - `scope_predicates_met`
 - `prompt_template_id`
 - `prior_seen=false`
 
 `causal_footprint` is the visible phrase used in positive cells, such as
-`a white chalk line on the blackboard`. `causal_footprint_absence` is the
+`a white chalk line on the blackboard`. `causal_footprint_absence_phrase` is the
 article-free phrase used in negative cells, such as `white chalk line on the
 blackboard`. This avoids prompt noise such as "no a line" or singular/plural
-grammar errors.
+grammar errors. It is a grammar field, not a fifth condition and not a
+duplicate of the `footprint_only` cell. The manifest should also include an
+explicit `factorial_cells` map so that the four conditions remain auditable as
+target presence crossed with footprint presence. Legacy tooling may retain
+`causal_footprint_absence` as a compatibility alias, but new C0.3 prompts should
+read `causal_footprint_absence_phrase` first.
 
 The prior C0.2 item 4 can appear in a separate `debug_exemplar` split, but not
 in the C0.3 denominator.

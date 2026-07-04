@@ -171,7 +171,12 @@ def c03_surface_for(item: dict[str, object]) -> str:
 
 def c03_footprints_for(item: dict[str, object]) -> tuple[str, str]:
     footprint = normalize_space(str(item.get("causal_footprint", "causal footprint")))
-    absence = normalize_space(str(item.get("causal_footprint_absence", "")))
+    absence = normalize_space(
+        str(
+            item.get("causal_footprint_absence_phrase")
+            or item.get("causal_footprint_absence", "")
+        )
+    )
     return footprint, absence or footprint
 
 

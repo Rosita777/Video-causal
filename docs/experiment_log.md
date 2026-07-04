@@ -4101,8 +4101,15 @@ seed_indices=0..4
 prompt_template=c03_scope_locked
 dry_run=true
 frame_strip_count=0
+factorial_cells=explicit target_visible x footprint_visible map
+causal_footprint_absence_phrase=grammar field, not a factorial cell
 ```
 
-No new real videos were generated in this step. The next gate is human approval
-of the pre-registered candidate manifest before launching the 160-video real
-run.
+Fable method-advisor review raised a useful naming-risk critique: the original
+`causal_footprint_absence` field could be misread as an experimental condition
+instead of the noun phrase used in "no X" prompts. We hardened the manifest and
+runner by adding `causal_footprint_absence_phrase`, retaining the older field as
+a compatibility alias, and adding an explicit `factorial_cells` map to the
+candidate manifest. No new real videos were generated in this step. The next
+gate is human approval of the pre-registered candidate manifest before
+launching the 160-video real run.

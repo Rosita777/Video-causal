@@ -1,5 +1,5 @@
 {
-  "created_at_utc": "2026-07-04T11:41:15.764866+00:00",
+  "created_at_utc": "2026-07-04T11:48:37.916245+00:00",
   "baseline": "c0_counterfactual_grid",
   "model": "models/zeroscope_v2_576w",
   "dry_run": true,
