@@ -641,7 +641,7 @@ git commit -m "add c03 scope locked prompt template"
 - Create: `experiments/evaluation/c03_scope_locked_gate_20260704_dryrun/review_manifest.json`
 - Modify: `docs/experiment_log.md`
 
-- [ ] **Step 1: Run the 160-row dry run**
+- [x] **Step 1: Run the 160-row dry run**
 
 Run:
 
@@ -659,7 +659,7 @@ PYTHONNOUSERSITE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
 
 Expected: `generation_manifest.json` with 160 rows.
 
-- [ ] **Step 2: Build dry-run blinded review package**
+- [x] **Step 2: Build dry-run blinded review package**
 
 Run:
 
@@ -680,7 +680,7 @@ Expected: review CSV and answer key with 160 rows. Frame strips are absent in
 dry-run because videos are not generated; this is acceptable for metadata
 validation and should be recorded as `frame_strip_count=0`.
 
-- [ ] **Step 3: Run metadata integrity checks**
+- [x] **Step 3: Run metadata integrity checks**
 
 Run:
 
@@ -716,7 +716,7 @@ PY
 
 Expected: all assertions pass.
 
-- [ ] **Step 4: Append dry-run summary to experiment log**
+- [x] **Step 4: Append dry-run summary to experiment log**
 
 Append to `docs/experiment_log.md`:
 
@@ -755,7 +755,7 @@ of the pre-registered candidate manifest before launching the 160-video real
 run.
 ```
 
-- [ ] **Step 5: Commit dry-run artifacts**
+- [x] **Step 5: Commit dry-run artifacts**
 
 ```bash
 git add docs/experiment_log.md \

@@ -4073,3 +4073,36 @@ two honest paths: expand to a larger diverse item set, or make the method scope
 narrow and test that scope directly. A stronger publishable version likely
 needs a synthetic or controlled benchmark with known masks/causal structure plus
 a re-insertion or consistency test, not only visual plausibility.
+
+### 2026-07-04 C0.3 scope-locked validity gate dry run
+
+Created the C0.3 scope-locked surface-trace candidate manifest and validated a
+160-row dry-run grid before any new GPU generation.
+
+Artifacts:
+
+```text
+experiments/method_probe/c03_scope_locked_candidates_20260704/candidate_manifest.json
+experiments/method_probe/c03_scope_locked_gate_20260704_dryrun/generation_manifest.json
+experiments/evaluation/c03_scope_locked_gate_20260704_dryrun/blind_review.csv
+experiments/evaluation/c03_scope_locked_gate_20260704_dryrun/answer_key.csv
+experiments/evaluation/c03_scope_locked_gate_20260704_dryrun/review_manifest.json
+```
+
+Integrity:
+
+```text
+candidate_items=8
+denominator_items=8
+prior_seen=false for all denominator items
+rows=160
+variants=40 each
+seed_indices=0..4
+prompt_template=c03_scope_locked
+dry_run=true
+frame_strip_count=0
+```
+
+No new real videos were generated in this step. The next gate is human approval
+of the pre-registered candidate manifest before launching the 160-video real
+run.
