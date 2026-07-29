@@ -4,9 +4,28 @@
 
 **Canonical example:** after erasing "ball" from "a red ball rolls and knocks over wooden blocks", the ball disappears but the blocks still fall.
 
+## Active Restart (2026-07-29)
+
+The project is being restarted from the GitHub snapshot on `A100_sc` at:
+
+```text
+/data/xiaohuang_workspace/ljc/Video-causal
+```
+
+The active direction supersedes the older ZeroScope method-probe direction:
+
+- ZeroScope is no longer an active backbone because it does not reliably generate complete causal-chain videos.
+- The active backbones are Wan2.1-T2V-1.3B and CogVideoX-2B.
+- The method direction is training-based, but the training objective is intentionally not fixed yet.
+- The immediate engineering milestone is a single clean-source scenario: a red rubber ball rolls into four upright wooden blocks and the blocks topple after impact.
+- `prompts/ball_blocks_clean_candidates50.txt` contains 50 wording variants of this fixed scene.
+- Each prompt will be generated once with the base Wan model, then full videos will be screened for a visible ball, visible impact, and blocks toppling only after impact.
+
+The older benchmark, baseline, ZeroScope, and method-probe sections below are retained as historical evidence. Do not treat them as the current experimental plan. The current restart decisions are tracked in `docs/restart_plan_2026-07-29.md`.
+
 ## Current Direction
 
-The project is now benchmark-first. Before proposing a new erasure method, we are defining **causal footprint leakage** as a distinct failure mode from ordinary target-visible leakage and building a structured benchmark for it.
+Historically, the project was benchmark-first. Before proposing a new erasure method, it defined **causal footprint leakage** as a distinct failure mode from ordinary target-visible leakage and built a structured benchmark for it.
 
 Current benchmark design spec:
 

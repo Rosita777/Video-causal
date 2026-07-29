@@ -97,3 +97,6 @@ outputs/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# Project-local download/runtime environments
+.hf-download-env/
