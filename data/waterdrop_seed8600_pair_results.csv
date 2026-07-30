@@ -1,0 +1,13 @@
+sample_id,seed,reference_end_exclusive,first_frame_reference_mae_255,max_encoded_temporal_mae_255,frames,fps,decision,notes
+wdt000,8600,12,0.7542,0.0003,49,8,pass,"Clean stable pond target."
+wdt001,8601,28,0.8894,0.0067,49,8,pass,"Clean stable bowl target."
+wdt002,8602,24,0.7288,0.0024,49,8,pass,"Clean stable cup target."
+wdt003,8603,12,0.8149,0.0047,49,8,pass,"Clean stable bucket target."
+wdt004,8604,12,0.6464,0.0005,49,8,pass,"Clean stable puddle target."
+wdt005,8605,12,1.6084,0.0019,49,8,pass,"Clean stable aquarium-surface target."
+wdt006,8606,24,1.7444,0.0047,49,8,pass,"Clean stable tile target."
+wdt007,8607,16,0.8398,0.0047,49,8,pass,"Clean stable tray target."
+wdt008,8608,12,0.6554,0.0009,49,8,pass,"Clean stable glass-surface target."
+wdt011,8611,32,0.6579,0.0008,49,8,pass,"Clean stable blue-board target."
+wdt015,8615,4,1.0979,0.0016,49,8,pass,"Clean stable sponge target from a short prefix."
+wdt022,8622,12,1.7716,0.0167,49,8,reject,"The receiver resembles seeds rather than coffee grounds and the footprint becomes an implausible black pool."
