@@ -62,6 +62,67 @@ def test_generate_wan_clean_dry_run_writes_manifest(tmp_path):
     assert manifest["items"][0]["video_path"].endswith("_seed123.mp4")
 
 
+def test_generate_wan_clean_accepts_explicit_seed_list(tmp_path):
+    prompts = tmp_path / "prompts.txt"
+    prompts.write_text(
+        "First static scene. | droplet | still surface\n"
+        "Second static scene. | droplet | dry surface\n",
+        encoding="utf-8",
+    )
+    output_dir = tmp_path / "wan_explicit_seeds"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(PROJECT_ROOT / "scripts" / "generate_wan_clean.py"),
+            "--prompts",
+            str(prompts),
+            "--output-dir",
+            str(output_dir),
+            "--seeds",
+            "8300,8316",
+            "--dry-run",
+        ],
+        cwd=PROJECT_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    manifest = json.loads((output_dir / "generation_manifest.json").read_text(encoding="utf-8"))
+    assert [item["seed"] for item in manifest["items"]] == [8300, 8316]
+    assert manifest["generation"]["seeds"] == [8300, 8316]
+
+
+def test_generate_wan_clean_rejects_wrong_explicit_seed_count(tmp_path):
+    prompts = tmp_path / "prompts.txt"
+    prompts.write_text(
+        "First static scene. | droplet | still surface\n"
+        "Second static scene. | droplet | dry surface\n",
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(PROJECT_ROOT / "scripts" / "generate_wan_clean.py"),
+            "--prompts",
+            str(prompts),
+            "--output-dir",
+            str(tmp_path / "bad_seed_count"),
+            "--seeds",
+            "8300",
+            "--dry-run",
+        ],
+        cwd=PROJECT_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode != 0
+    assert "1 values but 2 prompts were selected" in result.stderr
+
+
 def test_wan_clean_uses_cpu_prompt_encoding_when_offloaded():
     offloaded = SimpleNamespace(enable_sequential_cpu_offload=True, enable_model_cpu_offload=False)
     model_offloaded = SimpleNamespace(enable_sequential_cpu_offload=False, enable_model_cpu_offload=True)

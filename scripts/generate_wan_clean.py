@@ -27,6 +27,7 @@ def build_generation_config(args: argparse.Namespace) -> dict[str, object]:
     return {
         "baseline": args.baseline,
         "seed": args.seed,
+        "seeds": args.seeds,
         "num_inference_steps": args.steps,
         "guidance_scale": args.guidance_scale,
         "num_frames": args.num_frames,
@@ -49,12 +50,13 @@ def build_manifest_items(
     base_seed: int,
     limit: int | None,
     baseline: str,
+    explicit_seeds: list[int] | None = None,
 ) -> list[dict[str, object]]:
     selected = prompts[:limit] if limit is not None else prompts
     items: list[dict[str, object]] = []
     video_dir = output_dir / "videos"
     for index, item in enumerate(selected):
-        seed = base_seed + index
+        seed = explicit_seeds[index] if explicit_seeds is not None else base_seed + index
         prompt_slug = slugify(item["prompt"])
         manifest_item: dict[str, object] = {
             "index": index,
@@ -68,6 +70,16 @@ def build_manifest_items(
             manifest_item["negative_prompt"] = item["target_concept"]
         items.append(manifest_item)
     return items
+
+
+def parse_seed_list(value: str) -> list[int]:
+    try:
+        seeds = [int(part.strip()) for part in value.split(",") if part.strip()]
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("--seeds must be a comma-separated list of integers") from exc
+    if not seeds:
+        raise argparse.ArgumentTypeError("--seeds must contain at least one integer")
+    return seeds
 
 
 def write_manifest(
@@ -220,6 +232,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--seeds",
+        type=parse_seed_list,
+        help="Comma-separated per-prompt seeds; overrides --seed when provided",
+    )
     parser.add_argument("--steps", type=int, default=25)
     parser.add_argument("--guidance-scale", type=float, default=5.0)
     parser.add_argument("--num-frames", type=int, default=49)
@@ -253,8 +270,18 @@ def main() -> int:
         parser.error("--height and --width must be positive")
 
     prompts = parse_prompt_file(args.prompts)
+    selected_count = len(prompts[: args.limit] if args.limit is not None else prompts)
+    if args.seeds is not None and len(args.seeds) != selected_count:
+        parser.error(f"--seeds contains {len(args.seeds)} values but {selected_count} prompts were selected")
     generation = build_generation_config(args)
-    items = build_manifest_items(prompts, args.output_dir, args.seed, args.limit, args.baseline)
+    items = build_manifest_items(
+        prompts,
+        args.output_dir,
+        args.seed,
+        args.limit,
+        args.baseline,
+        explicit_seeds=args.seeds,
+    )
 
     if not args.dry_run:
         generate_videos(args, items)

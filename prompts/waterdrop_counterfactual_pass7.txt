@@ -1,0 +1,8 @@
+# prompt | target concept | expected effect
+A realistic fixed-camera macro video in one continuous shot. The perfectly flat surface of the same calm shallow pond remains completely still and undisturbed throughout the video. | single falling water droplet | pond surface stays flat and still
+A realistic fixed-camera close-up video in one continuous shot. The same transparent glass bowl filled with water remains completely still and level throughout the video. | single falling water droplet | water in the bowl stays still and level
+A realistic fixed-camera close-up video in one continuous shot. The water inside the same plain white ceramic cup remains calm, level, and motionless throughout the video. | single falling water droplet | water in the cup stays calm and level
+A realistic fixed-camera macro video in one continuous shot. The same clean stainless-steel tray remains completely dry and unchanged throughout the video. | single falling water droplet | steel tray stays clean and dry
+A realistic fixed-camera macro video in one continuous shot. The same clean transparent glass tabletop remains completely dry and unchanged throughout the video. | single falling water droplet | glass tabletop stays clean and dry
+A realistic fixed-camera macro video in one continuous shot. The same plain white ceramic plate remains completely dry and unchanged throughout the video. | single falling water droplet | ceramic plate stays clean and dry
+A realistic fixed-camera macro video in one continuous shot. The same smooth piece of unfinished pale wood remains completely clean, dry, and unchanged throughout the video. | single falling water droplet | unfinished wood stays clean and dry

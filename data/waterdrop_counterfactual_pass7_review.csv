@@ -1,0 +1,8 @@
+scene_id,seed,receiver,counterfactual_no_droplet,counterfactual_static,receiver_clear,strict_pair_alignment,decision,notes
+wd000,8300,calm shallow pond,pass,pass,pass,fail,clean_only,"Clean still water, but horizon, color, and framing differ from the factual video."
+wd001,8301,glass bowl filled with water,pass,pass,pass,fail,clean_only,"Clean stable bowl, but bowl shape, scale, and camera angle differ."
+wd002,8302,ceramic cup filled with water,pass,pass,pass,fail,clean_only,"Clean stable cup, but the counterfactual uses a higher camera angle and different framing."
+wd007,8307,stainless-steel tray,pass,pass,pass,fail,clean_only,"Clean stable tray, but the factual view is side-on while the counterfactual is top-down."
+wd008,8308,glass tabletop,pass,pass,uncertain,fail,reject,"No droplet appears, but the tabletop is weakly defined and the composition is unrelated."
+wd010,8310,ceramic plate,pass,pass,pass,fail,clean_only,"Clean stable plate, but the factual video is tightly cropped and the counterfactual shows the full plate."
+wd016,8316,unfinished pale wood,pass,pass,pass,fail,clean_only,"Clean stable wood surface, but grain, brightness, and framing do not match."
