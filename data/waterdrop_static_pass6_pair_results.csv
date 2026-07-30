@@ -1,0 +1,7 @@
+scene_id,seed,receiver,reference_end_exclusive,first_frame_reference_mae_255,max_encoded_temporal_mae_255,frames,fps,decision,notes
+wd001,8301,glass bowl filled with water,20,1.0817,0.0068,49,8,pass,"Clean prefix is visible; bowl geometry stays aligned."
+wd002,8302,ceramic cup filled with water,20,0.4455,0.0021,49,8,pass,"Clean prefix is visible; cup geometry stays aligned."
+wd007,8307,stainless-steel tray,2,0.4705,0.0040,49,8,pass,"Reference shortened because the droplet enters at frame 2."
+wd008,8308,glass tabletop,5,0.4894,0.0015,49,8,pass,"Clean prefix is short but sufficient; glass boundary stays aligned."
+wd010,8310,ceramic plate,16,0.7690,0.0013,49,8,pass,"Previously verified single aligned pair."
+wd016,8316,unfinished pale wood,20,1.0950,0.0007,49,8,pass,"Clean prefix is visible; wood grain stays aligned."
