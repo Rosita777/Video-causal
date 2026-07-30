@@ -1,0 +1,15 @@
+{
+  "created_at_utc": "2026-07-30T08:44:19.283456+00:00",
+  "method": "median_of_clean_pre_event_frames_repeated_as_static_video",
+  "input": "outputs/waterdrop_scene_probe30_repeat_wan_seed8400_8429/part_b/videos/002_a-realistic-fixed-camera-macro-video-in-one-continuous-shot-during-the-f_seed8417.mp4",
+  "output_video": "outputs/waterdrop_repeat_pass16_aligned_pairs/wdr017_seed8417/counterfactual_static.mp4",
+  "clean_reference": "outputs/waterdrop_repeat_pass16_aligned_pairs/wdr017_seed8417/clean_reference.png",
+  "contact_sheet": "outputs/waterdrop_repeat_pass16_aligned_pairs/wdr017_seed8417/factual_counterfactual_contact_sheet.jpg",
+  "frame_count": 49,
+  "fps": 8.0,
+  "height": 480,
+  "width": 832,
+  "reference_start_inclusive": 0,
+  "reference_end_exclusive": 20,
+  "first_frame_reference_mae": 0.6489625066773504
+}
