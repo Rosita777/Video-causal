@@ -1,0 +1,12 @@
+sample_id,seed,reference_end_exclusive,first_frame_reference_mae_255,max_encoded_temporal_mae_255,frames,fps,decision,notes
+wdu000,8700,16,0.6522,0.0003,49,8,pass,"Clean stable pond target."
+wdu002,8702,16,0.6042,0.0018,49,8,pass,"Clean stable cup target."
+wdu003,8703,12,1.0372,0.0053,49,8,pass,"Clean stable bucket target."
+wdu004,8704,8,0.6380,0.0003,49,8,pass,"Clean stable puddle target."
+wdu006,8706,20,1.1666,0.0038,49,8,pass,"Clean stable tile target."
+wdu007,8707,16,0.7557,0.0060,49,8,pass,"Clean stable tray target."
+wdu008,8708,16,0.7181,0.0021,49,8,pass,"Clean stable glass-surface target."
+wdu014,8714,16,1.2057,0.0060,49,8,pass,"Clean stable cardboard target."
+wdu015,8715,12,1.3942,0.0004,49,8,pass,"Clean stable sponge target."
+wdu016,8716,16,1.1227,0.0031,49,8,pass,"Clean stable wood target."
+wdu019,8719,8,4.3799,0.0286,49,8,reject,"The clean prefix is unstable, so this target is not suitable for strict aligned supervision."
