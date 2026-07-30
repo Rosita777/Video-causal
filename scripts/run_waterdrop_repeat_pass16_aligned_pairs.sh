@@ -3,9 +3,9 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-review="data/waterdrop_scene_probe30_repeat_review.csv"
-source_root="outputs/waterdrop_scene_probe30_repeat_wan_seed8400_8429"
-output_root="outputs/waterdrop_repeat_pass16_aligned_pairs"
+review="${REVIEW:-data/waterdrop_scene_probe30_repeat_review.csv}"
+source_root="${SOURCE_ROOT:-outputs/waterdrop_scene_probe30_repeat_wan_seed8400_8429}"
+output_root="${OUTPUT_ROOT:-outputs/waterdrop_repeat_pass16_aligned_pairs}"
 
 while IFS=, read -r sample_id seed part index receiver decision reference_end notes; do
   if [[ "$sample_id" == "sample_id" || "$decision" != "pass" ]]; then
