@@ -1,0 +1,9 @@
+# Water-drop backbone capability probe: matched counterfactual states
+# Ordered to match waterdrop_capability_factual5.txt and generated with the same seeds.
+# Format: <prompt> | <target> | <effect>
+
+A realistic macro slow-motion video with a fixed side camera. A calm shallow pond fills the same simple scene. Its flat water surface remains completely still and undisturbed throughout the video. | single falling water droplet | the pond surface remains flat and still
+A realistic close-up video with a locked side camera. A transparent glass cup is nearly full of perfectly still water. The liquid remains calm, level, and motionless throughout the video. | single falling water droplet | the water in the glass remains calm and motionless
+A realistic macro video with a stationary side camera. A clean dry dark-gray ceramic tile fills the same simple scene. Its surface remains dry, clean, and unchanged throughout the video. | single falling water droplet | the ceramic tile remains dry and unchanged
+A realistic macro video with a fixed camera. A clean dry sheet of white absorbent paper lies flat on a table. The paper remains clean, dry, flat, and unchanged throughout the video. | single falling water droplet | the paper remains clean and dry
+A realistic macro slow-motion video with a locked side camera. A fresh dry green leaf is held horizontally in the same simple scene. The leaf remains still, dry, and unchanged throughout the video. | single falling water droplet | the leaf remains still and dry
