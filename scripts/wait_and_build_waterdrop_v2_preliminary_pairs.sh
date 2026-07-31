@@ -2,7 +2,7 @@
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SCREEN_CSV="${SCREEN_CSV:-$PROJECT_ROOT/data/waterdrop_v2_auto_screen.csv}"
+SCREEN_CSV="${SCREEN_CSV:-$PROJECT_ROOT/data/waterdrop_prompt_bank_v2_auto_screen.csv}"
 LOG_PATH="${LOG_PATH:-$PROJECT_ROOT/logs/waterdrop_v2_preliminary_pairs.log}"
 
 cd "$PROJECT_ROOT"

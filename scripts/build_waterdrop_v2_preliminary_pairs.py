@@ -13,7 +13,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=Path("."))
     parser.add_argument(
-        "--screen-csv", type=Path, default=Path("data/waterdrop_v2_auto_screen.csv")
+        "--screen-csv",
+        type=Path,
+        default=Path("data/waterdrop_prompt_bank_v2_auto_screen.csv"),
     )
     parser.add_argument(
         "--output-root", type=Path, default=Path("outputs/waterdrop_prompt_bank_v2_preliminary_pairs")
