@@ -1,0 +1,31 @@
+scene_id,source_scene_id,receiver_id,family,receiver,prompt_variant,condition,split,expected_base_target,expected_base_footprint,expected_erased_target,expected_erased_footprint,erase_instruction,fixed_seed,shard,shard_index
+wdreplenish000,wdsimple0158,hard_surface_04,hard_surface,plain white ceramic plate,0,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,0,0
+wdreplenish006,wdsimple0176,hard_surface_13,hard_surface,white enamel stove surface,0,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,0,1
+wdreplenish012,wdsimple0202,hard_surface_26,hard_surface,laminated office desk,0,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,0,2
+wdreplenish018,wdsimple0220,hard_surface_35,hard_surface,clear glass coaster,0,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,0,3
+wdreplenish024,wdsimple0238,hard_surface_44,hard_surface,smooth whiteboard panel,0,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,0,4
+wdreplenish001,wdsimple0158,hard_surface_04,hard_surface,plain white ceramic plate,1,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,1,0
+wdreplenish007,wdsimple0176,hard_surface_13,hard_surface,white enamel stove surface,1,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,1,1
+wdreplenish013,wdsimple0202,hard_surface_26,hard_surface,laminated office desk,1,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,1,2
+wdreplenish019,wdsimple0220,hard_surface_35,hard_surface,clear glass coaster,1,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,1,3
+wdreplenish025,wdsimple0238,hard_surface_44,hard_surface,smooth whiteboard panel,1,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,1,4
+wdreplenish002,wdsimple0164,hard_surface_07,hard_surface,white quartz countertop,0,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,2,0
+wdreplenish008,wdsimple0184,hard_surface_17,hard_surface,polished brass plate,0,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,2,1
+wdreplenish014,wdsimple0214,hard_surface_32,hard_surface,glazed pottery lid,0,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,2,2
+wdreplenish020,wdsimple0226,hard_surface_38,hard_surface,porcelain bathtub ledge,0,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,2,3
+wdreplenish026,wdsimple0242,hard_surface_46,hard_surface,polished jade slab,0,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,2,4
+wdreplenish003,wdsimple0164,hard_surface_07,hard_surface,white quartz countertop,1,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,3,0
+wdreplenish009,wdsimple0184,hard_surface_17,hard_surface,polished brass plate,1,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,3,1
+wdreplenish015,wdsimple0214,hard_surface_32,hard_surface,glazed pottery lid,1,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,3,2
+wdreplenish021,wdsimple0226,hard_surface_38,hard_surface,porcelain bathtub ledge,1,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,3,3
+wdreplenish027,wdsimple0242,hard_surface_46,hard_surface,polished jade slab,1,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,3,4
+wdreplenish004,wdsimple0174,hard_surface_12,hard_surface,porcelain sink ledge,0,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,4,0
+wdreplenish010,wdsimple0198,hard_surface_24,hard_surface,rigid white PVC board,0,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,4,1
+wdreplenish016,wdsimple0218,hard_surface_34,hard_surface,glazed ceramic coaster,0,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,4,2
+wdreplenish022,wdsimple0228,hard_surface_39,hard_surface,flat section of a painted car hood,0,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,4,3
+wdreplenish028,wdsimple0246,hard_surface_48,hard_surface,glazed porcelain floor tile,0,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,4,4
+wdreplenish005,wdsimple0174,hard_surface_12,hard_surface,porcelain sink ledge,1,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,5,0
+wdreplenish011,wdsimple0198,hard_surface_24,hard_surface,rigid white PVC board,1,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,5,1
+wdreplenish017,wdsimple0218,hard_surface_34,hard_surface,glazed ceramic coaster,1,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,5,2
+wdreplenish023,wdsimple0228,hard_surface_39,hard_surface,flat section of a painted car hood,1,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,5,3
+wdreplenish029,wdsimple0246,hard_surface_48,hard_surface,glazed porcelain floor tile,1,target_only_resting_bead,frozen_test_replenishment_candidate,yes,no,no,no,Remove the water droplet.,9300,5,4
