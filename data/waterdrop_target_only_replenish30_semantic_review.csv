@@ -1,0 +1,31 @@
+scene_id,receiver,prompt_variant,semantic_pass,selected_for_final20,failure_reason,review_basis
+wdreplenish000,plain white ceramic plate,0,no,no,bead grows substantially across the clip,12-frame contact sheet
+wdreplenish001,plain white ceramic plate,1,no,no,bead is initially tiny and grows substantially,12-frame contact sheet
+wdreplenish002,white quartz countertop,0,yes,yes,,12-frame contact sheet
+wdreplenish003,white quartz countertop,1,yes,yes,,12-frame contact sheet
+wdreplenish004,porcelain sink ledge,0,yes,yes,,12-frame contact sheet
+wdreplenish005,porcelain sink ledge,1,yes,no,,12-frame contact sheet
+wdreplenish006,white enamel stove surface,0,no,no,dark puddle and ring form instead of one clear bead,12-frame contact sheet
+wdreplenish007,white enamel stove surface,1,no,no,bead forms and grows after recording begins,12-frame contact sheet
+wdreplenish008,polished brass plate,0,no,no,new falling water enters near the end,12-frame contact sheet
+wdreplenish009,polished brass plate,1,no,no,bead grows substantially near the end,12-frame contact sheet
+wdreplenish010,rigid white PVC board,0,no,no,late impact-like deformation,12-frame contact sheet
+wdreplenish011,rigid white PVC board,1,yes,yes,,12-frame contact sheet
+wdreplenish012,laminated office desk,0,yes,yes,,12-frame contact sheet
+wdreplenish013,laminated office desk,1,yes,yes,,12-frame contact sheet
+wdreplenish014,glazed pottery lid,0,yes,yes,,12-frame contact sheet
+wdreplenish015,glazed pottery lid,1,no,no,bead changes shape substantially,12-frame contact sheet
+wdreplenish016,glazed ceramic coaster,0,no,no,surrounding ring and late falling water,12-frame contact sheet
+wdreplenish017,glazed ceramic coaster,1,no,no,persistent surrounding wet ring,12-frame contact sheet
+wdreplenish018,clear glass coaster,0,no,no,surrounding ring and late falling water,12-frame contact sheet
+wdreplenish019,clear glass coaster,1,no,no,surrounding ring and late falling water,12-frame contact sheet
+wdreplenish020,porcelain bathtub ledge,0,no,no,new falling water enters near the end,12-frame contact sheet
+wdreplenish021,porcelain bathtub ledge,1,no,no,new falling water enters near the end,12-frame contact sheet
+wdreplenish022,flat section of a painted car hood,0,no,no,persistent surrounding wet ring,12-frame contact sheet
+wdreplenish023,flat section of a painted car hood,1,yes,yes,,12-frame contact sheet
+wdreplenish024,smooth whiteboard panel,0,yes,yes,,12-frame contact sheet
+wdreplenish025,smooth whiteboard panel,1,yes,yes,,12-frame contact sheet
+wdreplenish026,polished jade slab,0,no,no,surrounding ring and late impact,12-frame contact sheet
+wdreplenish027,polished jade slab,1,no,no,bead grows and receives a late impact,12-frame contact sheet
+wdreplenish028,glazed porcelain floor tile,0,no,no,large shape changes and late incoming water,12-frame contact sheet
+wdreplenish029,glazed porcelain floor tile,1,no,no,large shape changes across the clip,12-frame contact sheet
