@@ -1,0 +1,21 @@
+scene_id,receiver,semantic_pass,failure_reason,review_basis
+wdresting000,stainless-steel tray,yes,,12-frame contact sheet
+wdresting001,transparent glass tabletop,yes,,12-frame contact sheet
+wdresting002,blue plastic cutting board,yes,,12-frame contact sheet
+wdresting003,white quartz countertop,no,bead appears late and spreads into a ring,12-frame contact sheet
+wdresting004,porcelain sink ledge,no,bead is absent initially and grows later,12-frame contact sheet
+wdresting005,flat chrome-plated shelf,yes,,12-frame contact sheet
+wdresting006,polished copper plate,yes,,12-frame contact sheet
+wdresting007,steel workbench top,yes,,12-frame contact sheet
+wdresting008,clear glass plate,no,wet ring is present and bead forms later,12-frame contact sheet
+wdresting009,rigid white PVC board,no,bead appears late and then fades,12-frame contact sheet
+wdresting010,painted metal cabinet top,yes,,12-frame contact sheet
+wdresting011,tempered-glass refrigerator shelf,yes,,12-frame contact sheet
+wdresting012,flat wall mirror,no,bead appears late with a surrounding wet ring,12-frame contact sheet
+wdresting013,glazed ceramic coaster,no,impact-like concentric rings and late bead formation,12-frame contact sheet
+wdresting014,clear glass coaster,no,large wet footprint and changing bead,12-frame contact sheet
+wdresting015,flat section of a painted car hood,no,bead appears late and spreads,12-frame contact sheet
+wdresting016,laptop glass trackpad,yes,,12-frame contact sheet
+wdresting017,laboratory resin worktop,yes,,12-frame contact sheet
+wdresting018,polished jade slab,no,bead changes shape substantially instead of remaining motionless,12-frame contact sheet
+wdresting019,glazed porcelain floor tile,no,bead is absent initially and appears late,12-frame contact sheet
