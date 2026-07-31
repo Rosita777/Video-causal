@@ -1,0 +1,21 @@
+scene_id,source_scene_id,receiver_id,family,receiver,condition,split,expected_base_target,expected_base_footprint,expected_erased_target,expected_erased_footprint,erase_instruction,fixed_seed,shard,shard_index
+wdresting000,wdsimple0152,hard_surface_01,hard_surface,stainless-steel tray,target_only_resting_bead,frozen_test_candidate,yes,no,no,no,Remove the water droplet.,9200,0,0
+wdresting004,wdsimple0174,hard_surface_12,hard_surface,porcelain sink ledge,target_only_resting_bead,frozen_test_candidate,yes,no,no,no,Remove the water droplet.,9200,0,1
+wdresting008,wdsimple0192,hard_surface_21,hard_surface,clear glass plate,target_only_resting_bead,frozen_test_candidate,yes,no,no,no,Remove the water droplet.,9200,0,2
+wdresting012,wdsimple0210,hard_surface_30,hard_surface,flat wall mirror,target_only_resting_bead,frozen_test_candidate,yes,no,no,no,Remove the water droplet.,9200,0,3
+wdresting016,wdsimple0232,hard_surface_41,hard_surface,laptop glass trackpad,target_only_resting_bead,frozen_test_candidate,yes,no,no,no,Remove the water droplet.,9200,0,4
+wdresting001,wdsimple0154,hard_surface_02,hard_surface,transparent glass tabletop,target_only_resting_bead,frozen_test_candidate,yes,no,no,no,Remove the water droplet.,9200,1,0
+wdresting005,wdsimple0178,hard_surface_14,hard_surface,flat chrome-plated shelf,target_only_resting_bead,frozen_test_candidate,yes,no,no,no,Remove the water droplet.,9200,1,1
+wdresting009,wdsimple0198,hard_surface_24,hard_surface,rigid white PVC board,target_only_resting_bead,frozen_test_candidate,yes,no,no,no,Remove the water droplet.,9200,1,2
+wdresting013,wdsimple0218,hard_surface_34,hard_surface,glazed ceramic coaster,target_only_resting_bead,frozen_test_candidate,yes,no,no,no,Remove the water droplet.,9200,1,3
+wdresting017,wdsimple0236,hard_surface_43,hard_surface,laboratory resin worktop,target_only_resting_bead,frozen_test_candidate,yes,no,no,no,Remove the water droplet.,9200,1,4
+wdresting002,wdsimple0160,hard_surface_05,hard_surface,blue plastic cutting board,target_only_resting_bead,frozen_test_candidate,yes,no,no,no,Remove the water droplet.,9200,2,0
+wdresting006,wdsimple0182,hard_surface_16,hard_surface,polished copper plate,target_only_resting_bead,frozen_test_candidate,yes,no,no,no,Remove the water droplet.,9200,2,1
+wdresting010,wdsimple0206,hard_surface_28,hard_surface,painted metal cabinet top,target_only_resting_bead,frozen_test_candidate,yes,no,no,no,Remove the water droplet.,9200,2,2
+wdresting014,wdsimple0220,hard_surface_35,hard_surface,clear glass coaster,target_only_resting_bead,frozen_test_candidate,yes,no,no,no,Remove the water droplet.,9200,2,3
+wdresting018,wdsimple0242,hard_surface_46,hard_surface,polished jade slab,target_only_resting_bead,frozen_test_candidate,yes,no,no,no,Remove the water droplet.,9200,2,4
+wdresting003,wdsimple0164,hard_surface_07,hard_surface,white quartz countertop,target_only_resting_bead,frozen_test_candidate,yes,no,no,no,Remove the water droplet.,9200,3,0
+wdresting007,wdsimple0186,hard_surface_18,hard_surface,steel workbench top,target_only_resting_bead,frozen_test_candidate,yes,no,no,no,Remove the water droplet.,9200,3,1
+wdresting011,wdsimple0208,hard_surface_29,hard_surface,tempered-glass refrigerator shelf,target_only_resting_bead,frozen_test_candidate,yes,no,no,no,Remove the water droplet.,9200,3,2
+wdresting015,wdsimple0228,hard_surface_39,hard_surface,flat section of a painted car hood,target_only_resting_bead,frozen_test_candidate,yes,no,no,no,Remove the water droplet.,9200,3,3
+wdresting019,wdsimple0246,hard_surface_48,hard_surface,glazed porcelain floor tile,target_only_resting_bead,frozen_test_candidate,yes,no,no,no,Remove the water droplet.,9200,3,4
