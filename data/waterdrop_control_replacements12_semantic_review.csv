@@ -1,0 +1,13 @@
+scene_id,replaced_scene_id,condition,receiver,semantic_pass,selected_for_final100,semantic_note,review_basis
+wdcontrolfix000,wdfive0008,unrelated_footprint,a white enamel washbasin filled with water,yes,yes,"visible unrelated ripples, no target droplet, receiver preserved",12-frame contact sheet
+wdcontrolfix001,wdfive0008,unrelated_footprint,a white enamel washbasin filled with water,yes,no,"visible unrelated ripples, no target droplet, receiver preserved",12-frame contact sheet
+wdcontrolfix002,wdfive0008,unrelated_footprint,a white enamel washbasin filled with water,yes,no,"visible unrelated ripples, no target droplet, receiver preserved",12-frame contact sheet
+wdcontrolfix003,wdfive0008,unrelated_footprint,a white enamel washbasin filled with water,yes,no,"visible unrelated ripples, no target droplet, receiver preserved",12-frame contact sheet
+wdcontrolfix004,wdfive0018,unrelated_footprint,a small porcelain teacup filled with water,yes,yes,"visible unrelated ripples, no target droplet, receiver preserved",12-frame contact sheet
+wdcontrolfix005,wdfive0018,unrelated_footprint,a small porcelain teacup filled with water,yes,no,"visible unrelated ripples, no target droplet, receiver preserved",12-frame contact sheet
+wdcontrolfix006,wdfive0018,unrelated_footprint,a small porcelain teacup filled with water,yes,no,"visible unrelated ripples, no target droplet, receiver preserved",12-frame contact sheet
+wdcontrolfix007,wdfive0018,unrelated_footprint,a small porcelain teacup filled with water,yes,no,"visible unrelated ripples, no target droplet, receiver preserved",12-frame contact sheet
+wdcontrolfix008,wdfive0049,clean_control,a shallow puddle on a flat stone step,no,no,"ripples remain visible, so this is not a clean control",12-frame contact sheet
+wdcontrolfix009,wdfive0049,clean_control,a shallow puddle on a flat stone step,no,no,"ripples remain visible, so this is not a clean control",12-frame contact sheet
+wdcontrolfix010,wdfive0049,clean_control,a shallow puddle on a flat stone step,no,no,"ripples remain visible, so this is not a clean control",12-frame contact sheet
+wdcontrolfix011,wdfive0049,clean_control,a shallow puddle on a flat stone step,no,no,"ripples remain visible, so this is not a clean control",12-frame contact sheet
