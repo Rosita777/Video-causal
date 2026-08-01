@@ -128,7 +128,8 @@ def build_cache(args: argparse.Namespace, rows: list[dict[str, str]], project_ro
         str(args.model), subfolder="vae", torch_dtype=torch.bfloat16
     ).to(device)
     vae.eval()
-    vae.enable_tiling()
+    if hasattr(vae, "enable_tiling"):
+        vae.enable_tiling()
     processor = WanPipeline.from_pretrained(
         str(args.model), transformer=None, text_encoder=None, tokenizer=None, vae=None
     ).video_processor
