@@ -9,8 +9,8 @@ PYTHON="${WAN_PYTHON:-models/.wan-runtime/bin/python}"
 exec "$PYTHON" scripts/train_wan_waterdrop_lora.py \
   --manifest data/waterdrop_train_pilot40_sft_v0.csv \
   --model models/Wan2.1-T2V-1.3B-Diffusers \
-  --cache-dir outputs/training_cache/waterdrop_mask_bg_lora_v0 \
-  --output-dir outputs/adapters/waterdrop_mask_bg_lora_smoke \
+  --cache-dir outputs/training_cache/waterdrop_mask_bg_lora_v1 \
+  --output-dir outputs/adapters/waterdrop_mask_bg_lora_smoke_v1 \
   --role erase \
   --objective mask_bg \
   --mask-weight 4.0 \

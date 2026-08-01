@@ -72,8 +72,6 @@ def load_rows(args: argparse.Namespace) -> list[dict[str, str]]:
         rows = list(csv.DictReader(handle))
     if args.role != "all":
         rows = [row for row in rows if row["training_role"] == args.role]
-    if args.objective == "mask_bg":
-        rows = [row for row in rows if row.get("residual_mask_enabled") == "yes"]
     if not rows:
         raise ValueError(f"No rows found for role={args.role!r}, objective={args.objective!r}")
     required = {"scene_id", "prompt", "desired_target_video", "training_role"}
@@ -169,7 +167,7 @@ def build_cache(args: argparse.Namespace, rows: list[dict[str, str]], project_ro
             "latents": latents,
             "prompt_embeds": prompt_embeddings[row["prompt"]],
         }
-        if args.objective == "mask_bg":
+        if args.objective == "mask_bg" and row.get("residual_mask_enabled") == "yes":
             factual_path = resolve_path(project_root, row["residual_mask_factual_video"])
             factual_frames = read_video(factual_path, args.num_frames)
             factual_video = processor.preprocess_video(
@@ -253,7 +251,8 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
         timestep = (sigma.flatten() * 1000.0).to(dtype=torch.bfloat16)
 
         teacher_prediction = None
-        if args.objective == "mask_bg":
+        has_residual_mask = args.objective == "mask_bg" and "residual_mask" in sample
+        if has_residual_mask:
             transformer.disable_adapters()
             with torch.no_grad():
                 teacher_prediction = transformer(
@@ -273,7 +272,7 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
         element_loss = torch.nn.functional.mse_loss(
             prediction.float(), target.float(), reduction="none"
         )
-        if args.objective == "mask_bg":
+        if has_residual_mask:
             mask = sample["residual_mask"].to(device=device, dtype=torch.float32)
             remove_loss = (element_loss * (1.0 + args.mask_weight * mask)).mean()
             background_loss = (
@@ -299,7 +298,8 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
         background_losses.append(background_value)
         elapsed = time.time() - started
         print(
-            f"step={step}/{args.max_steps} scene={sample['scene_id']} loss={loss_value:.6f} "
+            f"step={step}/{args.max_steps} scene={sample['scene_id']} masked={has_residual_mask} "
+            f"loss={loss_value:.6f} "
             f"remove={remove_value:.6f} bg={background_value:.6f} "
             f"mean20={np.mean(losses[-20:]):.6f} elapsed={elapsed:.1f}s",
             flush=True,
@@ -347,7 +347,7 @@ def main() -> int:
             target = resolve_path(project_root, row["desired_target_video"])
             if not target.exists():
                 raise FileNotFoundError(target)
-            if args.objective == "mask_bg":
+            if args.objective == "mask_bg" and row.get("residual_mask_enabled") == "yes":
                 factual = resolve_path(project_root, row["residual_mask_factual_video"])
                 if not factual.exists():
                     raise FileNotFoundError(factual)
