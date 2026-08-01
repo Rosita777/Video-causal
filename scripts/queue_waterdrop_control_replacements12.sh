@@ -13,14 +13,20 @@ while true; do
       | head -3
   )
   printf '%s available_gpus=%s\n' "$(date -Iseconds)" "${available[*]:-none}" >>"$QUEUE_LOG"
-  if [[ "${#available[@]}" -ge 3 ]]; then break; fi
+  if [[ "${#available[@]}" -ge 2 ]]; then break; fi
   sleep 60
 done
 
 export GPU_SHARD0="${available[0]}"
 export GPU_SHARD1="${available[1]}"
-export GPU_SHARD2="${available[2]}"
-echo "starting generation on GPUs $GPU_SHARD0 $GPU_SHARD1 $GPU_SHARD2" >>"$QUEUE_LOG"
+if [[ "${#available[@]}" -ge 3 ]]; then
+  export GPU_SHARD2="${available[2]}"
+  export TWO_STAGE=0
+else
+  export GPU_SHARD2="$GPU_SHARD0"
+  export TWO_STAGE=1
+fi
+echo "starting generation on GPUs $GPU_SHARD0 $GPU_SHARD1; two_stage=$TWO_STAGE" >>"$QUEUE_LOG"
 bash scripts/run_waterdrop_control_replacements12_wan.sh >>"$QUEUE_LOG" 2>&1
 
 models/.wan-runtime/bin/python scripts/build_waterdrop_v2_auto_screen.py \

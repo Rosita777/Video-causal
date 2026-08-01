@@ -9,7 +9,8 @@ OUTPUT_ROOT="${OUTPUT_ROOT:-$PROJECT_ROOT/outputs/waterdrop_control_replacements
 LOG_ROOT="${LOG_ROOT:-$PROJECT_ROOT/logs/waterdrop_control_replacements12_wan}"
 GPU_SHARD0="${GPU_SHARD0:?GPU_SHARD0 is required}"
 GPU_SHARD1="${GPU_SHARD1:?GPU_SHARD1 is required}"
-GPU_SHARD2="${GPU_SHARD2:?GPU_SHARD2 is required}"
+GPU_SHARD2="${GPU_SHARD2:-$GPU_SHARD0}"
+TWO_STAGE="${TWO_STAGE:-0}"
 mkdir -p "$OUTPUT_ROOT" "$LOG_ROOT"
 cd "$PROJECT_ROOT"
 
@@ -33,10 +34,18 @@ run_shard() {
       --vae-slicing --vae-tiling >"$LOG_ROOT/shard_${shard}.log" 2>&1
 }
 
-run_shard 0 "$GPU_SHARD0" & pid0="$!"
-run_shard 1 "$GPU_SHARD1" & pid1="$!"
-run_shard 2 "$GPU_SHARD2" & pid2="$!"
-echo "shard0=gpu$GPU_SHARD0 shard1=gpu$GPU_SHARD1 shard2=gpu$GPU_SHARD2"
-status=0
-for pid in "$pid0" "$pid1" "$pid2"; do wait "$pid" || status=$?; done
-exit "$status"
+if [[ "$TWO_STAGE" == "1" ]]; then
+  run_shard 0 "$GPU_SHARD0" & pid0="$!"
+  run_shard 1 "$GPU_SHARD1" & pid1="$!"
+  status=0
+  for pid in "$pid0" "$pid1"; do wait "$pid" || status=$?; done
+  [[ "$status" -eq 0 ]] || exit "$status"
+  run_shard 2 "$GPU_SHARD2"
+else
+  run_shard 0 "$GPU_SHARD0" & pid0="$!"
+  run_shard 1 "$GPU_SHARD1" & pid1="$!"
+  run_shard 2 "$GPU_SHARD2" & pid2="$!"
+  status=0
+  for pid in "$pid0" "$pid1" "$pid2"; do wait "$pid" || status=$?; done
+  exit "$status"
+fi
