@@ -28,6 +28,6 @@ For a simple background-drift probe, early frames 0-16 were compared against the
 
 ## Decision
 
-The current background objective has a mixed result and does not yet support a preservation-improvement claim. It should not be presented as successful based on this five-case pilot.
+Compared directly with plain LoRA, the current full objective has a mixed result and does not by itself support a preservation-improvement claim.
 
-The next controlled experiment is the masked-counterfactual variant with background weight zero. This separates the effect of residual weighting from background distillation. A later background-weight sweep is justified only if the mask-only comparison is positive.
+The completed mask-only control separates the two components. Relative to mask-only, background distillation reduces pre-event RGB MAE in all five quick-evaluation cases by 3.03% to 9.54%, with a mean reduction of 7.44%. This is positive incremental evidence for the background term, even though residual-weighted training itself does not yet show a removal gain.

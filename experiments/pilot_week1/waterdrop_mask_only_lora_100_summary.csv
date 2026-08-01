@@ -1,0 +1,7 @@
+case_id,plain_early_mae,mask_only_early_mae,mask_bg_early_mae,mask_bg_vs_mask_only_percent,qualitative_result
+trained_explicit,0.20416619,0.20585378,0.18714094,-9.090,partial removal similar across adapter variants
+heldout_hard_surface,0.07557776,0.07924402,0.07566867,-4.512,partial removal similar across adapter variants
+heldout_liquid_surface,0.17141561,0.18238552,0.17146704,-5.986,partial removal similar across adapter variants
+unrelated_footprint,0.25573221,0.24577211,0.22233188,-9.537,chalk circle preserved across adapter variants
+clean_control,0.06976628,0.08119672,0.07873444,-3.032,clean state preserved across adapter variants
+mean,0.15533161,0.15889043,0.14706859,-7.441,background distillation consistently recovers drift introduced by mask-only training
