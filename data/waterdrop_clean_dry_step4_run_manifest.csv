@@ -1,0 +1,5 @@
+scene_id,replaced_scene_id,receiver_group_id,source_scene_id,receiver_id,family,receiver,condition,prompt_variant,split,causal_footprint,expected_base_target,expected_base_footprint,expected_erased_target,expected_erased_footprint,erase_instruction,fixed_seed,shard,shard_index
+wdcleanfix000,wdfive0049,wdreceiver09,wdsimple0141,clean_dry_stone_step,hard_surface,a clean dry flat gray stone step,clean_control,0,frozen_test_replacement_candidate,none,no,no,no,no,Remove the water droplet.,9500,0,0
+wdcleanfix001,wdfive0049,wdreceiver09,wdsimple0141,clean_dry_stone_step,hard_surface,a clean dry flat gray stone step,clean_control,1,frozen_test_replacement_candidate,none,no,no,no,no,Remove the water droplet.,9500,0,1
+wdcleanfix002,wdfive0049,wdreceiver09,wdsimple0141,clean_dry_stone_step,hard_surface,a clean dry flat gray stone step,clean_control,2,frozen_test_replacement_candidate,none,no,no,no,no,Remove the water droplet.,9500,0,2
+wdcleanfix003,wdfive0049,wdreceiver09,wdsimple0141,clean_dry_stone_step,hard_surface,a clean dry flat gray stone step,clean_control,3,frozen_test_replacement_candidate,none,no,no,no,no,Remove the water droplet.,9500,0,3
