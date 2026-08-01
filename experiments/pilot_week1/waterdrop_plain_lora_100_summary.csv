@@ -1,0 +1,6 @@
+case_id,split,condition,receiver,seed,base_result,lora_result,removal_effect,preservation_result,decision
+trained_explicit,train,explicit_causal,dark-gray ceramic tile,9600,large persistent water ring,smaller delayed dark water mark,partial,background composition changed,plain_sft_signal_positive
+heldout_hard_surface,test,explicit_causal,white enamel stove surface,9100,clear splash and spreading wet footprint,much smaller delayed splash,partial,background composition changed,generalizes_but_incomplete
+heldout_liquid_surface,test,explicit_causal,calm shallow pond,9100,large droplet and wide persistent ripples,smaller delayed droplet and ripple,partial,water surface appearance changed,out_of_domain_signal_positive
+unrelated_footprint,control,unrelated_footprint,dark-gray ceramic tile with chalk circle,9600,chalk circle remains,chalk circle remains,not_applicable,circle preserved but viewpoint changed,control_preserved_with_drift
+clean_control,control,clean_control,white enamel stove surface,9100,clean and static,clean and static,not_applicable,clean state preserved but composition changed,control_preserved_with_drift
