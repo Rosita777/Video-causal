@@ -41,6 +41,8 @@ def build_generation_config(args: argparse.Namespace) -> dict[str, object]:
         "vae_slicing": args.vae_slicing,
         "vae_tiling": args.vae_tiling,
         "prompt_encode_device_policy": "cpu_when_offloaded_else_selected_device",
+        "lora_path": str(args.lora_path) if args.lora_path else None,
+        "lora_scale": args.lora_scale,
     }
 
 
@@ -164,6 +166,10 @@ def generate_videos(args: argparse.Namespace, items: list[dict[str, object]]) ->
     torch_dtype = resolve_torch_dtype(torch, args.dtype)
     pipe = WanPipeline.from_pretrained(args.model, torch_dtype=torch_dtype)
 
+    if args.lora_path is not None:
+        pipe.load_lora_weights(str(args.lora_path), adapter_name="waterdrop")
+        pipe.set_adapters("waterdrop", adapter_weights=args.lora_scale)
+
     if args.vae_slicing and hasattr(pipe, "enable_vae_slicing"):
         pipe.enable_vae_slicing()
     if args.vae_tiling and hasattr(pipe, "enable_vae_tiling"):
@@ -245,6 +251,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--width", type=int, default=832)
     parser.add_argument("--dtype", choices=["fp16", "bf16", "fp32"], default="bf16")
     parser.add_argument("--device", default="auto")
+    parser.add_argument("--lora-path", type=Path)
+    parser.add_argument("--lora-scale", type=float, default=1.0)
     parser.add_argument("--limit", type=int)
     parser.add_argument("--enable-model-cpu-offload", action="store_true")
     parser.add_argument("--enable-sequential-cpu-offload", action="store_true")
@@ -268,6 +276,10 @@ def main() -> int:
         parser.error("--fps must be positive")
     if args.height <= 0 or args.width <= 0:
         parser.error("--height and --width must be positive")
+    if args.lora_scale < 0:
+        parser.error("--lora-scale must be non-negative")
+    if args.lora_path is not None and not args.dry_run and not args.lora_path.exists():
+        parser.error(f"--lora-path does not exist: {args.lora_path}")
 
     prompts = parse_prompt_file(args.prompts)
     selected_count = len(prompts[: args.limit] if args.limit is not None else prompts)
