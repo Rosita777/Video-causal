@@ -1,0 +1,6 @@
+case_id,split,condition,plain_early_mae,mask_bg_early_mae,relative_change_percent,qualitative_result
+trained_explicit,train,explicit_causal,0.20416619,0.18714094,-8.34,partial removal retained and early background drift reduced
+heldout_hard_surface,test,explicit_causal,0.07557776,0.07566867,0.12,partial removal retained and background drift unchanged
+heldout_liquid_surface,test,explicit_causal,0.17141561,0.17146704,0.03,partial removal retained and background drift unchanged
+unrelated_footprint,control,unrelated_footprint,0.25573221,0.22233188,-13.06,chalk circle preserved and early background drift reduced
+clean_control,control,clean_control,0.06976628,0.07873444,12.85,clean state preserved but early background drift increased
