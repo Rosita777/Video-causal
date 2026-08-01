@@ -64,10 +64,30 @@ def main() -> None:
         writer = csv.DictWriter(handle, fieldnames=list(review[0]))
         writer.writeheader()
         writer.writerows(review)
+
+    review_by_id = {row["scene_id"]: row for row in review}
+    preliminary = read_csv(ROOT / "data/waterdrop_train_pilot40_sft_preliminary.csv")
+    final_rows = []
+    for row in preliminary:
+        decision = review_by_id[row["scene_id"]]
+        if decision["preliminary_sft_usable"] != "yes":
+            continue
+        final_rows.append(
+            {
+                **row,
+                "semantic_status": "manual_sft_usable",
+                "generated_condition_pass": decision["generated_condition_pass"],
+            }
+        )
+    final_output = ROOT / "data/waterdrop_train_pilot40_sft_v0.csv"
+    with final_output.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(final_rows[0]))
+        writer.writeheader()
+        writer.writerows(final_rows)
     print(
         f"wrote {len(review)} reviews; generated_pass="
         f"{sum(row['generated_condition_pass'] == 'yes' for row in review)}; "
-        f"sft_usable={sum(row['preliminary_sft_usable'] == 'yes' for row in review)}"
+        f"sft_usable={len(final_rows)}"
     )
 
 

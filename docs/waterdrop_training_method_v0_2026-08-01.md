@@ -59,3 +59,11 @@ An additional data ablation should compare aligned targets against independently
 ## Pilot decision rule
 
 Proceed to paper-scale data only if the full method improves explicit and implicit causal-footprint removal over plain LoRA while keeping unrelated-footprint and clean preservation near the frozen base model. If the mask adds no benefit, do not retain it merely as a novelty claim.
+
+## Pilot40 evidence
+
+The first 40 generated candidates produced seven reliable aligned causal groups. Three groups were rejected because the droplet appeared too early to provide at least two clean-prefix frames. All seven constructed counterfactual targets passed manual inspection.
+
+Pixel-space residual-mask previews also passed the initial visual check. The masks follow the falling droplet and expand over the later wet footprint while leaving most background pixels unselected. Across the seven groups, mean selected area is about 5.3% to 13.7% of a frame and peak selected area is about 10.9% to 31.0%. The first clean frame has zero selected area in all seven groups.
+
+This supports implementing the residual weighting in latent space, but it does not yet establish an accuracy gain. That claim requires the ablations above.
