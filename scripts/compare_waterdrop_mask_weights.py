@@ -26,6 +26,7 @@ METHODS = {
     "mask_w2_bg1": "outputs/waterdrop_mask_w2_bg1_lora_100_quick_eval5/videos",
     "mask_w4_bg1": "outputs/waterdrop_mask_bg_lora_100_quick_eval5/videos",
     "paired_sep_bg1": "outputs/waterdrop_paired_sep_bg1_lora_100_quick_eval5/videos",
+    "paired_sep_w4_bg1": "outputs/waterdrop_paired_sep_w4_bg1_lora_100_quick_eval5/videos",
 }
 
 
