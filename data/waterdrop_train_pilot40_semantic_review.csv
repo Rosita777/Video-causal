@@ -1,0 +1,41 @@
+scene_id,train_group_id,condition,receiver,generated_condition_pass,preliminary_sft_usable,semantic_note,review_basis
+wdtrain00_explicit_causal,wdtrain00,explicit_causal,dark-gray ceramic tile,yes,yes,causal event and footprint are visible; clean prefix supports aligned target,12-frame contact sheet
+wdtrain00_target_only,wdtrain00,target_only,dark-gray ceramic tile,no,yes,"base generation adds delayed formation, impact, or footprint; prompt remains usable as erase conditioning",12-frame contact sheet
+wdtrain00_unrelated_footprint,wdtrain00,unrelated_footprint,dark-gray ceramic tile,yes,yes,dry unrelated ring is visible and the receiver is stable,12-frame contact sheet
+wdtrain00_clean_control,wdtrain00,clean_control,dark-gray ceramic tile,yes,yes,empty dry receiver remains stable,12-frame contact sheet
+wdtrain01_explicit_causal,wdtrain01,explicit_causal,polished dark marble slab,yes,yes,causal event and footprint are visible; clean prefix supports aligned target,12-frame contact sheet
+wdtrain01_target_only,wdtrain01,target_only,polished dark marble slab,no,yes,"base generation adds delayed formation, impact, or footprint; prompt remains usable as erase conditioning",12-frame contact sheet
+wdtrain01_unrelated_footprint,wdtrain01,unrelated_footprint,polished dark marble slab,yes,yes,dry unrelated ring is visible and the receiver is stable,12-frame contact sheet
+wdtrain01_clean_control,wdtrain01,clean_control,polished dark marble slab,yes,yes,empty dry receiver remains stable,12-frame contact sheet
+wdtrain02_explicit_causal,wdtrain02,explicit_causal,granite countertop,yes,yes,causal event and footprint are visible; clean prefix supports aligned target,12-frame contact sheet
+wdtrain02_target_only,wdtrain02,target_only,granite countertop,yes,yes,one bead is present without a substantial footprint,12-frame contact sheet
+wdtrain02_unrelated_footprint,wdtrain02,unrelated_footprint,granite countertop,yes,yes,dry unrelated ring is visible and the receiver is stable,12-frame contact sheet
+wdtrain02_clean_control,wdtrain02,clean_control,granite countertop,yes,yes,empty dry receiver remains stable,12-frame contact sheet
+wdtrain03_explicit_causal,wdtrain03,explicit_causal,dark slate tile,no,no,causal event is visible but there are fewer than two reliable clean-prefix frames,12-frame contact sheet
+wdtrain03_target_only,wdtrain03,target_only,dark slate tile,no,no,"base generation adds delayed formation, impact, or footprint; prompt remains usable as erase conditioning",12-frame contact sheet
+wdtrain03_unrelated_footprint,wdtrain03,unrelated_footprint,dark slate tile,yes,no,dry unrelated ring is visible and the receiver is stable,12-frame contact sheet
+wdtrain03_clean_control,wdtrain03,clean_control,dark slate tile,yes,no,empty dry receiver remains stable,12-frame contact sheet
+wdtrain04_explicit_causal,wdtrain04,explicit_causal,polished concrete slab,yes,yes,causal event and footprint are visible; clean prefix supports aligned target,12-frame contact sheet
+wdtrain04_target_only,wdtrain04,target_only,polished concrete slab,no,yes,"base generation adds delayed formation, impact, or footprint; prompt remains usable as erase conditioning",12-frame contact sheet
+wdtrain04_unrelated_footprint,wdtrain04,unrelated_footprint,polished concrete slab,yes,yes,dry unrelated ring is visible and the receiver is stable,12-frame contact sheet
+wdtrain04_clean_control,wdtrain04,clean_control,polished concrete slab,yes,yes,empty dry receiver remains stable,12-frame contact sheet
+wdtrain05_explicit_causal,wdtrain05,explicit_causal,smooth epoxy floor sample,yes,yes,causal event and footprint are visible; clean prefix supports aligned target,12-frame contact sheet
+wdtrain05_target_only,wdtrain05,target_only,smooth epoxy floor sample,no,yes,"base generation adds delayed formation, impact, or footprint; prompt remains usable as erase conditioning",12-frame contact sheet
+wdtrain05_unrelated_footprint,wdtrain05,unrelated_footprint,smooth epoxy floor sample,yes,yes,dry unrelated ring is visible and the receiver is stable,12-frame contact sheet
+wdtrain05_clean_control,wdtrain05,clean_control,smooth epoxy floor sample,yes,yes,empty dry receiver remains stable,12-frame contact sheet
+wdtrain06_explicit_causal,wdtrain06,explicit_causal,brushed aluminum sheet,yes,yes,causal event and footprint are visible; clean prefix supports aligned target,12-frame contact sheet
+wdtrain06_target_only,wdtrain06,target_only,brushed aluminum sheet,yes,yes,one bead is present without a substantial footprint,12-frame contact sheet
+wdtrain06_unrelated_footprint,wdtrain06,unrelated_footprint,brushed aluminum sheet,yes,yes,dry unrelated ring is visible and the receiver is stable,12-frame contact sheet
+wdtrain06_clean_control,wdtrain06,clean_control,brushed aluminum sheet,yes,yes,empty dry receiver remains stable,12-frame contact sheet
+wdtrain07_explicit_causal,wdtrain07,explicit_causal,flat cast-iron griddle,no,no,causal event is visible but there are fewer than two reliable clean-prefix frames,12-frame contact sheet
+wdtrain07_target_only,wdtrain07,target_only,flat cast-iron griddle,no,no,"base generation adds delayed formation, impact, or footprint; prompt remains usable as erase conditioning",12-frame contact sheet
+wdtrain07_unrelated_footprint,wdtrain07,unrelated_footprint,flat cast-iron griddle,yes,no,dry unrelated ring is visible and the receiver is stable,12-frame contact sheet
+wdtrain07_clean_control,wdtrain07,clean_control,flat cast-iron griddle,yes,no,empty dry receiver remains stable,12-frame contact sheet
+wdtrain08_explicit_causal,wdtrain08,explicit_causal,black nonstick baking tray,yes,yes,causal event and footprint are visible; clean prefix supports aligned target,12-frame contact sheet
+wdtrain08_target_only,wdtrain08,target_only,black nonstick baking tray,no,yes,"base generation adds delayed formation, impact, or footprint; prompt remains usable as erase conditioning",12-frame contact sheet
+wdtrain08_unrelated_footprint,wdtrain08,unrelated_footprint,black nonstick baking tray,yes,yes,dry unrelated ring is visible and the receiver is stable,12-frame contact sheet
+wdtrain08_clean_control,wdtrain08,clean_control,black nonstick baking tray,yes,yes,empty dry receiver remains stable,12-frame contact sheet
+wdtrain09_explicit_causal,wdtrain09,explicit_causal,sealed hardwood tabletop,no,no,causal event is visible but there are fewer than two reliable clean-prefix frames,12-frame contact sheet
+wdtrain09_target_only,wdtrain09,target_only,sealed hardwood tabletop,no,no,"base generation adds delayed formation, impact, or footprint; prompt remains usable as erase conditioning",12-frame contact sheet
+wdtrain09_unrelated_footprint,wdtrain09,unrelated_footprint,sealed hardwood tabletop,yes,no,dry unrelated ring is visible and the receiver is stable,12-frame contact sheet
+wdtrain09_clean_control,wdtrain09,clean_control,sealed hardwood tabletop,yes,no,empty dry receiver remains stable,12-frame contact sheet

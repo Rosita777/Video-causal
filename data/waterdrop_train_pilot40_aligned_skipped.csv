@@ -1,0 +1,4 @@
+train_group_id,reason
+wdtrain03,explicit causal video has fewer than two detected clean-prefix frames
+wdtrain07,explicit causal video has fewer than two detected clean-prefix frames
+wdtrain09,explicit causal video has fewer than two detected clean-prefix frames
