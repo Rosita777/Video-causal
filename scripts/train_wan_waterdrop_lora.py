@@ -252,7 +252,7 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
 
         teacher_prediction = None
         has_residual_mask = args.objective == "mask_bg" and "residual_mask" in sample
-        if has_residual_mask:
+        if has_residual_mask and args.background_weight > 0:
             transformer.disable_adapters()
             with torch.no_grad():
                 teacher_prediction = transformer(
@@ -275,9 +275,12 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
         if has_residual_mask:
             mask = sample["residual_mask"].to(device=device, dtype=torch.float32)
             remove_loss = (element_loss * (1.0 + args.mask_weight * mask)).mean()
-            background_loss = (
-                (prediction.float() - teacher_prediction.float()).square() * (1.0 - mask)
-            ).mean()
+            if teacher_prediction is not None:
+                background_loss = (
+                    (prediction.float() - teacher_prediction.float()).square() * (1.0 - mask)
+                ).mean()
+            else:
+                background_loss = torch.zeros((), device=device)
             combined_loss = remove_loss + args.background_weight * background_loss
         else:
             remove_loss = element_loss.mean()
