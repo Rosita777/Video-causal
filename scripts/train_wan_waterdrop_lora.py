@@ -210,8 +210,8 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
         noise = torch.randn(clean.shape, generator=generator, dtype=torch.float32).to(device, dtype=torch.bfloat16)
         sigma = torch.rand((clean.shape[0],), generator=generator, dtype=torch.float32).to(device)
         sigma = sigma.view(-1, 1, 1, 1, 1)
-        noisy = (1.0 - sigma) * clean + sigma * noise
-        target = noise - clean
+        noisy = ((1.0 - sigma) * clean + sigma * noise).to(dtype=torch.bfloat16)
+        target = (noise - clean).to(dtype=torch.bfloat16)
         timestep = (sigma.flatten() * 1000.0).to(dtype=torch.bfloat16)
 
         prediction = transformer(
