@@ -28,6 +28,10 @@ METHODS = {
     "paired_sep_bg1": "outputs/waterdrop_paired_sep_bg1_lora_100_quick_eval5/videos",
     "paired_sep_w4_bg1": "outputs/waterdrop_paired_sep_w4_bg1_lora_100_quick_eval5/videos",
     "dual_traj_bg1": "outputs/waterdrop_dual_traj_bg1_lora_100_quick_eval5/videos",
+    "dual_traj_rw0025": "outputs/waterdrop_dual_traj_rw0025_lora_100_quick_eval5/videos",
+    "dual_traj_rw0100": "outputs/waterdrop_dual_traj_rw0100_lora_100_quick_eval5/videos",
+    "dual_traj_scale050": "outputs/waterdrop_dual_traj_bg1_lora_100_scale050_quick_eval5/videos",
+    "dual_traj_scale075": "outputs/waterdrop_dual_traj_bg1_lora_100_scale075_quick_eval5/videos",
 }
 
 

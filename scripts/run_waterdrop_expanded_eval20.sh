@@ -3,7 +3,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-METHOD="${METHOD:?Set METHOD to plain or dual}"
+METHOD="${METHOD:?Set METHOD to plain, dual, or dual_scale075}"
 case "$METHOD" in
   plain)
     LORA_PATH="outputs/adapters/waterdrop_plain_lora_100/checkpoint-000100"
@@ -12,9 +12,15 @@ case "$METHOD" in
   dual)
     LORA_PATH="outputs/adapters/waterdrop_dual_traj_bg1_lora_100/checkpoint-000100"
     OUTPUT_DIR="outputs/waterdrop_dual_traj_bg1_lora_100_eval20"
+    LORA_SCALE=1
+    ;;
+  dual_scale075)
+    LORA_PATH="outputs/adapters/waterdrop_dual_traj_bg1_lora_100/checkpoint-000100"
+    OUTPUT_DIR="outputs/waterdrop_dual_traj_bg1_lora_100_scale075_eval20"
+    LORA_SCALE=0.75
     ;;
   *)
-    echo "METHOD must be plain or dual" >&2
+    echo "METHOD must be plain, dual, or dual_scale075" >&2
     exit 2
     ;;
 esac
@@ -29,7 +35,7 @@ exec "$PYTHON" scripts/generate_wan_clean.py \
   --output-dir "$OUTPUT_DIR" \
   --model models/Wan2.1-T2V-1.3B-Diffusers \
   --lora-path "$LORA_PATH" \
-  --lora-scale 1 \
+  --lora-scale "${LORA_SCALE:-1}" \
   --seeds "$SEEDS" \
   --steps 25 \
   --guidance-scale 5 \

@@ -1,0 +1,7 @@
+method,removal_cases,mean_removal_suppression_percent,mean_removal_early_base_mae,mean_control_early_base_mae
+dual_traj_bg1,3,77.56,0.14956170,0.15451423
+dual_traj_rw0025,3,66.49,0.15053233,0.16304352
+dual_traj_rw0100,3,80.64,0.15158680,0.16335140
+dual_traj_scale050,3,54.20,0.09811861,0.08884133
+dual_traj_scale075,3,73.23,0.13280452,0.12490339
+plain,3,62.20,0.15038652,0.16274925

@@ -15,6 +15,7 @@ import numpy as np
 METHOD_DIRS = {
     "plain": "outputs/waterdrop_plain_lora_100_eval20/videos",
     "dual_traj": "outputs/waterdrop_dual_traj_bg1_lora_100_eval20/videos",
+    "dual_traj_scale075": "outputs/waterdrop_dual_traj_bg1_lora_100_scale075_eval20/videos",
 }
 
 

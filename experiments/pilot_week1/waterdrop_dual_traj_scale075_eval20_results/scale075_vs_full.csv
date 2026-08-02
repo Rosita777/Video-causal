@@ -1,0 +1,21 @@
+eval_index,scene_id,condition,family,receiver,full_scale_suppression_percent,scale075_suppression_percent,scale075_minus_full_points,full_scale_early_base_mae,scale075_early_base_mae
+000,wdfive0000,explicit_causal,liquid_surface,a calm shallow pond,79.42,76.33,-3.09,0.18093862,0.16000052
+001,wdfive0005,explicit_causal,liquid_surface,a white enamel washbasin filled with water,73.27,58.17,-15.10,0.10723083,0.08988738
+002,wdfive0010,explicit_causal,liquid_surface,a laboratory beaker filled with clear water,82.61,72.36,-10.25,0.11041731,0.10011639
+003,wdfive0015,explicit_causal,liquid_surface,a small porcelain teacup filled with water,75.14,50.75,-24.39,0.17867070,0.16074626
+004,wdfive0020,explicit_causal,liquid_surface,a shallow white shower tray holding a thin layer of water,93.59,93.29,-0.30,0.15503317,0.14057593
+005,wdfive0050,explicit_causal,hard_surface,stainless-steel tray,95.94,94.51,-1.43,0.15918538,0.14145081
+006,wdfive0055,explicit_causal,hard_surface,blue plastic cutting board,84.58,84.64,0.06,0.06977531,0.04937689
+007,wdfive0060,explicit_causal,hard_surface,white enamel stove surface,72.16,65.59,-6.57,0.07858349,0.06929239
+008,wdfive0065,explicit_causal,hard_surface,polished brass plate,91.06,88.97,-2.09,0.19609934,0.16007605
+009,wdfive0070,explicit_causal,hard_surface,rigid white PVC board,98.01,97.47,-0.54,0.15125330,0.13191316
+010,wdfive0001,implicit_causal,liquid_surface,a calm shallow pond,81.83,75.71,-6.12,0.21126893,0.18114817
+011,wdfive0006,implicit_causal,liquid_surface,a white enamel washbasin filled with water,76.90,78.11,1.21,0.10318494,0.08341163
+012,wdfive0011,implicit_causal,liquid_surface,a laboratory beaker filled with clear water,88.83,89.37,0.54,0.15476002,0.13962916
+013,wdfive0016,implicit_causal,liquid_surface,a small porcelain teacup filled with water,66.30,64.97,-1.33,0.19914390,0.17476554
+014,wdfive0021,implicit_causal,liquid_surface,a shallow white shower tray holding a thin layer of water,94.10,92.21,-1.89,0.14188309,0.12466270
+015,wdfive0051,implicit_causal,hard_surface,stainless-steel tray,93.97,92.53,-1.44,0.15351662,0.13049257
+016,wdfive0056,implicit_causal,hard_surface,blue plastic cutting board,78.90,77.90,-1.00,0.07870147,0.05291333
+017,wdfive0061,implicit_causal,hard_surface,white enamel stove surface,93.84,93.82,-0.02,0.12821384,0.11679387
+018,wdfive0066,implicit_causal,hard_surface,polished brass plate,91.88,90.91,-0.97,0.20622122,0.16873047
+019,wdfive0071,implicit_causal,hard_surface,rigid white PVC board,96.38,96.27,-0.11,0.12919529,0.10703790
