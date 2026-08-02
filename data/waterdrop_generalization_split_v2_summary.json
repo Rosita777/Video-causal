@@ -1,0 +1,24 @@
+{
+  "version": "v2",
+  "base_pairs": 55,
+  "accepted_expansion_pairs": 5,
+  "total_pairs": 60,
+  "counts_by_split": {
+    "train_candidate": 31,
+    "reserved_external_eval_overlap": 13,
+    "internal_receiver_holdout": 16
+  },
+  "train_candidate_by_footprint": {
+    "splash_ripple": 11,
+    "splash_wet_mark": 9,
+    "spreading_wet_patch": 8,
+    "crater_or_damp_particle_mark": 3
+  },
+  "accepted_expansion_ids": [
+    "wdgen001",
+    "wdgen005",
+    "wdgen006",
+    "wdgen008",
+    "wdgen014"
+  ]
+}

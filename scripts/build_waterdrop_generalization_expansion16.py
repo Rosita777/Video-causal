@@ -40,6 +40,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", type=Path, default=Path("data/waterdrop_prompt_bank_v1.csv"))
     parser.add_argument("--output", type=Path, default=Path("data/waterdrop_generalization_expansion16.csv"))
+    parser.add_argument("--run-manifest", type=Path, default=Path("data/waterdrop_generalization_expansion16_run_manifest.csv"))
     parser.add_argument("--prompt-prefix", type=Path, default=Path("prompts/waterdrop_generalization_expansion16"))
     args = parser.parse_args()
 
@@ -82,7 +83,25 @@ def main() -> int:
             for row in selected:
                 handle.write(f"{row['prompt']} | {row['target_concept']} | {row['expected_effect']}\n")
 
-    print(f"Wrote {len(records)} candidates to {args.output} and two balanced prompt shards")
+    run_manifest = args.run_manifest
+    run_manifest.parent.mkdir(parents=True, exist_ok=True)
+    with run_manifest.open("w", newline="", encoding="utf-8") as handle:
+        fieldnames = ["shard", "shard_index", "scene_id", "family", "receiver", "fixed_seed"]
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+        writer.writeheader()
+        for index, row in enumerate(records):
+            writer.writerow(
+                {
+                    "shard": index % 2,
+                    "shard_index": index // 2,
+                    "scene_id": row["expansion_id"],
+                    "family": row["family"],
+                    "receiver": row["receiver"],
+                    "fixed_seed": row["fixed_seed"],
+                }
+            )
+
+    print(f"Wrote {len(records)} candidates, run manifest, and two balanced prompt shards")
     return 0
 
 

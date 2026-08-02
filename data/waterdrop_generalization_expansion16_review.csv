@@ -1,0 +1,6 @@
+scene_id,decision,reference_end_exclusive,reason
+wdgen001,accepted,8,clean prefix and clear drop-to-ripple event in saucepan
+wdgen005,accepted,33,clean prefix and clear drop-to-wet-mark event on hardwood
+wdgen006,accepted,14,clean prefix and clear drop-to-ripple event on acrylic sheet
+wdgen008,accepted,26,clean prefix and clear absorption/wet-patch event on paper towel
+wdgen014,accepted,14,clean prefix and clear crater/damp-particle event in cornmeal
