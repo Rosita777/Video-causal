@@ -43,5 +43,38 @@ class PairedSeparationLossTest(unittest.TestCase):
         self.assertGreater(prediction.grad.abs().sum().item(), 0)
 
 
+class FactualRedirectLossTest(unittest.TestCase):
+    def test_zero_for_prediction_that_reconstructs_counterfactual(self) -> None:
+        module = load_module()
+        sigma = torch.tensor([0.5]).view(1, 1, 1, 1, 1)
+        noisy_factual = torch.ones((1, 2, 1, 1, 1))
+        counterfactual = torch.zeros_like(noisy_factual)
+        prediction = (noisy_factual - counterfactual) / sigma
+        mask = torch.ones((1, 1, 1, 1, 1))
+
+        loss = module.factual_redirect_loss(
+            prediction, noisy_factual, counterfactual, sigma, mask
+        )
+
+        self.assertAlmostEqual(loss.item(), 0.0)
+
+    def test_penalizes_wrong_endpoint_and_has_gradient(self) -> None:
+        module = load_module()
+        sigma = torch.tensor([0.5]).view(1, 1, 1, 1, 1)
+        noisy_factual = torch.ones((1, 2, 1, 1, 1))
+        counterfactual = torch.zeros_like(noisy_factual)
+        prediction = torch.zeros_like(noisy_factual, requires_grad=True)
+        mask = torch.ones((1, 1, 1, 1, 1))
+
+        loss = module.factual_redirect_loss(
+            prediction, noisy_factual, counterfactual, sigma, mask
+        )
+        loss.backward()
+
+        self.assertAlmostEqual(loss.item(), 1.0)
+        self.assertIsNotNone(prediction.grad)
+        self.assertGreater(prediction.grad.abs().sum().item(), 0)
+
+
 if __name__ == "__main__":
     unittest.main()

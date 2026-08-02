@@ -47,12 +47,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--role", choices=["erase", "preserve", "all"], default="erase")
     parser.add_argument(
-        "--objective", choices=["plain", "mask_bg", "paired_sep"], default="plain"
+        "--objective",
+        choices=["plain", "mask_bg", "paired_sep", "dual_traj"],
+        default="plain",
     )
     parser.add_argument("--mask-weight", type=float, default=4.0)
     parser.add_argument("--background-weight", type=float, default=1.0)
     parser.add_argument("--pair-weight", type=float, default=1.0)
     parser.add_argument("--pair-margin", type=float, default=0.05)
+    parser.add_argument("--redirect-weight", type=float, default=1.0)
     parser.add_argument("--rebuild-cache", action="store_true")
     parser.add_argument("--cache-only", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
@@ -63,8 +66,14 @@ def parse_args() -> argparse.Namespace:
         parser.error("--num-frames must be 4n+1 for the Wan VAE")
     if min(args.max_steps, args.rank, args.alpha, args.grad_accum) <= 0:
         parser.error("step, rank, alpha, and accumulation values must be positive")
-    if min(args.mask_weight, args.background_weight, args.pair_weight, args.pair_margin) < 0:
-        parser.error("mask, background, pair weight, and pair margin must be non-negative")
+    if min(
+        args.mask_weight,
+        args.background_weight,
+        args.pair_weight,
+        args.pair_margin,
+        args.redirect_weight,
+    ) < 0:
+        parser.error("all loss weights and margins must be non-negative")
     return args
 
 
@@ -131,6 +140,20 @@ def paired_separation_loss(
     return (hinge * weights).sum() / weights.sum().clamp_min(1e-6)
 
 
+def factual_redirect_loss(
+    prediction: torch.Tensor,
+    noisy_factual: torch.Tensor,
+    counterfactual_clean: torch.Tensor,
+    sigma: torch.Tensor,
+    mask: torch.Tensor,
+) -> torch.Tensor:
+    """Pull the clean endpoint predicted from a factual trajectory toward the counterfactual."""
+    predicted_clean = noisy_factual.float() - sigma.float() * prediction.float()
+    error = (predicted_clean - counterfactual_clean.float()).square().mean(dim=1, keepdim=True)
+    weights = mask.float()
+    return (error * weights).sum() / weights.sum().clamp_min(1e-6)
+
+
 @torch.no_grad()
 def cache_prompt_embeddings(args: argparse.Namespace, rows: list[dict[str, str]]) -> dict[str, torch.Tensor]:
     device = torch.device(args.device)
@@ -192,7 +215,7 @@ def build_cache(args: argparse.Namespace, rows: list[dict[str, str]], project_ro
             "latents": latents,
             "prompt_embeds": prompt_embeddings[row["prompt"]],
         }
-        if args.objective in {"mask_bg", "paired_sep"} and row.get("residual_mask_enabled") == "yes":
+        if args.objective in {"mask_bg", "paired_sep", "dual_traj"} and row.get("residual_mask_enabled") == "yes":
             factual_path = resolve_path(project_root, row["residual_mask_factual_video"])
             factual_frames = read_video(factual_path, args.num_frames)
             factual_video = processor.preprocess_video(
@@ -258,6 +281,7 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
     remove_losses: list[float] = []
     background_losses: list[float] = []
     pair_losses: list[float] = []
+    redirect_losses: list[float] = []
     optimizer.zero_grad(set_to_none=True)
     started = time.time()
 
@@ -277,7 +301,17 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
         timestep = (sigma.flatten() * 1000.0).to(dtype=torch.bfloat16)
 
         teacher_prediction = None
-        has_residual_mask = args.objective in {"mask_bg", "paired_sep"} and "residual_mask" in sample
+        teacher_factual_prediction = None
+        has_residual_mask = (
+            args.objective in {"mask_bg", "paired_sep", "dual_traj"}
+            and "residual_mask" in sample
+        )
+        uses_factual = has_residual_mask and args.objective in {"paired_sep", "dual_traj"}
+        if uses_factual:
+            factual = sample["factual_latents"].to(device=device, dtype=torch.bfloat16)
+            factual_target = (noise - factual).to(dtype=torch.bfloat16)
+        if has_residual_mask and args.objective == "dual_traj":
+            noisy_factual = ((1.0 - sigma) * factual + sigma * noise).to(dtype=torch.bfloat16)
         if has_residual_mask and args.background_weight > 0:
             transformer.disable_adapters()
             with torch.no_grad():
@@ -287,6 +321,13 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                     encoder_hidden_states=prompt_embeds,
                     return_dict=False,
                 )[0]
+                if args.objective == "dual_traj":
+                    teacher_factual_prediction = transformer(
+                        hidden_states=noisy_factual,
+                        timestep=timestep,
+                        encoder_hidden_states=prompt_embeds,
+                        return_dict=False,
+                    )[0]
             transformer.enable_adapters()
 
         prediction = transformer(
@@ -310,23 +351,41 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                 ).mean()
             else:
                 background_loss = torch.zeros((), device=device)
-            if args.objective == "paired_sep":
-                factual = sample["factual_latents"].to(device=device, dtype=torch.bfloat16)
-                factual_target = (noise - factual).to(dtype=torch.bfloat16)
+            if args.objective in {"paired_sep", "dual_traj"}:
                 pair_loss = paired_separation_loss(
                     prediction, target, factual_target, mask, args.pair_margin
                 )
             else:
                 pair_loss = torch.zeros((), device=device)
+            if args.objective == "dual_traj":
+                factual_prediction = transformer(
+                    hidden_states=noisy_factual,
+                    timestep=timestep,
+                    encoder_hidden_states=prompt_embeds,
+                    return_dict=False,
+                )[0]
+                redirect_loss = factual_redirect_loss(
+                    factual_prediction, noisy_factual, clean, sigma, mask
+                )
+                if teacher_factual_prediction is not None:
+                    factual_background_loss = (
+                        (factual_prediction.float() - teacher_factual_prediction.float()).square()
+                        * (1.0 - mask)
+                    ).mean()
+                    background_loss = 0.5 * (background_loss + factual_background_loss)
+            else:
+                redirect_loss = torch.zeros((), device=device)
             combined_loss = (
                 remove_loss
                 + args.background_weight * background_loss
                 + args.pair_weight * pair_loss
+                + args.redirect_weight * redirect_loss
             )
         else:
             remove_loss = element_loss.mean()
             background_loss = torch.zeros((), device=device)
             pair_loss = torch.zeros((), device=device)
+            redirect_loss = torch.zeros((), device=device)
             combined_loss = remove_loss
         loss = combined_loss / args.grad_accum
         loss.backward()
@@ -339,23 +398,32 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
         remove_value = float(remove_loss.detach())
         background_value = float(background_loss.detach())
         pair_value = float(pair_loss.detach())
+        redirect_value = float(redirect_loss.detach())
         losses.append(loss_value)
         remove_losses.append(remove_value)
         background_losses.append(background_value)
         pair_losses.append(pair_value)
+        redirect_losses.append(redirect_value)
         elapsed = time.time() - started
         print(
             f"step={step}/{args.max_steps} scene={sample['scene_id']} masked={has_residual_mask} "
             f"loss={loss_value:.6f} "
-            f"remove={remove_value:.6f} bg={background_value:.6f} pair={pair_value:.6f} "
+            f"remove={remove_value:.6f} bg={background_value:.6f} "
+            f"pair={pair_value:.6f} redirect={redirect_value:.6f} "
             f"mean20={np.mean(losses[-20:]):.6f} elapsed={elapsed:.1f}s",
             flush=True,
         )
         del sample, clean, prompt_embeds, noise, noisy, target, prediction, loss, element_loss
         if teacher_prediction is not None:
-            del teacher_prediction, mask
-        if has_residual_mask and args.objective == "paired_sep":
+            del teacher_prediction
+        if has_residual_mask:
+            del mask
+        if uses_factual:
             del factual, factual_target, pair_loss
+        if has_residual_mask and args.objective == "dual_traj":
+            del noisy_factual, factual_prediction, redirect_loss
+            if teacher_factual_prediction is not None:
+                del teacher_factual_prediction, factual_background_loss
 
         if step % args.save_every == 0 or step == args.max_steps:
             checkpoint = args.output_dir / f"checkpoint-{step:06d}"
@@ -378,9 +446,11 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                     "background_weight": args.background_weight,
                     "pair_weight": args.pair_weight,
                     "pair_margin": args.pair_margin,
+                    "redirect_weight": args.redirect_weight,
                     "mean_remove_loss_last_20": float(np.mean(remove_losses[-20:])),
                     "mean_background_loss_last_20": float(np.mean(background_losses[-20:])),
                     "mean_pair_loss_last_20": float(np.mean(pair_losses[-20:])),
+                    "mean_redirect_loss_last_20": float(np.mean(redirect_losses[-20:])),
                 },
             )
             print(f"Saved {checkpoint}", flush=True)
@@ -399,7 +469,7 @@ def main() -> int:
             target = resolve_path(project_root, row["desired_target_video"])
             if not target.exists():
                 raise FileNotFoundError(target)
-            if args.objective in {"mask_bg", "paired_sep"} and row.get("residual_mask_enabled") == "yes":
+            if args.objective in {"mask_bg", "paired_sep", "dual_traj"} and row.get("residual_mask_enabled") == "yes":
                 factual = resolve_path(project_root, row["residual_mask_factual_video"])
                 if not factual.exists():
                     raise FileNotFoundError(factual)
