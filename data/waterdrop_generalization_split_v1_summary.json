@@ -1,0 +1,34 @@
+{
+  "total_aligned_pairs": 55,
+  "counts_by_split": {
+    "train_candidate": 26,
+    "reserved_external_eval_overlap": 13,
+    "internal_receiver_holdout": 16
+  },
+  "train_candidate_by_footprint": {
+    "splash_ripple": 10,
+    "splash_wet_mark": 7,
+    "spreading_wet_patch": 7,
+    "crater_or_damp_particle_mark": 2
+  },
+  "internal_holdout_by_footprint": {
+    "splash_wet_mark": 5,
+    "splash_ripple": 4,
+    "spreading_wet_patch": 6,
+    "crater_or_damp_particle_mark": 1
+  },
+  "minimum_new_train_pairs_needed_for_30": 4,
+  "external_eval_receiver_keys": [
+    "cup",
+    "cutting_board",
+    "pond",
+    "tray"
+  ],
+  "internal_holdout_receiver_keys": [
+    "bucket",
+    "cardboard",
+    "chalk",
+    "glass_tabletop",
+    "sponge"
+  ]
+}
