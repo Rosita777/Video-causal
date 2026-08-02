@@ -1,0 +1,31 @@
+scene_id,decision,reference_end_exclusive,reason
+collision000,reject,,multiple balls appear and the block stack does not move
+collision001,reject,,ball is already present and duplicated before a late unstable collapse
+collision002,accept,4,clear ball contact followed by box tipping
+collision003,reject,,ball passes the row without causing visible object movement
+collision004,reject,,ball does not produce a clear collision response and a hand appears
+collision005,reject,,blocks rearrange before the ball arrives
+collision006,reject,,multiple red objects appear and the causal contact is ambiguous
+collision007,accept,16,ball contacts the right blocks before they tip over
+collision008,accept,8,ball contacts the domino row before dominoes begin to fall
+collision009,accept,20,ball contacts the stone-like toys before they move and topple
+collision010,reject,,multiple balls appear and the cans remain standing
+collision011,accept,24,ball reaches the cup row before several cups tip over
+collision012,reject,,ball moves through the scene but the paper cups remain unchanged
+collision013,accept,12,ball contacts the bottles before they tip and roll
+collision014,reject,,no clear contact-triggered bottle movement
+collision015,accept,16,ball rolls into the tins before a tin tips and moves
+collision016,accept,23,ball contacts the cup row before cups are displaced
+collision017,reject,,multiple balls appear and the collision chain is unstable
+collision018,reject,,a can is already tipped before the ball arrives
+collision019,reject,,cups remain mostly unchanged and multiple ball-like objects appear
+collision020,reject,,ball passes the wooden pins without knocking them down
+collision021,reject,,chess pieces disappear rather than showing a physical collision response
+collision022,reject,,ball is present from the first frame and no clean prefix exists
+collision023,reject,,dominoes are already fallen and multiple balls appear
+collision024,reject,,collision contains severe ball duplication and object artifacts
+collision025,reject,,a hand-like striped object dominates instead of a ball collision
+collision026,accept,24,ball contacts the blue game pieces before they topple
+collision027,accept,20,ball reaches the peg row before several pegs fall
+collision028,reject,,a visible hand performs the interaction
+collision029,reject,,figurines and ball change inconsistently without a clean collision chain
