@@ -2,6 +2,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+mkdir -p outputs/collision_expansion72_wan/shard_0/videos outputs/collision_expansion72_wan/shard_1/videos
 while :; do
   count0="$(find outputs/collision_expansion72_wan/shard_0/videos -type f -name '*.mp4' 2>/dev/null | wc -l)"
   count1="$(find outputs/collision_expansion72_wan/shard_1/videos -type f -name '*.mp4' 2>/dev/null | wc -l)"
