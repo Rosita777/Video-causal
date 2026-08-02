@@ -1,0 +1,73 @@
+shard,shard_index,scene_id,family,receiver,fixed_seed
+0,0,collisionx000,block_stack,three light pine cubes stacked in a short tower,10000
+1,0,collisionx001,block_stack,four red foam blocks stacked loosely,10001
+0,1,collisionx002,block_stack,five blue wooden blocks standing in a close row,10002
+1,1,collisionx003,block_stack,three small cardboard cartons stacked two levels high,10003
+0,2,collisionx004,block_stack,six white plastic domino blocks standing in a straight row,10004
+1,2,collisionx005,block_stack,four tan cork cubes standing upright,10005
+0,3,collisionx006,block_stack,three hollow plastic bricks stacked on a tabletop,10006
+1,3,collisionx007,block_stack,five small balsa-wood blocks in a tight row,10007
+0,4,collisionx008,block_stack,four yellow foam cubes arranged as a low tower,10008
+1,4,collisionx009,block_stack,three lightweight toy bricks stacked vertically,10009
+0,5,collisionx010,block_stack,six short wooden domino blocks standing in a row,10010
+1,5,collisionx011,block_stack,four small paper boxes stacked loosely,10011
+0,6,collisionx012,block_stack,three red wooden cubes in a short tower,10012
+1,6,collisionx013,block_stack,five white foam blocks standing side by side,10013
+0,7,collisionx014,block_stack,four blue plastic bricks arranged as a small wall,10014
+1,7,collisionx015,block_stack,three light cork blocks stacked at the center,10015
+0,8,collisionx016,block_stack,six tan toy blocks standing in a straight line,10016
+1,8,collisionx017,block_stack,four hollow cardboard cubes in a low stack,10017
+0,9,collisionx018,block_stack,three green foam cubes stacked vertically,10018
+1,9,collisionx019,block_stack,five narrow wooden blocks standing upright,10019
+0,10,collisionx020,block_stack,four lightweight building bricks in a short tower,10020
+1,10,collisionx021,block_stack,three small white cartons stacked loosely,10021
+0,11,collisionx022,block_stack,six red domino blocks standing in a close row,10022
+1,11,collisionx023,block_stack,four plain wooden cubes forming a low wall,10023
+0,12,collisionx024,container_row,three empty silver cans standing close together,10024
+1,12,collisionx025,container_row,four lightweight white paper cups in a row,10025
+0,13,collisionx026,container_row,three small clear plastic bottles standing upright,10026
+1,13,collisionx027,container_row,five empty red aluminum cans in a straight row,10027
+0,14,collisionx028,container_row,four short metal tins standing close together,10028
+1,14,collisionx029,container_row,three lightweight blue plastic cups in a row,10029
+0,15,collisionx030,container_row,five small cardboard cups standing upright,10030
+1,15,collisionx031,container_row,four empty green drink cans in a close row,10031
+0,16,collisionx032,container_row,three clear plastic cups standing side by side,10032
+1,16,collisionx033,container_row,five short paper cups in a straight line,10033
+0,17,collisionx034,container_row,four lightweight orange cans standing upright,10034
+1,17,collisionx035,container_row,three small empty metal tins in a row,10035
+0,18,collisionx036,container_row,five blue disposable cups standing close together,10036
+1,18,collisionx037,container_row,four short plastic bottles standing upright,10037
+0,19,collisionx038,container_row,three empty white cans in a straight row,10038
+1,19,collisionx039,container_row,five lightweight cardboard tubes standing upright,10039
+0,20,collisionx040,container_row,four small red paper cups in a close row,10040
+1,20,collisionx041,container_row,three empty gold aluminum cans standing together,10041
+0,21,collisionx042,container_row,five clear disposable cups in a straight row,10042
+1,21,collisionx043,container_row,four small cylindrical tins standing upright,10043
+0,22,collisionx044,container_row,three lightweight juice cans in a close row,10044
+1,22,collisionx045,container_row,five short blue paper cups standing upright,10045
+0,23,collisionx046,container_row,four clear empty bottles in a straight row,10046
+1,23,collisionx047,container_row,three small white plastic cups standing together,10047
+0,24,collisionx048,upright_pieces,five light wooden pegs standing in a straight row,10048
+1,24,collisionx049,upright_pieces,four blue plastic game pieces standing upright,10049
+0,25,collisionx050,upright_pieces,six short white toy pins standing close together,10050
+1,25,collisionx051,upright_pieces,five red wooden bowling pins in a row,10051
+0,26,collisionx052,upright_pieces,four small yellow game pawns standing upright,10052
+1,26,collisionx053,upright_pieces,six tan wooden dowels standing on end,10053
+0,27,collisionx054,upright_pieces,five lightweight white domino pieces in a row,10054
+1,27,collisionx055,upright_pieces,four short blue toy posts standing upright,10055
+0,28,collisionx056,upright_pieces,six small wooden cylinders standing in a line,10056
+1,28,collisionx057,upright_pieces,five red plastic pawns standing close together,10057
+0,29,collisionx058,upright_pieces,four light cork pegs standing on end,10058
+1,29,collisionx059,upright_pieces,six short yellow toy pins in a straight row,10059
+0,30,collisionx060,upright_pieces,five blue wooden posts standing upright,10060
+1,30,collisionx061,upright_pieces,four small white bowling pins in a row,10061
+0,31,collisionx062,upright_pieces,six lightweight game pieces standing close together,10062
+1,31,collisionx063,upright_pieces,five tan wooden pegs standing in a line,10063
+0,32,collisionx064,upright_pieces,four red plastic domino pieces standing upright,10064
+1,32,collisionx065,upright_pieces,six short blue wooden cylinders on end,10065
+0,33,collisionx066,upright_pieces,five yellow toy pawns standing close together,10066
+1,33,collisionx067,upright_pieces,four lightweight wooden pins in a row,10067
+0,34,collisionx068,upright_pieces,six white plastic posts standing upright,10068
+1,34,collisionx069,upright_pieces,five small red wooden pegs in a line,10069
+0,35,collisionx070,upright_pieces,four blue toy bowling pins standing together,10070
+1,35,collisionx071,upright_pieces,six light cork cylinders standing on end,10071
