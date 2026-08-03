@@ -57,3 +57,18 @@ generic-motion-freezing failure. The next run should increase the frozen-teacher
 preservation weight and use an explicit balanced sampler, then select a single
 checkpoint using collision validation only. Waterdrop remains a held-out report
 metric.
+
+## Balanced high-preservation follow-up
+
+A second run alternated erase and preserve rows and increased the teacher
+preservation weight from 4 to 16. At checkpoint 50 it achieved 83.02% collision
+suppression, 0.1998 collision early MAE, and 33.11% held-out waterdrop
+suppression. The stronger constraint improved target-scene stability relative
+to the first checkpoint-50 model, but did not improve held-out causal
+specificity.
+
+This result indicates that generic teacher preservation alone is insufficient:
+it regularizes average behavior but cannot guarantee zero adapter effect on an
+unseen non-target mechanism. The next implementation step is the semantic
+target gate from the method design, with teacher preservation retained as a
+secondary regularizer rather than the sole specificity mechanism.
