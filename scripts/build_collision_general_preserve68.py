@@ -66,7 +66,7 @@ def main() -> int:
         writer = csv.DictWriter(handle, fieldnames=list(records[0]), lineterminator="\n")
         writer.writeheader()
         writer.writerows(records)
-    print(f"Wrote {len(records)} rows: erase=39 preserve=32")
+    print(f"Wrote {len(records)} rows: erase={len(erase_rows)} preserve={len(items)}")
     return 0
 
 

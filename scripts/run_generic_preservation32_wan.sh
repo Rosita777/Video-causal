@@ -15,5 +15,6 @@ exec "$PYTHON" scripts/generate_wan_clean.py \
   --prompts "$PROMPTS" \
   --output-dir "outputs/generic_preservation32_base/shard_${SHARD}" \
   --model models/Wan2.1-T2V-1.3B-Diffusers \
+  --skip-existing \
   --seeds "$SEEDS" --steps 25 --guidance-scale 5 --num-frames 49 --fps 8 \
   --height 480 --width 832 --dtype bf16 --device cuda --vae-slicing --vae-tiling

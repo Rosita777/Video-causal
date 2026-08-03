@@ -153,6 +153,16 @@ def apply_device_strategy(args: argparse.Namespace, pipe, selected_device: str) 
 
 
 def generate_videos(args: argparse.Namespace, items: list[dict[str, object]]) -> None:
+    pending_items = [
+        item
+        for item in items
+        if not (args.skip_existing and Path(str(item["video_path"])).exists())
+    ]
+    skipped = len(items) - len(pending_items)
+    if skipped:
+        print(f"Skipping {skipped} existing videos; generating {len(pending_items)}", flush=True)
+    if not pending_items:
+        return
     try:
         import torch
         from diffusers import WanPipeline
@@ -183,7 +193,7 @@ def generate_videos(args: argparse.Namespace, items: list[dict[str, object]]) ->
     )
     encoded_items: dict[int, tuple[object, object]] = {}
     if encode_device != selected_device:
-        for item in items:
+        for item in pending_items:
             prompt_embeds, negative_prompt_embeds = pipe.encode_prompt(
                 prompt=str(item["prompt"]),
                 negative_prompt=item.get("negative_prompt"),
@@ -196,7 +206,7 @@ def generate_videos(args: argparse.Namespace, items: list[dict[str, object]]) ->
 
     apply_device_strategy(args, pipe, selected_device)
 
-    for item in items:
+    for item in pending_items:
         video_path = Path(str(item["video_path"]))
         video_path.parent.mkdir(parents=True, exist_ok=True)
         generator_device = "cuda" if selected_device.startswith("cuda") and torch.cuda.is_available() else "cpu"
@@ -254,6 +264,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--lora-path", type=Path)
     parser.add_argument("--lora-scale", type=float, default=1.0)
     parser.add_argument("--limit", type=int)
+    parser.add_argument("--skip-existing", action="store_true")
     parser.add_argument("--enable-model-cpu-offload", action="store_true")
     parser.add_argument("--enable-sequential-cpu-offload", action="store_true")
     parser.add_argument("--vae-slicing", action="store_true")
