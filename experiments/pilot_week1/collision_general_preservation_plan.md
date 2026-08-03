@@ -9,7 +9,7 @@ preservation training?
 ## Training data
 
 - 31 collision counterfactual pairs: erase the ball and collision footprint.
-- 8 target-only counterfactual pairs: strengthen red-ball removal without a
+- 5 screened target-only counterfactual pairs: strengthen red-ball removal without a
   collision event.
 - 32 generic non-target videos: match the frozen base model's prediction.
 - No waterdrop examples are included in training.

@@ -17,18 +17,18 @@ def read_csv(path: Path) -> list[dict[str, str]]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--collision", type=Path, default=Path("data/collision_train31.csv"))
-    parser.add_argument("--target-only", type=Path, default=Path("data/collision_object_only8.csv"))
+    parser.add_argument("--target-only", type=Path, default=Path("data/collision_object_only5.csv"))
     parser.add_argument(
         "--generic-root", type=Path, default=Path("outputs/generic_preservation32_base")
     )
     parser.add_argument(
-        "--output", type=Path, default=Path("data/collision_general_preserve71.csv")
+        "--output", type=Path, default=Path("data/collision_general_preserve68.csv")
     )
     args = parser.parse_args()
 
     erase_rows = read_csv(args.collision) + read_csv(args.target_only)
-    if len(erase_rows) != 39:
-        raise SystemExit(f"Expected 39 erase rows, found {len(erase_rows)}")
+    if len(erase_rows) != 36:
+        raise SystemExit(f"Expected 36 erase rows, found {len(erase_rows)}")
 
     items = []
     for shard in range(2):

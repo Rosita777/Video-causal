@@ -1,0 +1,9 @@
+index,decision,reason
+0,accept,red ball appears after the initial static segment and receivers stay stable
+1,accept,red ball appears after the initial static segment and receivers stay stable
+2,accept,red ball appears after the initial static segment and receivers stay stable
+3,accept,red ball appears after the initial static segment and receivers stay stable
+4,accept,red ball appears after the initial static segment and receivers stay stable
+5,reject,wooden pieces change independently and introduce a non-target footprint
+6,reject,red ball is visible in the initial reference frames and remains in the counterfactual
+7,reject,wooden blocks change arrangement and introduce a non-target footprint

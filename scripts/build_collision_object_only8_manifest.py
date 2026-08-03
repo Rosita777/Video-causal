@@ -15,17 +15,27 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--generation", type=Path, default=Path("outputs/collision_target_only8_base/generation_manifest.json"))
     parser.add_argument("--output-root", type=Path, default=Path("outputs/collision_target_only8_pairs"))
-    parser.add_argument("--output", type=Path, default=Path("data/collision_object_only8.csv"))
+    parser.add_argument(
+        "--accepted-indices",
+        default="0,1,2,3,4",
+        help="Comma-separated indices accepted by manual semantic review.",
+    )
+    parser.add_argument("--output", type=Path, default=Path("data/collision_object_only5.csv"))
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
     manifest = json.loads(args.generation.read_text(encoding="utf-8"))
     items = list(manifest["items"])
     if len(items) != 8:
         raise SystemExit(f"Expected 8 generated items, found {len(items)}")
+    accepted = {int(value) for value in args.accepted_indices.split(",") if value.strip()}
+    if not accepted or not accepted <= set(range(len(items))):
+        raise SystemExit(f"Invalid accepted indices: {sorted(accepted)}")
     root = Path(".").resolve()
     records = []
     builder = root / "scripts/build_static_counterfactual_pair.py"
     for index, item in enumerate(items):
+        if index not in accepted:
+            continue
         factual = Path(str(item["video_path"]))
         pair_dir = args.output_root / f"targetonly_{index:03d}"
         pair_manifest = pair_dir / "pair_manifest.json"
@@ -58,13 +68,13 @@ def main() -> int:
             "source_index": str(index),
         })
     if args.dry_run:
-        print("Validated 8 target-only generation items")
+        print(f"Validated {len(accepted)} accepted target-only generation items")
         return 0
     with args.output.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(records[0]), lineterminator="\n")
         writer.writeheader()
         writer.writerows(records)
-    print(f"Wrote {len(records)} target-only erase rows to {args.output}")
+    print(f"Wrote {len(records)} accepted target-only erase rows to {args.output}")
     return 0
 
 
