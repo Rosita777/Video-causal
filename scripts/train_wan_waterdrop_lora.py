@@ -63,6 +63,11 @@ def parse_args() -> argparse.Namespace:
         default=1.0,
         help="Weight for frozen-teacher matching on training_role=preserve rows.",
     )
+    parser.add_argument(
+        "--balanced-roles",
+        action="store_true",
+        help="Alternate erase and preserve rows when training with --role all.",
+    )
     parser.add_argument("--rebuild-cache", action="store_true")
     parser.add_argument("--cache-only", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
@@ -285,6 +290,16 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
     generator = torch.Generator(device="cpu").manual_seed(args.seed)
     order_rng = random.Random(args.seed)
     order = list(range(len(cache_paths)))
+    role_indices = {"erase": [], "preserve": []}
+    if args.balanced_roles and args.role == "all":
+        for index, cache_path in enumerate(cache_paths):
+            metadata = torch.load(cache_path, map_location="cpu", weights_only=True)
+            role_indices[metadata["training_role"]].append(index)
+        if not all(role_indices.values()):
+            raise ValueError("--balanced-roles requires both erase and preserve rows")
+        for role in role_indices:
+            order_rng.shuffle(role_indices[role])
+        role_cursors = {"erase": 0, "preserve": 0}
     losses: list[float] = []
     remove_losses: list[float] = []
     background_losses: list[float] = []
@@ -296,9 +311,18 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
 
     transformer.train()
     for step in range(1, args.max_steps + 1):
-        if (step - 1) % len(order) == 0:
-            order_rng.shuffle(order)
-        sample_index = order[(step - 1) % len(order)]
+        if args.balanced_roles and args.role == "all":
+            role = "erase" if step % 2 else "preserve"
+            cursor = role_cursors[role]
+            if cursor >= len(role_indices[role]):
+                order_rng.shuffle(role_indices[role])
+                cursor = 0
+            sample_index = role_indices[role][cursor]
+            role_cursors[role] = cursor + 1
+        else:
+            if (step - 1) % len(order) == 0:
+                order_rng.shuffle(order)
+            sample_index = order[(step - 1) % len(order)]
         sample = torch.load(cache_paths[sample_index], map_location="cpu", weights_only=True)
         clean = sample["latents"].to(device=device, dtype=torch.bfloat16)
         prompt_embeds = sample["prompt_embeds"].to(device=device, dtype=torch.bfloat16)
@@ -473,6 +497,7 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                     "pair_margin": args.pair_margin,
                     "redirect_weight": args.redirect_weight,
                     "preserve_weight": args.preserve_weight,
+                    "balanced_roles": args.balanced_roles,
                     "mean_remove_loss_last_20": float(np.mean(remove_losses[-20:])),
                     "mean_background_loss_last_20": float(np.mean(background_losses[-20:])),
                     "mean_pair_loss_last_20": float(np.mean(pair_losses[-20:])),
