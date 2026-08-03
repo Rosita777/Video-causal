@@ -38,3 +38,22 @@ The pilot succeeds if collision erasure remains materially better than the
 base model while waterdrop suppression is substantially lower than the
 collision-only adapter. The waterdrop set is held out from training and model
 selection.
+
+## First pilot result
+
+The same adapter was evaluated at three checkpoints. The collision metric is
+post-event motion suppression; the waterdrop metric is computed only on the
+four held-out waterdrop cases in the specificity set.
+
+| checkpoint | collision suppression | collision early MAE | waterdrop suppression |
+| --- | ---: | ---: | ---: |
+| 50 | 82.89% | 0.2736 | 22.72% |
+| 100 | 85.82% | 0.2118 | 60.71% |
+| 200 | 85.28% | 0.1673 | 73.09% |
+
+This is a useful trade-off curve, not a final model. Longer training improves
+the target erasure and target-scene stability but gradually recovers the old
+generic-motion-freezing failure. The next run should increase the frozen-teacher
+preservation weight and use an explicit balanced sampler, then select a single
+checkpoint using collision validation only. Waterdrop remains a held-out report
+metric.
