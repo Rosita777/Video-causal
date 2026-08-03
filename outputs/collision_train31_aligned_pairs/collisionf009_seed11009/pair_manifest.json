@@ -1,0 +1,15 @@
+{
+  "created_at_utc": "2026-08-03T02:16:28.453635+00:00",
+  "method": "median_of_clean_pre_event_frames_repeated_as_static_video",
+  "input": "outputs/collision_feasible72_wan/shard_1/videos/004_a-simple-realistic-side-view-tabletop-video-fixed-camera-one-continuous_seed11009.mp4",
+  "output_video": "outputs/collision_train31_aligned_pairs/collisionf009_seed11009/counterfactual_static.mp4",
+  "clean_reference": "outputs/collision_train31_aligned_pairs/collisionf009_seed11009/clean_reference.png",
+  "contact_sheet": "outputs/collision_train31_aligned_pairs/collisionf009_seed11009/factual_counterfactual_contact_sheet.jpg",
+  "frame_count": 49,
+  "fps": 8.0,
+  "height": 480,
+  "width": 832,
+  "reference_start_inclusive": 0,
+  "reference_end_exclusive": 20,
+  "first_frame_reference_mae": 1.023364049145299
+}

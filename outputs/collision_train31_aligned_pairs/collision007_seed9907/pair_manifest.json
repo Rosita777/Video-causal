@@ -1,0 +1,15 @@
+{
+  "created_at_utc": "2026-08-03T02:15:58.625330+00:00",
+  "method": "median_of_clean_pre_event_frames_repeated_as_static_video",
+  "input": "outputs/collision_prompt_gate30_wan/shard_1/videos/003_a-realistic-fixed-camera-tabletop-video-in-one-continuous-shot-during-th_seed9907.mp4",
+  "output_video": "outputs/collision_train31_aligned_pairs/collision007_seed9907/counterfactual_static.mp4",
+  "clean_reference": "outputs/collision_train31_aligned_pairs/collision007_seed9907/clean_reference.png",
+  "contact_sheet": "outputs/collision_train31_aligned_pairs/collision007_seed9907/factual_counterfactual_contact_sheet.jpg",
+  "frame_count": 49,
+  "fps": 8.0,
+  "height": 480,
+  "width": 832,
+  "reference_start_inclusive": 0,
+  "reference_end_exclusive": 16,
+  "first_frame_reference_mae": 0.8461630275106837
+}

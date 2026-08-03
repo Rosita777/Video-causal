@@ -1,0 +1,15 @@
+{
+  "created_at_utc": "2026-08-03T02:16:20.898444+00:00",
+  "method": "median_of_clean_pre_event_frames_repeated_as_static_video",
+  "input": "outputs/collision_expansion72_wan/shard_1/videos/017_a-realistic-fixed-camera-tabletop-video-in-one-continuous-shot-for-the-f_seed10035.mp4",
+  "output_video": "outputs/collision_train31_aligned_pairs/collisionx035_seed10035/counterfactual_static.mp4",
+  "clean_reference": "outputs/collision_train31_aligned_pairs/collisionx035_seed10035/clean_reference.png",
+  "contact_sheet": "outputs/collision_train31_aligned_pairs/collisionx035_seed10035/factual_counterfactual_contact_sheet.jpg",
+  "frame_count": 49,
+  "fps": 8.0,
+  "height": 480,
+  "width": 832,
+  "reference_start_inclusive": 0,
+  "reference_end_exclusive": 24,
+  "first_frame_reference_mae": 1.0089242788461539
+}
