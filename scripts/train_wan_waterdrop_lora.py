@@ -4,9 +4,10 @@
 The plain baseline uses counterfactual flow matching. Mask-bg reweights that
 loss on the observed causal residual. Paired-separation additionally pushes the
 prediction away from the factual causal target inside the residual. Both masked
-objectives distill the frozen base prediction outside the residual. Video
-latents and prompt embeddings are cached once so the large VAE and text encoder
-are not resident during training.
+objectives distill the frozen base prediction outside the residual. Preserve
+rows distill the frozen model over the complete latent, without requiring a
+category-specific preservation label. Video latents and prompt embeddings are
+cached once so the large VAE and text encoder are not resident during training.
 """
 
 from __future__ import annotations
@@ -56,6 +57,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--pair-weight", type=float, default=1.0)
     parser.add_argument("--pair-margin", type=float, default=0.05)
     parser.add_argument("--redirect-weight", type=float, default=1.0)
+    parser.add_argument(
+        "--preserve-weight",
+        type=float,
+        default=1.0,
+        help="Weight for frozen-teacher matching on training_role=preserve rows.",
+    )
     parser.add_argument("--rebuild-cache", action="store_true")
     parser.add_argument("--cache-only", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
@@ -72,6 +79,7 @@ def parse_args() -> argparse.Namespace:
         args.pair_weight,
         args.pair_margin,
         args.redirect_weight,
+        args.preserve_weight,
     ) < 0:
         parser.error("all loss weights and margins must be non-negative")
     return args
@@ -282,6 +290,7 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
     background_losses: list[float] = []
     pair_losses: list[float] = []
     redirect_losses: list[float] = []
+    preserve_losses: list[float] = []
     optimizer.zero_grad(set_to_none=True)
     started = time.time()
 
@@ -302,6 +311,7 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
 
         teacher_prediction = None
         teacher_factual_prediction = None
+        is_preserve = sample["training_role"] == "preserve"
         has_residual_mask = (
             args.objective in {"mask_bg", "paired_sep", "dual_traj"}
             and "residual_mask" in sample
@@ -312,7 +322,8 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
             factual_target = (noise - factual).to(dtype=torch.bfloat16)
         if has_residual_mask and args.objective == "dual_traj":
             noisy_factual = ((1.0 - sigma) * factual + sigma * noise).to(dtype=torch.bfloat16)
-        if has_residual_mask and args.background_weight > 0:
+        needs_teacher = is_preserve or (has_residual_mask and args.background_weight > 0)
+        if needs_teacher:
             transformer.disable_adapters()
             with torch.no_grad():
                 teacher_prediction = transformer(
@@ -321,7 +332,7 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                     encoder_hidden_states=prompt_embeds,
                     return_dict=False,
                 )[0]
-                if args.objective == "dual_traj":
+                if has_residual_mask and args.objective == "dual_traj":
                     teacher_factual_prediction = transformer(
                         hidden_states=noisy_factual,
                         timestep=timestep,
@@ -339,7 +350,17 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
         element_loss = torch.nn.functional.mse_loss(
             prediction.float(), target.float(), reduction="none"
         )
-        if has_residual_mask:
+        if is_preserve:
+            preserve_loss = torch.nn.functional.mse_loss(
+                prediction.float(), teacher_prediction.float()
+            )
+            remove_loss = torch.zeros((), device=device)
+            background_loss = torch.zeros((), device=device)
+            pair_loss = torch.zeros((), device=device)
+            redirect_loss = torch.zeros((), device=device)
+            combined_loss = args.preserve_weight * preserve_loss
+        elif has_residual_mask:
+            preserve_loss = torch.zeros((), device=device)
             mask = sample["residual_mask"].to(device=device, dtype=torch.float32)
             if args.objective == "mask_bg":
                 remove_loss = (element_loss * (1.0 + args.mask_weight * mask)).mean()
@@ -382,6 +403,7 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                 + args.redirect_weight * redirect_loss
             )
         else:
+            preserve_loss = torch.zeros((), device=device)
             remove_loss = element_loss.mean()
             background_loss = torch.zeros((), device=device)
             pair_loss = torch.zeros((), device=device)
@@ -399,17 +421,20 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
         background_value = float(background_loss.detach())
         pair_value = float(pair_loss.detach())
         redirect_value = float(redirect_loss.detach())
+        preserve_value = float(preserve_loss.detach())
         losses.append(loss_value)
         remove_losses.append(remove_value)
         background_losses.append(background_value)
         pair_losses.append(pair_value)
         redirect_losses.append(redirect_value)
+        preserve_losses.append(preserve_value)
         elapsed = time.time() - started
         print(
-            f"step={step}/{args.max_steps} scene={sample['scene_id']} masked={has_residual_mask} "
+            f"step={step}/{args.max_steps} scene={sample['scene_id']} "
+            f"role={sample['training_role']} masked={has_residual_mask} "
             f"loss={loss_value:.6f} "
             f"remove={remove_value:.6f} bg={background_value:.6f} "
-            f"pair={pair_value:.6f} redirect={redirect_value:.6f} "
+            f"pair={pair_value:.6f} redirect={redirect_value:.6f} preserve={preserve_value:.6f} "
             f"mean20={np.mean(losses[-20:]):.6f} elapsed={elapsed:.1f}s",
             flush=True,
         )
@@ -447,10 +472,12 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                     "pair_weight": args.pair_weight,
                     "pair_margin": args.pair_margin,
                     "redirect_weight": args.redirect_weight,
+                    "preserve_weight": args.preserve_weight,
                     "mean_remove_loss_last_20": float(np.mean(remove_losses[-20:])),
                     "mean_background_loss_last_20": float(np.mean(background_losses[-20:])),
                     "mean_pair_loss_last_20": float(np.mean(pair_losses[-20:])),
                     "mean_redirect_loss_last_20": float(np.mean(redirect_losses[-20:])),
+                    "mean_preserve_loss_last_20": float(np.mean(preserve_losses[-20:])),
                 },
             )
             print(f"Saved {checkpoint}", flush=True)
