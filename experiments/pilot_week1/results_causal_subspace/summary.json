@@ -1,0 +1,99 @@
+{
+  "rank": 16,
+  "negative_weight": 1.0,
+  "heldout_receivers": [
+    "paper_cup",
+    "short_tin",
+    "wide_domino",
+    "wood_peg"
+  ],
+  "methods": {
+    "pca": {
+      "collision_train": {
+        "mean": 0.6282333731651306,
+        "median": 0.6382781267166138,
+        "std": 0.1106245294213295
+      },
+      "collision_test": {
+        "mean": 0.5297579169273376,
+        "median": 0.5066068172454834,
+        "std": 0.10624746233224869
+      },
+      "generic_train": {
+        "mean": 0.3398526608943939,
+        "median": 0.3343575894832611,
+        "std": 0.0914342850446701
+      },
+      "generic_test": {
+        "mean": 0.3445797562599182,
+        "median": 0.3174179196357727,
+        "std": 0.0700702890753746
+      },
+      "waterdrop": {
+        "mean": 0.5555707812309265,
+        "median": 0.5653594136238098,
+        "std": 0.061576444655656815
+      },
+      "auc_collision_test_vs_generic_test": 0.9285714285714286,
+      "auc_collision_test_vs_waterdrop": 0.4055299539170507
+    },
+    "discriminative": {
+      "collision_train": {
+        "mean": 0.5663630366325378,
+        "median": 0.554844856262207,
+        "std": 0.11584271490573883
+      },
+      "collision_test": {
+        "mean": 0.48026296496391296,
+        "median": 0.45598268508911133,
+        "std": 0.10669699311256409
+      },
+      "generic_train": {
+        "mean": 0.11655094474554062,
+        "median": 0.11774689704179764,
+        "std": 0.06066982448101044
+      },
+      "generic_test": {
+        "mean": 0.15896542370319366,
+        "median": 0.16305118799209595,
+        "std": 0.06900368630886078
+      },
+      "waterdrop": {
+        "mean": 0.4244934618473053,
+        "median": 0.4092462360858917,
+        "std": 0.07737061381340027
+      },
+      "auc_collision_test_vs_generic_test": 1.0,
+      "auc_collision_test_vs_waterdrop": 0.6728110599078341
+    },
+    "anchored_discriminative": {
+      "collision_train": {
+        "mean": 0.2316635102033615,
+        "median": 0.2117420881986618,
+        "std": 0.09021830558776855
+      },
+      "collision_test": {
+        "mean": 0.18826089799404144,
+        "median": 0.18633195757865906,
+        "std": 0.05442628636956215
+      },
+      "generic_train": {
+        "mean": 0.015724709257483482,
+        "median": 0.014564051292836666,
+        "std": 0.015140221454203129
+      },
+      "generic_test": {
+        "mean": 0.03038940578699112,
+        "median": 0.01723259501159191,
+        "std": 0.02672901563346386
+      },
+      "waterdrop": {
+        "mean": 0.13744081556797028,
+        "median": 0.13048596680164337,
+        "std": 0.04540841653943062
+      },
+      "auc_collision_test_vs_generic_test": 1.0,
+      "auc_collision_test_vs_waterdrop": 0.7741935483870968
+    }
+  }
+}
