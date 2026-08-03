@@ -1,0 +1,73 @@
+shard,shard_index,scene_id,family,receiver,fixed_seed
+0,0,collisionf000,wood_block,three pale balsa-wood blocks,11000
+1,0,collisionf001,wood_block,three light pine blocks,11001
+0,1,collisionf002,wood_block,three tan cork blocks,11002
+1,1,collisionf003,wood_block,three white wooden blocks,11003
+0,2,collisionf004,wood_block,three blue foam blocks,11004
+1,2,collisionf005,wood_block,three yellow toy blocks,11005
+0,3,collisionf006,wood_block,three small cardboard blocks,11006
+1,3,collisionf007,wood_block,three light oak blocks,11007
+0,4,collisionf008,wood_block,three green foam blocks,11008
+1,4,collisionf009,wood_block,three beige cork blocks,11009
+0,5,collisionf010,wood_block,three blue wooden blocks,11010
+1,5,collisionf011,wood_block,three white toy blocks,11011
+0,6,collisionf012,paper_cup,three white paper cups,11012
+1,6,collisionf013,paper_cup,three blue paper cups,11013
+0,7,collisionf014,paper_cup,three yellow paper cups,11014
+1,7,collisionf015,paper_cup,three green paper cups,11015
+0,8,collisionf016,paper_cup,three plain cardboard cups,11016
+1,8,collisionf017,paper_cup,three small white cups,11017
+0,9,collisionf018,paper_cup,three light blue paper cups,11018
+1,9,collisionf019,paper_cup,three pale yellow paper cups,11019
+0,10,collisionf020,paper_cup,three gray paper cups,11020
+1,10,collisionf021,paper_cup,three orange paper cups,11021
+0,11,collisionf022,paper_cup,three tan cardboard cups,11022
+1,11,collisionf023,paper_cup,three purple paper cups,11023
+0,12,collisionf024,short_tin,three short silver metal tins,11024
+1,12,collisionf025,short_tin,three short blue aluminum cans,11025
+0,13,collisionf026,short_tin,three short white tins,11026
+1,13,collisionf027,short_tin,three short gold metal tins,11027
+0,14,collisionf028,short_tin,three short green aluminum cans,11028
+1,14,collisionf029,short_tin,three short gray tins,11029
+0,15,collisionf030,short_tin,three small silver cans,11030
+1,15,collisionf031,short_tin,three small blue metal tins,11031
+0,16,collisionf032,short_tin,three small white cans,11032
+1,16,collisionf033,short_tin,three low gold tins,11033
+0,17,collisionf034,short_tin,three low green cans,11034
+1,17,collisionf035,short_tin,three low gray metal tins,11035
+0,18,collisionf036,wood_peg,three tan wooden pegs,11036
+1,18,collisionf037,wood_peg,three pale wooden pegs,11037
+0,19,collisionf038,wood_peg,three blue toy pegs,11038
+1,19,collisionf039,wood_peg,three yellow wooden pegs,11039
+0,20,collisionf040,wood_peg,three white toy pegs,11040
+1,20,collisionf041,wood_peg,three green wooden pegs,11041
+0,21,collisionf042,wood_peg,three short tan wooden pins,11042
+1,21,collisionf043,wood_peg,three short pale wooden pins,11043
+0,22,collisionf044,wood_peg,three short blue toy pins,11044
+1,22,collisionf045,wood_peg,three short yellow wooden pins,11045
+0,23,collisionf046,wood_peg,three short white toy pins,11046
+1,23,collisionf047,wood_peg,three short green wooden pins,11047
+0,24,collisionf048,toy_pawn,three yellow toy pawns,11048
+1,24,collisionf049,toy_pawn,three blue toy pawns,11049
+0,25,collisionf050,toy_pawn,three white toy pawns,11050
+1,25,collisionf051,toy_pawn,three green toy pawns,11051
+0,26,collisionf052,toy_pawn,three orange toy pawns,11052
+1,26,collisionf053,toy_pawn,three gray toy pawns,11053
+0,27,collisionf054,toy_pawn,three small yellow game pieces,11054
+1,27,collisionf055,toy_pawn,three small blue game pieces,11055
+0,28,collisionf056,toy_pawn,three small white game pieces,11056
+1,28,collisionf057,toy_pawn,three small green game pieces,11057
+0,29,collisionf058,toy_pawn,three small orange game pieces,11058
+1,29,collisionf059,toy_pawn,three small gray game pieces,11059
+0,30,collisionf060,wide_domino,three wide white domino blocks,11060
+1,30,collisionf061,wide_domino,three wide blue domino blocks,11061
+0,31,collisionf062,wide_domino,three wide yellow domino blocks,11062
+1,31,collisionf063,wide_domino,three wide green domino blocks,11063
+0,32,collisionf064,wide_domino,three wide tan wooden blocks,11064
+1,32,collisionf065,wide_domino,three wide gray toy blocks,11065
+0,33,collisionf066,wide_domino,three short white domino blocks,11066
+1,33,collisionf067,wide_domino,three short blue domino blocks,11067
+0,34,collisionf068,wide_domino,three short yellow domino blocks,11068
+1,34,collisionf069,wide_domino,three short green domino blocks,11069
+0,35,collisionf070,wide_domino,three short tan domino blocks,11070
+1,35,collisionf071,wide_domino,three short gray domino blocks,11071
