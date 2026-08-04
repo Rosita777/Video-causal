@@ -342,3 +342,36 @@ attenuation; it does not block the prompt-conditioned object formation. The
 next method must inject an explicit target-conditioned suppression signal into
 the generation path, rather than only changing the spatial support of a normal
 LoRA residual.
+
+### Target-Token Attention Suppression Diagnosis
+
+A training-free diagnostic directly reduced cross-attention from selected video
+queries to the exact `red rubber ball` and `ball` prompt tokens. The first run
+used the oracle causal gate (10.6% of the latent video grid) with attention-logit
+strength 20. The ball remained as red fragments, the receiver still fell, and
+the cup geometry changed. This is not semantic erasure.
+
+A deliberately extreme control used an all-ones spatiotemporal gate and strength
+100, effectively blocking the selected target tokens for every video query in
+all 30 Wan cross-attention blocks. Red ball fragments still appeared, while the
+three cups changed shape and layout substantially. Thus the failure cannot be
+explained by an inaccurate or too-small causal gate.
+
+| attention intervention | gate | object removed | footprint removed | receivers preserved |
+| --- | --- | ---: | ---: | ---: |
+| target-token suppression, strength 20 | oracle causal region | no | no | no |
+| target-token suppression, strength 100 | all video tokens | no | no | no |
+
+This ablation shows that target information is distributed through the full
+prompt representation and the iterative denoising state; zeroing a few token
+links at inference produces artifacts instead of the desired counterfactual.
+The implementation is retained as a reproducible diagnostic baseline, but
+further strength tuning is not justified.
+
+The next training formulation should use a target-conditioned intervention
+branch rather than a fixed negative attention bias. It will receive the target
+phrase, learn a residual from factual-prompt denoising toward the aligned clean
+counterfactual target, and retain frozen-teacher preservation outside the causal
+gate. A zero target condition must disable the branch exactly. The first test
+remains the four seen training pairs: it must remove the object and keep the
+receivers upright before any larger training or generalization experiment.

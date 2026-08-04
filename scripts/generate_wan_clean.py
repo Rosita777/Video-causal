@@ -46,6 +46,11 @@ def build_generation_config(args: argparse.Namespace) -> dict[str, object]:
         "activation_gate_dir": (
             str(args.activation_gate_dir) if args.activation_gate_dir else None
         ),
+        "attention_gate_dir": (
+            str(args.attention_gate_dir) if args.attention_gate_dir else None
+        ),
+        "attention_suppression_phrases": args.attention_suppression_phrase,
+        "attention_suppression_strength": args.attention_suppression_strength,
     }
 
 
@@ -171,6 +176,10 @@ def generate_videos(args: argparse.Namespace, items: list[dict[str, object]]) ->
         from diffusers import WanPipeline
         from diffusers.utils import export_to_video
         from causal_lora_activation_gate import CausalLoRAActivationGate
+        from target_token_attention_suppression import (
+            TargetTokenAttentionController,
+            find_token_mask,
+        )
     except ImportError as exc:
         raise SystemExit(
             "Wan generation requires torch and diffusers with WanPipeline. "
@@ -186,6 +195,14 @@ def generate_videos(args: argparse.Namespace, items: list[dict[str, object]]) ->
     activation_controller = (
         CausalLoRAActivationGate(pipe.transformer)
         if args.activation_gate_dir is not None
+        else None
+    )
+    attention_controller = (
+        TargetTokenAttentionController(
+            pipe.transformer,
+            args.attention_suppression_strength,
+        )
+        if args.attention_suppression_phrase
         else None
     )
 
@@ -227,6 +244,15 @@ def generate_videos(args: argparse.Namespace, items: list[dict[str, object]]) ->
             gate_payload = torch.load(gate_path, map_location="cpu", weights_only=True)
             activation_controller.set_gate(gate_payload["gate"].float().unsqueeze(0))
         prompt = str(item["prompt"])
+        if attention_controller is not None:
+            gate_path = args.attention_gate_dir / f"{int(item['index']):03d}.pt"
+            if not gate_path.exists():
+                raise FileNotFoundError(f"Missing attention gate: {gate_path}")
+            gate_payload = torch.load(gate_path, map_location="cpu", weights_only=True)
+            attention_controller.set_gate(gate_payload["gate"].float())
+            attention_controller.set_token_mask(
+                find_token_mask(pipe.tokenizer, prompt, args.attention_suppression_phrase)
+            )
         negative_prompt = item.get("negative_prompt")
         prompt_embeds = None
         negative_prompt_embeds = None
@@ -256,6 +282,8 @@ def generate_videos(args: argparse.Namespace, items: list[dict[str, object]]) ->
         export_to_video(output_frames(result), str(video_path), fps=args.fps)
     if activation_controller is not None:
         activation_controller.remove()
+    if attention_controller is not None:
+        attention_controller.remove(pipe.transformer)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -285,6 +313,18 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Directory containing per-item 000.pt spatiotemporal LoRA gates.",
     )
+    parser.add_argument(
+        "--attention-gate-dir",
+        type=Path,
+        help="Directory containing per-item video-query gates for target-token suppression.",
+    )
+    parser.add_argument(
+        "--attention-suppression-phrase",
+        action="append",
+        default=[],
+        help="Exact prompt phrase whose text tokens are suppressed; may be repeated.",
+    )
+    parser.add_argument("--attention-suppression-strength", type=float, default=20.0)
     parser.add_argument("--limit", type=int)
     parser.add_argument("--skip-existing", action="store_true")
     parser.add_argument("--enable-model-cpu-offload", action="store_true")
@@ -318,6 +358,13 @@ def main() -> int:
             parser.error("--activation-gate-dir requires --lora-path")
         if not args.dry_run and not args.activation_gate_dir.is_dir():
             parser.error(f"--activation-gate-dir does not exist: {args.activation_gate_dir}")
+    if args.attention_suppression_phrase:
+        if args.attention_gate_dir is None:
+            parser.error("--attention-gate-dir is required with attention suppression")
+        if args.attention_suppression_strength <= 0:
+            parser.error("--attention-suppression-strength must be positive")
+        if not args.dry_run and not args.attention_gate_dir.is_dir():
+            parser.error(f"--attention-gate-dir does not exist: {args.attention_gate_dir}")
 
     prompts = parse_prompt_file(args.prompts)
     selected_count = len(prompts[: args.limit] if args.limit is not None else prompts)
