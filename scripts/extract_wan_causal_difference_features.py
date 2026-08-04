@@ -17,10 +17,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--collision-cache", type=Path, required=True)
     parser.add_argument("--generic-cache", type=Path, required=True)
     parser.add_argument("--waterdrop-cache", type=Path, required=True)
+    parser.add_argument("--other-ball-cache", type=Path)
+    parser.add_argument("--negation-cache", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--layer", type=int, default=15)
     parser.add_argument("--sigma", type=float, default=0.5)
     parser.add_argument("--tokens-per-sample", type=int, default=64)
+    parser.add_argument("--tokens-per-frame", type=int, default=0)
+    parser.add_argument("--background-per-frame", type=int, default=4)
     parser.add_argument("--seed", type=int, default=20260803)
     parser.add_argument("--device", default="cuda")
     return parser.parse_args()
@@ -64,6 +68,8 @@ def extract_group(
     layer: int,
     sigma_value: float,
     tokens_per_sample: int,
+    tokens_per_frame: int,
+    background_per_frame: int,
     seed: int,
     device: torch.device,
 ) -> dict[str, object]:
@@ -78,7 +84,7 @@ def extract_group(
     try:
         for index, path in enumerate(paths):
             sample = torch.load(path, map_location="cpu", weights_only=True)
-            if name == "generic":
+            if name in {"generic", "negation"}:
                 factual, counterfactual, mask = generic_pair(sample["latents"])
             else:
                 if "factual_latents" not in sample or "residual_mask" not in sample:
@@ -110,21 +116,65 @@ def extract_group(
                 raise ValueError(
                     f"Token/mask mismatch for {path}: hidden={len(delta)} mask={len(weights)}"
                 )
-            count = min(tokens_per_sample, len(weights))
-            indices = torch.topk(weights, k=count, sorted=False).indices
+            if tokens_per_frame > 0:
+                frame_weights = weights.view(mask.shape[-3], -1)
+                causal_indices = []
+                background_indices = []
+                for frame_index, values in enumerate(frame_weights):
+                    offset = frame_index * len(values)
+                    causal_indices.append(
+                        torch.topk(values, k=min(tokens_per_frame, len(values)), sorted=False).indices
+                        + offset
+                    )
+                    background_indices.append(
+                        torch.topk(
+                            values,
+                            k=min(background_per_frame, len(values)),
+                            largest=False,
+                            sorted=False,
+                        ).indices
+                        + offset
+                    )
+                indices = torch.cat(causal_indices)
+                background_indices_tensor = torch.cat(background_indices)
+            else:
+                count = min(tokens_per_sample, len(weights))
+                indices = torch.topk(weights, k=count, sorted=False).indices
+                background_indices_tensor = torch.topk(
+                    weights,
+                    k=min(background_per_frame * mask.shape[-3], len(weights)),
+                    largest=False,
+                    sorted=False,
+                ).indices
             token_features = delta[indices]
+            factual_features = hidden[0][indices]
+            background_features = hidden[0][background_indices_tensor]
+            grid_height, grid_width = mask.shape[-2] // 2, mask.shape[-1] // 2
+            positions = torch.stack(
+                [
+                    indices // (grid_height * grid_width),
+                    (indices % (grid_height * grid_width)) // grid_width,
+                    indices % grid_width,
+                ],
+                dim=1,
+            )
             records.append(
                 {
                     "scene_id": sample["scene_id"],
                     "path": str(path),
+                    "video_path": sample["target_video"],
                     "features": token_features.to(torch.float16),
                     "pooled": token_features.mean(dim=0).to(torch.float16),
+                    "factual_features": factual_features.to(torch.float16),
+                    "background_features": background_features.to(torch.float16),
+                    "positions": positions.to(torch.int16),
+                    "mask_weights": weights[indices].to(torch.float16),
                     "mask_weight_mean": float(weights[indices].mean()),
                 }
             )
             print(
                 f"{name} {index + 1}/{len(paths)} scene={sample['scene_id']} "
-                f"tokens={count} delta_norm={token_features.norm(dim=1).mean():.4f}",
+                f"tokens={len(indices)} delta_norm={token_features.norm(dim=1).mean():.4f}",
                 flush=True,
             )
     finally:
@@ -151,12 +201,18 @@ def main() -> int:
         ("generic", cache_files(args.generic_cache, role="preserve")),
         ("waterdrop", cache_files(args.waterdrop_cache, role="erase")),
     ]
+    if args.other_ball_cache:
+        groups.append(("other_ball", cache_files(args.other_ball_cache, role="erase")))
+    if args.negation_cache:
+        groups.append(("negation", cache_files(args.negation_cache, role="preserve")))
     payload = {
         "config": {
             "model": str(args.model),
             "layer": args.layer,
             "sigma": args.sigma,
             "tokens_per_sample": args.tokens_per_sample,
+            "tokens_per_frame": args.tokens_per_frame,
+            "background_per_frame": args.background_per_frame,
             "seed": args.seed,
         },
         "groups": {},
@@ -169,6 +225,8 @@ def main() -> int:
             layer=args.layer,
             sigma_value=args.sigma,
             tokens_per_sample=args.tokens_per_sample,
+            tokens_per_frame=args.tokens_per_frame,
+            background_per_frame=args.background_per_frame,
             seed=args.seed + offset * 10000,
             device=device,
         )

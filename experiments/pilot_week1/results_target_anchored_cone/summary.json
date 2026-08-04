@@ -1,0 +1,64 @@
+{
+  "radius": 6.0,
+  "decay": 0.95,
+  "groups": {
+    "collision": {
+      "direct": {
+        "mean": 0.9687811482337213,
+        "std": 0.02223714508522993
+      },
+      "propagated": {
+        "mean": 0.9687811482337213,
+        "std": 0.02223714508522993
+      },
+      "direct_coverage": {
+        "mean": 0.6886090991958496,
+        "std": 0.1892704385208812
+      },
+      "propagated_coverage": {
+        "mean": 0.850359159131204,
+        "std": 0.14359454251633777
+      }
+    },
+    "generic": {
+      "direct": {
+        "mean": 0.255446579947602,
+        "std": 0.1821493928664622
+      },
+      "propagated": {
+        "mean": 0.2846753667690791,
+        "std": 0.19212898294492356
+      },
+      "direct_coverage": {
+        "mean": 0.005642361138598062,
+        "std": 0.014570668617556608
+      },
+      "propagated_coverage": {
+        "mean": 0.010850694510736503,
+        "std": 0.03182048257516683
+      }
+    },
+    "waterdrop": {
+      "direct": {
+        "mean": 0.7338177898237782,
+        "std": 0.1536896052625293
+      },
+      "propagated": {
+        "mean": 0.7361011726240958,
+        "std": 0.15015782528465252
+      },
+      "direct_coverage": {
+        "mean": 0.06834507578863733,
+        "std": 0.07178802805124805
+      },
+      "propagated_coverage": {
+        "mean": 0.11555564112120098,
+        "std": 0.11058705735048824
+      }
+    }
+  },
+  "auc_collision_vs_generic_direct": 1.0,
+  "auc_collision_vs_waterdrop_direct": 0.9947970863683663,
+  "auc_collision_vs_generic_propagated": 1.0,
+  "auc_collision_vs_waterdrop_propagated": 0.9947970863683663
+}

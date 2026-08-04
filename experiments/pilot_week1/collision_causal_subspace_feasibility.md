@@ -32,3 +32,65 @@ links only toward later tokens. The propagated causal cone, rather than raw
 motion similarity, should define where the erasure adapter may act. The next
 feasibility check is whether propagated activation separates held-out collision
 receivers from waterdrop better than the 0.774 anchored baseline.
+
+## Factual Anchor And Temporal Propagation
+
+The follow-up replaces the pair-difference anchor with a deployable linear
+detector trained only on factual Wan block-15 features from four target-only
+red-ball videos and 24 generic videos. Each frame retains 16 candidate tokens.
+Activation propagates forward using adjacent-frame hidden-feature affinity and
+spatial proximity.
+
+| metric | direct anchor | propagated cone |
+| --- | ---: | ---: |
+| collision vs generic AUC | 1.000 | 1.000 |
+| collision vs waterdrop AUC | 0.995 | 0.995 |
+| collision late-footprint coverage | 68.9% | 85.0% |
+| waterdrop late false coverage | 6.8% | 11.6% |
+
+Temporal propagation substantially expands coverage of the target collision
+footprint, while false waterdrop coverage remains much lower than collision
+coverage. Its increase from 6.8% to 11.6% shows that transition constraints
+still need improvement.
+
+This experiment may benefit from the repeated `red ball` prompt phrase through
+Wan's text-conditioned hidden states. Before treating it as method evidence,
+the detector must be tested on other-colored-ball collisions, red-ball negation
+prompts, and prompts mentioning a red ball when the generated video does not
+contain one.
+
+## Strict Control Audit
+
+The strict rerun removes low-motion generic clips from evaluation. The 32
+generic clips are ranked by measured motion: ranks 1--16 train the detector,
+ranks 17--24 are held out, and ranks 25--32 are ignored. Manual review retains
+six clear other-colored-ball collisions and two red-ball-negation generations
+where no red ball is visible.
+
+| control | direct AUC | propagated AUC | propagated coverage |
+| --- | ---: | ---: | ---: |
+| held-out generic motion | 1.000 | 1.000 | 0.1% |
+| held-out waterdrop | 0.986 | 0.986 | 12.6% |
+| other-colored-ball collision | 0.909 | 0.909 | 46.2% |
+| red-ball prompt, no visible red ball | 1.000 | 1.000 | 28.8% |
+
+The target collision reaches 82.0% propagated coverage. The negation control
+argues against a purely text-driven detector, and waterdrop remains well below
+the target. However, the 46.2% coverage on other-colored-ball collisions is too
+high: the current cone partly follows the collision mechanism without requiring
+enough target-object identity. This is positive feasibility evidence, but not
+yet sufficient specificity for adapter training.
+
+## Immediate Next Step
+
+Factor the cone into two explicit gates:
+
+1. a target-object gate, calibrated with target-only positives and visually
+   similar non-target objects;
+2. a forward causal-propagation gate, calibrated with factual/counterfactual
+   collision pairs.
+
+The adapter may act only on their intersection. The next ablation should compare
+motion-only, object-only, the current soft product, and the gated intersection.
+The acceptance target is to retain roughly 80% target collision coverage while
+reducing other-colored-ball collision coverage substantially below 46.2%.

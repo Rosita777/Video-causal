@@ -1,0 +1,19 @@
+control_group,index,decision,reason
+other_ball,0,accept,blue ball visibly contacts cups and a cup falls
+other_ball,1,accept,blue object visibly contacts cans and a can falls
+other_ball,2,reject,blue ball appears but receiver motion is not clear
+other_ball,3,accept,blue ball visibly contacts pawns and a pawn falls
+other_ball,4,reject,blue ball is airborne and no receiver moves
+other_ball,5,accept,green ball visibly contacts cups and a cup falls
+other_ball,6,accept,green ball contacts the tins and the receiver arrangement changes
+other_ball,7,accept,green ball visibly contacts blocks and a block moves
+other_ball,8,reject,green ball appears but no receiver moves
+other_ball,9,reject,no green ball is visible and receiver motion is unexplained
+red_ball_negation,0,reject,a red ball is visible throughout
+red_ball_negation,1,accept,no red ball is visible
+red_ball_negation,2,reject,multiple red balls appear
+red_ball_negation,3,accept,no red ball is visible
+red_ball_negation,4,reject,a small red ball is visible
+red_ball_negation,5,reject,red balls are visible
+red_ball_negation,6,reject,red ball-like blobs are visible in the bottles
+red_ball_negation,7,reject,a red ball is visible throughout

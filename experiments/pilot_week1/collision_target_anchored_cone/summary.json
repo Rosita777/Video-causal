@@ -1,0 +1,106 @@
+{
+  "radius": 6.0,
+  "decay": 0.95,
+  "generic_train_count": 16,
+  "generic_eval_count": 8,
+  "groups": {
+    "collision": {
+      "direct": {
+        "mean": 0.9647140945157697,
+        "std": 0.02750295964077851
+      },
+      "propagated": {
+        "mean": 0.9647140945157697,
+        "std": 0.02750295964077851
+      },
+      "direct_coverage": {
+        "mean": 0.6465061254078343,
+        "std": 0.2037657782454647
+      },
+      "propagated_coverage": {
+        "mean": 0.8204769597899529,
+        "std": 0.15351634333814132
+      }
+    },
+    "generic": {
+      "direct": {
+        "mean": 0.22026307950727642,
+        "std": 0.11471371051981173
+      },
+      "propagated": {
+        "mean": 0.23793537355959415,
+        "std": 0.1198732716278222
+      },
+      "direct_coverage": {
+        "mean": 0.0008680555620230734,
+        "std": 0.0022966591412994565
+      },
+      "propagated_coverage": {
+        "mean": 0.0008680555620230734,
+        "std": 0.0022966591412994565
+      }
+    },
+    "waterdrop": {
+      "direct": {
+        "mean": 0.7579642678460767,
+        "std": 0.14902635830592148
+      },
+      "propagated": {
+        "mean": 0.7601638897772758,
+        "std": 0.1426531626074857
+      },
+      "direct_coverage": {
+        "mean": 0.07741205077317934,
+        "std": 0.08360528853531926
+      },
+      "propagated_coverage": {
+        "mean": 0.1258883219542763,
+        "std": 0.1250061453200689
+      }
+    },
+    "other_ball": {
+      "direct": {
+        "mean": 0.7650691419839859,
+        "std": 0.21791122335749688
+      },
+      "propagated": {
+        "mean": 0.7654479394356409,
+        "std": 0.21713979735022945
+      },
+      "direct_coverage": {
+        "mean": 0.3499034655590852,
+        "std": 0.31898053049648095
+      },
+      "propagated_coverage": {
+        "mean": 0.4618915095925331,
+        "std": 0.371133388888258
+      }
+    },
+    "negation": {
+      "direct": {
+        "mean": 0.7335658669471741,
+        "std": 0.12384837865829468
+      },
+      "propagated": {
+        "mean": 0.7339670062065125,
+        "std": 0.1234472393989563
+      },
+      "direct_coverage": {
+        "mean": 0.1979166604578495,
+        "std": 0.1493055485188961
+      },
+      "propagated_coverage": {
+        "mean": 0.2881944440305233,
+        "std": 0.2048611082136631
+      }
+    }
+  },
+  "auc_collision_vs_generic_direct": 1.0,
+  "auc_collision_vs_waterdrop_direct": 0.9864724245577523,
+  "auc_collision_vs_other_ball_direct": 0.9086021505376344,
+  "auc_collision_vs_negation_direct": 1.0,
+  "auc_collision_vs_generic_propagated": 1.0,
+  "auc_collision_vs_waterdrop_propagated": 0.9864724245577523,
+  "auc_collision_vs_other_ball_propagated": 0.9086021505376344,
+  "auc_collision_vs_negation_propagated": 1.0
+}
