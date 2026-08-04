@@ -1,0 +1,372 @@
+{
+  "collision_train_count": 24,
+  "collision_eval_count": 7,
+  "generic_train_count": 16,
+  "generic_eval_count": 8,
+  "other_ball_train_count": 3,
+  "other_ball_eval_count": 3,
+  "object_threshold": 0.8784565925598145,
+  "mechanism_threshold": 0.027519281953573227,
+  "selected_gate": {
+    "objective": 0.05245672992120187,
+    "object_quantile": 0.05,
+    "mechanism_quantile": 0.9,
+    "object_threshold": 0.8784565925598145,
+    "mechanism_threshold": 0.027519281953573227,
+    "radius": 6.0,
+    "edge_threshold": 0.1,
+    "seed_window": 13,
+    "collision_train_coverage": 0.7475432700787982,
+    "generic_train_coverage": 0.0
+  },
+  "calibration_candidates": [
+    {
+      "objective": 0.05245672992120187,
+      "object_quantile": 0.05,
+      "mechanism_quantile": 0.9,
+      "object_threshold": 0.8784565925598145,
+      "mechanism_threshold": 0.027519281953573227,
+      "radius": 6.0,
+      "edge_threshold": 0.1,
+      "seed_window": 13,
+      "collision_train_coverage": 0.7475432700787982,
+      "generic_train_coverage": 0.0
+    },
+    {
+      "objective": 0.05245672992120187,
+      "object_quantile": 0.05,
+      "mechanism_quantile": 0.95,
+      "object_threshold": 0.8784565925598145,
+      "mechanism_threshold": 0.0431424118578434,
+      "radius": 6.0,
+      "edge_threshold": 0.1,
+      "seed_window": 13,
+      "collision_train_coverage": 0.7475432700787982,
+      "generic_train_coverage": 0.0
+    },
+    {
+      "objective": 0.05245672992120187,
+      "object_quantile": 0.05,
+      "mechanism_quantile": 0.99,
+      "object_threshold": 0.8784565925598145,
+      "mechanism_threshold": 0.1029510572552681,
+      "radius": 6.0,
+      "edge_threshold": 0.1,
+      "seed_window": 13,
+      "collision_train_coverage": 0.7475432700787982,
+      "generic_train_coverage": 0.0
+    },
+    {
+      "objective": 0.05592895379910867,
+      "object_quantile": 0.05,
+      "mechanism_quantile": 0.9,
+      "object_threshold": 0.8784565925598145,
+      "mechanism_threshold": 0.027519281953573227,
+      "radius": 6.0,
+      "edge_threshold": 0.1,
+      "seed_window": 8,
+      "collision_train_coverage": 0.7440710462008914,
+      "generic_train_coverage": 0.0
+    },
+    {
+      "objective": 0.05592895379910867,
+      "object_quantile": 0.05,
+      "mechanism_quantile": 0.95,
+      "object_threshold": 0.8784565925598145,
+      "mechanism_threshold": 0.0431424118578434,
+      "radius": 6.0,
+      "edge_threshold": 0.1,
+      "seed_window": 8,
+      "collision_train_coverage": 0.7440710462008914,
+      "generic_train_coverage": 0.0
+    },
+    {
+      "objective": 0.05592895379910867,
+      "object_quantile": 0.05,
+      "mechanism_quantile": 0.99,
+      "object_threshold": 0.8784565925598145,
+      "mechanism_threshold": 0.1029510572552681,
+      "radius": 6.0,
+      "edge_threshold": 0.1,
+      "seed_window": 8,
+      "collision_train_coverage": 0.7440710462008914,
+      "generic_train_coverage": 0.0
+    },
+    {
+      "objective": 0.056571412396927756,
+      "object_quantile": 0.05,
+      "mechanism_quantile": 0.9,
+      "object_threshold": 0.8784565925598145,
+      "mechanism_threshold": 0.027519281953573227,
+      "radius": 6.0,
+      "edge_threshold": 0.1,
+      "seed_window": 6,
+      "collision_train_coverage": 0.7434285876030723,
+      "generic_train_coverage": 0.0
+    },
+    {
+      "objective": 0.056571412396927756,
+      "object_quantile": 0.05,
+      "mechanism_quantile": 0.95,
+      "object_threshold": 0.8784565925598145,
+      "mechanism_threshold": 0.0431424118578434,
+      "radius": 6.0,
+      "edge_threshold": 0.1,
+      "seed_window": 6,
+      "collision_train_coverage": 0.7434285876030723,
+      "generic_train_coverage": 0.0
+    },
+    {
+      "objective": 0.056571412396927756,
+      "object_quantile": 0.05,
+      "mechanism_quantile": 0.99,
+      "object_threshold": 0.8784565925598145,
+      "mechanism_threshold": 0.1029510572552681,
+      "radius": 6.0,
+      "edge_threshold": 0.1,
+      "seed_window": 6,
+      "collision_train_coverage": 0.7434285876030723,
+      "generic_train_coverage": 0.0
+    },
+    {
+      "objective": 0.06332663403203098,
+      "object_quantile": 0.1,
+      "mechanism_quantile": 0.9,
+      "object_threshold": 0.896615743637085,
+      "mechanism_threshold": 0.027519281953573227,
+      "radius": 6.0,
+      "edge_threshold": 0.1,
+      "seed_window": 13,
+      "collision_train_coverage": 0.7366733659679691,
+      "generic_train_coverage": 0.0
+    }
+  ],
+  "groups": {
+    "collision": {
+      "motion_only": {
+        "score": {
+          "mean": 0.9998817614146641,
+          "std": 7.893922110749303e-05
+        },
+        "coverage": {
+          "mean": 1.0,
+          "std": 0.0
+        }
+      },
+      "object_only": {
+        "score": {
+          "mean": 0.9382603423936027,
+          "std": 0.0381519592278359
+        },
+        "coverage": {
+          "mean": 0.5081845266478402,
+          "std": 0.10217471743088131
+        }
+      },
+      "soft_product": {
+        "score": {
+          "mean": 0.9325870105198452,
+          "std": 0.039757316791943706
+        },
+        "coverage": {
+          "mean": 0.48983134967940195,
+          "std": 0.10172582317147665
+        }
+      },
+      "gated_cone": {
+        "score": {
+          "mean": 1.0,
+          "std": 0.0
+        },
+        "coverage": {
+          "mean": 0.6312003944601331,
+          "std": 0.2663734348858545
+        }
+      }
+    },
+    "generic": {
+      "motion_only": {
+        "score": {
+          "mean": 0.12057417770847678,
+          "std": 0.08431081215043638
+        },
+        "coverage": {
+          "mean": 0.0,
+          "std": 0.0
+        }
+      },
+      "object_only": {
+        "score": {
+          "mean": 0.1715987806674093,
+          "std": 0.14786447160385602
+        },
+        "coverage": {
+          "mean": 0.0026041667442768812,
+          "std": 0.006889977577901365
+        }
+      },
+      "soft_product": {
+        "score": {
+          "mean": 0.004953874435159378,
+          "std": 0.0035221908922941827
+        },
+        "coverage": {
+          "mean": 0.0,
+          "std": 0.0
+        }
+      },
+      "gated_cone": {
+        "score": {
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "coverage": {
+          "mean": 0.0,
+          "std": 0.0
+        }
+      }
+    },
+    "waterdrop": {
+      "motion_only": {
+        "score": {
+          "mean": 0.9995674779338222,
+          "std": 0.0004975766632729798
+        },
+        "coverage": {
+          "mean": 0.9985887119846959,
+          "std": 0.003348991821115465
+        }
+      },
+      "object_only": {
+        "score": {
+          "mean": 0.5705869481448205,
+          "std": 0.1749130642987762
+        },
+        "coverage": {
+          "mean": 0.023959340632803017,
+          "std": 0.02883601619397715
+        }
+      },
+      "soft_product": {
+        "score": {
+          "mean": 0.5649104329847521,
+          "std": 0.1740837131627829
+        },
+        "coverage": {
+          "mean": 0.022826091506548466,
+          "std": 0.028475504648859007
+        }
+      },
+      "gated_cone": {
+        "score": {
+          "mean": 0.0967741935483871,
+          "std": 0.29565004483586066
+        },
+        "coverage": {
+          "mean": 0.0940860221462865,
+          "std": 0.28769721133680387
+        }
+      }
+    },
+    "other_ball": {
+      "motion_only": {
+        "score": {
+          "mean": 0.9998513460159302,
+          "std": 1.6142261320327145e-05
+        },
+        "coverage": {
+          "mean": 1.0,
+          "std": 0.0
+        }
+      },
+      "object_only": {
+        "score": {
+          "mean": 0.8091517090797424,
+          "std": 0.07846349594142131
+        },
+        "coverage": {
+          "mean": 0.3736307695508003,
+          "std": 0.26844477565231223
+        }
+      },
+      "soft_product": {
+        "score": {
+          "mean": 0.805674413839976,
+          "std": 0.07998593068250964
+        },
+        "coverage": {
+          "mean": 0.36846280843019485,
+          "std": 0.26162230343013543
+        }
+      },
+      "gated_cone": {
+        "score": {
+          "mean": 0.3333333333333333,
+          "std": 0.4714045207910317
+        },
+        "coverage": {
+          "mean": 0.17829457918802896,
+          "std": 0.25214661198531435
+        }
+      }
+    },
+    "negation": {
+      "motion_only": {
+        "score": {
+          "mean": 0.11960320174694061,
+          "std": 0.027702853083610535
+        },
+        "coverage": {
+          "mean": 0.0,
+          "std": 0.0
+        }
+      },
+      "object_only": {
+        "score": {
+          "mean": 0.6323703527450562,
+          "std": 0.09033411741256714
+        },
+        "coverage": {
+          "mean": 0.055555555038154125,
+          "std": 0.034722221083939075
+        }
+      },
+      "soft_product": {
+        "score": {
+          "mean": 0.024073314620181918,
+          "std": 0.01914968271739781
+        },
+        "coverage": {
+          "mean": 0.0,
+          "std": 0.0
+        }
+      },
+      "gated_cone": {
+        "score": {
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "coverage": {
+          "mean": 0.0,
+          "std": 0.0
+        }
+      }
+    }
+  },
+  "auc_collision_vs_generic_motion_only": 1.0,
+  "auc_collision_vs_waterdrop_motion_only": 0.8617511520737328,
+  "auc_collision_vs_other_ball_motion_only": 0.8571428571428571,
+  "auc_collision_vs_negation_motion_only": 1.0,
+  "auc_collision_vs_generic_object_only": 1.0,
+  "auc_collision_vs_waterdrop_object_only": 0.9953917050691244,
+  "auc_collision_vs_other_ball_object_only": 0.9523809523809523,
+  "auc_collision_vs_negation_object_only": 1.0,
+  "auc_collision_vs_generic_soft_product": 1.0,
+  "auc_collision_vs_waterdrop_soft_product": 0.9953917050691244,
+  "auc_collision_vs_other_ball_soft_product": 0.9047619047619048,
+  "auc_collision_vs_negation_soft_product": 1.0,
+  "auc_collision_vs_generic_gated_cone": 1.0,
+  "auc_collision_vs_waterdrop_gated_cone": 0.9516129032258064,
+  "auc_collision_vs_other_ball_gated_cone": 0.8333333333333333,
+  "auc_collision_vs_negation_gated_cone": 1.0
+}

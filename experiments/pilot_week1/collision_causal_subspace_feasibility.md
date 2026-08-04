@@ -94,3 +94,33 @@ The adapter may act only on their intersection. The next ablation should compare
 motion-only, object-only, the current soft product, and the gated intersection.
 The acceptance target is to retain roughly 80% target collision coverage while
 reducing other-colored-ball collision coverage substantially below 46.2%.
+
+## Dual-Gate Ablation
+
+The follow-up separates the representation into an object detector and a
+mechanism detector. The object detector uses four target-only clips, 16 generic
+motion clips, and three other-colored-ball collisions as hard negatives. The
+remaining three other-colored-ball collisions are held out. The mechanism
+detector uses 24 collision clips and is evaluated on seven clips from held-out
+receiver families. Gate parameters are selected using only training collisions
+and generic motion, targeting 80% training coverage; none of the reported
+control groups participates in this selection.
+
+| method | target collision | generic motion | waterdrop | other-colored ball | no visible red ball |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| motion only | 100.0% | 0.0% | 99.9% | 100.0% | 0.0% |
+| object only | 50.8% | 0.3% | 2.4% | 37.4% | 5.6% |
+| soft product | 49.0% | 0.0% | 2.3% | 36.8% | 0.0% |
+| calibrated gated cone | 63.1% | 0.0% | 9.4% | 17.8% | 0.0% |
+
+Motion alone cannot distinguish causal mechanisms. Object anchoring supplies
+most of the specificity, while the calibrated temporal cone recovers additional
+target-footprint coverage and reduces held-out other-ball coverage from 36.8%
+to 17.8%. Relative to the earlier ungated propagated cone, target coverage drops
+from 82.0% to 63.1%, but other-ball coverage drops from 46.2% to 17.8%.
+
+This is a useful precision/coverage trade-off, not a final method result. The
+hard-negative split contains only three training and three test videos. The next
+experiment should apply the gate as a soft spatial-temporal weight during LoRA
+training and measure actual object erasure, footprint erasure, and preservation
+on generated videos.
