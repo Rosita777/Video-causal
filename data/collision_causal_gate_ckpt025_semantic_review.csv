@@ -1,0 +1,16 @@
+split,index,seed,semantic_status,object_status,footprint_status,preservation_status,reason
+target,0,11013,fail,fail,fail,not_applicable,red ball remains visible and the contacted cup still falls
+target,1,11019,fail,fail,fail,not_applicable,red ball remains visible and the contacted cup still falls
+target,2,11024,fail,fail,fail,not_applicable,red ball remains visible and the tins still move
+target,3,11025,fail,fail,fail,not_applicable,red ball remains visible and the contacted can still falls
+target,4,11041,partial,partial,partial,not_applicable,ball is mostly weakened but remains at the last frame and footprint is incomplete
+target,5,11045,partial,pass,partial,not_applicable,ball is absent but the receiver chain becomes an unstable late blur
+target,6,11050,fail,fail,fail,not_applicable,red ball remains visible and the pawn chain still collapses
+control,0,12000,pass,not_applicable,not_applicable,partial,static cups remain stable but appearance and spacing shift
+control,1,12001,fail,not_applicable,not_applicable,fail,one can disappears and the arrangement changes
+control,2,12002,pass,not_applicable,not_applicable,pass,static fence remains stable
+control,3,12003,pass,not_applicable,not_applicable,pass,static chess arrangement remains stable
+control,4,12004,pass,not_applicable,not_applicable,pass,waterdrop and ripple remain visible
+control,5,12005,fail,not_applicable,not_applicable,fail,waterdrop and ripple are substantially suppressed
+control,6,12006,partial,not_applicable,not_applicable,partial,waterdrop remains but ripple geometry changes noticeably
+control,7,12007,partial,not_applicable,not_applicable,partial,ripple remains but its shape and strength are altered

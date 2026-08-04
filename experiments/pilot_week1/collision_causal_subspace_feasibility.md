@@ -185,3 +185,27 @@ dominated on the target and frame-divergence metrics, so checkpoint 75 and scale
 0.5 were not generated. The next full semantic evaluation should use checkpoint
 25 at scale 1.0 and explicitly inspect target-object removal and causal-footprint
 removal rather than relying only on motion suppression.
+
+### Checkpoint-25 Full Semantic Audit
+
+The selected checkpoint was generated on all seven target collision prompts and
+eight specificity prompts. Automatic metrics improved substantially over
+checkpoint 100:
+
+| checkpoint | target suppression | control suppression | target early MAE | control early MAE |
+| ---: | ---: | ---: | ---: | ---: |
+| 25 | 53.11% | 7.09% | 0.0781 | 0.0588 |
+| 100 | 85.31% | 31.16% | 0.2232 | 0.1756 |
+
+Manual contact-sheet review is less positive than the motion metric. None of the
+seven target videos cleanly removes both the red ball and its collision
+footprint. Five fail and two are partial: the ball is often only reduced in size
+or contrast, while the receiver still falls. Among eight controls, four pass,
+two are partial, and two fail. One static-can scene loses an object, and one
+waterdrop scene has its drop and ripple substantially suppressed.
+
+This establishes that checkpoint selection reduces broad side effects, but the
+current adapter still performs causal attenuation rather than complete causal
+erasure. The next method change must improve the counterfactual target signal or
+apply the causal gate to adapter activations at inference; further scalar loss
+or LoRA-scale tuning alone is unlikely to solve the remaining semantic failure.
