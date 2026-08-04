@@ -325,3 +325,20 @@ LoRA plus counterfactual flow matching cannot reliably express the requested
 intervention. Further data expansion, longer training, or an online gate
 predictor should be paused. The next method change must alter how the
 counterfactual signal enters the denoising process rather than retune this loss.
+
+### All-Ones Gate Diagnosis
+
+To separate gate coverage from adapter expressivity, the same four-scene
+overfit run was repeated with all activation gates set to one. The training
+loss curve and its spikes were nearly unchanged. At checkpoint 50, the global
+adapter changed the scene more strongly and kept the boxes somewhat more
+stable, but the red ball still appeared. At checkpoint 100, the ball still
+appeared and the box layout degraded further.
+
+The all-ones control therefore does not recover object erasure. Sparse gates
+are useful for limiting side effects, but insufficient gate coverage is not the
+main failure. The current adapter learns a broad visual perturbation or motion
+attenuation; it does not block the prompt-conditioned object formation. The
+next method must inject an explicit target-conditioned suppression signal into
+the generation path, rather than only changing the spatial support of a normal
+LoRA residual.

@@ -1,0 +1,4 @@
+gate,checkpoint,scene_id,object_erasure,footprint_erasure,preservation,overall,notes
+sparse,50,collision_000,fail,fail,partial,fail,"ball is faint but remains; boxes collapse"
+all_ones,50,collision_000,fail,partial,fail,fail,"ball remains; boxes stay more stable but global appearance changes"
+all_ones,100,collision_000,fail,fail,fail,fail,"ball remains and box layout degrades"
