@@ -484,3 +484,17 @@ collapse. The component losses alone are therefore insufficient: the adapter
 was still activated by the older causal gate, whose coverage was concentrated
 on the target. The follow-up uses the union of `object_gate` and
 `receiver_gate` as the activation gate, keeping the loss weights unchanged.
+
+The union-gate follow-up validates the mismatch diagnosis:
+
+| checkpoint | target object | causal footprint | receiver preservation |
+| ---: | --- | --- | --- |
+| 25 | large ball removed; one tiny late red remnant | boxes remain upright through frame 48 | good on the audited seen scene |
+| 50 | removed | suppressed | catastrophic washout; boxes become faint and nearly disappear |
+
+`ck25` is the first audited checkpoint that approximately satisfies object
+removal and footprint removal together without changing the receiver layout.
+It is not yet a final success because of the small late target remnant and the
+single seen-scene scope. `ck50` demonstrates overtraining rather than further
+improvement. Subsequent experiments should use early stopping and strengthen
+receiver identity preservation; simply increasing steps is ruled out.
