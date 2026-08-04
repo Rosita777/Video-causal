@@ -475,3 +475,12 @@ factual-versus-counterfactual video difference. The color rule is explicitly a
 prototype annotation tool, not a proposed general method; a general experiment
 must replace its output with category-agnostic object masks without changing the
 loss.
+
+The first component run confirms the intended separation but also exposes an
+activation mismatch. At `ck25`, the red ball is absent from roughly frame 16
+onward, while the boxes still fall. At `ck50`, the ball is mostly suppressed,
+but the initial box arrangement is already distorted and the later boxes still
+collapse. The component losses alone are therefore insufficient: the adapter
+was still activated by the older causal gate, whose coverage was concentrated
+on the target. The follow-up uses the union of `object_gate` and
+`receiver_gate` as the activation gate, keeping the loss weights unchanged.

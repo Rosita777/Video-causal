@@ -85,8 +85,10 @@ def build_one(row: dict[str, str], project_root: Path, causal_dir: Path, frames:
     )[0, 0].clamp(0.0, 1.0)
     receiver_gate = video_difference_mask(factual_frames, target_frames, tuple(causal.shape))
     receiver_gate = receiver_gate * (1.0 - object_exclusion).clamp(0.0, 1.0)
+    activation_gate = torch.maximum(object_gate, receiver_gate)
     return {
         "scene_id": row["scene_id"],
+        "gate": activation_gate.to(torch.float16),
         "object_gate": object_gate.to(torch.float16),
         "receiver_gate": receiver_gate.to(torch.float16),
         "causal_gate": causal.to(torch.float16),
