@@ -301,3 +301,27 @@ pairs and evaluate those same training prompts. Failure there would show that
 the gated LoRA and flow objective cannot express the intervention; success there
 would instead isolate the problem to data coverage or generalization. This test
 should precede further full-manifest tuning.
+
+### Four-Scene Overfit Diagnostic
+
+Four visually aligned collision pairs were isolated in
+`data/collision_overfit4.csv`. The run uses erase rows only, no preservation
+rows, and repeats these four pairs for 200 steps with the activation-gated
+`counterfactual_sft` objective. Checkpoints were saved at steps 50, 100, 150,
+and 200.
+
+The loss does not show stable memorization. Its final 20-step mean is 0.1119,
+with recurring spikes despite each sample being revisited many times. More
+importantly, the first training prompt was regenerated with its original seed
+and training gate at checkpoints 50 and 200. Checkpoint 50 only fades the red
+ball and still allows the boxes to collapse. Checkpoint 200 retains the ball at
+multiple times, still collapses the boxes, and degrades the receiver layout.
+Neither output approaches the clean static training target.
+
+This failure occurs on a seen prompt, seen seed, and seen gate. It therefore
+rules out insufficient dataset diversity and held-out generalization as the
+primary explanation. Under the current formulation, activation-gated rank-16
+LoRA plus counterfactual flow matching cannot reliably express the requested
+intervention. Further data expansion, longer training, or an online gate
+predictor should be paused. The next method change must alter how the
+counterfactual signal enters the denoising process rather than retune this loss.

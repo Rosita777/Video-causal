@@ -1,0 +1,3 @@
+checkpoint,scene_id,seed,object_erasure,footprint_erasure,target_match,overall,notes
+50,collision_000,9902,fail,fail,fail,fail,"red ball is only faded; boxes still collapse"
+200,collision_000,9902,fail,fail,fail,fail,"red ball remains at multiple times; boxes still collapse and layout degrades"
