@@ -270,3 +270,34 @@ the gate. Expanding this checkpoint to the full 7+8 evaluation is not justified.
 The next method experiment should improve the counterfactual target itself,
 for example by distilling a clean static reconstruction inside the gate, before
 investing in an online gate predictor.
+
+### Counterfactual-SFT Ablation
+
+Three factual/counterfactual training pairs were visually audited before the
+next run. Their static targets are clean and well aligned: the red ball and
+collision outcome are absent while the original receivers remain upright.
+This rules out an obvious target-video construction failure in the sampled
+pairs.
+
+The `counterfactual_sft` objective removes both paired separation and factual
+redirection. Erase rows optimize counterfactual flow matching only inside the
+causal gate and frozen-teacher matching outside it. Preservation rows retain
+full-video teacher distillation. A 50-step balanced run saved checkpoints 25
+and 50; erase updates report zero pair and redirect losses as intended.
+
+| checkpoint | target motion suppression | target early MAE | semantic success |
+| ---: | ---: | ---: | ---: |
+| 25 | 12.90% | 0.0137 | 0/2 |
+| 50 | -32.76% | 0.0575 | 0/2 |
+
+At checkpoint 25, both red balls remain and the receiver still falls. At
+checkpoint 50, the balls still remain while deformation and extra motion become
+stronger, especially in the blue-cup scene. Removing the dominant redirect loss
+therefore does not recover semantic erasure, and simply training this objective
+longer is counterproductive at the current learning rate.
+
+The next diagnostic should deliberately overfit a very small set of aligned
+pairs and evaluate those same training prompts. Failure there would show that
+the gated LoRA and flow objective cannot express the intervention; success there
+would instead isolate the problem to data coverage or generalization. This test
+should precede further full-manifest tuning.

@@ -51,7 +51,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--role", choices=["erase", "preserve", "all"], default="erase")
     parser.add_argument(
         "--objective",
-        choices=["plain", "mask_bg", "paired_sep", "dual_traj", "causal_gate"],
+        choices=[
+            "plain",
+            "mask_bg",
+            "paired_sep",
+            "dual_traj",
+            "causal_gate",
+            "counterfactual_sft",
+        ],
         default="plain",
     )
     parser.add_argument(
@@ -108,8 +115,8 @@ def parse_args() -> argparse.Namespace:
         parser.error("all loss weights and margins must be non-negative")
     if args.gate_floor > 1:
         parser.error("--gate-floor must be at most 1")
-    if args.objective == "causal_gate" and args.causal_gate_dir is None:
-        parser.error("--causal-gate-dir is required for --objective causal_gate")
+    if args.objective in {"causal_gate", "counterfactual_sft"} and args.causal_gate_dir is None:
+        parser.error(f"--causal-gate-dir is required for --objective {args.objective}")
     return args
 
 
@@ -281,7 +288,13 @@ def build_cache(args: argparse.Namespace, rows: list[dict[str, str]], project_ro
             "latents": latents,
             "prompt_embeds": prompt_embeddings[row["prompt"]],
         }
-        if args.objective in {"mask_bg", "paired_sep", "dual_traj", "causal_gate"} and row.get("residual_mask_enabled") == "yes":
+        if args.objective in {
+            "mask_bg",
+            "paired_sep",
+            "dual_traj",
+            "causal_gate",
+            "counterfactual_sft",
+        } and row.get("residual_mask_enabled") == "yes":
             factual_path = resolve_path(project_root, row["residual_mask_factual_video"])
             factual_frames = read_video(factual_path, args.num_frames)
             factual_video = processor.preprocess_video(
@@ -408,7 +421,13 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
         teacher_prediction = None
         teacher_factual_prediction = None
         has_residual_mask = (
-            args.objective in {"mask_bg", "paired_sep", "dual_traj", "causal_gate"}
+            args.objective in {
+                "mask_bg",
+                "paired_sep",
+                "dual_traj",
+                "causal_gate",
+                "counterfactual_sft",
+            }
             and "residual_mask" in sample
         )
         uses_factual = has_residual_mask and args.objective in {"paired_sep", "dual_traj", "causal_gate"}
@@ -461,7 +480,7 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
         elif has_residual_mask:
             preserve_loss = torch.zeros((), device=device)
             mask = sample["residual_mask"].to(device=device, dtype=torch.float32)
-            if args.objective == "causal_gate":
+            if args.objective in {"causal_gate", "counterfactual_sft"}:
                 mask = load_causal_gate(args, sample["scene_id"], mask)
                 remove_loss = gated_flow_loss(element_loss, mask)
             elif args.objective == "mask_bg":
@@ -610,11 +629,17 @@ def main() -> int:
             target = resolve_path(project_root, row["desired_target_video"])
             if not target.exists():
                 raise FileNotFoundError(target)
-            if args.objective in {"mask_bg", "paired_sep", "dual_traj", "causal_gate"} and row.get("residual_mask_enabled") == "yes":
+            if args.objective in {
+                "mask_bg",
+                "paired_sep",
+                "dual_traj",
+                "causal_gate",
+                "counterfactual_sft",
+            } and row.get("residual_mask_enabled") == "yes":
                 factual = resolve_path(project_root, row["residual_mask_factual_video"])
                 if not factual.exists():
                     raise FileNotFoundError(factual)
-                if args.objective == "causal_gate":
+                if args.objective in {"causal_gate", "counterfactual_sft"}:
                     gate = args.causal_gate_dir / f"{row['scene_id']}.pt"
                     if not gate.exists():
                         raise FileNotFoundError(gate)

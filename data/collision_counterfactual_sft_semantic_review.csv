@@ -1,0 +1,5 @@
+checkpoint,index,seed,object_erasure,footprint_erasure,preservation,overall,notes
+25,0,11013,fail,fail,partial,fail,"red ball remains and the cup collision still occurs"
+25,1,11019,fail,fail,partial,fail,"red ball remains and the receiver still collapses"
+50,0,11013,fail,fail,fail,fail,"red ball remains; stronger cup deformation and extra motion"
+50,1,11019,fail,fail,fail,fail,"red ball remains and the receiver collapses with deformation"
