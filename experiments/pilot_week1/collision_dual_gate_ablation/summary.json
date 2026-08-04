@@ -141,6 +141,7 @@
       "generic_train_coverage": 0.0
     }
   ],
+  "fixed_gate_config": "experiments/pilot_week1/collision_dual_gate_ablation/summary.json",
   "groups": {
     "collision": {
       "motion_only": {
@@ -368,5 +369,8 @@
   "auc_collision_vs_generic_gated_cone": 1.0,
   "auc_collision_vs_waterdrop_gated_cone": 0.9516129032258064,
   "auc_collision_vs_other_ball_gated_cone": 0.8333333333333333,
-  "auc_collision_vs_negation_gated_cone": 1.0
+  "auc_collision_vs_negation_gated_cone": 1.0,
+  "exported_gate_dir": "outputs/causal_gates/collision_dual_gate_d2",
+  "exported_gate_count": 36,
+  "export_gate_dilation": 2
 }

@@ -11,4 +11,7 @@ PYTHON="${WAN_PYTHON:-models/.wan-runtime/bin/python}"
   --collision-manifest data/collision_train31.csv \
   --generic-motion-scores data/generic_preservation32_motion_scores.csv \
   --generic-train-count 16 --generic-eval-count 8 --other-ball-train-count 3 \
-  --steps 500 --target-train-coverage 0.80 --device cuda
+  --steps 500 --target-train-coverage 0.80 --device cuda \
+  --fixed-gate-config experiments/pilot_week1/collision_dual_gate_ablation/summary.json \
+  --export-gate-dir outputs/causal_gates/collision_dual_gate_d2 \
+  --export-gate-dilation 2

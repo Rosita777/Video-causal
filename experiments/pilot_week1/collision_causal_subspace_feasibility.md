@@ -124,3 +124,26 @@ hard-negative split contains only three training and three test videos. The next
 experiment should apply the gate as a soft spatial-temporal weight during LoRA
 training and measure actual object erasure, footprint erasure, and preservation
 on generated videos.
+
+## LoRA Integration
+
+The dual gate is now exported as one spatiotemporal latent mask per erase scene.
+Thirty-one collision scenes and five target-only scenes produce 36 non-empty
+gates. After spatial dilation, the gates cover 3.45% of the patch-token grid on
+average. They are generated artifacts and are not committed, but are fully
+reproducible with `run_collision_dual_gate_ablation.sh`.
+
+The new `causal_gate` training objective changes the existing dual-trajectory
+loss as follows:
+
+- counterfactual flow matching, paired separation, and factual redirection are
+  optimized only inside `residual_mask * causal_gate`;
+- outside that effective mask, both trajectories match the frozen Wan teacher;
+- generic preservation rows continue to distill the frozen teacher over the
+  complete latent.
+
+A 10-step smoke test completed without memory or numerical errors. The formal
+balanced run completed 100 steps and saved checkpoints every 25 steps at
+`outputs/adapters/collision_causal_gate_100`. A checkpoint-25 single-scene probe
+reduced the target collision post-event motion by 57.8%; this is only an early
+motion signal and does not replace semantic object/footprint evaluation.

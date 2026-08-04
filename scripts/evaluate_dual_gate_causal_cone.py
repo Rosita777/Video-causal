@@ -170,6 +170,39 @@ def sample_score(values: torch.Tensor, top_tokens: int = 8) -> float:
     return float(torch.topk(values, k=min(top_tokens, len(values))).values.mean())
 
 
+def export_gate(
+    record: dict[str, object],
+    values: torch.Tensor,
+    output_dir: Path,
+    dilation: int,
+) -> None:
+    cache = torch.load(record["path"], map_location="cpu", weights_only=True)
+    residual = cache["residual_mask"]
+    frames, latent_height, latent_width = residual.shape[-3:]
+    grid_height, grid_width = latent_height // 2, latent_width // 2
+    gate = torch.zeros((frames, grid_height, grid_width), dtype=torch.float32)
+    positions = record["positions"].long()
+    gate[positions[:, 0], positions[:, 1], positions[:, 2]] = values.float()
+    if dilation > 0:
+        kernel = 2 * dilation + 1
+        gate = torch.nn.functional.max_pool3d(
+            gate[None, None],
+            kernel_size=(1, kernel, kernel),
+            stride=1,
+            padding=(0, dilation, dilation),
+        )[0, 0]
+    output_dir.mkdir(parents=True, exist_ok=True)
+    torch.save(
+        {
+            "scene_id": record["scene_id"],
+            "gate": gate.to(torch.float16),
+            "source_cache": record["path"],
+            "dilation": dilation,
+        },
+        output_dir / f"{record['scene_id']}.pt",
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--features", type=Path, required=True)
@@ -183,6 +216,13 @@ def main() -> int:
     parser.add_argument("--steps", type=int, default=500)
     parser.add_argument("--radius", type=float, default=6.0)
     parser.add_argument("--target-train-coverage", type=float, default=0.80)
+    parser.add_argument("--export-gate-dir", type=Path)
+    parser.add_argument("--export-gate-dilation", type=int, default=2)
+    parser.add_argument(
+        "--fixed-gate-config",
+        type=Path,
+        help="Reuse selected_gate from a previous summary instead of repeating calibration.",
+    )
     parser.add_argument("--seed", type=int, default=20260804)
     parser.add_argument("--device", default="cuda")
     args = parser.parse_args()
@@ -235,65 +275,70 @@ def main() -> int:
     object_positive_scores = probabilities(object_positives, object_detector)
     mechanism_negative_scores = probabilities(mechanism_negatives, mechanism_detector)
 
-    calibration_records = collision_train + generic_train
-    collision_train_ids = {record["scene_id"] for record in collision_train}
-    calibration_scores = {
-        record["scene_id"]: (
-            probabilities(record["factual_features"], object_detector),
-            probabilities(record["features"], mechanism_detector),
-        )
-        for record in calibration_records
-    }
-    candidates = []
-    for object_quantile in (0.05, 0.10, 0.20, 0.30):
-        object_threshold = float(torch.quantile(object_positive_scores, object_quantile))
-        for mechanism_quantile in (0.90, 0.95, 0.99):
-            mechanism_threshold = float(
-                torch.quantile(mechanism_negative_scores, mechanism_quantile)
+    if args.fixed_gate_config is not None:
+        previous = json.loads(args.fixed_gate_config.read_text(encoding="utf-8"))
+        selected = previous["selected_gate"]
+        candidates = previous.get("calibration_candidates", [selected])
+    else:
+        calibration_records = collision_train + generic_train
+        collision_train_ids = {record["scene_id"] for record in collision_train}
+        calibration_scores = {
+            record["scene_id"]: (
+                probabilities(record["factual_features"], object_detector),
+                probabilities(record["features"], mechanism_detector),
             )
-            for radius in (2.0, 4.0, 6.0):
-                for edge_threshold in (0.1, 0.3, 0.5, 0.7):
-                    for seed_window in (1, 2, 4, 6, 8, 13):
-                        collision_coverages = []
-                        generic_coverages = []
-                        for record in calibration_records:
-                            object_scores, mechanism_scores = calibration_scores[record["scene_id"]]
-                            cone = strict_causal_cone(
-                                record,
-                                object_scores,
-                                mechanism_scores,
-                                object_threshold=object_threshold,
-                                mechanism_threshold=mechanism_threshold,
-                                radius=radius,
-                                edge_threshold=edge_threshold,
-                                seed_window=seed_window,
+            for record in calibration_records
+        }
+        candidates = []
+        for object_quantile in (0.05, 0.10, 0.20, 0.30):
+            object_threshold = float(torch.quantile(object_positive_scores, object_quantile))
+            for mechanism_quantile in (0.90, 0.95, 0.99):
+                mechanism_threshold = float(
+                    torch.quantile(mechanism_negative_scores, mechanism_quantile)
+                )
+                for radius in (2.0, 4.0, 6.0):
+                    for edge_threshold in (0.1, 0.3, 0.5, 0.7):
+                        for seed_window in (1, 2, 4, 6, 8, 13):
+                            collision_coverages = []
+                            generic_coverages = []
+                            for record in calibration_records:
+                                object_scores, mechanism_scores = calibration_scores[record["scene_id"]]
+                                cone = strict_causal_cone(
+                                    record,
+                                    object_scores,
+                                    mechanism_scores,
+                                    object_threshold=object_threshold,
+                                    mechanism_threshold=mechanism_threshold,
+                                    radius=radius,
+                                    edge_threshold=edge_threshold,
+                                    seed_window=seed_window,
+                                )
+                                destination = (
+                                    collision_coverages
+                                    if record["scene_id"] in collision_train_ids
+                                    else generic_coverages
+                                )
+                                destination.append(late_coverage(record, cone))
+                            collision_coverage = float(np.mean(collision_coverages))
+                            generic_coverage = float(np.mean(generic_coverages))
+                            objective = (
+                                abs(collision_coverage - args.target_train_coverage)
+                                + 2.0 * generic_coverage
                             )
-                            destination = (
-                                collision_coverages
-                                if record["scene_id"] in collision_train_ids
-                                else generic_coverages
-                            )
-                            destination.append(late_coverage(record, cone))
-                        collision_coverage = float(np.mean(collision_coverages))
-                        generic_coverage = float(np.mean(generic_coverages))
-                        objective = (
-                            abs(collision_coverage - args.target_train_coverage)
-                            + 2.0 * generic_coverage
-                        )
-                        candidates.append({
-                            "objective": objective,
-                            "object_quantile": object_quantile,
-                            "mechanism_quantile": mechanism_quantile,
-                            "object_threshold": object_threshold,
-                            "mechanism_threshold": mechanism_threshold,
-                            "radius": radius,
-                            "edge_threshold": edge_threshold,
-                            "seed_window": seed_window,
-                            "collision_train_coverage": collision_coverage,
-                            "generic_train_coverage": generic_coverage,
-                        })
-    candidates.sort(key=lambda item: (item["objective"], item["generic_train_coverage"]))
-    selected = candidates[0]
+                            candidates.append({
+                                "objective": objective,
+                                "object_quantile": object_quantile,
+                                "mechanism_quantile": mechanism_quantile,
+                                "object_threshold": object_threshold,
+                                "mechanism_threshold": mechanism_threshold,
+                                "radius": radius,
+                                "edge_threshold": edge_threshold,
+                                "seed_window": seed_window,
+                                "collision_train_coverage": collision_coverage,
+                                "generic_train_coverage": generic_coverage,
+                            })
+        candidates.sort(key=lambda item: (item["objective"], item["generic_train_coverage"]))
+        selected = candidates[0]
     object_threshold = selected["object_threshold"]
     mechanism_threshold = selected["mechanism_threshold"]
 
@@ -353,6 +398,7 @@ def main() -> int:
         "mechanism_threshold": mechanism_threshold,
         "selected_gate": selected,
         "calibration_candidates": candidates[:10],
+        "fixed_gate_config": str(args.fixed_gate_config) if args.fixed_gate_config else None,
         "groups": {},
     }
     for group_name, method_metrics in group_metrics.items():
@@ -367,6 +413,26 @@ def main() -> int:
         for negative_group in ("generic", "waterdrop", "other_ball", "negation"):
             negative = np.asarray(group_metrics[negative_group][method]["score"])
             summary[f"auc_collision_vs_{negative_group}_{method}"] = auc(positive, negative)
+
+    if args.export_gate_dir is not None:
+        export_records = groups["collision"]["records"] + groups["target_object"]["records"]
+        for record in export_records:
+            object_scores = probabilities(record["factual_features"], object_detector)
+            mechanism_scores = probabilities(record["features"], mechanism_detector)
+            cone = strict_causal_cone(
+                record,
+                object_scores,
+                mechanism_scores,
+                object_threshold=object_threshold,
+                mechanism_threshold=mechanism_threshold,
+                radius=selected["radius"],
+                edge_threshold=selected["edge_threshold"],
+                seed_window=selected["seed_window"],
+            )
+            export_gate(record, cone, args.export_gate_dir, args.export_gate_dilation)
+        summary["exported_gate_dir"] = str(args.export_gate_dir)
+        summary["exported_gate_count"] = len(export_records)
+        summary["export_gate_dilation"] = args.export_gate_dilation
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     with (args.output_dir / "scores.csv").open("w", newline="", encoding="utf-8") as handle:

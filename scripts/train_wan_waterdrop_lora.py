@@ -49,8 +49,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--role", choices=["erase", "preserve", "all"], default="erase")
     parser.add_argument(
         "--objective",
-        choices=["plain", "mask_bg", "paired_sep", "dual_traj"],
+        choices=["plain", "mask_bg", "paired_sep", "dual_traj", "causal_gate"],
         default="plain",
+    )
+    parser.add_argument(
+        "--causal-gate-dir",
+        type=Path,
+        help="Per-scene causal gates exported by the dual-gate evaluator.",
+    )
+    parser.add_argument(
+        "--gate-floor",
+        type=float,
+        default=0.0,
+        help="Minimum erase weight outside the exported causal gate.",
     )
     parser.add_argument("--mask-weight", type=float, default=4.0)
     parser.add_argument("--background-weight", type=float, default=1.0)
@@ -85,8 +96,13 @@ def parse_args() -> argparse.Namespace:
         args.pair_margin,
         args.redirect_weight,
         args.preserve_weight,
+        args.gate_floor,
     ) < 0:
         parser.error("all loss weights and margins must be non-negative")
+    if args.gate_floor > 1:
+        parser.error("--gate-floor must be at most 1")
+    if args.objective == "causal_gate" and args.causal_gate_dir is None:
+        parser.error("--causal-gate-dir is required for --objective causal_gate")
     return args
 
 
@@ -167,6 +183,28 @@ def factual_redirect_loss(
     return (error * weights).sum() / weights.sum().clamp_min(1e-6)
 
 
+def gated_flow_loss(element_loss: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+    error = element_loss.float().mean(dim=1, keepdim=True)
+    weights = mask.float()
+    return (error * weights).sum() / weights.sum().clamp_min(1e-6)
+
+
+def load_causal_gate(args: argparse.Namespace, scene_id: str, mask: torch.Tensor) -> torch.Tensor:
+    gate_path = args.causal_gate_dir / f"{scene_id}.pt"
+    if not gate_path.exists():
+        raise FileNotFoundError(f"Missing causal gate for {scene_id}: {gate_path}")
+    payload = torch.load(gate_path, map_location="cpu", weights_only=True)
+    gate = payload["gate"].float()[None, None]
+    gate = torch.nn.functional.interpolate(
+        gate,
+        size=mask.shape[-3:],
+        mode="trilinear",
+        align_corners=False,
+    ).to(device=mask.device)
+    gate = args.gate_floor + (1.0 - args.gate_floor) * gate.clamp(0.0, 1.0)
+    return mask.float() * gate
+
+
 @torch.no_grad()
 def cache_prompt_embeddings(args: argparse.Namespace, rows: list[dict[str, str]]) -> dict[str, torch.Tensor]:
     device = torch.device(args.device)
@@ -228,7 +266,7 @@ def build_cache(args: argparse.Namespace, rows: list[dict[str, str]], project_ro
             "latents": latents,
             "prompt_embeds": prompt_embeddings[row["prompt"]],
         }
-        if args.objective in {"mask_bg", "paired_sep", "dual_traj"} and row.get("residual_mask_enabled") == "yes":
+        if args.objective in {"mask_bg", "paired_sep", "dual_traj", "causal_gate"} and row.get("residual_mask_enabled") == "yes":
             factual_path = resolve_path(project_root, row["residual_mask_factual_video"])
             factual_frames = read_video(factual_path, args.num_frames)
             factual_video = processor.preprocess_video(
@@ -306,6 +344,7 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
     pair_losses: list[float] = []
     redirect_losses: list[float] = []
     preserve_losses: list[float] = []
+    gate_means: list[float] = []
     optimizer.zero_grad(set_to_none=True)
     started = time.time()
 
@@ -337,14 +376,14 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
         teacher_factual_prediction = None
         is_preserve = sample["training_role"] == "preserve"
         has_residual_mask = (
-            args.objective in {"mask_bg", "paired_sep", "dual_traj"}
+            args.objective in {"mask_bg", "paired_sep", "dual_traj", "causal_gate"}
             and "residual_mask" in sample
         )
-        uses_factual = has_residual_mask and args.objective in {"paired_sep", "dual_traj"}
+        uses_factual = has_residual_mask and args.objective in {"paired_sep", "dual_traj", "causal_gate"}
         if uses_factual:
             factual = sample["factual_latents"].to(device=device, dtype=torch.bfloat16)
             factual_target = (noise - factual).to(dtype=torch.bfloat16)
-        if has_residual_mask and args.objective == "dual_traj":
+        if has_residual_mask and args.objective in {"dual_traj", "causal_gate"}:
             noisy_factual = ((1.0 - sigma) * factual + sigma * noise).to(dtype=torch.bfloat16)
         needs_teacher = is_preserve or (has_residual_mask and args.background_weight > 0)
         if needs_teacher:
@@ -356,7 +395,7 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                     encoder_hidden_states=prompt_embeds,
                     return_dict=False,
                 )[0]
-                if has_residual_mask and args.objective == "dual_traj":
+                if has_residual_mask and args.objective in {"dual_traj", "causal_gate"}:
                     teacher_factual_prediction = transformer(
                         hidden_states=noisy_factual,
                         timestep=timestep,
@@ -386,7 +425,10 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
         elif has_residual_mask:
             preserve_loss = torch.zeros((), device=device)
             mask = sample["residual_mask"].to(device=device, dtype=torch.float32)
-            if args.objective == "mask_bg":
+            if args.objective == "causal_gate":
+                mask = load_causal_gate(args, sample["scene_id"], mask)
+                remove_loss = gated_flow_loss(element_loss, mask)
+            elif args.objective == "mask_bg":
                 remove_loss = (element_loss * (1.0 + args.mask_weight * mask)).mean()
             else:
                 remove_loss = element_loss.mean()
@@ -396,13 +438,13 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                 ).mean()
             else:
                 background_loss = torch.zeros((), device=device)
-            if args.objective in {"paired_sep", "dual_traj"}:
+            if args.objective in {"paired_sep", "dual_traj", "causal_gate"}:
                 pair_loss = paired_separation_loss(
                     prediction, target, factual_target, mask, args.pair_margin
                 )
             else:
                 pair_loss = torch.zeros((), device=device)
-            if args.objective == "dual_traj":
+            if args.objective in {"dual_traj", "causal_gate"}:
                 factual_prediction = transformer(
                     hidden_states=noisy_factual,
                     timestep=timestep,
@@ -446,12 +488,14 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
         pair_value = float(pair_loss.detach())
         redirect_value = float(redirect_loss.detach())
         preserve_value = float(preserve_loss.detach())
+        gate_mean = float(mask.mean()) if has_residual_mask else 0.0
         losses.append(loss_value)
         remove_losses.append(remove_value)
         background_losses.append(background_value)
         pair_losses.append(pair_value)
         redirect_losses.append(redirect_value)
         preserve_losses.append(preserve_value)
+        gate_means.append(gate_mean)
         elapsed = time.time() - started
         print(
             f"step={step}/{args.max_steps} scene={sample['scene_id']} "
@@ -459,6 +503,7 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
             f"loss={loss_value:.6f} "
             f"remove={remove_value:.6f} bg={background_value:.6f} "
             f"pair={pair_value:.6f} redirect={redirect_value:.6f} preserve={preserve_value:.6f} "
+            f"gate={gate_mean:.6f} "
             f"mean20={np.mean(losses[-20:]):.6f} elapsed={elapsed:.1f}s",
             flush=True,
         )
@@ -469,7 +514,7 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
             del mask
         if uses_factual:
             del factual, factual_target, pair_loss
-        if has_residual_mask and args.objective == "dual_traj":
+        if has_residual_mask and args.objective in {"dual_traj", "causal_gate"}:
             del noisy_factual, factual_prediction, redirect_loss
             if teacher_factual_prediction is not None:
                 del teacher_factual_prediction, factual_background_loss
@@ -498,11 +543,14 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                     "redirect_weight": args.redirect_weight,
                     "preserve_weight": args.preserve_weight,
                     "balanced_roles": args.balanced_roles,
+                    "causal_gate_dir": str(args.causal_gate_dir) if args.causal_gate_dir else None,
+                    "gate_floor": args.gate_floor,
                     "mean_remove_loss_last_20": float(np.mean(remove_losses[-20:])),
                     "mean_background_loss_last_20": float(np.mean(background_losses[-20:])),
                     "mean_pair_loss_last_20": float(np.mean(pair_losses[-20:])),
                     "mean_redirect_loss_last_20": float(np.mean(redirect_losses[-20:])),
                     "mean_preserve_loss_last_20": float(np.mean(preserve_losses[-20:])),
+                    "mean_gate_last_20": float(np.mean(gate_means[-20:])),
                 },
             )
             print(f"Saved {checkpoint}", flush=True)
@@ -521,10 +569,14 @@ def main() -> int:
             target = resolve_path(project_root, row["desired_target_video"])
             if not target.exists():
                 raise FileNotFoundError(target)
-            if args.objective in {"mask_bg", "paired_sep", "dual_traj"} and row.get("residual_mask_enabled") == "yes":
+            if args.objective in {"mask_bg", "paired_sep", "dual_traj", "causal_gate"} and row.get("residual_mask_enabled") == "yes":
                 factual = resolve_path(project_root, row["residual_mask_factual_video"])
                 if not factual.exists():
                     raise FileNotFoundError(factual)
+                if args.objective == "causal_gate":
+                    gate = args.causal_gate_dir / f"{row['scene_id']}.pt"
+                    if not gate.exists():
+                        raise FileNotFoundError(gate)
         print("Dry run passed: manifest and target videos are valid.")
         return 0
     cache_paths = build_cache(args, rows, project_root)
