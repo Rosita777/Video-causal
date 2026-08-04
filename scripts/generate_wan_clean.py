@@ -46,6 +46,7 @@ def build_generation_config(args: argparse.Namespace) -> dict[str, object]:
         "activation_gate_dir": (
             str(args.activation_gate_dir) if args.activation_gate_dir else None
         ),
+        "lora_target_phrases": args.lora_target_phrase,
         "attention_gate_dir": (
             str(args.attention_gate_dir) if args.attention_gate_dir else None
         ),
@@ -237,13 +238,17 @@ def generate_videos(args: argparse.Namespace, items: list[dict[str, object]]) ->
         video_path.parent.mkdir(parents=True, exist_ok=True)
         generator_device = "cuda" if selected_device.startswith("cuda") and torch.cuda.is_available() else "cpu"
         generator = torch.Generator(device=generator_device).manual_seed(int(item["seed"]))
+        prompt = str(item["prompt"])
         if activation_controller is not None:
             gate_path = args.activation_gate_dir / f"{int(item['index']):03d}.pt"
             if not gate_path.exists():
                 raise FileNotFoundError(f"Missing inference activation gate: {gate_path}")
             gate_payload = torch.load(gate_path, map_location="cpu", weights_only=True)
             activation_controller.set_gate(gate_payload["gate"].float().unsqueeze(0))
-        prompt = str(item["prompt"])
+            if args.lora_target_phrase:
+                activation_controller.set_text_gate(
+                    find_token_mask(pipe.tokenizer, prompt, args.lora_target_phrase)
+                )
         if attention_controller is not None:
             gate_path = args.attention_gate_dir / f"{int(item['index']):03d}.pt"
             if not gate_path.exists():
@@ -314,6 +319,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Directory containing per-item 000.pt spatiotemporal LoRA gates.",
     )
     parser.add_argument(
+        "--lora-target-phrase",
+        action="append",
+        default=[],
+        help="Exact target phrase whose text-token LoRA residual is enabled.",
+    )
+    parser.add_argument(
         "--attention-gate-dir",
         type=Path,
         help="Directory containing per-item video-query gates for target-token suppression.",
@@ -358,6 +369,9 @@ def main() -> int:
             parser.error("--activation-gate-dir requires --lora-path")
         if not args.dry_run and not args.activation_gate_dir.is_dir():
             parser.error(f"--activation-gate-dir does not exist: {args.activation_gate_dir}")
+    if args.lora_target_phrase:
+        if args.lora_path is None or args.activation_gate_dir is None:
+            parser.error("--lora-target-phrase requires --lora-path and --activation-gate-dir")
     if args.attention_suppression_phrase:
         if args.attention_gate_dir is None:
             parser.error("--attention-gate-dir is required with attention suppression")

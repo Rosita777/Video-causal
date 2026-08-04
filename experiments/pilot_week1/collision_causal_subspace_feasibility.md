@@ -375,3 +375,59 @@ counterfactual target, and retain frozen-teacher preservation outside the causal
 gate. A zero target condition must disable the branch exactly. The first test
 remains the four seen training pairs: it must remove the object and keep the
 receivers upright before any larger training or generalization experiment.
+
+### Target-Conditioned LoRA Overfit
+
+The activation controller was extended with a target-token gate. Cross-attention
+K/V LoRA residuals are active only on exact target-phrase tokens, while all
+video-side LoRA residuals require both a nonempty target condition and the
+spatiotemporal causal gate. An empty target condition makes every adapter path
+an exact base-model no-op. During classifier-free guidance, the controller also
+detects whether the selected target-token positions contain actual embeddings,
+so the adapter is disabled for the empty unconditional prompt.
+
+The first four-scene overfit retained counterfactual flow matching and trained
+for 100 steps. A seen training prompt, seed, and gate were evaluated at three
+checkpoints.
+
+| checkpoint | target object | collision footprint | receiver preservation |
+| ---: | --- | --- | --- |
+| 25 | red ball remains | boxes still fall | fail |
+| 50 | ball is smaller and disappears earlier | boxes still fall | fail |
+| 100, before CFG fix | ball is faint but still visible | boxes still fall | fail |
+| 100, correct conditional CFG | ball is absent early but reappears near frame 32 | collision is delayed; boxes still fall | fail |
+
+The target-conditioned architecture improves specificity and progressively
+attenuates the target appearance, but counterfactual flow training still does
+not stop the downstream collision. Its final 20-step mean loss is 0.0681 and it
+does not memorize the aligned target even on a seen example. The likely mismatch
+is trajectory-level: training denoises states around the clean counterfactual,
+whereas factual prompting drives inference toward the collision trajectory.
+The next ablation therefore adds explicit factual-to-counterfactual endpoint
+redirection while retaining the same target and spatial gates.
+
+### Target-Conditioned Trajectory Redirection
+
+A separate `target_conditioned_redirect` objective adds a factual-trajectory
+forward pass. Its predicted endpoint is pushed toward the aligned clean
+counterfactual inside the causal gate, with weight 4. This is kept separate from
+`target_conditioned_sft` so the flow-only ablation remains reproducible.
+
+The redirect loss on the audited seen scene decreases from about 0.91 at the
+start to 0.28 at step 50, and the final 20-step total-loss mean is 3.2605.
+However, manual video review remains negative. At checkpoint 25 the ball is
+smaller but the boxes still fall. At checkpoint 50 the ball is absent in early
+frames, reappears around frame 32, and the boxes fall later in the clip.
+
+For a fair control, the flow-only checkpoint 100 was regenerated after fixing
+conditional-versus-unconditional CFG gating. Its video is nearly identical to
+redirect checkpoint 50: the ball and collision are delayed rather than erased.
+Therefore the visible improvement comes mainly from correctly disabling the
+adapter on the unconditional prompt; endpoint redirection has no clear semantic
+benefit in this probe.
+
+The remaining failure is a temporal-relocation shortcut. Evaluation must treat
+delaying the target event as failure, and the next loss must penalize target and
+footprint presence over every post-intervention frame. More training steps or a
+larger redirect weight are not justified until that temporal constraint is
+implemented.

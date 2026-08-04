@@ -27,8 +27,10 @@ from PIL import Image
 from diffusers import AutoencoderKLWan, WanPipeline, WanTransformer3DModel
 from diffusers.utils import convert_state_dict_to_diffusers
 from peft import LoraConfig, get_peft_model_state_dict
+from transformers import AutoTokenizer
 
 from causal_lora_activation_gate import CausalLoRAActivationGate
+from target_token_attention_suppression import find_token_mask
 
 
 def parse_args() -> argparse.Namespace:
@@ -58,6 +60,8 @@ def parse_args() -> argparse.Namespace:
             "dual_traj",
             "causal_gate",
             "counterfactual_sft",
+            "target_conditioned_sft",
+            "target_conditioned_redirect",
         ],
         default="plain",
     )
@@ -76,6 +80,12 @@ def parse_args() -> argparse.Namespace:
         "--activation-gate-dir",
         type=Path,
         help="Gate LoRA residual activations using per-scene patch-token masks.",
+    )
+    parser.add_argument(
+        "--target-phrase",
+        action="append",
+        default=[],
+        help="Exact target phrase used to gate cross-attention text LoRA tokens.",
     )
     parser.add_argument("--mask-weight", type=float, default=4.0)
     parser.add_argument("--background-weight", type=float, default=1.0)
@@ -115,8 +125,21 @@ def parse_args() -> argparse.Namespace:
         parser.error("all loss weights and margins must be non-negative")
     if args.gate_floor > 1:
         parser.error("--gate-floor must be at most 1")
-    if args.objective in {"causal_gate", "counterfactual_sft"} and args.causal_gate_dir is None:
+    gated_objectives = {
+        "causal_gate",
+        "counterfactual_sft",
+        "target_conditioned_sft",
+        "target_conditioned_redirect",
+    }
+    if args.objective in gated_objectives and args.causal_gate_dir is None:
         parser.error(f"--causal-gate-dir is required for --objective {args.objective}")
+    if args.objective in {"target_conditioned_sft", "target_conditioned_redirect"}:
+        if args.activation_gate_dir is None:
+            parser.error("--activation-gate-dir is required for target-conditioned objectives")
+        if not args.target_phrase:
+            parser.error("at least one --target-phrase is required for target-conditioned objectives")
+        if args.role != "erase":
+            parser.error("target-conditioned objectives currently support --role erase only")
     return args
 
 
@@ -294,6 +317,8 @@ def build_cache(args: argparse.Namespace, rows: list[dict[str, str]], project_ro
             "dual_traj",
             "causal_gate",
             "counterfactual_sft",
+            "target_conditioned_sft",
+            "target_conditioned_redirect",
         } and row.get("residual_mask_enabled") == "yes":
             factual_path = resolve_path(project_root, row["residual_mask_factual_video"])
             factual_frames = read_video(factual_path, args.num_frames)
@@ -359,6 +384,11 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
             f"Activation-gated LoRA modules: {activation_controller.module_count}",
             flush=True,
         )
+    target_tokenizer = (
+        AutoTokenizer.from_pretrained(str(args.model), subfolder="tokenizer")
+        if args.objective in {"target_conditioned_sft", "target_conditioned_redirect"}
+        else None
+    )
     trainable = [parameter for parameter in transformer.parameters() if parameter.requires_grad]
     trainable_count = sum(parameter.numel() for parameter in trainable)
     print(f"Trainable LoRA parameters: {trainable_count:,}", flush=True)
@@ -402,6 +432,8 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
             sample_index = order[(step - 1) % len(order)]
         sample = torch.load(cache_paths[sample_index], map_location="cpu", weights_only=True)
         is_preserve = sample["training_role"] == "preserve"
+        clean = sample["latents"].to(device=device, dtype=torch.bfloat16)
+        prompt_embeds = sample["prompt_embeds"].to(device=device, dtype=torch.bfloat16)
         if activation_controller is not None:
             if is_preserve:
                 activation_controller.clear_gate()
@@ -409,8 +441,15 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                 activation_controller.set_gate(
                     load_activation_gate(args.activation_gate_dir, sample["scene_id"], device)
                 )
-        clean = sample["latents"].to(device=device, dtype=torch.bfloat16)
-        prompt_embeds = sample["prompt_embeds"].to(device=device, dtype=torch.bfloat16)
+                if target_tokenizer is not None:
+                    activation_controller.set_text_gate(
+                        find_token_mask(
+                            target_tokenizer,
+                            sample["prompt"],
+                            args.target_phrase,
+                            max_length=prompt_embeds.shape[1],
+                        ).to(device=device)
+                    )
         noise = torch.randn(clean.shape, generator=generator, dtype=torch.float32).to(device, dtype=torch.bfloat16)
         sigma = torch.rand((clean.shape[0],), generator=generator, dtype=torch.float32).to(device)
         sigma = sigma.view(-1, 1, 1, 1, 1)
@@ -427,14 +466,25 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                 "dual_traj",
                 "causal_gate",
                 "counterfactual_sft",
+                "target_conditioned_sft",
+                "target_conditioned_redirect",
             }
             and "residual_mask" in sample
         )
-        uses_factual = has_residual_mask and args.objective in {"paired_sep", "dual_traj", "causal_gate"}
+        uses_factual = has_residual_mask and args.objective in {
+            "paired_sep",
+            "dual_traj",
+            "causal_gate",
+            "target_conditioned_redirect",
+        }
         if uses_factual:
             factual = sample["factual_latents"].to(device=device, dtype=torch.bfloat16)
             factual_target = (noise - factual).to(dtype=torch.bfloat16)
-        if has_residual_mask and args.objective in {"dual_traj", "causal_gate"}:
+        if has_residual_mask and args.objective in {
+            "dual_traj",
+            "causal_gate",
+            "target_conditioned_redirect",
+        }:
             noisy_factual = ((1.0 - sigma) * factual + sigma * noise).to(dtype=torch.bfloat16)
         needs_teacher = is_preserve or (has_residual_mask and args.background_weight > 0)
         if needs_teacher:
@@ -448,7 +498,11 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                     encoder_hidden_states=prompt_embeds,
                     return_dict=False,
                 )[0]
-                if has_residual_mask and args.objective in {"dual_traj", "causal_gate"}:
+                if has_residual_mask and args.objective in {
+                    "dual_traj",
+                    "causal_gate",
+                    "target_conditioned_redirect",
+                }:
                     teacher_factual_prediction = transformer(
                         hidden_states=noisy_factual,
                         timestep=timestep,
@@ -480,7 +534,12 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
         elif has_residual_mask:
             preserve_loss = torch.zeros((), device=device)
             mask = sample["residual_mask"].to(device=device, dtype=torch.float32)
-            if args.objective in {"causal_gate", "counterfactual_sft"}:
+            if args.objective in {
+                "causal_gate",
+                "counterfactual_sft",
+                "target_conditioned_sft",
+                "target_conditioned_redirect",
+            }:
                 mask = load_causal_gate(args, sample["scene_id"], mask)
                 remove_loss = gated_flow_loss(element_loss, mask)
             elif args.objective == "mask_bg":
@@ -499,7 +558,11 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                 )
             else:
                 pair_loss = torch.zeros((), device=device)
-            if args.objective in {"dual_traj", "causal_gate"}:
+            if args.objective in {
+                "dual_traj",
+                "causal_gate",
+                "target_conditioned_redirect",
+            }:
                 factual_prediction = transformer(
                     hidden_states=noisy_factual,
                     timestep=timestep,
@@ -571,7 +634,11 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
             del mask
         if uses_factual:
             del factual, factual_target, pair_loss
-        if has_residual_mask and args.objective in {"dual_traj", "causal_gate"}:
+        if has_residual_mask and args.objective in {
+            "dual_traj",
+            "causal_gate",
+            "target_conditioned_redirect",
+        }:
             del noisy_factual, factual_prediction, redirect_loss
             if teacher_factual_prediction is not None:
                 del teacher_factual_prediction, factual_background_loss
@@ -605,6 +672,7 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                     "activation_gate_dir": (
                         str(args.activation_gate_dir) if args.activation_gate_dir else None
                     ),
+                    "target_phrase": args.target_phrase,
                     "mean_remove_loss_last_20": float(np.mean(remove_losses[-20:])),
                     "mean_background_loss_last_20": float(np.mean(background_losses[-20:])),
                     "mean_pair_loss_last_20": float(np.mean(pair_losses[-20:])),
@@ -635,11 +703,18 @@ def main() -> int:
                 "dual_traj",
                 "causal_gate",
                 "counterfactual_sft",
+                "target_conditioned_sft",
+                "target_conditioned_redirect",
             } and row.get("residual_mask_enabled") == "yes":
                 factual = resolve_path(project_root, row["residual_mask_factual_video"])
                 if not factual.exists():
                     raise FileNotFoundError(factual)
-                if args.objective in {"causal_gate", "counterfactual_sft"}:
+                if args.objective in {
+                    "causal_gate",
+                    "counterfactual_sft",
+                    "target_conditioned_sft",
+                    "target_conditioned_redirect",
+                }:
                     gate = args.causal_gate_dir / f"{row['scene_id']}.pt"
                     if not gate.exists():
                         raise FileNotFoundError(gate)

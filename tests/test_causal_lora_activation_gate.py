@@ -37,6 +37,36 @@ class FakeTransformer(torch.nn.Module):
         return self.to_q(values)
 
 
+class FakeAttention(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.to_k = FakeLoraLinear()
+        self.to_v = FakeLoraLinear()
+
+
+class FakeCrossAttentionTransformer(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.attn2 = FakeAttention()
+
+    def forward(self, values: torch.Tensor) -> torch.Tensor:
+        return self.attn2.to_k(values)
+
+
+class FakeConditionalTransformer(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.to_q = FakeLoraLinear()
+
+    def forward(
+        self,
+        values: torch.Tensor,
+        encoder_hidden_states: torch.Tensor,
+    ) -> torch.Tensor:
+        del encoder_hidden_states
+        return self.to_q(values)
+
+
 class CausalLoRAActivationGateTest(unittest.TestCase):
     def test_gates_adapter_residual_per_token(self) -> None:
         module = load_module()
@@ -75,6 +105,60 @@ class CausalLoRAActivationGateTest(unittest.TestCase):
         output = transformer(text_values)
 
         torch.testing.assert_close(output, text_values)
+
+    def test_target_text_gate_only_changes_selected_cross_attention_token(self) -> None:
+        module = load_module()
+        transformer = FakeCrossAttentionTransformer()
+        controller = module.CausalLoRAActivationGate(transformer)
+        controller.set_gate(torch.ones((1, 1, 1, 2)))
+        controller.set_text_gate(torch.tensor([0.0, 1.0, 0.0]))
+        values = torch.tensor([[[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]])
+
+        output = transformer(values)
+
+        expected = values.clone()
+        expected[:, 1] = torch.tensor([[10.0, 11.0]])
+        torch.testing.assert_close(output, expected)
+
+    def test_empty_text_gate_disables_video_lora_path(self) -> None:
+        module = load_module()
+        transformer = FakeTransformer()
+        controller = module.CausalLoRAActivationGate(transformer, target_suffixes=("to_q",))
+        controller.set_gate(torch.ones((1, 1, 1, 2)))
+        controller.set_text_gate(torch.zeros((1, 3)))
+        values = torch.tensor([[[1.0, 2.0], [3.0, 4.0]]])
+
+        output = transformer(values)
+
+        torch.testing.assert_close(output, values)
+
+    def test_missing_target_embedding_disables_conditional_video_path(self) -> None:
+        module = load_module()
+        transformer = FakeConditionalTransformer()
+        controller = module.CausalLoRAActivationGate(transformer, target_suffixes=("to_q",))
+        controller.set_gate(torch.ones((1, 1, 1, 2)))
+        controller.set_text_gate(torch.tensor([0.0, 1.0, 0.0]))
+        values = torch.tensor([[[1.0, 2.0], [3.0, 4.0]]])
+        empty_prompt = torch.zeros((1, 3, 4))
+
+        output = transformer(values, encoder_hidden_states=empty_prompt)
+
+        torch.testing.assert_close(output, values)
+
+    def test_present_target_embedding_enables_conditional_video_path(self) -> None:
+        module = load_module()
+        transformer = FakeConditionalTransformer()
+        controller = module.CausalLoRAActivationGate(transformer, target_suffixes=("to_q",))
+        controller.set_gate(torch.ones((1, 1, 1, 2)))
+        controller.set_text_gate(torch.tensor([0.0, 1.0, 0.0]))
+        values = torch.tensor([[[1.0, 2.0], [3.0, 4.0]]])
+        target_prompt = torch.zeros((1, 3, 4))
+        target_prompt[:, 1] = 1.0
+
+        output = transformer(values, encoder_hidden_states=target_prompt)
+
+        expected = torch.tensor([[[4.0, 5.0], [10.0, 11.0]]])
+        torch.testing.assert_close(output, expected)
 
 
 if __name__ == "__main__":
