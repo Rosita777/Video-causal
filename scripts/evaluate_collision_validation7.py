@@ -54,10 +54,16 @@ def main() -> int:
     parser.add_argument("--adapter-dir", type=Path, required=True)
     parser.add_argument("--output-csv", type=Path, required=True)
     parser.add_argument("--sheet-dir", type=Path, required=True)
+    parser.add_argument("--limit", type=int)
     args = parser.parse_args()
 
     base_items = read_items(args.base_dir)
     adapter_items = read_items(args.adapter_dir)
+    if args.limit is not None:
+        if args.limit <= 0:
+            parser.error("--limit must be positive")
+        base_items = base_items[: args.limit]
+        adapter_items = adapter_items[: args.limit]
     if len(base_items) != len(adapter_items):
         raise ValueError("Base and adapter manifests have different item counts")
 

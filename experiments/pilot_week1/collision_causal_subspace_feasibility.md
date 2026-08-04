@@ -164,3 +164,24 @@ validates engineering integration, but does not yet demonstrate a superior
 end-to-end adapter. The next tuning step should reduce global LoRA strength or
 increase preservation pressure while retaining the gate, then select the
 checkpoint on the target-versus-preservation Pareto frontier.
+
+### Checkpoint And Scale Probe
+
+A matched 2-target/2-control probe was used for inexpensive model selection.
+These four videos are only a tuning split and do not replace the full 7/8
+checkpoint-100 evaluation.
+
+| checkpoint | LoRA scale | target suppression | control suppression | target early MAE | control early MAE |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 25 | 1.00 | 69.57% | 9.11% | 0.0844 | 0.0849 |
+| 50 | 1.00 | 60.25% | 6.32% | 0.2588 | 0.0991 |
+| 25 | 0.75 | 53.40% | 9.43% | 0.0614 | 0.0605 |
+
+Checkpoint 25 at scale 1.0 is the preferred primary operating point: it has the
+strongest target suppression in this probe while retaining low control
+suppression. Scale 0.75 is a conservative alternative with lower base-adapter
+frame divergence but substantially weaker target suppression. Checkpoint 50 is
+dominated on the target and frame-divergence metrics, so checkpoint 75 and scale
+0.5 were not generated. The next full semantic evaluation should use checkpoint
+25 at scale 1.0 and explicitly inspect target-object removal and causal-footprint
+removal rather than relying only on motion suppression.
