@@ -455,3 +455,23 @@ damage. It does not solve object-plus-footprint erasure and should remain an
 ablation, not the main method. The next method change must supervise target
 presence and receiver identity directly, while using the causal gate only to
 localize that supervision. Gate expansion and longer training are now ruled out.
+
+### Component-Balanced Supervision
+
+The next prototype separates the counterfactual residual into two independently
+normalized terms. An `object_gate` covers the target object trajectory, while a
+`receiver_gate` covers the receiver changes after excluding the target. The
+factual denoising trajectory is redirected to the clean counterfactual endpoint
+inside each gate:
+
+`L = L_flow + 4 L_background + 4 L_object + 2 L_receiver`.
+
+This addresses a concrete failure of the previous loss: the small red ball was
+averaged together with the much larger moving receiver, so a low aggregate loss
+could coexist with visible target remnants. Component normalization prevents
+receiver area from hiding target failure. For this collision feasibility test,
+the red target gate is extracted by a simple color rule and the receiver gate by
+factual-versus-counterfactual video difference. The color rule is explicitly a
+prototype annotation tool, not a proposed general method; a general experiment
+must replace its output with category-agnostic object masks without changing the
+loss.

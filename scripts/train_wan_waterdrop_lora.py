@@ -65,6 +65,7 @@ def parse_args() -> argparse.Namespace:
             "counterfactual_sft",
             "target_conditioned_sft",
             "target_conditioned_redirect",
+            "target_conditioned_components",
         ],
         default="plain",
     )
@@ -95,11 +96,18 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Keep the full causal-chain spatial union active after its first frame.",
     )
+    parser.add_argument(
+        "--component-gate-dir",
+        type=Path,
+        help="Per-scene object_gate and receiver_gate tensors for component supervision.",
+    )
     parser.add_argument("--mask-weight", type=float, default=4.0)
     parser.add_argument("--background-weight", type=float, default=1.0)
     parser.add_argument("--pair-weight", type=float, default=1.0)
     parser.add_argument("--pair-margin", type=float, default=0.05)
     parser.add_argument("--redirect-weight", type=float, default=1.0)
+    parser.add_argument("--object-weight", type=float, default=1.0)
+    parser.add_argument("--receiver-weight", type=float, default=1.0)
     parser.add_argument(
         "--preserve-weight",
         type=float,
@@ -127,6 +135,8 @@ def parse_args() -> argparse.Namespace:
         args.pair_weight,
         args.pair_margin,
         args.redirect_weight,
+        args.object_weight,
+        args.receiver_weight,
         args.preserve_weight,
         args.gate_floor,
     ) < 0:
@@ -138,16 +148,23 @@ def parse_args() -> argparse.Namespace:
         "counterfactual_sft",
         "target_conditioned_sft",
         "target_conditioned_redirect",
+        "target_conditioned_components",
     }
     if args.objective in gated_objectives and args.causal_gate_dir is None:
         parser.error(f"--causal-gate-dir is required for --objective {args.objective}")
-    if args.objective in {"target_conditioned_sft", "target_conditioned_redirect"}:
+    if args.objective in {
+        "target_conditioned_sft",
+        "target_conditioned_redirect",
+        "target_conditioned_components",
+    }:
         if args.activation_gate_dir is None:
             parser.error("--activation-gate-dir is required for target-conditioned objectives")
         if not args.target_phrase:
             parser.error("at least one --target-phrase is required for target-conditioned objectives")
         if args.role != "erase":
             parser.error("target-conditioned objectives currently support --role erase only")
+    if args.objective == "target_conditioned_components" and args.component_gate_dir is None:
+        parser.error("--component-gate-dir is required for component supervision")
     return args
 
 
@@ -268,6 +285,30 @@ def load_activation_gate(
     return gate.to(device=device)
 
 
+def load_component_gates(
+    gate_dir: Path,
+    scene_id: str,
+    reference: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    gate_path = gate_dir / f"{scene_id}.pt"
+    if not gate_path.exists():
+        raise FileNotFoundError(f"Missing component supervision gate for {scene_id}: {gate_path}")
+    payload = torch.load(gate_path, map_location="cpu", weights_only=True)
+    gates = []
+    for name in ("object_gate", "receiver_gate"):
+        if name not in payload:
+            raise KeyError(f"{gate_path} does not contain {name}")
+        gate = payload[name].float()[None, None]
+        gate = torch.nn.functional.interpolate(
+            gate,
+            size=reference.shape[-3:],
+            mode="trilinear",
+            align_corners=False,
+        ).to(device=reference.device)
+        gates.append(gate.clamp(0.0, 1.0))
+    return gates[0], gates[1]
+
+
 @torch.no_grad()
 def cache_prompt_embeddings(args: argparse.Namespace, rows: list[dict[str, str]]) -> dict[str, torch.Tensor]:
     device = torch.device(args.device)
@@ -337,6 +378,7 @@ def build_cache(args: argparse.Namespace, rows: list[dict[str, str]], project_ro
             "counterfactual_sft",
             "target_conditioned_sft",
             "target_conditioned_redirect",
+            "target_conditioned_components",
         } and row.get("residual_mask_enabled") == "yes":
             factual_path = resolve_path(project_root, row["residual_mask_factual_video"])
             factual_frames = read_video(factual_path, args.num_frames)
@@ -404,7 +446,11 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
         )
     target_tokenizer = (
         AutoTokenizer.from_pretrained(str(args.model), subfolder="tokenizer")
-        if args.objective in {"target_conditioned_sft", "target_conditioned_redirect"}
+        if args.objective in {
+            "target_conditioned_sft",
+            "target_conditioned_redirect",
+            "target_conditioned_components",
+        }
         else None
     )
     trainable = [parameter for parameter in transformer.parameters() if parameter.requires_grad]
@@ -429,6 +475,8 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
     background_losses: list[float] = []
     pair_losses: list[float] = []
     redirect_losses: list[float] = []
+    object_losses: list[float] = []
+    receiver_losses: list[float] = []
     preserve_losses: list[float] = []
     gate_means: list[float] = []
     optimizer.zero_grad(set_to_none=True)
@@ -491,6 +539,7 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                 "counterfactual_sft",
                 "target_conditioned_sft",
                 "target_conditioned_redirect",
+                "target_conditioned_components",
             }
             and "residual_mask" in sample
         )
@@ -499,6 +548,7 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
             "dual_traj",
             "causal_gate",
             "target_conditioned_redirect",
+            "target_conditioned_components",
         }
         if uses_factual:
             factual = sample["factual_latents"].to(device=device, dtype=torch.bfloat16)
@@ -507,6 +557,7 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
             "dual_traj",
             "causal_gate",
             "target_conditioned_redirect",
+            "target_conditioned_components",
         }:
             noisy_factual = ((1.0 - sigma) * factual + sigma * noise).to(dtype=torch.bfloat16)
         needs_teacher = is_preserve or (has_residual_mask and args.background_weight > 0)
@@ -525,6 +576,7 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                     "dual_traj",
                     "causal_gate",
                     "target_conditioned_redirect",
+                    "target_conditioned_components",
                 }:
                     teacher_factual_prediction = transformer(
                         hidden_states=noisy_factual,
@@ -553,6 +605,8 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
             background_loss = torch.zeros((), device=device)
             pair_loss = torch.zeros((), device=device)
             redirect_loss = torch.zeros((), device=device)
+            object_loss = torch.zeros((), device=device)
+            receiver_loss = torch.zeros((), device=device)
             combined_loss = args.preserve_weight * preserve_loss
         elif has_residual_mask:
             preserve_loss = torch.zeros((), device=device)
@@ -562,6 +616,7 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                 "counterfactual_sft",
                 "target_conditioned_sft",
                 "target_conditioned_redirect",
+                "target_conditioned_components",
             }:
                 mask = load_causal_gate(args, sample["scene_id"], mask)
                 remove_loss = gated_flow_loss(element_loss, mask)
@@ -569,9 +624,18 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                 remove_loss = (element_loss * (1.0 + args.mask_weight * mask)).mean()
             else:
                 remove_loss = element_loss.mean()
+            if args.objective == "target_conditioned_components":
+                object_gate, receiver_gate = load_component_gates(
+                    args.component_gate_dir, sample["scene_id"], mask
+                )
+                background_mask = torch.maximum(object_gate, receiver_gate)
+            else:
+                object_gate = receiver_gate = None
+                background_mask = mask
             if teacher_prediction is not None:
                 background_loss = (
-                    (prediction.float() - teacher_prediction.float()).square() * (1.0 - mask)
+                    (prediction.float() - teacher_prediction.float()).square()
+                    * (1.0 - background_mask)
                 ).mean()
             else:
                 background_loss = torch.zeros((), device=device)
@@ -585,6 +649,7 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                 "dual_traj",
                 "causal_gate",
                 "target_conditioned_redirect",
+                "target_conditioned_components",
             }:
                 factual_prediction = transformer(
                     hidden_states=noisy_factual,
@@ -592,22 +657,37 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                     encoder_hidden_states=prompt_embeds,
                     return_dict=False,
                 )[0]
-                redirect_loss = factual_redirect_loss(
-                    factual_prediction, noisy_factual, clean, sigma, mask
-                )
+                if args.objective == "target_conditioned_components":
+                    redirect_loss = torch.zeros((), device=device)
+                    object_loss = factual_redirect_loss(
+                        factual_prediction, noisy_factual, clean, sigma, object_gate
+                    )
+                    receiver_loss = factual_redirect_loss(
+                        factual_prediction, noisy_factual, clean, sigma, receiver_gate
+                    )
+                else:
+                    redirect_loss = factual_redirect_loss(
+                        factual_prediction, noisy_factual, clean, sigma, mask
+                    )
+                    object_loss = torch.zeros((), device=device)
+                    receiver_loss = torch.zeros((), device=device)
                 if teacher_factual_prediction is not None:
                     factual_background_loss = (
                         (factual_prediction.float() - teacher_factual_prediction.float()).square()
-                        * (1.0 - mask)
+                        * (1.0 - background_mask)
                     ).mean()
                     background_loss = 0.5 * (background_loss + factual_background_loss)
             else:
                 redirect_loss = torch.zeros((), device=device)
+                object_loss = torch.zeros((), device=device)
+                receiver_loss = torch.zeros((), device=device)
             combined_loss = (
                 remove_loss
                 + args.background_weight * background_loss
                 + args.pair_weight * pair_loss
                 + args.redirect_weight * redirect_loss
+                + args.object_weight * object_loss
+                + args.receiver_weight * receiver_loss
             )
         else:
             preserve_loss = torch.zeros((), device=device)
@@ -615,6 +695,8 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
             background_loss = torch.zeros((), device=device)
             pair_loss = torch.zeros((), device=device)
             redirect_loss = torch.zeros((), device=device)
+            object_loss = torch.zeros((), device=device)
+            receiver_loss = torch.zeros((), device=device)
             combined_loss = remove_loss
         loss = combined_loss / args.grad_accum
         loss.backward()
@@ -630,6 +712,8 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
         background_value = float(background_loss.detach())
         pair_value = float(pair_loss.detach())
         redirect_value = float(redirect_loss.detach())
+        object_value = float(object_loss.detach())
+        receiver_value = float(receiver_loss.detach())
         preserve_value = float(preserve_loss.detach())
         gate_mean = float(mask.mean()) if has_residual_mask else 0.0
         losses.append(loss_value)
@@ -637,6 +721,8 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
         background_losses.append(background_value)
         pair_losses.append(pair_value)
         redirect_losses.append(redirect_value)
+        object_losses.append(object_value)
+        receiver_losses.append(receiver_value)
         preserve_losses.append(preserve_value)
         gate_means.append(gate_mean)
         elapsed = time.time() - started
@@ -645,7 +731,9 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
             f"role={sample['training_role']} masked={has_residual_mask} "
             f"loss={loss_value:.6f} "
             f"remove={remove_value:.6f} bg={background_value:.6f} "
-            f"pair={pair_value:.6f} redirect={redirect_value:.6f} preserve={preserve_value:.6f} "
+            f"pair={pair_value:.6f} redirect={redirect_value:.6f} "
+            f"object={object_value:.6f} receiver={receiver_value:.6f} "
+            f"preserve={preserve_value:.6f} "
             f"gate={gate_mean:.6f} "
             f"mean20={np.mean(losses[-20:]):.6f} elapsed={elapsed:.1f}s",
             flush=True,
@@ -661,6 +749,7 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
             "dual_traj",
             "causal_gate",
             "target_conditioned_redirect",
+            "target_conditioned_components",
         }:
             del noisy_factual, factual_prediction, redirect_loss
             if teacher_factual_prediction is not None:
@@ -688,6 +777,8 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                     "pair_weight": args.pair_weight,
                     "pair_margin": args.pair_margin,
                     "redirect_weight": args.redirect_weight,
+                    "object_weight": args.object_weight,
+                    "receiver_weight": args.receiver_weight,
                     "preserve_weight": args.preserve_weight,
                     "balanced_roles": args.balanced_roles,
                     "causal_gate_dir": str(args.causal_gate_dir) if args.causal_gate_dir else None,
@@ -695,12 +786,17 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                     "activation_gate_dir": (
                         str(args.activation_gate_dir) if args.activation_gate_dir else None
                     ),
+                    "component_gate_dir": (
+                        str(args.component_gate_dir) if args.component_gate_dir else None
+                    ),
                     "target_phrase": args.target_phrase,
                     "persistent_causal_time": args.persistent_causal_time,
                     "mean_remove_loss_last_20": float(np.mean(remove_losses[-20:])),
                     "mean_background_loss_last_20": float(np.mean(background_losses[-20:])),
                     "mean_pair_loss_last_20": float(np.mean(pair_losses[-20:])),
                     "mean_redirect_loss_last_20": float(np.mean(redirect_losses[-20:])),
+                    "mean_object_loss_last_20": float(np.mean(object_losses[-20:])),
+                    "mean_receiver_loss_last_20": float(np.mean(receiver_losses[-20:])),
                     "mean_preserve_loss_last_20": float(np.mean(preserve_losses[-20:])),
                     "mean_gate_last_20": float(np.mean(gate_means[-20:])),
                 },
@@ -738,6 +834,7 @@ def main() -> int:
                     "counterfactual_sft",
                     "target_conditioned_sft",
                     "target_conditioned_redirect",
+                    "target_conditioned_components",
                 }:
                     gate = args.causal_gate_dir / f"{row['scene_id']}.pt"
                     if not gate.exists():
@@ -746,6 +843,10 @@ def main() -> int:
                     activation_gate = args.activation_gate_dir / f"{row['scene_id']}.pt"
                     if not activation_gate.exists():
                         raise FileNotFoundError(activation_gate)
+                if args.objective == "target_conditioned_components":
+                    component_gate = args.component_gate_dir / f"{row['scene_id']}.pt"
+                    if not component_gate.exists():
+                        raise FileNotFoundError(component_gate)
         print("Dry run passed: manifest and target videos are valid.")
         return 0
     cache_paths = build_cache(args, rows, project_root)
