@@ -28,6 +28,8 @@ from diffusers import AutoencoderKLWan, WanPipeline, WanTransformer3DModel
 from diffusers.utils import convert_state_dict_to_diffusers
 from peft import LoraConfig, get_peft_model_state_dict
 
+from causal_lora_activation_gate import CausalLoRAActivationGate
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -62,6 +64,11 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=0.0,
         help="Minimum erase weight outside the exported causal gate.",
+    )
+    parser.add_argument(
+        "--activation-gate-dir",
+        type=Path,
+        help="Gate LoRA residual activations using per-scene patch-token masks.",
     )
     parser.add_argument("--mask-weight", type=float, default=4.0)
     parser.add_argument("--background-weight", type=float, default=1.0)
@@ -205,6 +212,14 @@ def load_causal_gate(args: argparse.Namespace, scene_id: str, mask: torch.Tensor
     return mask.float() * gate
 
 
+def load_activation_gate(gate_dir: Path, scene_id: str, device: torch.device) -> torch.Tensor:
+    gate_path = gate_dir / f"{scene_id}.pt"
+    if not gate_path.exists():
+        raise FileNotFoundError(f"Missing activation gate for {scene_id}: {gate_path}")
+    payload = torch.load(gate_path, map_location="cpu", weights_only=True)
+    return payload["gate"].float().unsqueeze(0).to(device=device)
+
+
 @torch.no_grad()
 def cache_prompt_embeddings(args: argparse.Namespace, rows: list[dict[str, str]]) -> dict[str, torch.Tensor]:
     device = torch.device(args.device)
@@ -321,6 +336,16 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
             target_modules=["to_q", "to_k", "to_v", "to_out.0"],
         )
     )
+    activation_controller = (
+        CausalLoRAActivationGate(transformer)
+        if args.activation_gate_dir is not None
+        else None
+    )
+    if activation_controller is not None:
+        print(
+            f"Activation-gated LoRA modules: {activation_controller.module_count}",
+            flush=True,
+        )
     trainable = [parameter for parameter in transformer.parameters() if parameter.requires_grad]
     trainable_count = sum(parameter.numel() for parameter in trainable)
     print(f"Trainable LoRA parameters: {trainable_count:,}", flush=True)
@@ -363,6 +388,14 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                 order_rng.shuffle(order)
             sample_index = order[(step - 1) % len(order)]
         sample = torch.load(cache_paths[sample_index], map_location="cpu", weights_only=True)
+        is_preserve = sample["training_role"] == "preserve"
+        if activation_controller is not None:
+            if is_preserve:
+                activation_controller.clear_gate()
+            else:
+                activation_controller.set_gate(
+                    load_activation_gate(args.activation_gate_dir, sample["scene_id"], device)
+                )
         clean = sample["latents"].to(device=device, dtype=torch.bfloat16)
         prompt_embeds = sample["prompt_embeds"].to(device=device, dtype=torch.bfloat16)
         noise = torch.randn(clean.shape, generator=generator, dtype=torch.float32).to(device, dtype=torch.bfloat16)
@@ -374,7 +407,6 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
 
         teacher_prediction = None
         teacher_factual_prediction = None
-        is_preserve = sample["training_role"] == "preserve"
         has_residual_mask = (
             args.objective in {"mask_bg", "paired_sep", "dual_traj", "causal_gate"}
             and "residual_mask" in sample
@@ -387,6 +419,8 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
             noisy_factual = ((1.0 - sigma) * factual + sigma * noise).to(dtype=torch.bfloat16)
         needs_teacher = is_preserve or (has_residual_mask and args.background_weight > 0)
         if needs_teacher:
+            if activation_controller is not None:
+                activation_controller.disable()
             transformer.disable_adapters()
             with torch.no_grad():
                 teacher_prediction = transformer(
@@ -403,6 +437,8 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                         return_dict=False,
                     )[0]
             transformer.enable_adapters()
+            if activation_controller is not None:
+                activation_controller.enable()
 
         prediction = transformer(
             hidden_states=noisy,
@@ -477,6 +513,8 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
             combined_loss = remove_loss
         loss = combined_loss / args.grad_accum
         loss.backward()
+        if activation_controller is not None:
+            activation_controller.clear_gate()
         if step % args.grad_accum == 0:
             torch.nn.utils.clip_grad_norm_(trainable, 1.0)
             optimizer.step()
@@ -545,6 +583,9 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                     "balanced_roles": args.balanced_roles,
                     "causal_gate_dir": str(args.causal_gate_dir) if args.causal_gate_dir else None,
                     "gate_floor": args.gate_floor,
+                    "activation_gate_dir": (
+                        str(args.activation_gate_dir) if args.activation_gate_dir else None
+                    ),
                     "mean_remove_loss_last_20": float(np.mean(remove_losses[-20:])),
                     "mean_background_loss_last_20": float(np.mean(background_losses[-20:])),
                     "mean_pair_loss_last_20": float(np.mean(pair_losses[-20:])),
@@ -577,6 +618,10 @@ def main() -> int:
                     gate = args.causal_gate_dir / f"{row['scene_id']}.pt"
                     if not gate.exists():
                         raise FileNotFoundError(gate)
+                if args.activation_gate_dir is not None and row["training_role"] == "erase":
+                    activation_gate = args.activation_gate_dir / f"{row['scene_id']}.pt"
+                    if not activation_gate.exists():
+                        raise FileNotFoundError(activation_gate)
         print("Dry run passed: manifest and target videos are valid.")
         return 0
     cache_paths = build_cache(args, rows, project_root)

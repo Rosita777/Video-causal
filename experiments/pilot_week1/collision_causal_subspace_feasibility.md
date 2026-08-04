@@ -209,3 +209,31 @@ current adapter still performs causal attenuation rather than complete causal
 erasure. The next method change must improve the counterfactual target signal or
 apply the causal gate to adapter activations at inference; further scalar loss
 or LoRA-scale tuning alone is unlikely to solve the remaining semantic failure.
+
+## Activation-Gated LoRA Feasibility
+
+Loss masking does not prevent a globally active LoRA adapter from changing
+tokens outside the causal region. The new activation controller therefore
+modifies each LoRA projection output using
+
+`base_output + gate * (adapter_output - base_output)`.
+
+Erase rows use their exported spatiotemporal causal gate. Preservation rows
+leave the adapter globally active so frozen-teacher distillation can still
+constrain its behavior on ordinary prompts. Teacher forward passes bypass the
+activation hook, and text K/V projections are skipped automatically because
+their token length differs from the video gate.
+
+A two-step Wan smoke test completed on one erase row and one preservation row.
+The controller found 240 PEFT projection modules, backward propagation completed
+without numerical errors, and checkpoint 2 was saved at
+`outputs/adapters/collision_activation_gate_smoke/checkpoint-000002`. A unit test
+also verifies that a zero gate blocks adapter gradients while preserving the
+frozen base path.
+
+This validates the training mechanism only. The present implementation loads
+precomputed gates for training scenes; it cannot yet gate a novel prompt during
+generation. The next experiment should first compare a short activation-gated
+run with the loss-gated checkpoint on fixed target and control prompts. If that
+improves the semantic trade-off, the remaining method requirement is an online
+gate predictor for inference.
