@@ -68,6 +68,19 @@ class FakeConditionalTransformer(torch.nn.Module):
 
 
 class CausalLoRAActivationGateTest(unittest.TestCase):
+    def test_temporal_persistence_keeps_spatial_union_after_first_event(self) -> None:
+        module = load_module()
+        gate = torch.tensor(
+            [[[[0.0, 0.0, 0.0]], [[0.0, 0.5, 0.0]], [[0.0, 0.0, 1.0]], [[0.0, 0.0, 0.0]]]]
+        )
+
+        persistent = module.make_temporally_persistent_gate(gate)
+
+        expected = torch.tensor(
+            [[[[0.0, 0.0, 0.0]], [[0.0, 0.5, 1.0]], [[0.0, 0.5, 1.0]], [[0.0, 0.5, 1.0]]]]
+        )
+        torch.testing.assert_close(persistent, expected)
+
     def test_gates_adapter_residual_per_token(self) -> None:
         module = load_module()
         transformer = FakeTransformer()

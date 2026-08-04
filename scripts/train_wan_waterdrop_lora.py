@@ -29,7 +29,10 @@ from diffusers.utils import convert_state_dict_to_diffusers
 from peft import LoraConfig, get_peft_model_state_dict
 from transformers import AutoTokenizer
 
-from causal_lora_activation_gate import CausalLoRAActivationGate
+from causal_lora_activation_gate import (
+    CausalLoRAActivationGate,
+    make_temporally_persistent_gate,
+)
 from target_token_attention_suppression import find_token_mask
 
 
@@ -86,6 +89,11 @@ def parse_args() -> argparse.Namespace:
         action="append",
         default=[],
         help="Exact target phrase used to gate cross-attention text LoRA tokens.",
+    )
+    parser.add_argument(
+        "--persistent-causal-time",
+        action="store_true",
+        help="Keep the full causal-chain spatial union active after its first frame.",
     )
     parser.add_argument("--mask-weight", type=float, default=4.0)
     parser.add_argument("--background-weight", type=float, default=1.0)
@@ -239,15 +247,25 @@ def load_causal_gate(args: argparse.Namespace, scene_id: str, mask: torch.Tensor
         align_corners=False,
     ).to(device=mask.device)
     gate = args.gate_floor + (1.0 - args.gate_floor) * gate.clamp(0.0, 1.0)
-    return mask.float() * gate
+    combined = mask.float() * gate
+    return make_temporally_persistent_gate(combined) if args.persistent_causal_time else combined
 
 
-def load_activation_gate(gate_dir: Path, scene_id: str, device: torch.device) -> torch.Tensor:
+def load_activation_gate(
+    gate_dir: Path,
+    scene_id: str,
+    device: torch.device,
+    *,
+    persistent_time: bool = False,
+) -> torch.Tensor:
     gate_path = gate_dir / f"{scene_id}.pt"
     if not gate_path.exists():
         raise FileNotFoundError(f"Missing activation gate for {scene_id}: {gate_path}")
     payload = torch.load(gate_path, map_location="cpu", weights_only=True)
-    return payload["gate"].float().unsqueeze(0).to(device=device)
+    gate = payload["gate"].float().unsqueeze(0)
+    if persistent_time:
+        gate = make_temporally_persistent_gate(gate)
+    return gate.to(device=device)
 
 
 @torch.no_grad()
@@ -439,7 +457,12 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                 activation_controller.clear_gate()
             else:
                 activation_controller.set_gate(
-                    load_activation_gate(args.activation_gate_dir, sample["scene_id"], device)
+                    load_activation_gate(
+                        args.activation_gate_dir,
+                        sample["scene_id"],
+                        device,
+                        persistent_time=args.persistent_causal_time,
+                    )
                 )
                 if target_tokenizer is not None:
                     activation_controller.set_text_gate(
@@ -673,6 +696,7 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                         str(args.activation_gate_dir) if args.activation_gate_dir else None
                     ),
                     "target_phrase": args.target_phrase,
+                    "persistent_causal_time": args.persistent_causal_time,
                     "mean_remove_loss_last_20": float(np.mean(remove_losses[-20:])),
                     "mean_background_loss_last_20": float(np.mean(background_losses[-20:])),
                     "mean_pair_loss_last_20": float(np.mean(pair_losses[-20:])),

@@ -46,6 +46,7 @@ def build_generation_config(args: argparse.Namespace) -> dict[str, object]:
         "activation_gate_dir": (
             str(args.activation_gate_dir) if args.activation_gate_dir else None
         ),
+        "persistent_activation_gate": args.persistent_activation_gate,
         "lora_target_phrases": args.lora_target_phrase,
         "attention_gate_dir": (
             str(args.attention_gate_dir) if args.attention_gate_dir else None
@@ -176,7 +177,10 @@ def generate_videos(args: argparse.Namespace, items: list[dict[str, object]]) ->
         import torch
         from diffusers import WanPipeline
         from diffusers.utils import export_to_video
-        from causal_lora_activation_gate import CausalLoRAActivationGate
+        from causal_lora_activation_gate import (
+            CausalLoRAActivationGate,
+            make_temporally_persistent_gate,
+        )
         from target_token_attention_suppression import (
             TargetTokenAttentionController,
             find_token_mask,
@@ -244,7 +248,10 @@ def generate_videos(args: argparse.Namespace, items: list[dict[str, object]]) ->
             if not gate_path.exists():
                 raise FileNotFoundError(f"Missing inference activation gate: {gate_path}")
             gate_payload = torch.load(gate_path, map_location="cpu", weights_only=True)
-            activation_controller.set_gate(gate_payload["gate"].float().unsqueeze(0))
+            activation_gate = gate_payload["gate"].float().unsqueeze(0)
+            if args.persistent_activation_gate:
+                activation_gate = make_temporally_persistent_gate(activation_gate)
+            activation_controller.set_gate(activation_gate)
             if args.lora_target_phrase:
                 activation_controller.set_text_gate(
                     find_token_mask(pipe.tokenizer, prompt, args.lora_target_phrase)
@@ -319,6 +326,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Directory containing per-item 000.pt spatiotemporal LoRA gates.",
     )
     parser.add_argument(
+        "--persistent-activation-gate",
+        action="store_true",
+        help="Keep the gate's spatial union active after its first causal frame.",
+    )
+    parser.add_argument(
         "--lora-target-phrase",
         action="append",
         default=[],
@@ -372,6 +384,8 @@ def main() -> int:
     if args.lora_target_phrase:
         if args.lora_path is None or args.activation_gate_dir is None:
             parser.error("--lora-target-phrase requires --lora-path and --activation-gate-dir")
+    if args.persistent_activation_gate and args.activation_gate_dir is None:
+        parser.error("--persistent-activation-gate requires --activation-gate-dir")
     if args.attention_suppression_phrase:
         if args.attention_gate_dir is None:
             parser.error("--attention-gate-dir is required with attention suppression")

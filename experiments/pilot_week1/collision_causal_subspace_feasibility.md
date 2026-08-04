@@ -431,3 +431,27 @@ delaying the target event as failure, and the next loss must penalize target and
 footprint presence over every post-intervention frame. More training steps or a
 larger redirect weight are not justified until that temporal constraint is
 implemented.
+
+### Persistent-Time Gate Ablation
+
+To close the temporal-relocation loophole, a persistent gate was added. After
+the first causal frame, it keeps the spatial union of the entire factual causal
+chain active through the end of the clip. The same expansion is applied to the
+training loss gate and the inference LoRA gate. The original gate covers 3.6%
+of the latent grid on average; the persistent version covers 13.8% while still
+leaving the first two static frames untouched.
+
+The persistent redirect run has lower training loss than the dynamic-gate run:
+its final 20-step mean is 1.66, and redirect loss reaches 0.098 on the audited
+scene. The videos do not support a success claim:
+
+| checkpoint | target object | receiver/background preservation |
+| ---: | --- | --- |
+| 25 | red ball reappears in the middle and late frames | boxes still change and collapse |
+| 50 | only a tiny red remnant remains | the initial box arrangement is already corrupted |
+
+The persistent gate therefore trades temporal suppression for broad visual
+damage. It does not solve object-plus-footprint erasure and should remain an
+ablation, not the main method. The next method change must supervise target
+presence and receiver identity directly, while using the causal gate only to
+localize that supervision. Gate expansion and longer training are now ruled out.

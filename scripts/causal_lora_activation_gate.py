@@ -8,6 +8,17 @@ from collections.abc import Iterable
 import torch
 
 
+def make_temporally_persistent_gate(gate: torch.Tensor) -> torch.Tensor:
+    """Keep the spatial union of a causal gate active after its first event."""
+    if gate.ndim not in {4, 5}:
+        raise ValueError(f"Expected [B,T,H,W] or [B,C,T,H,W], got {tuple(gate.shape)}")
+    time_dim = gate.ndim - 3
+    spatial_union = gate.amax(dim=time_dim, keepdim=True)
+    active_time = (gate.amax(dim=(-2, -1), keepdim=True) > 0).to(gate.dtype)
+    active_from_first = torch.cummax(active_time, dim=time_dim).values
+    return spatial_union * active_from_first
+
+
 class CausalLoRAActivationGate:
     """Gate LoRA residuals by video region and optional target-text tokens."""
 
