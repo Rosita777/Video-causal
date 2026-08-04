@@ -498,3 +498,22 @@ It is not yet a final success because of the small late target remnant and the
 single seen-scene scope. `ck50` demonstrates overtraining rather than further
 improvement. Subsequent experiments should use early stopping and strengthen
 receiver identity preservation; simply increasing steps is ruled out.
+
+### Four-Receiver Seen-Scene Audit
+
+The best `union ck25` checkpoint was then applied to all four training scenes,
+using the original seed for each receiver. The result is mixed rather than a
+general success:
+
+| receiver | target removal | receiver / footprint | judgment |
+| --- | --- | --- | --- |
+| cardboard boxes | mostly removed; tiny late red remnant | boxes stay upright | good |
+| cork blocks | mostly removed; tiny late red specks | blocks stay upright | good |
+| white dominoes | visible red remnants at middle frames | dominoes stay upright | partial |
+| stone-like blocks | target and motion suppressed | global washout / low contrast | failure |
+
+This is the first useful generalization diagnosis. The loss and activation
+design can work across receivers, but the automatically built component gates
+are not equally reliable: small or low-contrast target masks produce either
+residual target pixels or broad visual washout. The next data step is therefore
+gate-quality auditing and rejection before training, not more adapter capacity.
