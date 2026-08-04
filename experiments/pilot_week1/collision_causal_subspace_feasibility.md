@@ -147,3 +147,20 @@ balanced run completed 100 steps and saved checkpoints every 25 steps at
 `outputs/adapters/collision_causal_gate_100`. A checkpoint-25 single-scene probe
 reduced the target collision post-event motion by 57.8%; this is only an early
 motion signal and does not replace semantic object/footprint evaluation.
+
+### Checkpoint-100 Video Results
+
+| adapter | target motion suppression | static-control suppression | target early MAE | control early MAE |
+| --- | ---: | ---: | ---: | ---: |
+| general preserve, checkpoint 100 | 85.82% | 35.93% | 0.2118 | 0.1612 |
+| balanced preserve, checkpoint 50 | 83.02% | 17.28% | 0.1998 | 0.1550 |
+| causal gate, checkpoint 100 | 85.31% | 31.16% | 0.2232 | 0.1756 |
+
+The gated adapter retains strong target suppression and modestly improves the
+static-control motion metric relative to the earlier checkpoint-100 adapter.
+It does not beat the balanced checkpoint-50 preservation result, and its
+base-adapter frame divergence is higher. Therefore the current experiment
+validates engineering integration, but does not yet demonstrate a superior
+end-to-end adapter. The next tuning step should reduce global LoRA strength or
+increase preservation pressure while retaining the gate, then select the
+checkpoint on the target-versus-preservation Pareto frontier.
