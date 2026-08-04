@@ -1,0 +1,4 @@
+split,index,seed,object_erasure,footprint_erasure,preservation,overall,notes
+target,0,11013,fail,partial,partial,fail,"red ball remains faint; collision chain shrinks from three fallen cups to roughly one"
+target,1,11019,fail,fail,fail,fail,"multiple red dots remain; receiver still collapses with melting artifacts"
+control,0,12000,pass,not_applicable,pass,pass,"empty gate output is byte-identical to a fresh base Wan generation"

@@ -69,9 +69,12 @@ class CausalLoRAActivationGate:
         gate = self._flat_gate
         if gate.shape[0] == 1 and output.shape[0] > 1:
             gate = gate.expand(output.shape[0], -1, -1)
-        if gate.shape[:2] != output.shape[:2]:
-            # Cross-attention K/V project text tokens and must remain ungated.
+        if gate.shape[0] != output.shape[0]:
             return None
+        if gate.shape[1] != output.shape[1]:
+            # Text K/V have no video-grid position. Use a per-sample switch so
+            # an empty video gate still disables every LoRA path exactly.
+            gate = gate.amax(dim=1, keepdim=True).expand(-1, output.shape[1], -1)
         base_layer = getattr(module, "base_layer")
         base_output = base_layer(inputs[0])
         gate = gate.to(device=output.device, dtype=output.dtype)

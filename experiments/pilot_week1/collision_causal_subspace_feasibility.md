@@ -221,8 +221,10 @@ modifies each LoRA projection output using
 Erase rows use their exported spatiotemporal causal gate. Preservation rows
 leave the adapter globally active so frozen-teacher distillation can still
 constrain its behavior on ordinary prompts. Teacher forward passes bypass the
-activation hook, and text K/V projections are skipped automatically because
-their token length differs from the video gate.
+activation hook. Video-token projections use the full spatiotemporal gate;
+text K/V projections use a per-sample nonempty-gate switch because text tokens
+do not have video-grid coordinates. This makes an empty gate disable all LoRA
+paths instead of leaving a global text-side residual active.
 
 A two-step Wan smoke test completed on one erase row and one preservation row.
 The controller found 240 PEFT projection modules, backward propagation completed
@@ -237,3 +239,34 @@ generation. The next experiment should first compare a short activation-gated
 run with the loss-gated checkpoint on fixed target and control prompts. If that
 improves the semantic trade-off, the remaining method requirement is an online
 gate predictor for inference.
+
+### Checkpoint-25 Inference Probe
+
+A 25-step activation-gated adapter was trained with the same balanced 68-row
+manifest and loss weights as the earlier pilot. For an inexpensive inference
+upper-bound probe, approximate gates were built from the first-pass base videos:
+persistent red regions from the opening frames are removed, newly appearing red
+regions seed the gate, and temporally reachable local motion expands the causal
+region. The two target gates cover 10.6% and 13.1% of the video-token grid.
+
+The first implementation left text K/V LoRA projections active when the video
+gate was empty. This caused a false preservation change and was corrected by
+using a per-sample nonempty-gate switch for text tokens. After the fix, a fresh
+base control and an empty-gate adapter control have identical MP4 checksums and
+zero frame MAE. This verifies exact no-op behavior when no target region is
+detected.
+
+The semantic target result is still negative. On the first target, the red ball
+remains faintly visible and roughly one cup still falls, although the original
+three-cup collision chain is shortened. On the second target, multiple red dots
+remain and the receiver still collapses with visible melting artifacts. Neither
+sample removes both the object and its causal footprint. Mean motion suppression
+over the two samples is 35.41%, but this again reflects attenuation rather than
+successful semantic erasure.
+
+Activation gating therefore solves the spatial preservation problem when its
+gate is empty, but it does not supply the missing counterfactual content inside
+the gate. Expanding this checkpoint to the full 7+8 evaluation is not justified.
+The next method experiment should improve the counterfactual target itself,
+for example by distilling a clean static reconstruction inside the gate, before
+investing in an online gate predictor.

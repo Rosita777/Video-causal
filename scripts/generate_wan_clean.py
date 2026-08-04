@@ -43,6 +43,9 @@ def build_generation_config(args: argparse.Namespace) -> dict[str, object]:
         "prompt_encode_device_policy": "cpu_when_offloaded_else_selected_device",
         "lora_path": str(args.lora_path) if args.lora_path else None,
         "lora_scale": args.lora_scale,
+        "activation_gate_dir": (
+            str(args.activation_gate_dir) if args.activation_gate_dir else None
+        ),
     }
 
 
@@ -167,6 +170,7 @@ def generate_videos(args: argparse.Namespace, items: list[dict[str, object]]) ->
         import torch
         from diffusers import WanPipeline
         from diffusers.utils import export_to_video
+        from causal_lora_activation_gate import CausalLoRAActivationGate
     except ImportError as exc:
         raise SystemExit(
             "Wan generation requires torch and diffusers with WanPipeline. "
@@ -179,6 +183,11 @@ def generate_videos(args: argparse.Namespace, items: list[dict[str, object]]) ->
     if args.lora_path is not None:
         pipe.load_lora_weights(str(args.lora_path), adapter_name="waterdrop")
         pipe.set_adapters("waterdrop", adapter_weights=args.lora_scale)
+    activation_controller = (
+        CausalLoRAActivationGate(pipe.transformer)
+        if args.activation_gate_dir is not None
+        else None
+    )
 
     if args.vae_slicing and hasattr(pipe, "enable_vae_slicing"):
         pipe.enable_vae_slicing()
@@ -211,6 +220,12 @@ def generate_videos(args: argparse.Namespace, items: list[dict[str, object]]) ->
         video_path.parent.mkdir(parents=True, exist_ok=True)
         generator_device = "cuda" if selected_device.startswith("cuda") and torch.cuda.is_available() else "cpu"
         generator = torch.Generator(device=generator_device).manual_seed(int(item["seed"]))
+        if activation_controller is not None:
+            gate_path = args.activation_gate_dir / f"{int(item['index']):03d}.pt"
+            if not gate_path.exists():
+                raise FileNotFoundError(f"Missing inference activation gate: {gate_path}")
+            gate_payload = torch.load(gate_path, map_location="cpu", weights_only=True)
+            activation_controller.set_gate(gate_payload["gate"].float().unsqueeze(0))
         prompt = str(item["prompt"])
         negative_prompt = item.get("negative_prompt")
         prompt_embeds = None
@@ -239,6 +254,8 @@ def generate_videos(args: argparse.Namespace, items: list[dict[str, object]]) ->
             generator=generator,
         )
         export_to_video(output_frames(result), str(video_path), fps=args.fps)
+    if activation_controller is not None:
+        activation_controller.remove()
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -263,6 +280,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--device", default="auto")
     parser.add_argument("--lora-path", type=Path)
     parser.add_argument("--lora-scale", type=float, default=1.0)
+    parser.add_argument(
+        "--activation-gate-dir",
+        type=Path,
+        help="Directory containing per-item 000.pt spatiotemporal LoRA gates.",
+    )
     parser.add_argument("--limit", type=int)
     parser.add_argument("--skip-existing", action="store_true")
     parser.add_argument("--enable-model-cpu-offload", action="store_true")
@@ -291,6 +313,11 @@ def main() -> int:
         parser.error("--lora-scale must be non-negative")
     if args.lora_path is not None and not args.dry_run and not args.lora_path.exists():
         parser.error(f"--lora-path does not exist: {args.lora_path}")
+    if args.activation_gate_dir is not None:
+        if args.lora_path is None:
+            parser.error("--activation-gate-dir requires --lora-path")
+        if not args.dry_run and not args.activation_gate_dir.is_dir():
+            parser.error(f"--activation-gate-dir does not exist: {args.activation_gate_dir}")
 
     prompts = parse_prompt_file(args.prompts)
     selected_count = len(prompts[: args.limit] if args.limit is not None else prompts)

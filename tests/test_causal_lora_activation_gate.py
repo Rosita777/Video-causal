@@ -65,6 +65,17 @@ class CausalLoRAActivationGateTest(unittest.TestCase):
         )
         self.assertGreater(values.grad.abs().sum().item(), 0.0)
 
+    def test_empty_video_gate_disables_mismatched_text_tokens(self) -> None:
+        module = load_module()
+        transformer = FakeTransformer()
+        controller = module.CausalLoRAActivationGate(transformer, target_suffixes=("to_q",))
+        controller.set_gate(torch.zeros((1, 1, 1, 2)))
+        text_values = torch.tensor([[[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]])
+
+        output = transformer(text_values)
+
+        torch.testing.assert_close(output, text_values)
+
 
 if __name__ == "__main__":
     unittest.main()
