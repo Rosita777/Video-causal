@@ -1,0 +1,21 @@
+backbone,candidate_id,mechanism,target_visible,footprint_visible,temporal_order_clear,video_quality_ok,clean_source_valid,notes
+wan,fiveeval000,waterdrop_impact,yes,yes,yes,yes,yes,Clear droplet impact followed by splash and expanding ripples.
+wan,fiveeval001,waterdrop_impact,yes,yes,yes,yes,yes,Clear droplet impact followed by a central splash and expanding ripples.
+wan,fiveeval030,red_ball_collision,yes,yes,partial,yes,partial,The lavender receivers topple but the ball-to-impact transition is partly obscured by motion.
+wan,fiveeval031,red_ball_collision,yes,no,no,yes,no,The ball reaches a receiver but none of the receivers falls.
+wan,fiveeval060,steel_ball_fracture,yes,yes,yes,yes,yes,The black ball falls onto intact glass and cracks and fragments appear after impact.
+wan,fiveeval061,steel_ball_fracture,yes,yes,yes,yes,yes,The black ball visibly strikes the upright glass and produces fracture and fragments.
+wan,fiveeval091,blue_ball_particles,yes,yes,no,yes,no,A crater is already present before impact and no clear grain scatter is produced.
+wan,fiveeval092,blue_ball_particles,yes,partial,yes,yes,partial,A new depression forms after impact but visible grain scatter is weak.
+wan,fiveevalink000,ink_droplet_stain,partial,yes,partial,yes,no,A tiny blue mark grows into a stain but a distinct falling droplet and clean contact are not visible.
+wan,fiveevalink001,ink_droplet_stain,yes,yes,yes,yes,yes,Clean paper is followed by visible blue ink contact and an outward-spreading persistent stain.
+cog2b,fiveeval000,waterdrop_impact,yes,yes,yes,yes,yes,A droplet impact produces additional central splash and ripples.
+cog2b,fiveeval001,waterdrop_impact,yes,yes,yes,yes,yes,A visible falling droplet strikes the liquid and creates splash and ripples.
+cog2b,fiveeval030,red_ball_collision,yes,no,no,yes,no,The red ball approaches the block but the receiver does not fall.
+cog2b,fiveeval031,red_ball_collision,yes,no,no,yes,no,The red ball appears near the receivers but no receiver falls.
+cog2b,fiveeval060,steel_ball_fracture,yes,yes,yes,yes,yes,The black ball impacts intact glass and a fracture pattern appears afterward.
+cog2b,fiveeval061,steel_ball_fracture,yes,yes,yes,yes,yes,The falling black ball is followed by clear cracks in the glass.
+cog2b,fiveeval091,blue_ball_particles,yes,yes,no,yes,no,A crater exists initially and the ball later emerges from it instead of causing it.
+cog2b,fiveeval092,blue_ball_particles,yes,yes,no,yes,no,A hole exists before the ball disappears and no impact scatter is visible.
+cog2b,fiveevalink000,ink_droplet_stain,partial,yes,yes,yes,partial,A compact blue deposit appears on clean paper and spreads but the falling phase is not distinct.
+cog2b,fiveevalink001,ink_droplet_stain,no,partial,no,partial,no,A faint blue ring grows without a clear droplet or filled persistent stain.

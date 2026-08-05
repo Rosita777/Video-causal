@@ -322,7 +322,7 @@ def ink_stain_smoke_rows() -> list[dict[str, str]]:
                 "expected_footprint": footprint,
                 "prompt": prompt,
                 "generation_repetitions": "1",
-                "candidate_status": "pending_mixed_v2_wan_and_cog5b_screen",
+                "candidate_status": "pending_mixed_v2_backbone_screen",
                 "intended_split": "evaluation_candidate_only",
             }
         )
