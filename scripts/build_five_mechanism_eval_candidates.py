@@ -262,16 +262,58 @@ def smoke_rows(rows: list[dict[str, str]], per_mechanism: int = 2) -> list[dict[
     return selected
 
 
+def simple_smoke_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    selected_indices = {
+        "waterdrop_impact": {0, 1},
+        "red_ball_collision": {0, 1},
+        "steel_ball_fracture": {0, 1},
+        "blue_ball_particles": {1, 2},
+        "toy_car_trace": {1, 2},
+    }
+    selected = []
+    for row in rows:
+        mechanism = row["mechanism"]
+        if int(row["mechanism_index"]) not in selected_indices[mechanism]:
+            continue
+        output = dict(row)
+        receiver = row["receiver"]
+        if mechanism == "waterdrop_impact":
+            footprint = "a small splash and circular ripples appear after impact"
+            prompt = f"Fixed-camera realistic close-up: one clear water droplet falls into {receiver}, making {footprint}."
+        elif mechanism == "red_ball_collision":
+            footprint = "the leftmost receiver falls over after contact"
+            prompt = f"Fixed side-view video: one red rubber ball rolls into {receiver}, and {footprint}."
+        elif mechanism == "steel_ball_fracture":
+            footprint = "cracks spread from the impact point and small fragments break away"
+            prompt = f"Fixed-camera realistic close-up: one black steel ball drops onto {receiver}; {footprint}."
+        elif mechanism == "blue_ball_particles":
+            footprint = "sand grains scatter and a round crater remains after impact"
+            prompt = f"Fixed-camera realistic close-up: one blue rubber ball drops into {receiver}; {footprint}."
+        else:
+            footprint = "two fresh wheel tracks appear only behind the moving car"
+            prompt = f"Fixed-camera realistic video: one yellow toy car drives across {receiver}; {footprint}."
+        output["expected_footprint"] = footprint
+        output["prompt"] = prompt
+        output["candidate_status"] = "pending_simple_v1_wan_and_cog_screen"
+        selected.append(output)
+    return selected
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-csv", type=Path, default=Path("data/five_mechanism_eval_candidates_v0.csv"))
     parser.add_argument("--output-prompts", type=Path, default=Path("prompts/five_mechanism_eval_candidates_v0.prompts"))
     parser.add_argument("--output-smoke-prompts", type=Path, default=Path("prompts/five_mechanism_eval_smoke10_v0.prompts"))
+    parser.add_argument("--output-simple-smoke-csv", type=Path, default=Path("data/five_mechanism_eval_smoke10_simple_v1.csv"))
+    parser.add_argument("--output-simple-smoke-prompts", type=Path, default=Path("prompts/five_mechanism_eval_smoke10_simple_v1.prompts"))
     args = parser.parse_args()
     rows = build_rows()
     write_csv(args.output_csv, rows)
     write_prompts(args.output_prompts, rows)
     write_prompts(args.output_smoke_prompts, smoke_rows(rows))
+    simple_rows = simple_smoke_rows(rows)
+    write_csv(args.output_simple_smoke_csv, simple_rows)
+    write_prompts(args.output_simple_smoke_prompts, simple_rows)
     print(f"Wrote {len(rows)} candidates across {len(MECHANISMS)} mechanisms")
     return 0
 

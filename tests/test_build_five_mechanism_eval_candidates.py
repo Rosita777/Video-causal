@@ -1,6 +1,6 @@
 from collections import Counter, defaultdict
 
-from scripts.build_five_mechanism_eval_candidates import MECHANISMS, build_rows, smoke_rows
+from scripts.build_five_mechanism_eval_candidates import MECHANISMS, build_rows, simple_smoke_rows, smoke_rows
 
 
 def test_builds_balanced_candidate_pool():
@@ -36,3 +36,13 @@ def test_smoke_rows_cover_every_mechanism():
 
     assert len(rows) == 10
     assert Counter(row["mechanism"] for row in rows) == {name: 2 for name in MECHANISMS}
+
+
+def test_simple_smoke_uses_short_prompts_and_high_contrast_surfaces():
+    rows = simple_smoke_rows(build_rows())
+
+    assert len(rows) == 10
+    assert Counter(row["mechanism"] for row in rows) == {name: 2 for name in MECHANISMS}
+    assert max(len(row["prompt"].split()) for row in rows) < 35
+    particle_receivers = [row["receiver"] for row in rows if row["mechanism"] == "blue_ball_particles"]
+    assert all("white sand" not in receiver for receiver in particle_receivers)
