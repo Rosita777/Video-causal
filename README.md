@@ -16,8 +16,8 @@ The active direction supersedes the older ZeroScope method-probe direction:
 
 - ZeroScope is no longer an active backbone because it does not reliably generate complete causal-chain videos.
 - The active backbones are Wan2.1-T2V-1.3B and CogVideoX-2B.
-- The method direction is training-based, but the training objective is intentionally not fixed yet.
-- The immediate engineering milestone is a single clean-source scenario: a red rubber ball rolls into four upright wooden blocks and the blocks topple after impact.
+- The method direction is training-based. The current method v1 is dual-trajectory causal-footprint LoRA: aligned factual/counterfactual pairs, a latent causal-residual mask, outside-mask preservation, and factual-trajectory redirection. See `docs/method_spec_v1_dual_trajectory_2026-08-05.md`.
+- The current scene set is four mechanism families: waterdrop impact, red-ball toppling, wooden-mallet glass fracture, and apple-to-flour impact. The set is frozen for the next data-expansion stage.
 - `prompts/ball_blocks_clean_candidates50.txt` contains 50 wording variants of this fixed scene.
 - Each prompt will be generated once with the base Wan model, then full videos will be screened for a visible ball, visible impact, and blocks toppling only after impact.
 
