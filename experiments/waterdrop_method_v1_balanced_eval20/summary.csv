@@ -1,0 +1,16 @@
+method,condition,family,count,mean_early_base_mae,mean_post_change_suppression_percent
+dual_traj,explicit_causal,hard_surface,5,0.03484448,33.52
+dual_traj,explicit_causal,liquid_surface,5,0.02360430,3.44
+dual_traj,implicit_causal,hard_surface,5,0.03391217,53.36
+dual_traj,implicit_causal,liquid_surface,5,0.02976281,40.41
+dual_traj_scale075,explicit_causal,hard_surface,5,0.03484448,33.52
+dual_traj_scale075,explicit_causal,liquid_surface,5,0.02360430,3.44
+dual_traj_scale075,implicit_causal,hard_surface,5,0.03391217,53.36
+dual_traj_scale075,implicit_causal,liquid_surface,5,0.02976281,40.41
+plain,explicit_causal,hard_surface,5,0.00000000,0.00
+plain,explicit_causal,liquid_surface,5,0.00000000,0.00
+plain,implicit_causal,hard_surface,5,0.00000000,0.00
+plain,implicit_causal,liquid_surface,5,0.00000000,0.00
+plain,ALL,ALL,20,0.00000000,0.00
+dual_traj,ALL,ALL,20,0.03053094,32.68
+dual_traj_scale075,ALL,ALL,20,0.03053094,32.68
