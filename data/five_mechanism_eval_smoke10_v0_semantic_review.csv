@@ -1,0 +1,21 @@
+backbone,candidate_id,mechanism,target_visible,footprint_visible,temporal_order_clear,video_quality_ok,clean_source_valid,notes
+wan,fiveeval000,waterdrop_impact,yes,yes,yes,yes,yes,Clear falling droplet followed by ripple and splash.
+wan,fiveeval001,waterdrop_impact,yes,yes,yes,yes,yes,Clear falling droplet followed by ripple and splash.
+wan,fiveeval030,red_ball_collision,yes,yes,yes,partial,borderline,Impact is visible but receiver count and shapes drift.
+wan,fiveeval031,red_ball_collision,yes,yes,yes,yes,yes,Red ball contacts the row before one receiver falls.
+wan,fiveeval060,steel_ball_fracture,yes,yes,yes,yes,yes,Black ball impact is followed by visible fracture and fragments.
+wan,fiveeval061,steel_ball_fracture,yes,yes,yes,yes,yes,Black ball impact is followed by a strong glass fracture.
+wan,fiveeval090,blue_ball_particles,yes,partial,yes,yes,no,Blue ball is clear but particle scatter and crater are too weak.
+wan,fiveeval091,blue_ball_particles,yes,partial,yes,yes,borderline,A crater remains but particle scatter is weak.
+wan,fiveeval120,toy_car_trace,yes,partial,yes,partial,no,Car is visible but tracks are too faint and the scene is nearly blank.
+wan,fiveeval121,toy_car_trace,yes,yes,no,yes,no,Tracks are already visible before the car enters.
+cogvideox,fiveeval000,waterdrop_impact,no,yes,no,yes,no,Ripples appear but the causal droplet is not visible.
+cogvideox,fiveeval001,waterdrop_impact,yes,yes,yes,yes,yes,Clear droplet impact followed by splash and ripples.
+cogvideox,fiveeval030,red_ball_collision,yes,no,no,partial,no,Red ball enters late but the receiver row and collision are absent.
+cogvideox,fiveeval031,red_ball_collision,no,no,no,partial,no,Only a static receiver-like block is visible.
+cogvideox,fiveeval060,steel_ball_fracture,no,no,no,no,no,Nearly blank output.
+cogvideox,fiveeval061,steel_ball_fracture,no,no,no,no,no,Nearly blank output.
+cogvideox,fiveeval090,blue_ball_particles,no,no,no,no,no,Nearly blank output.
+cogvideox,fiveeval091,blue_ball_particles,yes,no,no,yes,no,Blue ball stays static and no particle footprint appears.
+cogvideox,fiveeval120,toy_car_trace,yes,no,no,partial,no,Tiny car is static and no tracks appear.
+cogvideox,fiveeval121,toy_car_trace,yes,no,no,partial,no,Tiny car is static and no tracks appear.
