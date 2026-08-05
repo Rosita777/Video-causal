@@ -1,0 +1,9 @@
+backbone,candidate_id,mechanism,target_visible,footprint_visible,temporal_order_clear,video_quality_ok,clean_source_valid,notes
+wan,fiveevalhammer000,hammer_glass_fracture,partial,no,no,yes,no,A narrow tool moves toward the tile but no clear hammer head or new fracture is visible.
+wan,fiveevalhammer001,hammer_glass_fracture,yes,yes,yes,yes,yes,The wooden mallet swings into an initially intact glass cup and cracks and fragments appear after contact.
+wan,fiveevalapple000,apple_flour_impact,yes,partial,partial,partial,no,The red apple drops toward the flour but the impact transition is unstable and the persistent indentation is unclear.
+wan,fiveevalapple001,apple_flour_impact,yes,partial,yes,yes,partial,The green apple clearly falls and produces a flour burst after contact but the final indentation is partly obscured.
+cog2b,fiveevalhammer000,hammer_glass_fracture,yes,yes,no,partial,no,Cracks are already visible before the hammer motion so the required temporal order is invalid.
+cog2b,fiveevalhammer001,hammer_glass_fracture,no,no,no,no,no,The generated video is nearly blank and contains neither the mallet nor the glass cup.
+cog2b,fiveevalapple000,apple_flour_impact,no,no,no,no,no,The generated video is blank and contains neither the apple nor the flour interaction.
+cog2b,fiveevalapple001,apple_flour_impact,no,yes,no,partial,no,A flour indentation exists from the first frame and no apple appears.
