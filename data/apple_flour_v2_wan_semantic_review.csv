@@ -1,0 +1,5 @@
+backbone,candidate_id,mechanism,target_visible,footprint_visible,temporal_order_clear,video_quality_ok,clean_source_valid,notes
+wan,appleflourv2000,apple_flour_impact,yes,yes,yes,yes,yes,The red apple falls onto initially still white flour and a flour burst appears only after impact.
+wan,appleflourv2001,apple_flour_impact,yes,yes,yes,yes,yes,The green apple visibly descends and produces a strong outward white flour burst after contact.
+wan,appleflourv2002,apple_flour_impact,yes,yes,yes,yes,yes,The red apple lands in golden flour and a visible powder plume follows the impact.
+wan,appleflourv2003,apple_flour_impact,yes,yes,yes,yes,yes,The green apple descends into pale flour and a large powder burst occurs afterward.
