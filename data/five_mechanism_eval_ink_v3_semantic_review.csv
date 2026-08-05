@@ -1,0 +1,5 @@
+backbone,candidate_id,mechanism,target_visible,footprint_visible,temporal_order_clear,video_quality_ok,clean_source_valid,notes
+wan,fiveevalink000,ink_droplet_stain,partial,yes,no,yes,no,The paper stays clean but the blue mark appears on the surface and grows; no clearly separate falling droplet is visible.
+wan,fiveevalink001,ink_droplet_stain,partial,yes,no,yes,no,A small surface dot grows into a dark stain, but the target does not visibly fall through the air.
+cog2b,fiveevalink000,ink_droplet_stain,no,partial,no,partial,no,Only a faint surface mark followed by a sudden ring is visible; no falling droplet or clear stain spread.
+cog2b,fiveevalink001,ink_droplet_stain,no,partial,no,partial,no,The paper remains blank until a final blue ring appears without a visible droplet or causal transition.

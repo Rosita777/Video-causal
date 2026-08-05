@@ -308,8 +308,10 @@ def ink_stain_smoke_rows() -> list[dict[str, str]]:
     rows = []
     for index, (family, receiver) in enumerate(receivers):
         prompt = (
-            f"Fixed-camera realistic macro video. At first {receiver} is clean and blank. "
-            f"One large blue ink droplet falls onto its center. Only after contact, {footprint}."
+            f"Fixed-camera realistic side-view macro video with the full paper surface visible. "
+            f"At first {receiver} is completely clean and blank with no blue mark. "
+            f"One large round blue ink droplet is clearly visible in the air above the paper, "
+            f"falls downward, and touches the center. Only after contact, {footprint}."
         )
         rows.append(
             {
