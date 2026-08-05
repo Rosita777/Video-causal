@@ -623,7 +623,10 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
             elif args.objective == "mask_bg":
                 remove_loss = (element_loss * (1.0 + args.mask_weight * mask)).mean()
             else:
-                remove_loss = element_loss.mean()
+                # Concentrate the counterfactual flow-matching signal on the
+                # observed causal residual while retaining a base-weighted
+                # signal outside it through background_loss.
+                remove_loss = (element_loss * (1.0 + args.mask_weight * mask)).mean()
             if args.objective == "target_conditioned_components":
                 object_gate, receiver_gate = load_component_gates(
                     args.component_gate_dir, sample["scene_id"], mask
