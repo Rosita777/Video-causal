@@ -26,6 +26,8 @@ Each mechanism contains 30 evaluation candidates with one generation per prompt.
 
 The candidate CSV is `data/five_mechanism_eval_candidates_v0.csv`. The pipe-delimited generation input is `prompts/five_mechanism_eval_candidates_v0.prompts`.
 
+Before full generation, `prompts/five_mechanism_eval_smoke10_v0.prompts` runs two cases from every mechanism on each backbone.
+
 ## Pilot metrics
 
 The first comparison uses four human-readable binary judgments:

@@ -255,14 +255,23 @@ def write_prompts(path: Path, rows: list[dict[str, str]]) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def smoke_rows(rows: list[dict[str, str]], per_mechanism: int = 2) -> list[dict[str, str]]:
+    selected = []
+    for mechanism in MECHANISMS:
+        selected.extend(row for row in rows if row["mechanism"] == mechanism and int(row["mechanism_index"]) < per_mechanism)
+    return selected
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-csv", type=Path, default=Path("data/five_mechanism_eval_candidates_v0.csv"))
     parser.add_argument("--output-prompts", type=Path, default=Path("prompts/five_mechanism_eval_candidates_v0.prompts"))
+    parser.add_argument("--output-smoke-prompts", type=Path, default=Path("prompts/five_mechanism_eval_smoke10_v0.prompts"))
     args = parser.parse_args()
     rows = build_rows()
     write_csv(args.output_csv, rows)
     write_prompts(args.output_prompts, rows)
+    write_prompts(args.output_smoke_prompts, smoke_rows(rows))
     print(f"Wrote {len(rows)} candidates across {len(MECHANISMS)} mechanisms")
     return 0
 

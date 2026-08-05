@@ -1,6 +1,6 @@
 from collections import Counter, defaultdict
 
-from scripts.build_five_mechanism_eval_candidates import MECHANISMS, build_rows
+from scripts.build_five_mechanism_eval_candidates import MECHANISMS, build_rows, smoke_rows
 
 
 def test_builds_balanced_candidate_pool():
@@ -29,3 +29,10 @@ def test_prompts_state_temporal_causal_order():
         assert row["receiver"] in row["prompt"]
         assert row["expected_footprint"] in row["prompt"]
         assert "Only" in row["prompt"]
+
+
+def test_smoke_rows_cover_every_mechanism():
+    rows = smoke_rows(build_rows())
+
+    assert len(rows) == 10
+    assert Counter(row["mechanism"] for row in rows) == {name: 2 for name in MECHANISMS}
