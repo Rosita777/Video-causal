@@ -517,3 +517,30 @@ design can work across receivers, but the automatically built component gates
 are not equally reliable: small or low-contrast target masks produce either
 residual target pixels or broad visual washout. The next data step is therefore
 gate-quality auditing and rejection before training, not more adapter capacity.
+
+### Unseen-Receiver Inference Audit
+
+The same `union ck25` Adapter was applied to seven unseen receivers. First, an
+all-ones spatial gate removed much of the ball and collision motion, but every
+receiver became visibly washed out. This is not acceptable preservation.
+
+We then built an inference-only gate from the original generated video: a
+strict red-object detector plus local frame-difference motion, without using a
+counterfactual video. Gate coverage was reduced to 4.5%--9.3%. The result was
+better but still mixed:
+
+| unseen receiver group | result with automatic local gate |
+| --- | --- |
+| blue cups | ball reduced, receiver geometry changes |
+| yellow cups | repeated red remnants and blur |
+| silver tins | red ball persists and tins move |
+| blue cans | mostly preserved, small target remnants |
+| green pegs | receiver preserved, early red-ball remnant |
+| yellow pins | receiver mostly preserved, late red remnant |
+| white pawns | mostly preserved, small late remnant |
+
+This separates two effects: the Adapter can transfer the deletion behavior, but
+automatic gate quality controls whether that behavior is local or destructive.
+The next method step is therefore not a larger Adapter. It is a conservative
+gate-confidence rule: reject or weaken gates with broad color detections or
+unstable temporal tracks, and measure the tradeoff explicitly.
