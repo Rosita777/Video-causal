@@ -63,12 +63,14 @@ def build_manifest_items(
     limit: int | None,
     baseline: str,
     explicit_seeds: list[int] | None = None,
+    start_index: int = 0,
 ) -> list[dict[str, object]]:
-    selected = prompts[:limit] if limit is not None else prompts
+    selected = prompts[start_index : start_index + limit] if limit is not None else prompts[start_index:]
     items: list[dict[str, object]] = []
     video_dir = output_dir / "videos"
-    for index, item in enumerate(selected):
-        seed = explicit_seeds[index] if explicit_seeds is not None else base_seed + index
+    for local_index, item in enumerate(selected):
+        index = start_index + local_index
+        seed = explicit_seeds[local_index] if explicit_seeds is not None else base_seed + index
         prompt_slug = slugify(item["prompt"])
         manifest_item: dict[str, object] = {
             "index": index,
@@ -349,6 +351,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--attention-suppression-strength", type=float, default=20.0)
     parser.add_argument("--limit", type=int)
+    parser.add_argument("--start-index", type=int, default=0)
     parser.add_argument("--skip-existing", action="store_true")
     parser.add_argument("--enable-model-cpu-offload", action="store_true")
     parser.add_argument("--enable-sequential-cpu-offload", action="store_true")
@@ -364,6 +367,8 @@ def main() -> int:
 
     if args.limit is not None and args.limit <= 0:
         parser.error("--limit must be positive")
+    if args.start_index < 0:
+        parser.error("--start-index must be non-negative")
     if args.steps <= 0:
         parser.error("--steps must be positive")
     if args.num_frames <= 0:
@@ -395,7 +400,7 @@ def main() -> int:
             parser.error(f"--attention-gate-dir does not exist: {args.attention_gate_dir}")
 
     prompts = parse_prompt_file(args.prompts)
-    selected_count = len(prompts[: args.limit] if args.limit is not None else prompts)
+    selected_count = len(prompts[args.start_index : args.start_index + args.limit] if args.limit is not None else prompts[args.start_index:])
     if args.seeds is not None and len(args.seeds) != selected_count:
         parser.error(f"--seeds contains {len(args.seeds)} values but {selected_count} prompts were selected")
     generation = build_generation_config(args)
@@ -406,6 +411,7 @@ def main() -> int:
         args.limit,
         args.baseline,
         explicit_seeds=args.seeds,
+        start_index=args.start_index,
     )
 
     if not args.dry_run:

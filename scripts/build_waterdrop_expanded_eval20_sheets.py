@@ -11,7 +11,7 @@ import imageio.v2 as imageio
 import numpy as np
 from PIL import Image, ImageDraw
 
-from evaluate_waterdrop_expanded_eval20 import METHOD_DIRS, one_match
+from evaluate_waterdrop_expanded_eval20 import one_match
 
 
 FRAME_INDICES = [0, 8, 16, 24, 32, 40, 48]
@@ -30,21 +30,24 @@ def main() -> None:
     parser.add_argument("--repo-root", type=Path, default=Path("."))
     parser.add_argument("--manifest", type=Path, default=Path("data/waterdrop_dual_traj_eval20.csv"))
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--base-dir", type=Path, required=True)
+    parser.add_argument("--adapter-dir", type=Path, required=True)
     args = parser.parse_args()
 
     root = args.repo_root.resolve()
     manifest = args.manifest if args.manifest.is_absolute() else root / args.manifest
     output_dir = args.output_dir if args.output_dir.is_absolute() else root / args.output_dir
+    base_dir = args.base_dir if args.base_dir.is_absolute() else root / args.base_dir
+    adapter_dir = args.adapter_dir if args.adapter_dir.is_absolute() else root / args.adapter_dir
     output_dir.mkdir(parents=True, exist_ok=True)
     with manifest.open(newline="", encoding="utf-8") as handle:
         cases = list(csv.DictReader(handle))
 
     for case in cases:
-        paths = [("frozen_base", root / case["video_path"])]
-        paths.extend(
-            (method, one_match(root / method_dir, f"{case['eval_index']}_*.mp4"))
-            for method, method_dir in METHOD_DIRS.items()
-        )
+        paths = [
+            ("frozen_base", one_match(base_dir, f"{case['eval_index']}_*.mp4")),
+            ("method_v1", one_match(adapter_dir, f"{case['eval_index']}_*.mp4")),
+        ]
         videos = [(label, load_video(path)) for label, path in paths]
         cell_width = 208
         cell_height = round(videos[0][1].shape[1] * cell_width / videos[0][1].shape[2])

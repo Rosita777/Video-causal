@@ -12,7 +12,7 @@ import imageio.v3 as iio
 import numpy as np
 
 
-METHOD_DIRS = {
+DEFAULT_METHOD_DIRS = {
     "plain": "outputs/waterdrop_plain_lora_100_eval20/videos",
     "dual_traj": "outputs/waterdrop_dual_traj_bg1_lora_100_eval20/videos",
     "dual_traj_scale075": "outputs/waterdrop_dual_traj_bg1_lora_100_scale075_eval20/videos",
@@ -50,7 +50,19 @@ def main() -> None:
     parser.add_argument("--repo-root", type=Path, default=Path("."))
     parser.add_argument("--manifest", type=Path, default=Path("data/waterdrop_dual_traj_eval20.csv"))
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--base-dir", type=Path, help="Directory containing the frozen-base videos.")
+    parser.add_argument("--adapter-dir", type=Path, help="Directory containing the new adapter videos.")
+    parser.add_argument("--legacy-plain-dir", type=Path, help="Optional legacy plain-LoRA directory.")
     args = parser.parse_args()
+
+    method_dirs = dict(DEFAULT_METHOD_DIRS)
+    if args.base_dir is not None:
+        method_dirs["plain"] = args.base_dir
+    if args.adapter_dir is not None:
+        method_dirs["dual_traj_scale075"] = args.adapter_dir
+        method_dirs["dual_traj"] = args.adapter_dir
+    if args.legacy_plain_dir is not None:
+        method_dirs["plain"] = args.legacy_plain_dir
 
     root = args.repo_root.resolve()
     manifest = args.manifest if args.manifest.is_absolute() else root / args.manifest
@@ -63,7 +75,7 @@ def main() -> None:
         base_path = root / case["video_path"]
         base = load_video(base_path)
         base_change = post_change_mae(base)
-        for method, method_dir in METHOD_DIRS.items():
+        for method, method_dir in method_dirs.items():
             video_path = one_match(root / method_dir, f"{case['eval_index']}_*.mp4")
             candidate = load_video(video_path)
             candidate_change = post_change_mae(candidate)
@@ -99,7 +111,7 @@ def main() -> None:
                 "mean_post_change_suppression_percent": f"{np.mean([float(r['post_change_suppression_percent']) for r in rows]):.2f}",
             }
         )
-    for method in METHOD_DIRS:
+    for method in method_dirs:
         rows = [row for row in raw_rows if row["method"] == method]
         summary_rows.append(
             {
