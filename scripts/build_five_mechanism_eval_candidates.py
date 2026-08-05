@@ -299,6 +299,54 @@ def simple_smoke_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
     return selected
 
 
+def ink_stain_smoke_rows() -> list[dict[str, str]]:
+    receivers = [
+        ("watercolor_paper", "a sheet of white watercolor paper"),
+        ("blotting_paper", "a sheet of cream blotting paper"),
+    ]
+    footprint = "a dark blue circular stain spreads outward and remains"
+    rows = []
+    for index, (family, receiver) in enumerate(receivers):
+        prompt = (
+            f"Fixed-camera realistic macro video. At first {receiver} is clean and blank. "
+            f"One large blue ink droplet falls onto its center. Only after contact, {footprint}."
+        )
+        rows.append(
+            {
+                "candidate_id": f"fiveevalink{index:03d}",
+                "mechanism": "ink_droplet_stain",
+                "mechanism_index": str(index),
+                "target_concept": "one large blue ink droplet",
+                "receiver_family": family,
+                "receiver": receiver,
+                "expected_footprint": footprint,
+                "prompt": prompt,
+                "generation_repetitions": "1",
+                "candidate_status": "pending_mixed_v2_wan_and_cog5b_screen",
+                "intended_split": "evaluation_candidate_only",
+            }
+        )
+    return rows
+
+
+def mixed_smoke_rows_v2(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    simple = simple_smoke_rows(rows)
+    selected = []
+    for mechanism in ["waterdrop_impact", "blue_ball_particles"]:
+        selected.extend(row for row in simple if row["mechanism"] == mechanism)
+    for mechanism in ["red_ball_collision", "steel_ball_fracture"]:
+        selected.extend(row for row in smoke_rows(rows) if row["mechanism"] == mechanism)
+    selected.extend(ink_stain_smoke_rows())
+    order = {
+        "waterdrop_impact": 0,
+        "red_ball_collision": 1,
+        "steel_ball_fracture": 2,
+        "blue_ball_particles": 3,
+        "ink_droplet_stain": 4,
+    }
+    return sorted(selected, key=lambda row: (order[row["mechanism"]], row["candidate_id"]))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-csv", type=Path, default=Path("data/five_mechanism_eval_candidates_v0.csv"))
@@ -306,6 +354,8 @@ def main() -> int:
     parser.add_argument("--output-smoke-prompts", type=Path, default=Path("prompts/five_mechanism_eval_smoke10_v0.prompts"))
     parser.add_argument("--output-simple-smoke-csv", type=Path, default=Path("data/five_mechanism_eval_smoke10_simple_v1.csv"))
     parser.add_argument("--output-simple-smoke-prompts", type=Path, default=Path("prompts/five_mechanism_eval_smoke10_simple_v1.prompts"))
+    parser.add_argument("--output-mixed-smoke-csv", type=Path, default=Path("data/five_mechanism_eval_smoke10_mixed_v2.csv"))
+    parser.add_argument("--output-mixed-smoke-prompts", type=Path, default=Path("prompts/five_mechanism_eval_smoke10_mixed_v2.prompts"))
     args = parser.parse_args()
     rows = build_rows()
     write_csv(args.output_csv, rows)
@@ -314,6 +364,9 @@ def main() -> int:
     simple_rows = simple_smoke_rows(rows)
     write_csv(args.output_simple_smoke_csv, simple_rows)
     write_prompts(args.output_simple_smoke_prompts, simple_rows)
+    mixed_rows = mixed_smoke_rows_v2(rows)
+    write_csv(args.output_mixed_smoke_csv, mixed_rows)
+    write_prompts(args.output_mixed_smoke_prompts, mixed_rows)
     print(f"Wrote {len(rows)} candidates across {len(MECHANISMS)} mechanisms")
     return 0
 

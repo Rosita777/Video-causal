@@ -1,6 +1,13 @@
 from collections import Counter, defaultdict
 
-from scripts.build_five_mechanism_eval_candidates import MECHANISMS, build_rows, simple_smoke_rows, smoke_rows
+from scripts.build_five_mechanism_eval_candidates import (
+    MECHANISMS,
+    build_rows,
+    ink_stain_smoke_rows,
+    mixed_smoke_rows_v2,
+    simple_smoke_rows,
+    smoke_rows,
+)
 
 
 def test_builds_balanced_candidate_pool():
@@ -46,3 +53,18 @@ def test_simple_smoke_uses_short_prompts_and_high_contrast_surfaces():
     assert max(len(row["prompt"].split()) for row in rows) < 35
     particle_receivers = [row["receiver"] for row in rows if row["mechanism"] == "blue_ball_particles"]
     assert all("white sand" not in receiver for receiver in particle_receivers)
+
+
+def test_mixed_v2_replaces_trace_with_ink_stain():
+    rows = mixed_smoke_rows_v2(build_rows())
+
+    assert len(rows) == 10
+    assert Counter(row["mechanism"] for row in rows) == {
+        "waterdrop_impact": 2,
+        "red_ball_collision": 2,
+        "steel_ball_fracture": 2,
+        "blue_ball_particles": 2,
+        "ink_droplet_stain": 2,
+    }
+    assert all(row["mechanism"] != "toy_car_trace" for row in rows)
+    assert all("Only after contact" in row["prompt"] for row in ink_stain_smoke_rows())
