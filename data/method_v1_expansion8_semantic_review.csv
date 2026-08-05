@@ -1,0 +1,9 @@
+backbone,candidate_id,mechanism,target_visible,footprint_visible,temporal_order_clear,video_quality_ok,clean_source_valid,notes
+wan,methodv1water000,liquid_impact,yes,yes,no,yes,no,Ripples are already present in the first frame, so the causal order is invalid.
+wan,methodv1water001,liquid_impact,yes,yes,yes,yes,yes,The ice cube descends into initially still water and produces a post-contact splash and ripples.
+wan,methodv1collision000,toppling_collision,yes,yes,partial,yes,partial,The wooden blocks topple and the red ball appears, but the exact contact moment is partly obscured.
+wan,methodv1collision001,toppling_collision,yes,yes,yes,yes,yes,The wooden cylinder contacts the row and the blocks fall afterward.
+wan,methodv1fracture000,brittle_fracture,yes,yes,yes,yes,yes,The wooden mallet strikes intact glass and cracks and fragments follow.
+wan,methodv1fracture001,brittle_fracture,yes,yes,yes,yes,yes,The metal hammer strikes intact glass and a clear fracture pattern follows.
+wan,methodv1powder000,powder_impact,yes,yes,yes,yes,yes,The apple falls onto still flour and a strong flour burst appears after contact.
+wan,methodv1powder001,powder_impact,yes,yes,yes,yes,yes,The wooden cube falls into still flour and a post-contact flour plume appears.
