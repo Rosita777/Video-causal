@@ -1,0 +1,21 @@
+backbone,candidate_id,mechanism,target_visible,footprint_visible,temporal_order_clear,video_quality_ok,clean_source_valid,notes
+wan,fiveeval000,waterdrop_impact,yes,yes,yes,yes,yes,Clear droplet impact and expanding ripples.
+wan,fiveeval001,waterdrop_impact,yes,yes,yes,yes,yes,Clear droplet impact and expanding ripples.
+wan,fiveeval030,red_ball_collision,yes,no,no,yes,no,Ball moves around the receivers but no receiver falls.
+wan,fiveeval031,red_ball_collision,yes,no,no,partial,no,A hand appears and the receivers do not fall.
+wan,fiveeval060,steel_ball_fracture,yes,yes,yes,yes,yes,Impact produces visible fragments although the glass later looks intact again.
+wan,fiveeval061,steel_ball_fracture,yes,partial,partial,partial,no,The black ball and receiver merge into an ambiguous fractured object.
+wan,fiveeval091,blue_ball_particles,yes,yes,yes,yes,yes,Blue ball impact produces visible scatter and a persistent dark crater.
+wan,fiveeval092,blue_ball_particles,yes,no,no,yes,no,Blue ball rests on red sand without a clear impact footprint.
+wan,fiveeval121,toy_car_trace,yes,yes,no,yes,no,Wheel tracks already exist before the car moves.
+wan,fiveeval122,toy_car_trace,yes,yes,no,yes,no,Wheel tracks already exist before the car moves.
+cogvideox,fiveeval000,waterdrop_impact,yes,yes,yes,yes,yes,Clear droplet impact and expanding ripples.
+cogvideox,fiveeval001,waterdrop_impact,yes,yes,yes,yes,yes,Clear droplet impact and expanding ripples.
+cogvideox,fiveeval030,red_ball_collision,yes,no,no,no,no,Receivers are absent and colored balls appear only near the end.
+cogvideox,fiveeval031,red_ball_collision,no,no,no,yes,no,Three blocks remain static and the red ball is absent.
+cogvideox,fiveeval060,steel_ball_fracture,yes,no,no,no,no,An oversized black ball occludes the scene and no fracture appears.
+cogvideox,fiveeval061,steel_ball_fracture,yes,partial,no,no,no,Receiver is absent and scattered black marks are not a clear fracture.
+cogvideox,fiveeval091,blue_ball_particles,yes,yes,partial,yes,borderline,A crater develops but the ball does not visibly fall into the surface.
+cogvideox,fiveeval092,blue_ball_particles,yes,no,no,no,no,The ball turns into text-like artifacts instead of producing a crater.
+cogvideox,fiveeval121,toy_car_trace,yes,yes,no,no,no,Tracks and text artifacts preexist while the car stays static.
+cogvideox,fiveeval122,toy_car_trace,yes,yes,no,yes,no,Tracks preexist while the car barely moves.
