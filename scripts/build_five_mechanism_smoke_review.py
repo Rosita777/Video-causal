@@ -84,6 +84,35 @@ def build_rows(
 
 
 def attach_sheets(rows: list[dict[str, str]], output_dir: Path, project_root: Path) -> None:
+    from PIL import Image, ImageDraw
+
+    def av_strip(video_path: Path, output_path: Path) -> Path | None:
+        try:
+            import av
+        except ImportError:
+            return None
+        if not video_path.exists():
+            return None
+        with av.open(str(video_path)) as container:
+            frames = [frame.to_image().convert("RGB") for frame in container.decode(video=0)]
+        if not frames:
+            return None
+        indices = [round(i * (len(frames) - 1) / 11) for i in range(12)]
+        thumb_w, thumb_h, label_h = 160, 96, 18
+        sheet = Image.new("RGB", (thumb_w * len(indices), thumb_h + label_h), "white")
+        draw = ImageDraw.Draw(sheet)
+        for position, index in enumerate(indices):
+            image = frames[index]
+            image.thumbnail((thumb_w, thumb_h))
+            canvas = Image.new("RGB", (thumb_w, thumb_h), "white")
+            canvas.paste(image, ((thumb_w - image.width) // 2, (thumb_h - image.height) // 2))
+            x = position * thumb_w
+            sheet.paste(canvas, (x, label_h))
+            draw.text((x + 4, 3), f"t={position + 1}/12", fill=(80, 80, 80))
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        sheet.save(output_path, quality=92)
+        return output_path
+
     sheets = output_dir / "contact_sheets"
     for row in rows:
         sheet_path = sheets / f"{row['backbone']}_{row['candidate_id']}.jpg"
@@ -95,6 +124,11 @@ def attach_sheets(rows: list[dict[str, str]], output_dir: Path, project_root: Pa
             thumb_width=160,
             thumb_height=96,
         )
+        if built is None:
+            video_path = Path(row["video_path"])
+            if not video_path.is_absolute():
+                video_path = project_root / video_path
+            built = av_strip(video_path, sheet_path)
         if built is None:
             row["notes"] = "contact sheet unavailable"
             continue
