@@ -32,6 +32,12 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--base-dir", type=Path, required=True)
     parser.add_argument("--adapter-dir", type=Path, required=True)
+    parser.add_argument(
+        "--index",
+        action="append",
+        default=[],
+        help="Only render this eval index; may be repeated.",
+    )
     args = parser.parse_args()
 
     root = args.repo_root.resolve()
@@ -42,6 +48,9 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     with manifest.open(newline="", encoding="utf-8") as handle:
         cases = list(csv.DictReader(handle))
+    if args.index:
+        selected = set(args.index)
+        cases = [case for case in cases if case["eval_index"] in selected]
 
     for case in cases:
         paths = [

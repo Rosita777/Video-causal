@@ -53,6 +53,12 @@ def main() -> None:
     parser.add_argument("--base-dir", type=Path, help="Directory containing the frozen-base videos.")
     parser.add_argument("--adapter-dir", type=Path, help="Directory containing the new adapter videos.")
     parser.add_argument("--legacy-plain-dir", type=Path, help="Optional legacy plain-LoRA directory.")
+    parser.add_argument(
+        "--index",
+        action="append",
+        default=[],
+        help="Only evaluate this eval index; may be repeated.",
+    )
     args = parser.parse_args()
 
     method_dirs = dict(DEFAULT_METHOD_DIRS)
@@ -69,6 +75,9 @@ def main() -> None:
     output_dir = args.output_dir if args.output_dir.is_absolute() else root / args.output_dir
     with manifest.open(newline="", encoding="utf-8") as handle:
         cases = list(csv.DictReader(handle))
+    if args.index:
+        selected = set(args.index)
+        cases = [case for case in cases if case["eval_index"] in selected]
 
     raw_rows: list[dict[str, str]] = []
     for case in cases:
