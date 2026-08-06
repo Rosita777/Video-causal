@@ -1,0 +1,5 @@
+index,source_object,receiver,base_chain_valid,adapter_object_result,adapter_footprint_result,preservation_result,overall
+000,red apple,pond,yes,mostly removed,strongly reduced,mild appearance shift,cross-object erasure
+001,green apple,glass water tank,yes,remains,mostly removed,receiver geometry rewritten,partial with major side effect
+002,gray stone,pond,yes,mostly removed,strongly reduced,mild appearance shift,cross-object erasure
+003,dark stone,ceramic water basin,yes,mostly removed,strongly reduced,receiver mostly preserved,cross-object erasure
