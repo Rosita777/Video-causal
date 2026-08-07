@@ -62,3 +62,36 @@ def test_parallel_wan_jobs_dry_run_expands_clean_jobs(tmp_path):
     ]
     assert "--enable-sequential-cpu-offload" in manifest["jobs"][0]["command"]
     assert "--vae-tiling" in manifest["jobs"][0]["command"]
+
+
+def test_parallel_wan_jobs_supports_one_fixed_seed_for_all_prompts(tmp_path):
+    prompts = tmp_path / "prompts.txt"
+    prompts.write_text(
+        "Prompt zero. | pebble | ripples\nPrompt one. | ball | movement\n",
+        encoding="utf-8",
+    )
+    output_root = tmp_path / "wan_fixed_seed"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(PROJECT_ROOT / "scripts" / "run_parallel_wan_jobs.py"),
+            "--prompts",
+            str(prompts),
+            "--output-root",
+            str(output_root),
+            "--gpus",
+            "2,3",
+            "--fixed-seed",
+            "12000",
+            "--dry-run",
+        ],
+        cwd=PROJECT_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    manifest = json.loads((output_root / "parallel_job_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["generation"]["fixed_seed"] == 12000
+    assert [row["seed"] for row in manifest["jobs"]] == [12000, 12000]

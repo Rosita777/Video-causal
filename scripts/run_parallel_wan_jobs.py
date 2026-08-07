@@ -115,7 +115,7 @@ def build_jobs(args: argparse.Namespace) -> list[dict[str, object]]:
     for job_index, source_index in enumerate(source_indices):
         selected_prompt_index = source_indices.index(source_index)
         slot_name, gpu = slots[job_index % len(slots)]
-        seed = args.seed + source_index
+        seed = args.fixed_seed if args.fixed_seed is not None else args.seed + source_index
         output_dir = args.output_root / "clean_shards" / f"prompt_{source_index:03d}"
         job_id = f"{job_index:03d}_clean_prompt_{source_index:03d}"
         jobs.append(
@@ -150,8 +150,9 @@ def write_manifest(args: argparse.Namespace, jobs: list[dict[str, object]]) -> P
         "gpus": args.gpus,
         "slots_per_gpu": args.slots_per_gpu,
         "max_concurrent_jobs": len(args.gpus) * args.slots_per_gpu,
-        "generation": {
-            "seed": args.seed,
+            "generation": {
+                "seed": args.seed,
+                "fixed_seed": args.fixed_seed,
             "num_inference_steps": args.steps,
             "guidance_scale": args.guidance_scale,
             "num_frames": args.num_frames,
@@ -230,6 +231,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--source-indices")
     parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--fixed-seed",
+        type=int,
+        help="Use exactly this seed for every prompt instead of seed + source index.",
+    )
     parser.add_argument("--steps", type=int, default=20)
     parser.add_argument("--guidance-scale", type=float, default=5.0)
     parser.add_argument("--num-frames", type=int, default=49)
