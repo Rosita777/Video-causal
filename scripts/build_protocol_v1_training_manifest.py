@@ -14,6 +14,7 @@ import numpy as np
 FIELDS = [
     "protocol_version",
     "sample_id",
+    "scene_id",
     "training_role",
     "mechanism",
     "split",
@@ -71,7 +72,9 @@ def write_static_video(path: Path, frame: np.ndarray, frame_count: int, fps: flo
 
 
 def with_defaults(row: dict[str, str]) -> dict[str, str]:
-    return {field: row.get(field, "") for field in FIELDS}
+    values = {field: row.get(field, "") for field in FIELDS}
+    values["scene_id"] = row.get("scene_id") or row["sample_id"]
+    return values
 
 
 def main() -> None:
