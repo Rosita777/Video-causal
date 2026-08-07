@@ -1,4 +1,4 @@
-# Method v1: dual-trajectory causal-footprint LoRA
+# Method v1: mask-weighted dual-trajectory causal-footprint LoRA
 
 ## Scope
 
@@ -34,13 +34,15 @@ L = L_remove + lambda_bg * L_background
 
 `L_pair` explicitly separates the adapter prediction from the factual causal target inside `M`; `L_redirect` teaches the adapter to redirect a partially formed factual chain toward the counterfactual endpoint.
 
+In the frozen Protocol v1 configuration, the remove-flow loss is weighted by `1 + 8M`. This keeps the causal residual from being diluted by a full-frame average. The background and preserve terms still constrain the rest of the scene.
+
 ## Default operating point
 
 - backbone: Wan2.1-T2V-1.3B
 - LoRA: rank 16, alpha 16, learning rate 1e-4
 - background weight: 1.0
 - pair weight: 1.0
-- redirect training weight: 0.05
+- redirect training weight: 0.5 for Protocol v1
 - inference LoRA scale: 0.75 by default; 1.0 is the maximum-erasure setting
 
 ## Evidence and limitation

@@ -1,0 +1,101 @@
+{
+  "protocol_version": "v1",
+  "fixed_seed": 12000,
+  "clean_prefix_frames": 16,
+  "video_frames": 49,
+  "fps": 8,
+  "mechanisms": {
+    "water_impact": {
+      "name": "Water impact",
+      "train_sources": [
+        {"id": "water_droplet", "name": "one large clear water droplet", "motion": "falls vertically from above"},
+        {"id": "ice_cube", "name": "one small clear ice cube", "motion": "falls vertically from above"},
+        {"id": "red_apple", "name": "one small red apple", "motion": "falls vertically from above"}
+      ],
+      "test_sources": [
+        {"id": "gray_stone", "name": "one smooth gray stone", "motion": "falls vertically from above"},
+        {"id": "yellow_ball", "name": "one small yellow rubber ball", "motion": "falls vertically from above"}
+      ],
+      "train_receivers": [
+        {"id": "shallow_pond", "name": "a calm shallow pond", "clean_state": "its water surface is flat and completely still"},
+        {"id": "white_basin", "name": "a wide white ceramic basin filled with water", "clean_state": "its water surface is flat and completely still"},
+        {"id": "glass_tank", "name": "a clear rectangular glass tank filled with water", "clean_state": "its water surface is flat and completely still"}
+      ],
+      "test_receivers": [
+        {"id": "steel_sink", "name": "a stainless-steel sink filled with water", "clean_state": "its water surface is flat and completely still"},
+        {"id": "blue_tub", "name": "a wide blue plastic tub filled with water", "clean_state": "its water surface is flat and completely still"}
+      ],
+      "footprint": "a brief splash and expanding circular ripples",
+      "counterfactual_state": "the water remains flat and still, with no incoming object, splash, cavity, or ripple"
+    },
+    "rigid_collision": {
+      "name": "Rigid collision",
+      "train_sources": [
+        {"id": "red_ball", "name": "one small red rubber ball", "motion": "rolls from left to right along the tabletop"},
+        {"id": "wood_cylinder", "name": "one short wooden cylinder", "motion": "rolls from left to right along the tabletop"},
+        {"id": "metal_puck", "name": "one silver metal puck", "motion": "slides from left to right along the tabletop"}
+      ],
+      "test_sources": [
+        {"id": "wood_cube", "name": "one small blue wooden cube", "motion": "slides from left to right along the tabletop"},
+        {"id": "toy_car", "name": "one small yellow toy car", "motion": "rolls from left to right along the tabletop"}
+      ],
+      "train_receivers": [
+        {"id": "wood_blocks", "name": "three plain wooden blocks standing upright", "clean_state": "all three blocks are upright and motionless"},
+        {"id": "bowling_pins", "name": "four small white plastic bowling pins", "clean_state": "all four pins are upright and motionless"},
+        {"id": "cardboard_boxes", "name": "three small plain cardboard boxes", "clean_state": "all three boxes are upright and motionless"}
+      ],
+      "test_receivers": [
+        {"id": "aluminum_cans", "name": "four empty aluminum cans standing upright", "clean_state": "all four cans are upright and motionless"},
+        {"id": "plastic_cups", "name": "four rigid plastic cups standing upright", "clean_state": "all four cups are upright and motionless"}
+      ],
+      "footprint": "a tipped contacted object and visible displacement of nearby objects",
+      "counterfactual_state": "the source object is absent and every receiver object remains upright and motionless"
+    },
+    "brittle_fracture": {
+      "name": "Brittle fracture",
+      "train_sources": [
+        {"id": "wood_mallet", "name": "one small wooden mallet", "motion": "moves into frame from above"},
+        {"id": "metal_hammer", "name": "one small metal hammer", "motion": "moves into frame from above"},
+        {"id": "steel_ball", "name": "one polished steel ball", "motion": "falls vertically from above"}
+      ],
+      "test_sources": [
+        {"id": "gray_stone", "name": "one smooth gray stone", "motion": "falls vertically from above"},
+        {"id": "wood_baton", "name": "one short wooden baton", "motion": "moves into frame from above"}
+      ],
+      "train_receivers": [
+        {"id": "glass_pane", "name": "one thin clear glass pane held upright", "clean_state": "the pane is intact, clear, and motionless"},
+        {"id": "wine_glass", "name": "one empty clear wine glass on a table", "clean_state": "the glass is intact and motionless"},
+        {"id": "glass_bottle", "name": "one empty clear glass bottle on a table", "clean_state": "the bottle is intact and motionless"}
+      ],
+      "test_receivers": [
+        {"id": "glass_bowl", "name": "one empty clear glass bowl on a table", "clean_state": "the bowl is intact and motionless"},
+        {"id": "glass_jar", "name": "one empty clear glass jar on a table", "clean_state": "the jar is intact and motionless"}
+      ],
+      "footprint": "spreading visible cracks and several separated glass fragments",
+      "counterfactual_state": "the source object is absent and the glass receiver remains intact, uncracked, and motionless"
+    },
+    "powder_impact": {
+      "name": "Powder impact",
+      "train_sources": [
+        {"id": "red_apple", "name": "one small red apple", "motion": "falls vertically from above"},
+        {"id": "wood_cube", "name": "one small wooden cube", "motion": "falls vertically from above"},
+        {"id": "steel_ball", "name": "one polished steel ball", "motion": "falls vertically from above"}
+      ],
+      "test_sources": [
+        {"id": "gray_stone", "name": "one smooth gray stone", "motion": "falls vertically from above"},
+        {"id": "yellow_ball", "name": "one small yellow rubber ball", "motion": "falls vertically from above"}
+      ],
+      "train_receivers": [
+        {"id": "flour", "name": "a shallow dark tray filled with white flour", "clean_state": "the powder surface is flat, smooth, and motionless"},
+        {"id": "cornstarch", "name": "a shallow dark tray filled with white cornstarch", "clean_state": "the powder surface is flat, smooth, and motionless"},
+        {"id": "fine_sand", "name": "a shallow dark tray filled with fine dry sand", "clean_state": "the granular surface is flat, smooth, and motionless"}
+      ],
+      "test_receivers": [
+        {"id": "powdered_sugar", "name": "a shallow dark tray filled with white powdered sugar", "clean_state": "the powder surface is flat, smooth, and motionless"},
+        {"id": "cocoa_powder", "name": "a shallow light-gray tray filled with cocoa powder", "clean_state": "the powder surface is flat, smooth, and motionless"}
+      ],
+      "footprint": "a short powder plume and a visible impact crater",
+      "counterfactual_state": "the source object is absent and the powder surface remains flat, smooth, and undisturbed"
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "protocol_version": "v1",
+  "counts": {
+    "train_erase": 144,
+    "preserve": 36,
+    "eval": 80
+  },
+  "per_mechanism": {
+    "water_impact": {
+      "train_erase": 36,
+      "eval": 20
+    },
+    "rigid_collision": {
+      "train_erase": 36,
+      "eval": 20
+    },
+    "brittle_fracture": {
+      "train_erase": 36,
+      "eval": 20
+    },
+    "powder_impact": {
+      "train_erase": 36,
+      "eval": 20
+    }
+  },
+  "checks": {
+    "unique_sample_ids": true,
+    "unique_prompts": true,
+    "source_train_test_disjoint_within_mechanism": true,
+    "receiver_train_test_disjoint_within_mechanism": true,
+    "eval_groups_five_each": true
+  },
+  "sha256": {
+    "train_erase_manifest": "81cb210051be69f8614bb7d85d8dd96d934a263d16f2a93779a61ebd8a6e4745",
+    "preserve_manifest": "05f1f2617ef1bb8a0706924856ebddb673de8b8ed32473c5b27cb4a4cfdd82c3",
+    "eval_manifest": "2eb033e6e1f514d4aab75904a35024f4b59c7e39e37396b45050593197e52b67",
+    "train_erase_prompts": "0a4401ef0ea7333508261c42de2136d765fc4555845990b2967fcecf912593c9",
+    "preserve_prompts": "401aa75e793a5abb648b6869964a23ae190f6c37bbaedd81ee5d7e01d50f7310",
+    "eval_prompts": "acd7ea65262f3861e2ff08ae6ec54720f4c2e698638ac123915650ad3db71766"
+  }
+}
