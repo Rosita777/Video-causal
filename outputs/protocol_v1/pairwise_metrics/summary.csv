@@ -1,0 +1,14 @@
+group,count,mean_footprint_suppression_percent,mean_early_divergence_mae,mean_ours_late_frame_mae
+ALL,80,82.91,0.12204677,0.12775691
+mechanism=brittle_fracture,20,85.24,0.06211747,0.06718141
+mechanism=powder_impact,20,65.12,0.22433637,0.22360196
+mechanism=rigid_collision,20,91.35,0.10165346,0.09766827
+mechanism=water_impact,20,89.94,0.10007977,0.12257599
+generalization_group=seen_seen,20,76.75,0.12839101,0.13472527
+generalization_group=seen_unseen,20,84.10,0.11851406,0.12171530
+generalization_group=unseen_seen,20,84.53,0.12610219,0.13332487
+generalization_group=unseen_unseen,20,86.28,0.11517980,0.12126218
+source_seen=no,40,85.40,0.12064100,0.12729353
+source_seen=yes,40,80.42,0.12345254,0.12822028
+receiver_seen=no,40,85.19,0.11684693,0.12148874
+receiver_seen=yes,40,80.64,0.12724660,0.13402507
