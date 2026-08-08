@@ -22,4 +22,10 @@ The first three mechanisms show strong causal-footprint suppression and transfer
 
 These are automatic temporal proxies, not the final erasure score. The next required step is paired contact-sheet review using four labels: source-object removal, footprint removal, receiver preservation, and unrelated-mechanism preservation.
 
+## Initial visual audit
+
+Spot checks show that water impact usually removes both the source and its footprint. Rigid collision is mostly successful but can leave a small source remnant. Brittle fracture often preserves intact glass, although some Original videos do not generate a valid fracture and must be reported as base-model failures. Powder impact frequently suppresses the powder response while leaving the falling object visible, so its 65.12% temporal score overstates complete erasure quality.
+
+The 82.91% aggregate must therefore be reported only as a temporal suppression proxy. Final claims require separate human labels for source removal, footprint removal, receiver preservation, and Original validity.
+
 Raw rows are in `outputs/protocol_v1/pairwise_metrics/pairwise_metrics.csv`; grouped values are in `outputs/protocol_v1/pairwise_metrics/summary.csv`.
