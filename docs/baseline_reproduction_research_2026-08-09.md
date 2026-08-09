@@ -35,7 +35,7 @@ VideoEraser is training-free and has an official CogVideoX implementation. It ha
 
 The paper's default parameters are `alpha=0.01`, `w0=1000`, `sm=0.5`, `v0=0`, `beta=0.5`, and `theta=1`. The CogVideoX experiment uses 50 denoising steps, guidance scale 6, 720x480, and 50 frames. The repository's CogVideoX script uses 49 frames and the same DPM scheduler family.
 
-For our protocol, the clean reproduction is to run the official CogVideoX pipeline with each mechanism phrase as `unsafe_concept`, using the same 80 prompts and fixed seeds. We should keep the official settings and record any compatibility patch separately. The current official script has a string/list handling issue in its negative-prompt helper; because the method intends an empty ordinary negative prompt, this should be fixed as a one-line compatibility patch and documented.
+For our protocol, the clean reproduction is to run the official CogVideoX pipeline with each mechanism phrase as `unsafe_concept`, using the same 80 prompts and fixed seeds. A one-prompt smoke test succeeded with the official pipeline unchanged under CogVideoX-2B, torch 2.6.0, and diffusers 0.33.1, so the formal run keeps the official implementation unmodified.
 
 ## Fair comparison protocol
 
