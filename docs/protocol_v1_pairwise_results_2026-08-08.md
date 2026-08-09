@@ -14,6 +14,19 @@ The pairwise temporal proxy measures how much late motion is suppressed by Ours 
 | Brittle fracture | 20 | 85.24% |
 | Powder impact | 20 | 65.12% |
 
+## Negative Prompt baseline
+
+The same paired proxy gives Negative Prompt -3.02% overall suppression, compared with 82.91% for Ours. By mechanism:
+
+| Mechanism | Negative Prompt | Ours |
+| --- | ---: | ---: |
+| Water impact | 25.72% | 89.94% |
+| Rigid collision | 4.82% | 91.35% |
+| Brittle fracture | -27.04% | 85.24% |
+| Powder impact | -15.57% | 65.12% |
+
+Negative values mean the baseline produces more late temporal change than Original rather than suppressing it.
+
 For the fully unseen source and receiver split, suppression is 86.28%. The seen/seen split is 76.75%; the other three split groups are 84.10% to 86.28%.
 
 ## Interpretation
