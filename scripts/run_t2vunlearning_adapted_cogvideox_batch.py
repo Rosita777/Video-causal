@@ -21,6 +21,7 @@ def main() -> int:
     parser.add_argument("--guidance-scale", type=float, default=6.0)
     parser.add_argument("--num-frames", type=int, default=49)
     parser.add_argument("--fps", type=int, default=8)
+    parser.add_argument("--adapter-scale", type=float, default=1.0)
     parser.add_argument("--limit", type=int)
     parser.add_argument("--skip-existing", action="store_true")
     args = parser.parse_args()
@@ -70,7 +71,7 @@ def main() -> int:
             hidden_states, encoder_hidden_states = self.attn(
                 hidden_states, encoder_hidden_states, attention_mask, **kwargs
             )
-            hidden_states = hidden_states + self.adapter(hidden_states)
+            hidden_states = hidden_states + args.adapter_scale * self.adapter(hidden_states)
             return hidden_states, encoder_hidden_states
 
     pipe = CogVideoXPipeline.from_pretrained(args.model, torch_dtype=torch.bfloat16)
@@ -141,6 +142,7 @@ def main() -> int:
             "dtype": "bfloat16",
             "scheduler": "CogVideoXDPMScheduler trailing",
             "adapter_rank": rank,
+            "adapter_scale": args.adapter_scale,
         },
         "items": items,
     }
