@@ -1,0 +1,17 @@
+baseline,mechanism,count,quality_collapse_count,mean_rgb,mean_temporal_frame_mae,mean_early_mae_vs_original,mean_late_mae_vs_original
+negative_prompt,brittle_fracture,20,0,170.3530,5.3128,23.5059,26.6460
+negative_prompt,powder_impact,20,0,146.8124,2.9841,19.9657,29.6320
+negative_prompt,rigid_collision,20,0,180.4477,2.8350,25.0135,24.7527
+negative_prompt,water_impact,20,0,161.0271,11.1971,22.6420,24.6874
+original,brittle_fracture,20,0,185.1671,5.4729,0.0000,0.0000
+original,powder_impact,20,0,156.2276,1.8404,0.0000,0.0000
+original,rigid_collision,20,0,194.7195,2.3920,0.0000,0.0000
+original,water_impact,20,0,170.3664,13.6753,0.0000,0.0000
+t2vunlearning_adapted,brittle_fracture,20,1,80.6423,8.0563,123.5018,105.3437
+t2vunlearning_adapted,powder_impact,20,0,135.5415,2.6686,34.4770,43.2978
+t2vunlearning_adapted,rigid_collision,20,0,184.3845,2.8551,20.4658,21.7019
+t2vunlearning_adapted,water_impact,20,0,146.5634,23.2578,37.6631,36.1879
+videoeraser_official,brittle_fracture,20,0,188.6887,5.5216,33.0879,40.1890
+videoeraser_official,powder_impact,20,0,148.1985,4.2160,43.4824,59.4280
+videoeraser_official,rigid_collision,20,0,201.3244,1.8254,28.7228,30.1510
+videoeraser_official,water_impact,20,0,163.0802,3.2913,37.3705,39.9021
