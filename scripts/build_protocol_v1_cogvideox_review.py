@@ -166,11 +166,15 @@ def main() -> int:
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--protocol-root", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument(
+        "--t2v-root", default="eval_t2vunlearning_adapted"
+    )
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--blind-seed", type=int, default=20260810)
     args = parser.parse_args()
 
     rows = read_csv(args.manifest)
+    ROOTS["t2vunlearning_adapted"] = args.t2v_root
     mechanisms = sorted({row["mechanism"] for row in rows})
     paths = {baseline: {} for baseline in ("original", *BASELINES)}
     for baseline in paths:
