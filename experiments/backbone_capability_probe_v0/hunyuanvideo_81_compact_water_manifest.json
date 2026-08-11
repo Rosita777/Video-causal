@@ -1,0 +1,29 @@
+{
+  "created_at_utc": "2026-08-11T13:09:29.759771+00:00",
+  "baseline": "clean",
+  "model": "models/HunyuanVideo-Diffusers",
+  "dry_run": false,
+  "prompts": "prompts/backbone_capability_probe_compact_v0.prompts",
+  "generation": {
+    "seed": 18000,
+    "num_inference_steps": 30,
+    "guidance_scale": 6.0,
+    "num_frames": 81,
+    "fps": 24,
+    "height": 480,
+    "width": 720,
+    "dtype": "bf16",
+    "enable_model_cpu_offload": false,
+    "vae_tiling": true
+  },
+  "items": [
+    {
+      "index": 0,
+      "prompt": "Locked camera, one continuous shot. For the first two seconds, calm water is perfectly still and no source object is visible. Then a clear water droplet falls from above and hits the center. Only after contact, a small splash appears and circular ripples expand. The background and camera remain unchanged.",
+      "target_concept": "one clear water droplet",
+      "expected_effect": "a small splash and expanding circular ripples",
+      "seed": 18000,
+      "video_path": "outputs/backbone_capability_probe_v0/hunyuanvideo_native81_compact_water/videos/000_locked-camera-one-continuous-shot-for-the-first-two-seconds-calm-water-i_seed18000.mp4"
+    }
+  ]
+}

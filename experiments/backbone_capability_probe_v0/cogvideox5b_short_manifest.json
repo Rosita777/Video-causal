@@ -1,0 +1,64 @@
+{
+  "created_at_utc": "2026-08-11T12:36:32.339208+00:00",
+  "baseline": "clean",
+  "model": "models/CogVideoX-5b",
+  "dry_run": false,
+  "prompts": "prompts/backbone_capability_probe_v0.prompts",
+  "generation": {
+    "seed": 16000,
+    "num_inference_steps": 30,
+    "guidance_scale": 6.0,
+    "num_frames": 49,
+    "fps": 8,
+    "height": 480,
+    "width": 720,
+    "dtype": "bf16",
+    "device": "auto",
+    "enable_model_cpu_offload": false,
+    "enable_sequential_cpu_offload": false,
+    "vae_slicing": true,
+    "vae_tiling": true
+  },
+  "items": [
+    {
+      "index": 0,
+      "prompt": "Fixed-camera realistic close-up: one clear water droplet falls into a calm rain barrel filled with water, making a small splash and circular ripples appear after impact.",
+      "target_concept": "one large clear water droplet",
+      "expected_effect": "a small splash and circular ripples appear after impact",
+      "seed": 16000,
+      "video_path": "outputs/backbone_capability_probe_v0/cogvideox5b/videos/000_fixed-camera-realistic-close-up-one-clear-water-droplet-falls-into-a-cal_seed16000.mp4"
+    },
+    {
+      "index": 1,
+      "prompt": "Fixed side-view video: one red rubber ball rolls into three upright lavender wooden blocks, and the leftmost receiver falls over after contact.",
+      "target_concept": "one small red rubber ball",
+      "expected_effect": "the leftmost receiver falls over after contact",
+      "seed": 16001,
+      "video_path": "outputs/backbone_capability_probe_v0/cogvideox5b/videos/001_fixed-side-view-video-one-red-rubber-ball-rolls-into-three-upright-laven_seed16001.mp4"
+    },
+    {
+      "index": 2,
+      "prompt": "Fixed-camera realistic close-up: one black steel ball drops onto a thin clear glass square; cracks spread from the impact point and small fragments break away.",
+      "target_concept": "one small black steel ball",
+      "expected_effect": "cracks spread from the impact point and small fragments break away",
+      "seed": 16002,
+      "video_path": "outputs/backbone_capability_probe_v0/cogvideox5b/videos/002_fixed-camera-realistic-close-up-one-black-steel-ball-drops-onto-a-thin-c_seed16002.mp4"
+    },
+    {
+      "index": 3,
+      "prompt": "Fixed-camera realistic close-up: one blue rubber ball drops into a shallow tray of fine black sand; sand grains scatter and a round crater remains after impact.",
+      "target_concept": "one small blue rubber ball",
+      "expected_effect": "sand grains scatter and a round crater remains after impact",
+      "seed": 16003,
+      "video_path": "outputs/backbone_capability_probe_v0/cogvideox5b/videos/003_fixed-camera-realistic-close-up-one-blue-rubber-ball-drops-into-a-shallo_seed16003.mp4"
+    },
+    {
+      "index": 4,
+      "prompt": "Fixed-camera realistic video: one yellow toy car drives across a flat bed of fine black sand; two fresh wheel tracks appear only behind the moving car.",
+      "target_concept": "one small yellow toy car",
+      "expected_effect": "two fresh wheel tracks appear only behind the moving car",
+      "seed": 16004,
+      "video_path": "outputs/backbone_capability_probe_v0/cogvideox5b/videos/004_fixed-camera-realistic-video-one-yellow-toy-car-drives-across-a-flat-bed_seed16004.mp4"
+    }
+  ]
+}
