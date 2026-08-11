@@ -30,8 +30,11 @@ Each row contains two prompts:
 - `training_prompt`: the factual condition presented to the adapter, including
   the source, contact, splash, and expanding ripples.
 - `target_generation_prompt`: a target-only prompt used to create the desired
-  dynamic counterfactual video. It keeps mild water movement and shifting
-  reflections, but contains no incoming source or impact-generated footprint.
+  dynamic counterfactual video. It keeps gradual reflection and lighting
+  changes on a smooth water surface, but contains no incoming source or
+  impact-generated footprint. The prompt uses positive descriptions only;
+  forbidden event terms are supplied through the generator's negative-prompt
+  channel because negated event words can still be rendered by T2V models.
 
 Training uses `training_prompt` with the video made from
 `target_generation_prompt`. Pixel alignment between a factual video and its

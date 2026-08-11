@@ -94,27 +94,27 @@ def factual_prompt(source: str, receiver: str, variant: str) -> str:
             "ripples travel outward."
         )
     return (
-        "A simple realistic locked-camera video in one continuous shot. "
-        f"{event} The receiver, camera, lighting, and background remain consistent."
+        "A simple realistic close-up video in one continuous shot. "
+        f"{event} A soft reflected highlight moves slowly from left to right across "
+        "the water and receiver throughout the shot. The viewpoint, receiver, and "
+        "background geometry remain stable."
     )
 
 
 def counterfactual_prompt(receiver: str, variant: str) -> str:
     if variant == "direct":
         motion = (
-            "The water moves gently throughout the shot with subtle natural surface "
-            "undulations and slowly changing reflections."
+            "The water surface stays smooth, level, and undisturbed. A soft reflected "
+            "highlight moves slowly from left to right across the water and receiver."
         )
     else:
         motion = (
-            "Soft ambient air creates mild continuous movement on the water surface, "
-            "while reflected light shifts naturally over time."
+            "The calm level water keeps a smooth surface while reflected light and "
+            "faint ambient highlights move gradually across the scene."
         )
     return (
-        "A simple realistic locked-camera video in one continuous shot showing "
-        f"{receiver}. {motion} Nothing falls into or strikes the water. No impact splash, "
-        "impact cavity, or impact-generated circular wave appears. The receiver, camera, "
-        "lighting, and background remain consistent."
+        "A simple realistic close-up video in one continuous shot showing "
+        f"{receiver}. {motion} The viewpoint, receiver, and background geometry remain stable."
     )
 
 
@@ -216,12 +216,14 @@ def write_csv(path: Path, rows: list[dict[str, str]]) -> None:
         writer.writerows(rows)
 
 
-def write_prompt_file(path: Path, rows: list[dict[str, str]], key: str) -> None:
+def write_prompt_file(
+    path: Path, rows: list[dict[str, str]], key: str, target_concept: str
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as handle:
         for row in rows:
             handle.write(
-                f"{row[key]} | Water impact | "
+                f"{row[key]} | {target_concept} | "
                 f"{row['expected_counterfactual_state']}\n"
             )
 
@@ -235,13 +237,34 @@ def main() -> None:
     train_rows, test_rows = build_rows()
     write_csv(args.data_dir / "train_pairs.csv", train_rows)
     write_csv(args.data_dir / "test_pairs.csv", test_rows)
-    write_prompt_file(args.prompt_dir / "train_factual.prompts", train_rows, "training_prompt")
     write_prompt_file(
-        args.prompt_dir / "train_counterfactual.prompts", train_rows, "target_generation_prompt"
+        args.prompt_dir / "train_factual.prompts", train_rows, "training_prompt", "Water impact"
     )
-    write_prompt_file(args.prompt_dir / "test_factual.prompts", test_rows, "training_prompt")
     write_prompt_file(
-        args.prompt_dir / "test_counterfactual.prompts", test_rows, "target_generation_prompt"
+        args.prompt_dir / "train_counterfactual.prompts",
+        train_rows,
+        "target_generation_prompt",
+        "falling object, water impact, splash, cavity, concentric rings, circular ripples",
+    )
+    write_prompt_file(
+        args.prompt_dir / "test_factual.prompts", test_rows, "training_prompt", "Water impact"
+    )
+    write_prompt_file(
+        args.prompt_dir / "test_counterfactual.prompts",
+        test_rows,
+        "target_generation_prompt",
+        "falling object, water impact, splash, cavity, concentric rings, circular ripples",
+    )
+    receiver_smoke_rows = [
+        row
+        for row in train_rows
+        if row["source_id"] == TRAIN_SOURCES[0][0] and row["prompt_variant"] == "direct"
+    ]
+    write_prompt_file(
+        args.prompt_dir / "train_counterfactual_receiver_smoke.prompts",
+        receiver_smoke_rows,
+        "target_generation_prompt",
+        "falling object, water impact, splash, cavity, concentric rings, circular ripples",
     )
     print(f"Wrote {len(train_rows)} training pairs and {len(test_rows)} test pairs")
 

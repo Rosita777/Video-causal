@@ -46,3 +46,9 @@ def test_training_prompts_and_seeds_are_unique() -> None:
     assert all(
         "first two seconds" not in row["target_generation_prompt"] for row in train_rows
     )
+    banned_target_words = {"falls", "impact", "splash", "cavity", "ripple", "ring"}
+    assert all(
+        not any(word in row["target_generation_prompt"].lower() for word in banned_target_words)
+        for row in train_rows
+    )
+    assert all("camera" not in row["target_generation_prompt"].lower() for row in train_rows)
