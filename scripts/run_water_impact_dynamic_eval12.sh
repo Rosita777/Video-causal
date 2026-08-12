@@ -37,8 +37,11 @@ generate ckpt200_scale0p5 \
 generate ckpt300 \
   --lora-path outputs/water_impact_dynamic_v1/adapter_dynamic_sft_v1/checkpoint-000300 \
   --lora-scale 1.0
+generate preserve_v2_ckpt200_scale1p25 \
+  --lora-path outputs/water_impact_dynamic_v1/adapter_dynamic_sft_preserve_v2/checkpoint-000200 \
+  --lora-scale 1.25
 
-for checkpoint in ckpt200 ckpt200_scale0p5 ckpt300; do
+for checkpoint in ckpt200 ckpt200_scale0p5 ckpt300 preserve_v2_ckpt200_scale1p25; do
   "$PYTHON" scripts/build_paired_video_sheets.py \
     --prompts "$PROMPTS" \
     --base-dir outputs/water_impact_dynamic_v1/eval12_base/videos \
