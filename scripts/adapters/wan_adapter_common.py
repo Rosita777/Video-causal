@@ -30,6 +30,16 @@ DEFAULT_MODEL = "models/Wan2.1-T2V-1.3B-Diffusers"
 PIPELINE_NAME = "WanPipeline"
 
 
+def parse_seed_list(value: str) -> list[int]:
+    try:
+        seeds = [int(part.strip()) for part in value.split(",") if part.strip()]
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("--seeds must be comma-separated integers") from exc
+    if not seeds:
+        raise argparse.ArgumentTypeError("--seeds must contain at least one integer")
+    return seeds
+
+
 def erase_concept_from_prompt(prompt: str, target: str, replacement: str) -> str:
     target = target.strip()
     if not target:
@@ -44,6 +54,7 @@ def erase_concept_from_prompt(prompt: str, target: str, replacement: str) -> str
 def generation_config(args: argparse.Namespace) -> dict[str, object]:
     return {
         "seed": args.seed,
+        "seeds": args.seeds,
         "num_inference_steps": args.steps,
         "guidance_scale": args.guidance_scale,
         "num_frames": args.num_frames,
@@ -66,6 +77,7 @@ def add_common_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--seeds", type=parse_seed_list)
     parser.add_argument("--steps", type=int, default=20)
     parser.add_argument("--guidance-scale", type=float, default=5.0)
     parser.add_argument("--num-frames", type=int, default=49)
@@ -79,6 +91,7 @@ def add_common_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument("--enable-sequential-cpu-offload", action="store_true")
     parser.add_argument("--vae-slicing", action="store_true")
     parser.add_argument("--vae-tiling", action="store_true")
+    parser.add_argument("--skip-existing", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     return parser
 
@@ -98,7 +111,16 @@ def validate_common_args(parser: argparse.ArgumentParser, args: argparse.Namespa
 
 def selected_prompts(args: argparse.Namespace) -> list[dict[str, str]]:
     prompts = parse_prompt_file(args.prompts)
-    return prompts[: args.limit] if args.limit is not None else prompts
+    selected = prompts[: args.limit] if args.limit is not None else prompts
+    if args.seeds is not None and len(args.seeds) != len(selected):
+        raise ValueError(
+            f"--seeds has {len(args.seeds)} values but {len(selected)} prompts were selected"
+        )
+    return selected
+
+
+def item_seed(args: argparse.Namespace, index: int) -> int:
+    return args.seeds[index] if args.seeds is not None else args.seed + index
 
 
 def base_item(index: int, prompt_row: dict[str, str], output_dir: Path, seed: int) -> dict[str, object]:
@@ -188,6 +210,10 @@ def generate_encoded_videos(
     items: list[dict[str, object]],
     encode_item: Callable,
 ) -> None:
+    if args.skip_existing:
+        items = [item for item in items if not Path(str(item["video_path"])).exists()]
+    if not items:
+        return
     torch_module, torch_dtype, export_to_video, pipe, selected_device = load_wan_pipe(args)
     generator_device = "cuda" if str(selected_device).startswith("cuda") and torch_module.cuda.is_available() else "cpu"
     encode_device = select_prompt_encode_device(

@@ -13,6 +13,7 @@ from wan_adapter_common import (
     erase_concept_from_prompt,
     generate_encoded_videos,
     generation_config,
+    item_seed,
     selected_prompts,
     validate_common_args,
     write_manifest,
@@ -43,7 +44,7 @@ def implementation_config(args: argparse.Namespace) -> dict[str, object]:
 def build_items(args: argparse.Namespace) -> list[dict[str, object]]:
     items = []
     for index, prompt_row in enumerate(selected_prompts(args)):
-        seed = args.seed + index
+        seed = item_seed(args, index)
         item = base_item(index, prompt_row, args.output_dir, seed)
         unlearn_prompt = erase_concept_from_prompt(
             str(item["prompt"]), str(item["target_concept"]), args.replacement_token
