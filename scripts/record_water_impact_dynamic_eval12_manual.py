@@ -100,10 +100,13 @@ def main() -> None:
         receiver = [int(row["receiver_preservation_0_bad_2_good"]) for row in items]
         quality = [int(row["video_quality_0_bad_2_good"]) for row in items]
         usable = [r >= 1 and q >= 1 for r, q in zip(receiver, quality)]
+        valid_indices = [index for index, value in enumerate(usable) if value]
         useful_erasure = [
             t <= 1 and f <= 1 and r >= 1 and q >= 1
             for t, f, r, q in zip(target, footprint, receiver, quality)
         ]
+        valid_target = [target[index] for index in valid_indices]
+        valid_footprint = [footprint[index] for index in valid_indices]
         summary_rows.append(
             {
                 "method": method,
@@ -115,6 +118,15 @@ def main() -> None:
                 "usable_video_rate_pct": round(100 * sum(usable) / n, 1),
                 "useful_erasure_rate_pct": round(100 * sum(useful_erasure) / n, 1),
                 "strict_success_rate_pct": round(100 * sum(row["strict_success"] == "yes" for row in items) / n, 1),
+                "valid_n": len(valid_indices),
+                "valid_target_suppression_pct": (
+                    round(100 * sum(2 - value for value in valid_target) / (2 * len(valid_target)), 1)
+                    if valid_target else "NA"
+                ),
+                "valid_footprint_suppression_pct": (
+                    round(100 * sum(2 - value for value in valid_footprint) / (2 * len(valid_footprint)), 1)
+                    if valid_footprint else "NA"
+                ),
             }
         )
     write_csv(args.summary, summary_rows, list(summary_rows[0]))

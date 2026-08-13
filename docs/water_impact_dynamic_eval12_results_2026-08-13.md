@@ -16,13 +16,20 @@ Each output was reviewed from a seven-frame reference/output sheet. Target and
 footprint visibility use `0=absent, 1=partial/weaker, 2=clear`. Receiver
 preservation and video quality use `0=bad, 1=partial, 2=good`.
 
-| Method | Target suppression | Footprint suppression | Receiver preservation | Video quality | Usable videos |
+| Method | Apparent target suppression | Apparent footprint suppression | Receiver preservation | Video quality | Usable videos | Valid footprint suppression |
 |---|---:|---:|---:|---:|---:|
 | Original | 0.0 | 0.0 | 100.0 | 100.0 | 100.0 |
 | Negative Prompt | 4.2 | 8.3 | 83.3 | 100.0 | 100.0 |
-| T2VUnlearning | 91.7 | 100.0 | 0.0 | 0.0 | 0.0 |
-| VideoEraser | 91.7 | 100.0 | 0.0 | 0.0 | 0.0 |
-| Ours v2 | 4.2 | 37.5 | 83.3 | 95.8 | 91.7 |
+| T2VUnlearning | 91.7 | 100.0 | 0.0 | 0.0 | 0.0 | N/A |
+| VideoEraser | 91.7 | 100.0 | 0.0 | 0.0 | 0.0 | N/A |
+| Ours v2 | 4.2 | 37.5 | 83.3 | 95.8 | 91.7 | 36.4 |
+
+The apparent suppression columns are intentionally not treated as success
+metrics: a collapsed or unusable video can make the target invisible by
+destroying the whole scene. The valid footprint column is computed only on
+outputs with receiver preservation and video quality at least 1. T2VUnlearning
+and VideoEraser have no valid outputs here, so their valid suppression is N/A,
+not 100%.
 
 These are preliminary manual scores on only 12 samples, not paper-final
 numbers. They nevertheless establish the main trade-off. Negative Prompt

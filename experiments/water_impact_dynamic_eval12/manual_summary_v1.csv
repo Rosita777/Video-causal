@@ -1,6 +1,6 @@
-method,n,target_suppression_pct,footprint_suppression_pct,receiver_preservation_pct,video_quality_pct,usable_video_rate_pct,useful_erasure_rate_pct,strict_success_rate_pct
-original,12,0.0,0.0,100.0,100.0,100.0,0.0,0.0
-negative_prompt,12,4.2,8.3,83.3,100.0,100.0,0.0,0.0
-t2vunlearning,12,91.7,100.0,0.0,0.0,0.0,0.0,0.0
-videoeraser,12,91.7,100.0,0.0,0.0,0.0,0.0,0.0
-ours_v2,12,4.2,37.5,83.3,95.8,91.7,0.0,0.0
+method,n,target_suppression_pct,footprint_suppression_pct,receiver_preservation_pct,video_quality_pct,usable_video_rate_pct,useful_erasure_rate_pct,strict_success_rate_pct,valid_n,valid_target_suppression_pct,valid_footprint_suppression_pct
+original,12,0.0,0.0,100.0,100.0,100.0,0.0,0.0,12,0.0,0.0
+negative_prompt,12,4.2,8.3,83.3,100.0,100.0,0.0,0.0,12,4.2,8.3
+t2vunlearning,12,91.7,100.0,0.0,0.0,0.0,0.0,0.0,0,NA,NA
+videoeraser,12,91.7,100.0,0.0,0.0,0.0,0.0,0.0,0,NA,NA
+ours_v2,12,4.2,37.5,83.3,95.8,91.7,0.0,0.0,11,0.0,36.4
