@@ -195,14 +195,15 @@ def encode_cfg(
     negative_prompt: str,
     device: str,
 ):
-    return pipe.encode_prompt(
-        prompt=prompt,
-        negative_prompt=negative_prompt,
-        do_classifier_free_guidance=True,
-        num_videos_per_prompt=1,
-        device=torch_module.device(device),
-        dtype=torch_dtype,
-    )
+    with torch_module.inference_mode():
+        return pipe.encode_prompt(
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            do_classifier_free_guidance=True,
+            num_videos_per_prompt=1,
+            device=torch_module.device(device),
+            dtype=torch_dtype,
+        )
 
 
 def generate_encoded_videos(
@@ -225,9 +226,9 @@ def generate_encoded_videos(
     encoded_items = []
     for item in items:
         prompt_embeds, negative_prompt_embeds = encode_item(pipe, torch_module, torch_dtype, encode_device, item)
-        prompt_embeds = prompt_embeds.to("cpu")
+        prompt_embeds = prompt_embeds.detach().to("cpu")
         if negative_prompt_embeds is not None:
-            negative_prompt_embeds = negative_prompt_embeds.to("cpu")
+            negative_prompt_embeds = negative_prompt_embeds.detach().to("cpu")
         encoded_items.append((item, prompt_embeds, negative_prompt_embeds))
 
     if args.enable_sequential_cpu_offload or args.enable_model_cpu_offload:
