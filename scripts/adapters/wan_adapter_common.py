@@ -225,6 +225,9 @@ def generate_encoded_videos(
     encoded_items = []
     for item in items:
         prompt_embeds, negative_prompt_embeds = encode_item(pipe, torch_module, torch_dtype, encode_device, item)
+        prompt_embeds = prompt_embeds.to("cpu")
+        if negative_prompt_embeds is not None:
+            negative_prompt_embeds = negative_prompt_embeds.to("cpu")
         encoded_items.append((item, prompt_embeds, negative_prompt_embeds))
 
     if args.enable_sequential_cpu_offload or args.enable_model_cpu_offload:
