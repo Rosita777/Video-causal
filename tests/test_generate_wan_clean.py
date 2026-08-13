@@ -132,3 +132,34 @@ def test_wan_clean_uses_cpu_prompt_encoding_when_offloaded():
     assert select_prompt_encode_device(model_offloaded, selected_device="cuda", cuda_available=True) == "cpu"
     assert select_prompt_encode_device(not_offloaded, selected_device="cuda", cuda_available=True) == "cuda"
     assert select_prompt_encode_device(offloaded, selected_device="cpu", cuda_available=False) == "cpu"
+
+
+def test_dry_run_records_lora_artifact_fingerprint(tmp_path):
+    prompts = tmp_path / "prompts.txt"
+    prompts.write_text("A calm bowl of water. | stone | ripples\n", encoding="utf-8")
+    lora = tmp_path / "checkpoint"
+    lora.mkdir()
+    (lora / "weights.safetensors").write_bytes(b"controlled weights")
+    output_dir = tmp_path / "wan_lora"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(PROJECT_ROOT / "scripts" / "generate_wan_clean.py"),
+            "--prompts",
+            str(prompts),
+            "--output-dir",
+            str(output_dir),
+            "--lora-path",
+            str(lora),
+            "--dry-run",
+        ],
+        cwd=PROJECT_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    manifest = json.loads((output_dir / "generation_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["generation"]["lora_sha256"]
+    assert len(manifest["generation"]["lora_sha256"]) == 64

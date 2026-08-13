@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import importlib.util
 from pathlib import Path
+import random
+import tempfile
 import unittest
 
+import numpy as np
 import torch
 
 
@@ -74,6 +77,79 @@ class FactualRedirectLossTest(unittest.TestCase):
         self.assertAlmostEqual(loss.item(), 1.0)
         self.assertIsNotNone(prediction.grad)
         self.assertGreater(prediction.grad.abs().sum().item(), 0)
+
+
+class TrainingSeedTest(unittest.TestCase):
+    def test_reseeding_reproduces_all_training_rngs(self) -> None:
+        module = load_module()
+
+        module.seed_training(26000)
+        first = (random.random(), np.random.rand(), torch.randn(4))
+        module.seed_training(26000)
+        second = (random.random(), np.random.rand(), torch.randn(4))
+
+        self.assertEqual(first[0], second[0])
+        self.assertEqual(first[1], second[1])
+        self.assertTrue(torch.equal(first[2], second[2]))
+
+    def test_trainable_fingerprint_changes_with_weights_not_frozen_state(self) -> None:
+        module = load_module()
+        layer = torch.nn.Linear(3, 2)
+        layer.bias.requires_grad_(False)
+
+        original = module.trainable_state_sha256(layer)
+        with torch.no_grad():
+            layer.bias.add_(1)
+        frozen_change = module.trainable_state_sha256(layer)
+        with torch.no_grad():
+            layer.weight.add_(1)
+        trainable_change = module.trainable_state_sha256(layer)
+
+        self.assertEqual(original, frozen_change)
+        self.assertNotEqual(original, trainable_change)
+
+    def test_trainable_fingerprint_supports_bfloat16(self) -> None:
+        module = load_module()
+        layer = torch.nn.Linear(3, 2, dtype=torch.bfloat16)
+
+        digest = module.trainable_state_sha256(layer)
+
+        self.assertEqual(len(digest), 64)
+
+    def test_cache_inventory_fingerprint_changes_with_same_size_content(self) -> None:
+        module = load_module()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "000_scene.pt"
+            path.write_bytes(b"alpha")
+            original = module.cache_inventory_sha256([path])
+            path.write_bytes(b"omega")
+            changed = module.cache_inventory_sha256([path])
+
+        self.assertNotEqual(original, changed)
+
+    def test_cached_row_validator_rejects_prompt_mismatch(self) -> None:
+        module = load_module()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "000_scene.pt"
+            torch.save(
+                {
+                    "scene_id": "scene",
+                    "prompt": "cached prompt",
+                    "training_role": "erase",
+                },
+                path,
+            )
+            with self.assertRaisesRegex(ValueError, "cached prompt"):
+                module.validate_cached_rows(
+                    [path],
+                    [
+                        {
+                            "scene_id": "scene",
+                            "prompt": "frozen prompt",
+                            "training_role": "erase",
+                        }
+                    ],
+                )
 
 
 if __name__ == "__main__":

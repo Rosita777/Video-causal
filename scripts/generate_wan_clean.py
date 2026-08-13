@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -21,6 +22,24 @@ from run_pilot import parse_prompt_file  # noqa: E402
 DEFAULT_MODEL = "models/Wan2.1-T2V-1.3B-Diffusers"
 DEFAULT_OUTPUT_DIR = Path("outputs/wan_clean")
 PIPELINE_NAME = "WanPipeline"
+
+
+def artifact_sha256(path: Path | None) -> str | None:
+    if path is None or not path.exists():
+        return None
+    digest = hashlib.sha256()
+    files = (
+        [path]
+        if path.is_file()
+        else sorted(item for item in path.rglob("*") if item.is_file())
+    )
+    for item in files:
+        relative = item.name if path.is_file() else item.relative_to(path).as_posix()
+        digest.update(relative.encode("utf-8"))
+        with item.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+    return digest.hexdigest()
 
 
 def build_generation_config(args: argparse.Namespace) -> dict[str, object]:
@@ -42,6 +61,7 @@ def build_generation_config(args: argparse.Namespace) -> dict[str, object]:
         "vae_tiling": args.vae_tiling,
         "prompt_encode_device_policy": "cpu_when_offloaded_else_selected_device",
         "lora_path": str(args.lora_path) if args.lora_path else None,
+        "lora_sha256": artifact_sha256(args.lora_path),
         "lora_scale": args.lora_scale,
         "activation_gate_dir": (
             str(args.activation_gate_dir) if args.activation_gate_dir else None
@@ -416,6 +436,8 @@ def main() -> int:
 
     if not args.dry_run:
         generate_videos(args, items)
+        if artifact_sha256(args.lora_path) != generation["lora_sha256"]:
+            raise RuntimeError("LoRA artifact changed during generation")
 
     manifest = write_manifest(
         output_dir=args.output_dir,

@@ -14,6 +14,7 @@ baselines/external/*/
 *.ckpt
 *.bin
 models/
+/models
 checkpoints/
 .cache/
 
@@ -93,6 +94,7 @@ adapters/
 !scripts/adapters/
 !scripts/adapters/*.py
 outputs/
+/logs
 # Local test/type-check/tool caches
 .pytest_cache/
 .mypy_cache/

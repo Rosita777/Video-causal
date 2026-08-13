@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import csv
 import gc
+import hashlib
 import json
 import random
 import time
@@ -200,6 +201,62 @@ def clear_memory() -> None:
     gc.collect()
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
+
+
+def seed_training(seed: int) -> None:
+    """Seed every RNG that can affect LoRA initialization or training."""
+    random.seed(seed)
+    np.random.seed(seed % (2**32))
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+
+def trainable_state_sha256(module: torch.nn.Module) -> str:
+    """Fingerprint trainable tensor names, metadata, and raw values."""
+    digest = hashlib.sha256()
+    for name, parameter in sorted(module.named_parameters()):
+        if not parameter.requires_grad:
+            continue
+        tensor = parameter.detach().contiguous().cpu()
+        digest.update(name.encode("utf-8"))
+        digest.update(str(tuple(tensor.shape)).encode("ascii"))
+        digest.update(str(tensor.dtype).encode("ascii"))
+        digest.update(tensor.view(torch.uint8).numpy().tobytes())
+    return digest.hexdigest()
+
+
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def cache_inventory_sha256(cache_paths: list[Path]) -> str:
+    """Fingerprint the ordered cache inventory and every payload byte."""
+    digest = hashlib.sha256()
+    for path in cache_paths:
+        resolved = path.resolve(strict=True)
+        digest.update(path.name.encode("utf-8"))
+        digest.update(b"\0")
+        with resolved.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        digest.update(b"\n")
+    return digest.hexdigest()
+
+
+def validate_cached_rows(cache_paths: list[Path], rows: list[dict[str, str]]) -> None:
+    for cache_path, row in zip(cache_paths, rows, strict=True):
+        payload = torch.load(cache_path, map_location="cpu", weights_only=True)
+        for field in ("scene_id", "prompt", "training_role"):
+            if payload.get(field) != row[field]:
+                raise ValueError(
+                    f"{cache_path}: cached {field}={payload.get(field)!r}, "
+                    f"expected {row[field]!r}"
+                )
 
 
 def causal_residual_mask(factual: torch.Tensor, clean: torch.Tensor) -> torch.Tensor:
@@ -419,13 +476,25 @@ def save_lora(transformer: WanTransformer3DModel, output_dir: Path, metadata: di
     )
 
 
-def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
+def train(
+    args: argparse.Namespace,
+    cache_paths: list[Path],
+    rows: list[dict[str, str]],
+) -> None:
+    seed_training(args.seed)
+    validate_cached_rows(cache_paths, rows)
+    manifest_sha256 = file_sha256(args.manifest)
+    cache_sha256 = cache_inventory_sha256(cache_paths)
     device = torch.device(args.device)
     transformer = WanTransformer3DModel.from_pretrained(
         str(args.model), subfolder="transformer", torch_dtype=torch.bfloat16
     ).to(device)
     transformer.requires_grad_(False)
     transformer.enable_gradient_checkpointing()
+    # Reset immediately before the only randomly initialized model component.
+    # This keeps controlled arms identical even if model loading starts using
+    # randomness in a future dependency version.
+    seed_training(args.seed)
     transformer.add_adapter(
         LoraConfig(
             r=args.rank,
@@ -455,7 +524,12 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
     )
     trainable = [parameter for parameter in transformer.parameters() if parameter.requires_grad]
     trainable_count = sum(parameter.numel() for parameter in trainable)
-    print(f"Trainable LoRA parameters: {trainable_count:,}", flush=True)
+    initial_lora_sha256 = trainable_state_sha256(transformer)
+    print(
+        f"Trainable LoRA parameters: {trainable_count:,} "
+        f"initial_sha256={initial_lora_sha256}",
+        flush=True,
+    )
     optimizer = torch.optim.AdamW(trainable, lr=args.learning_rate, betas=(0.9, 0.999), weight_decay=0.01)
     generator = torch.Generator(device="cpu").manual_seed(args.seed)
     order_rng = random.Random(args.seed)
@@ -479,6 +553,8 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
     receiver_losses: list[float] = []
     preserve_losses: list[float] = []
     gate_means: list[float] = []
+    role_step_counts = {"erase": 0, "preserve": 0}
+    sample_order_digest = hashlib.sha256()
     optimizer.zero_grad(set_to_none=True)
     started = time.time()
 
@@ -498,6 +574,10 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
             sample_index = order[(step - 1) % len(order)]
         sample = torch.load(cache_paths[sample_index], map_location="cpu", weights_only=True)
         is_preserve = sample["training_role"] == "preserve"
+        role_step_counts[sample["training_role"]] += 1
+        sample_order_digest.update(
+            f"{step}:{sample['training_role']}:{sample['scene_id']}\n".encode("utf-8")
+        )
         clean = sample["latents"].to(device=device, dtype=torch.bfloat16)
         prompt_embeds = sample["prompt_embeds"].to(device=device, dtype=torch.bfloat16)
         if activation_controller is not None:
@@ -768,11 +848,21 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                     "max_steps": args.max_steps,
                     "mean_loss_last_20": float(np.mean(losses[-20:])),
                     "manifest": str(args.manifest),
+                    "manifest_sha256": manifest_sha256,
                     "model": str(args.model),
+                    "cache_dir": str(args.cache_dir),
+                    "cache_entry_count": len(cache_paths),
+                    "cache_inventory_sha256": cache_sha256,
+                    "height": args.height,
+                    "width": args.width,
+                    "num_frames": args.num_frames,
+                    "grad_accum": args.grad_accum,
+                    "device": args.device,
                     "rank": args.rank,
                     "alpha": args.alpha,
                     "learning_rate": args.learning_rate,
                     "seed": args.seed,
+                    "initial_lora_sha256": initial_lora_sha256,
                     "role": args.role,
                     "objective": args.objective,
                     "mask_weight": args.mask_weight,
@@ -784,6 +874,8 @@ def train(args: argparse.Namespace, cache_paths: list[Path]) -> None:
                     "receiver_weight": args.receiver_weight,
                     "preserve_weight": args.preserve_weight,
                     "balanced_roles": args.balanced_roles,
+                    "role_step_counts": dict(role_step_counts),
+                    "sample_order_sha256": sample_order_digest.hexdigest(),
                     "causal_gate_dir": str(args.causal_gate_dir) if args.causal_gate_dir else None,
                     "gate_floor": args.gate_floor,
                     "activation_gate_dir": (
@@ -854,7 +946,7 @@ def main() -> int:
         return 0
     cache_paths = build_cache(args, rows, project_root)
     if not args.cache_only:
-        train(args, cache_paths)
+        train(args, cache_paths, rows)
     return 0
 
 
