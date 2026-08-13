@@ -1,4 +1,9 @@
-# Water-impact dynamic SFT v1 training run (2026-08-12)
+# Historical: water-impact dynamic SFT v1 training run (2026-08-12)
+
+> This is the original erase-only v1 run. It is retained for comparison and
+> debugging. The active training recipe is v2 in
+> `docs/PROJECT_HANDOFF.md` and
+> `scripts/run_water_impact_dynamic_sft_preserve_v2.sh`.
 
 The complete target generation produced 192 videos. No failed sample was
 regenerated with another seed. Technical screening and full contact-sheet

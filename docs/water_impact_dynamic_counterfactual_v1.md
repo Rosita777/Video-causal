@@ -1,5 +1,10 @@
 # Water-impact dynamic counterfactual protocol v1
 
+> This is the current pair-construction protocol. It defines the data source
+> for both the historical erase-only v1 run and the active preservation-balanced
+> v2 run. Training and evaluation settings are maintained separately in
+> `docs/PROJECT_HANDOFF.md`.
+
 ## Purpose
 
 This dataset trains one adapter for the mechanism **object enters water**. Given

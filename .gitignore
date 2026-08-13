@@ -100,3 +100,6 @@ outputs/
 
 # Project-local download/runtime environments
 .hf-download-env/
+# Local review tables contain machine-specific absolute video paths.
+experiments/water_impact_dynamic_eval12/review.csv
+experiments/water_impact_dynamic_eval12/review_server.csv
