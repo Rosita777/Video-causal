@@ -1,0 +1,2138 @@
+#!/usr/bin/env python3
+"""Train the frozen v3c sigma-weighted target-prompt-teacher Wan LoRA.
+
+The plain baseline uses counterfactual flow matching. Mask-bg reweights that
+loss on the observed causal residual. Paired-separation additionally pushes the
+prediction away from the factual causal target inside the residual. Both masked
+objectives distill the frozen base prediction outside the residual. Preserve
+rows distill the frozen model over the complete latent, without requiring a
+category-specific preservation label. Video latents and prompt embeddings are
+cached once so the large VAE and text encoder are not resident during training.
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import gc
+import hashlib
+import json
+import random
+import time
+from pathlib import Path
+
+import av
+import numpy as np
+import torch
+from PIL import Image
+from diffusers import AutoencoderKLWan, WanPipeline, WanTransformer3DModel
+from diffusers.utils import convert_state_dict_to_diffusers
+from peft import LoraConfig, get_peft_model_state_dict
+from transformers import AutoTokenizer
+
+from causal_lora_activation_gate import (
+    CausalLoRAActivationGate,
+    make_temporally_persistent_gate,
+)
+from target_token_attention_suppression import find_token_mask
+
+
+TRANSFORMER_INVENTORY_ALGORITHM = "sha256_ordered_name_nul_bytes_lf_v1"
+FROZEN_TRANSFORMER_INVENTORY: tuple[tuple[str, int, str], ...] = (
+    (
+        "transformer/config.json",
+        465,
+        "0b093fa072e9ff28763febe9b964ee582f566733a6d6709deb9dfba1bde16b81",
+    ),
+    (
+        "transformer/diffusion_pytorch_model-00001-of-00002.safetensors",
+        4_998_781_576,
+        "6d011927dbd2cc8afe53d57abab04a8fd86f615d83324770d985fb058ece3a24",
+    ),
+    (
+        "transformer/diffusion_pytorch_model-00002-of-00002.safetensors",
+        677_289_072,
+        "b92ec2309b1f239af6f746431815a881afcc938abb26a4f08d9a2fd6c892f872",
+    ),
+    (
+        "transformer/diffusion_pytorch_model.safetensors.index.json",
+        73_296,
+        "dcbcf3497134a3f50557ff069dd7d2c84b5c4d8c5932472f6bdb780fb4016589",
+    ),
+)
+FROZEN_TRANSFORMER_INVENTORY_SHA256 = (
+    "fe0c20ba99318c4b6d28d153b839888bbcf8a7a856796979566c305788dc18ac"
+)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--manifest", type=Path, required=True)
+    parser.add_argument("--model", type=Path, required=True)
+    parser.add_argument("--cache-dir", type=Path, required=True)
+    parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--height", type=int, default=480)
+    parser.add_argument("--width", type=int, default=832)
+    parser.add_argument("--num-frames", type=int, default=49)
+    parser.add_argument("--max-steps", type=int, default=300)
+    parser.add_argument("--learning-rate", type=float, default=1e-4)
+    parser.add_argument("--rank", type=int, default=16)
+    parser.add_argument("--alpha", type=int, default=16)
+    parser.add_argument("--grad-accum", type=int, default=1)
+    parser.add_argument("--save-every", type=int, default=50)
+    parser.add_argument("--seed", type=int, default=20260801)
+    parser.add_argument("--device", default="cuda")
+    parser.add_argument("--role", choices=["erase", "preserve", "all"], default="erase")
+    parser.add_argument(
+        "--objective",
+        choices=[
+            "plain",
+            "target_prompt_teacher_sigma_weighted",
+            "mask_bg",
+            "paired_sep",
+            "dual_traj",
+            "causal_gate",
+            "counterfactual_sft",
+            "target_conditioned_sft",
+            "target_conditioned_redirect",
+            "target_conditioned_components",
+        ],
+        default="plain",
+    )
+    parser.add_argument(
+        "--causal-gate-dir",
+        type=Path,
+        help="Per-scene causal gates exported by the dual-gate evaluator.",
+    )
+    parser.add_argument(
+        "--gate-floor",
+        type=float,
+        default=0.0,
+        help="Minimum erase weight outside the exported causal gate.",
+    )
+    parser.add_argument(
+        "--activation-gate-dir",
+        type=Path,
+        help="Gate LoRA residual activations using per-scene patch-token masks.",
+    )
+    parser.add_argument(
+        "--target-phrase",
+        action="append",
+        default=[],
+        help="Exact target phrase used to gate cross-attention text LoRA tokens.",
+    )
+    parser.add_argument(
+        "--persistent-causal-time",
+        action="store_true",
+        help="Keep the full causal-chain spatial union active after its first frame.",
+    )
+    parser.add_argument(
+        "--component-gate-dir",
+        type=Path,
+        help="Per-scene object_gate and receiver_gate tensors for component supervision.",
+    )
+    parser.add_argument("--mask-weight", type=float, default=4.0)
+    parser.add_argument("--background-weight", type=float, default=1.0)
+    parser.add_argument("--pair-weight", type=float, default=1.0)
+    parser.add_argument("--pair-margin", type=float, default=0.05)
+    parser.add_argument("--redirect-weight", type=float, default=1.0)
+    parser.add_argument("--object-weight", type=float, default=1.0)
+    parser.add_argument("--receiver-weight", type=float, default=1.0)
+    parser.add_argument(
+        "--preserve-weight",
+        type=float,
+        default=1.0,
+        help="Weight for frozen-teacher matching on training_role=preserve rows.",
+    )
+    parser.add_argument(
+        "--target-prompt-cache-dir",
+        type=Path,
+        help="Read-only sidecar with target_generation_prompt embeddings for erase rows.",
+    )
+    parser.add_argument(
+        "--target-prompt-cache-sha256",
+        help="Expected byte-level SHA-256 of the ordered target-prompt sidecar.",
+    )
+    parser.add_argument(
+        "--target-prompt-teacher-weight",
+        type=float,
+        default=1.0,
+        help=(
+            "Base weight for target-prompt frozen-teacher consistency on erase rows; "
+            "v3c applies the registered per-step multiplier 2*sigma."
+        ),
+    )
+    parser.add_argument(
+        "--target-prompt-calibration-id",
+        default="",
+        help="Frozen identifier for the training-only teacher-scale calibration.",
+    )
+    parser.add_argument(
+        "--target-prompt-sanity-min-output-grad-ratio",
+        type=float,
+        default=0.2,
+        help="Minimum mean weighted teacher/flow output-gradient ratio in the first 16 erase steps.",
+    )
+    parser.add_argument(
+        "--target-prompt-sanity-max-output-grad-ratio",
+        type=float,
+        default=0.5,
+        help="Maximum mean weighted teacher/flow output-gradient ratio in the first 16 erase steps.",
+    )
+    parser.add_argument(
+        "--target-prompt-sanity-max-single-output-grad-ratio",
+        type=float,
+        default=1.0,
+        help="Maximum individual weighted teacher/flow output-gradient ratio in the first 16 erase steps.",
+    )
+    parser.add_argument(
+        "--balanced-roles",
+        action="store_true",
+        help="Alternate erase and preserve rows when training with --role all.",
+    )
+    parser.add_argument("--rebuild-cache", action="store_true")
+    parser.add_argument("--cache-only", action="store_true")
+    parser.add_argument("--dry-run", action="store_true")
+    args = parser.parse_args()
+    if args.rebuild_cache or args.cache_only:
+        parser.error(
+            "the dedicated v3c trainer is read-only with respect to the frozen "
+            "base cache; --rebuild-cache and --cache-only are forbidden"
+        )
+    if args.height % 16 or args.width % 16:
+        parser.error("--height and --width must be divisible by 16")
+    if args.num_frames % 4 != 1:
+        parser.error("--num-frames must be 4n+1 for the Wan VAE")
+    if min(args.max_steps, args.rank, args.alpha, args.grad_accum) <= 0:
+        parser.error("step, rank, alpha, and accumulation values must be positive")
+    if min(
+        args.mask_weight,
+        args.background_weight,
+        args.pair_weight,
+        args.pair_margin,
+        args.redirect_weight,
+        args.object_weight,
+        args.receiver_weight,
+        args.preserve_weight,
+        args.target_prompt_teacher_weight,
+        args.target_prompt_sanity_min_output_grad_ratio,
+        args.target_prompt_sanity_max_output_grad_ratio,
+        args.target_prompt_sanity_max_single_output_grad_ratio,
+        args.gate_floor,
+    ) < 0:
+        parser.error("all loss weights and margins must be non-negative")
+    if args.gate_floor > 1:
+        parser.error("--gate-floor must be at most 1")
+    gated_objectives = {
+        "causal_gate",
+        "counterfactual_sft",
+        "target_conditioned_sft",
+        "target_conditioned_redirect",
+        "target_conditioned_components",
+    }
+    if args.objective in gated_objectives and args.causal_gate_dir is None:
+        parser.error(f"--causal-gate-dir is required for --objective {args.objective}")
+    if args.objective in {
+        "target_conditioned_sft",
+        "target_conditioned_redirect",
+        "target_conditioned_components",
+    }:
+        if args.activation_gate_dir is None:
+            parser.error("--activation-gate-dir is required for target-conditioned objectives")
+        if not args.target_phrase:
+            parser.error("at least one --target-phrase is required for target-conditioned objectives")
+        if args.role != "erase":
+            parser.error("target-conditioned objectives currently support --role erase only")
+    if args.objective == "target_conditioned_components" and args.component_gate_dir is None:
+        parser.error("--component-gate-dir is required for component supervision")
+    if args.objective == "target_prompt_teacher_sigma_weighted":
+        if (
+            not np.isfinite(args.target_prompt_teacher_weight)
+            or args.target_prompt_teacher_weight <= 0
+        ):
+            parser.error("sigma-weighted target-prompt teacher consistency requires a positive base weight")
+        if not args.target_prompt_calibration_id.strip():
+            parser.error("sigma-weighted target-prompt teacher consistency requires a calibration id")
+        if args.target_prompt_cache_dir is None or not args.target_prompt_cache_sha256:
+            parser.error(
+                "--target-prompt-cache-dir and --target-prompt-cache-sha256 are required "
+                "for sigma-weighted target-prompt teacher consistency"
+            )
+        if args.role != "all" or not args.balanced_roles:
+            parser.error(
+                "sigma-weighted target-prompt teacher consistency requires --role all --balanced-roles"
+            )
+        sanity_values = (
+            args.target_prompt_sanity_min_output_grad_ratio,
+            args.target_prompt_sanity_max_output_grad_ratio,
+            args.target_prompt_sanity_max_single_output_grad_ratio,
+        )
+        if not all(np.isfinite(value) for value in sanity_values):
+            parser.error("target-prompt sanity bounds must be finite")
+        if (
+            args.target_prompt_sanity_min_output_grad_ratio
+            >= args.target_prompt_sanity_max_output_grad_ratio
+            or args.target_prompt_sanity_max_output_grad_ratio
+            > args.target_prompt_sanity_max_single_output_grad_ratio
+        ):
+            parser.error("target-prompt sanity minimum must be smaller than maximum")
+    return args
+
+
+def resolve_path(project_root: Path, value: str) -> Path:
+    path = Path(value)
+    return path if path.is_absolute() else project_root / path
+
+
+def load_rows(args: argparse.Namespace) -> list[dict[str, str]]:
+    with args.manifest.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    if args.role != "all":
+        rows = [row for row in rows if row["training_role"] == args.role]
+    if not rows:
+        raise ValueError(f"No rows found for role={args.role!r}, objective={args.objective!r}")
+    required = {"scene_id", "prompt", "desired_target_video", "training_role"}
+    if (
+        args.objective == "target_prompt_teacher_sigma_weighted"
+        and args.target_prompt_teacher_weight > 0
+    ):
+        required.add("target_generation_prompt")
+    missing = required - rows[0].keys()
+    if missing:
+        raise ValueError(f"Manifest is missing columns: {sorted(missing)}")
+    if (
+        args.objective == "target_prompt_teacher_sigma_weighted"
+        and args.target_prompt_teacher_weight > 0
+    ):
+        missing_prompts = [
+            row["scene_id"]
+            for row in rows
+            if row["training_role"] == "erase"
+            and not row["target_generation_prompt"].strip()
+        ]
+        if missing_prompts:
+            raise ValueError(
+                "Erase rows have empty target_generation_prompt values: "
+                + ", ".join(missing_prompts[:5])
+            )
+    return rows
+
+
+def read_video(path: Path, num_frames: int) -> list[Image.Image]:
+    with av.open(str(path)) as container:
+        frames = [frame.to_image().convert("RGB") for frame in container.decode(video=0)]
+    if len(frames) < num_frames:
+        raise ValueError(f"{path} has {len(frames)} frames; expected at least {num_frames}")
+    indices = np.linspace(0, len(frames) - 1, num_frames).round().astype(int)
+    return [frames[index] for index in indices]
+
+
+def clear_memory() -> None:
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
+
+def seed_training(seed: int) -> None:
+    """Seed every RNG that can affect LoRA initialization or training."""
+    random.seed(seed)
+    np.random.seed(seed % (2**32))
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+
+def trainable_state_sha256(module: torch.nn.Module) -> str:
+    """Fingerprint trainable tensor names, metadata, and raw values."""
+    digest = hashlib.sha256()
+    for name, parameter in sorted(module.named_parameters()):
+        if not parameter.requires_grad:
+            continue
+        tensor = parameter.detach().contiguous().cpu()
+        digest.update(name.encode("utf-8"))
+        digest.update(str(tuple(tensor.shape)).encode("ascii"))
+        digest.update(str(tensor.dtype).encode("ascii"))
+        digest.update(tensor.view(torch.uint8).numpy().tobytes())
+    return digest.hexdigest()
+
+
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def compute_transformer_inventory(
+    model: Path,
+) -> tuple[str, list[dict[str, object]]]:
+    transformer_dir = model / "transformer"
+    index_path = transformer_dir / "diffusion_pytorch_model.safetensors.index.json"
+    config_path = transformer_dir / "config.json"
+    if not config_path.is_file() or not index_path.is_file():
+        raise FileNotFoundError("transformer config or safetensors index is missing")
+    try:
+        index = json.loads(index_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise ValueError(f"invalid transformer safetensors index: {exc}") from exc
+    weight_map = index.get("weight_map")
+    if not isinstance(weight_map, dict) or not weight_map:
+        raise ValueError("transformer safetensors index has no non-empty weight_map")
+    shard_values = list(weight_map.values())
+    if (
+        not shard_values
+        or any(
+            not isinstance(name, str)
+            or not name.endswith(".safetensors")
+            or Path(name).name != name
+            for name in shard_values
+        )
+    ):
+        raise ValueError("transformer safetensors index contains invalid shard names")
+    referenced_shards = sorted(set(shard_values))
+    actual_shards = sorted(path.name for path in transformer_dir.glob("*.safetensors"))
+    if actual_shards != referenced_shards:
+        raise ValueError(
+            "transformer shard inventory disagrees with its index: "
+            f"actual={actual_shards!r} referenced={referenced_shards!r}"
+        )
+    relative_names = sorted(
+        [
+            "transformer/config.json",
+            "transformer/diffusion_pytorch_model.safetensors.index.json",
+            *(f"transformer/{name}" for name in referenced_shards),
+        ]
+    )
+    inventory_digest = hashlib.sha256()
+    records: list[dict[str, object]] = []
+    for relative_name in relative_names:
+        path = model / relative_name
+        if not path.is_file():
+            raise FileNotFoundError(f"missing transformer inventory file: {path}")
+        file_digest = hashlib.sha256()
+        inventory_digest.update(relative_name.encode("utf-8"))
+        inventory_digest.update(b"\0")
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(8 * 1024 * 1024), b""):
+                file_digest.update(chunk)
+                inventory_digest.update(chunk)
+        inventory_digest.update(b"\n")
+        records.append(
+            {
+                "path": relative_name,
+                "size": path.stat().st_size,
+                "sha256": file_digest.hexdigest(),
+            }
+        )
+    return inventory_digest.hexdigest(), records
+
+
+def validate_frozen_transformer_inventory(
+    model: Path,
+    *,
+    expected_inventory: tuple[tuple[str, int, str], ...] = FROZEN_TRANSFORMER_INVENTORY,
+    expected_sha256: str = FROZEN_TRANSFORMER_INVENTORY_SHA256,
+) -> dict[str, object]:
+    expected_records = [
+        {"path": path, "size": size, "sha256": digest}
+        for path, size, digest in expected_inventory
+    ]
+    actual_sha256, actual_records = compute_transformer_inventory(model)
+    if actual_records != expected_records:
+        raise ValueError(
+            "frozen transformer file inventory mismatch: "
+            f"actual={actual_records!r} expected={expected_records!r}"
+        )
+    if actual_sha256 != expected_sha256:
+        raise ValueError(
+            "frozen transformer aggregate SHA-256 mismatch: "
+            f"{actual_sha256} != {expected_sha256}"
+        )
+    return {
+        "transformer_inventory_algorithm": TRANSFORMER_INVENTORY_ALGORITHM,
+        "transformer_inventory": actual_records,
+        "transformer_inventory_sha256": actual_sha256,
+    }
+
+
+def cache_inventory_sha256(cache_paths: list[Path]) -> str:
+    """Fingerprint the ordered cache inventory and every payload byte."""
+    digest = hashlib.sha256()
+    for path in cache_paths:
+        resolved = path.resolve(strict=True)
+        digest.update(path.name.encode("utf-8"))
+        digest.update(b"\0")
+        with resolved.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        digest.update(b"\n")
+    return digest.hexdigest()
+
+
+def validate_cached_rows(cache_paths: list[Path], rows: list[dict[str, str]]) -> None:
+    for cache_path, row in zip(cache_paths, rows, strict=True):
+        payload = torch.load(cache_path, map_location="cpu", weights_only=True)
+        for field in ("scene_id", "prompt", "training_role"):
+            if payload.get(field) != row[field]:
+                raise ValueError(
+                    f"{cache_path}: cached {field}={payload.get(field)!r}, "
+                    f"expected {row[field]!r}"
+                )
+
+
+def tensor_sha256(tensor: torch.Tensor) -> str:
+    value = tensor.detach().contiguous().cpu()
+    digest = hashlib.sha256()
+    digest.update(str(tuple(value.shape)).encode("ascii"))
+    digest.update(str(value.dtype).encode("ascii"))
+    digest.update(value.view(torch.uint8).numpy().tobytes())
+    return digest.hexdigest()
+
+
+def target_prompt_binding_sha256(rows: list[dict[str, str]]) -> str:
+    digest = hashlib.sha256()
+    for row in rows:
+        if row["training_role"] != "erase":
+            continue
+        digest.update(row["scene_id"].encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(row["target_generation_prompt"].encode("utf-8"))
+        digest.update(b"\n")
+    return digest.hexdigest()
+
+
+def validate_target_prompt_cache(
+    args: argparse.Namespace, rows: list[dict[str, str]]
+) -> tuple[dict[int, Path], dict[str, object]]:
+    if args.target_prompt_cache_dir is None or not args.target_prompt_cache_sha256:
+        raise ValueError("target-prompt sidecar path and frozen hash are required")
+    expected_model_revision = "0fad780a534b6463e45facd96134c9f345acfa5b"
+    revision_path = (
+        args.model / ".cache/huggingface/download/model_index.json.metadata"
+    )
+    try:
+        model_revision = revision_path.read_text(encoding="utf-8").splitlines()[0]
+    except (FileNotFoundError, IndexError) as exc:
+        raise ValueError(
+            f"cannot verify frozen model revision from {revision_path}: {exc}"
+        ) from exc
+    if model_revision != expected_model_revision:
+        raise ValueError(
+            f"frozen model revision mismatch: {model_revision} != {expected_model_revision}"
+        )
+    expected = {
+        index: args.target_prompt_cache_dir / f"{index:03d}_{row['scene_id']}.pt"
+        for index, row in enumerate(rows)
+        if row["training_role"] == "erase"
+    }
+    actual = sorted(args.target_prompt_cache_dir.glob("*.pt"))
+    expected_paths = [expected[index] for index in sorted(expected)]
+    missing = [path for path in expected_paths if not path.is_file()]
+    unexpected = sorted(set(actual) - set(expected_paths))
+    if missing or unexpected or len(actual) != len(expected_paths):
+        raise ValueError(
+            f"target-prompt cache inventory mismatch: expected={len(expected_paths)} "
+            f"actual={len(actual)} missing={len(missing)} unexpected={len(unexpected)}"
+        )
+    unique_embedding_hashes: dict[str, str] = {}
+    for manifest_index, cache_path in expected.items():
+        row = rows[manifest_index]
+        payload = torch.load(cache_path, map_location="cpu", weights_only=True)
+        expected_fields: dict[str, object] = {
+            "manifest_index": manifest_index,
+            "scene_id": row["scene_id"],
+            "training_role": "erase",
+            "target_generation_prompt": row["target_generation_prompt"],
+            "model": str(args.model),
+            "manifest_sha256": file_sha256(args.manifest),
+        }
+        for field, expected_value in expected_fields.items():
+            if payload.get(field) != expected_value:
+                raise ValueError(
+                    f"{cache_path}: cached {field}={payload.get(field)!r}, "
+                    f"expected {expected_value!r}"
+                )
+        embedding = payload.get("teacher_prompt_embeds")
+        if not isinstance(embedding, torch.Tensor):
+            raise ValueError(f"{cache_path}: missing teacher_prompt_embeds tensor")
+        if tuple(embedding.shape) != (1, 226, 4096) or embedding.dtype != torch.bfloat16:
+            raise ValueError(
+                f"{cache_path}: unexpected embedding {tuple(embedding.shape)} {embedding.dtype}"
+            )
+        embedding_hash = tensor_sha256(embedding)
+        if payload.get("teacher_prompt_embeds_sha256") != embedding_hash:
+            raise ValueError(f"{cache_path}: teacher embedding hash mismatch")
+        prompt = row["target_generation_prompt"]
+        previous_hash = unique_embedding_hashes.setdefault(prompt, embedding_hash)
+        if previous_hash != embedding_hash:
+            raise ValueError(
+                f"{cache_path}: repeated target prompt has inconsistent embeddings"
+            )
+    inventory_hash = cache_inventory_sha256(expected_paths)
+    if inventory_hash != args.target_prompt_cache_sha256:
+        raise ValueError(
+            f"target-prompt cache content hash mismatch: {inventory_hash} != "
+            f"{args.target_prompt_cache_sha256}"
+        )
+    manifest_path = args.target_prompt_cache_dir / "cache_manifest.json"
+    cache_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    prompt_binding_hash = target_prompt_binding_sha256(rows)
+    unique_embedding_digest = hashlib.sha256()
+    for prompt, embedding_hash in unique_embedding_hashes.items():
+        unique_embedding_digest.update(prompt.encode("utf-8"))
+        unique_embedding_digest.update(b"\0")
+        unique_embedding_digest.update(embedding_hash.encode("ascii"))
+        unique_embedding_digest.update(b"\n")
+    unique_embedding_hash = unique_embedding_digest.hexdigest()
+    expected_manifest = {
+        "protocol": "water_impact_dynamic_v3b_target_prompt_teacher_v1",
+        "source_manifest": str(args.manifest),
+        "source_manifest_sha256": file_sha256(args.manifest),
+        "model": str(args.model),
+        "dtype": "torch.bfloat16",
+        "do_classifier_free_guidance": False,
+        "max_sequence_length": 226,
+        "model_revision": expected_model_revision,
+        "erase_row_count": len(expected_paths),
+        "unique_prompt_count": len(
+            {row["target_generation_prompt"] for row in rows if row["training_role"] == "erase"}
+        ),
+        "prompt_binding_sha256": prompt_binding_hash,
+        "unique_embedding_sha256": unique_embedding_hash,
+        "cache_inventory_sha256": inventory_hash,
+    }
+    for field, expected_value in expected_manifest.items():
+        if cache_manifest.get(field) != expected_value:
+            raise ValueError(
+                f"target-prompt cache manifest {field}={cache_manifest.get(field)!r}, "
+                f"expected {expected_value!r}"
+            )
+    return expected, {
+        "target_prompt_cache_dir": str(args.target_prompt_cache_dir),
+        "target_prompt_cache_entry_count": len(expected_paths),
+        "target_prompt_cache_inventory_sha256": inventory_hash,
+        "target_prompt_cache_manifest_sha256": file_sha256(manifest_path),
+        "target_prompt_binding_sha256": prompt_binding_hash,
+        "target_prompt_unique_count": expected_manifest["unique_prompt_count"],
+        "target_prompt_unique_embedding_sha256": unique_embedding_hash,
+    }
+
+
+def expected_target_prompt_run_registration(
+    args: argparse.Namespace,
+    *,
+    manifest_sha256: str,
+    base_cache_sha256: str,
+) -> dict[str, object]:
+    return {
+        "protocol": (
+            "water_impact_dynamic_v3c_sigma_weighted_target_prompt_teacher_v1"
+        ),
+        "calibration_id": args.target_prompt_calibration_id,
+        "output_dir": str(args.output_dir),
+        "target_prompt_teacher_base_weight": args.target_prompt_teacher_weight,
+        "target_prompt_teacher_schedule": "2*sigma",
+        "target_prompt_teacher_effective_weight_formula": "4 * (2 * sigma)",
+        "target_prompt_teacher_expected_mean_weight": 4.0,
+        "sanity_mean_min": args.target_prompt_sanity_min_output_grad_ratio,
+        "sanity_mean_max": args.target_prompt_sanity_max_output_grad_ratio,
+        "sanity_single_max": args.target_prompt_sanity_max_single_output_grad_ratio,
+        "sanity_formula": (
+            "g_i = 8 * sigma_i * sqrt(target_prompt_teacher_loss / flow_loss)"
+        ),
+        "sanity_aggregation": "arithmetic_mean_over_first_16_erase_steps",
+        "checkpoint_policy": "no_checkpoint_before_scale_sanity_passes",
+        "train_manifest_sha256": manifest_sha256,
+        "base_cache_sha256": base_cache_sha256,
+        "teacher_cache_sha256": args.target_prompt_cache_sha256,
+        "teacher_cache_manifest_sha256": (
+            "c467d7f81ee22b2c4b1ff719537487fbfc808eacc98e730c3d24f0a17aca77cb"
+        ),
+        "target_prompt_binding_sha256": (
+            "9b1cc6e5bbdbe60b8f9f8378dc0ea11fea2fe82d8c73d6f9afed3f72b2bd00cc"
+        ),
+        "target_prompt_unique_embedding_sha256": (
+            "a15f5e910358d5e95bcdd995303abb7eb7e7302fd9ee649c4cfebf3b8f6b6330"
+        ),
+        "model_revision": "0fad780a534b6463e45facd96134c9f345acfa5b",
+        "transformer_inventory_algorithm": TRANSFORMER_INVENTORY_ALGORITHM,
+        "transformer_inventory": [
+            {"path": path, "size": size, "sha256": digest}
+            for path, size, digest in FROZEN_TRANSFORMER_INVENTORY
+        ],
+        "transformer_inventory_sha256": FROZEN_TRANSFORMER_INVENTORY_SHA256,
+        "expected_initial_lora_sha256": (
+            "af163fcb6706c8403ffb1eaa9001cb2b9ac8ef86110663e8b20000961bb270a8"
+        ),
+        "expected_noise_sigma_rng_initial_sha256": (
+            "49b65850c0793680efb3a7cfc023601e240f13acb78ddb3aa483794c68136704"
+        ),
+        "expected_noise_sigma_rng_final_sha256": (
+            "79ff6c9a3db46b02896073cc95e8d05d185e813c844475e14b1ae460dd61b33f"
+        ),
+        "expected_sample_order_sha256": (
+            "a0c819a58fbf3f5be184f7b7708d30134d2f9dc0ebc98d79415f19d1cacc87cb"
+        ),
+        "training_config": {
+            "model": str(args.model),
+            "height": args.height,
+            "width": args.width,
+            "num_frames": args.num_frames,
+            "max_steps": args.max_steps,
+            "learning_rate": args.learning_rate,
+            "rank": args.rank,
+            "alpha": args.alpha,
+            "grad_accum": args.grad_accum,
+            "save_every": args.save_every,
+            "seed": args.seed,
+            "device": args.device,
+            "role": args.role,
+            "objective": args.objective,
+            "balanced_roles": args.balanced_roles,
+            "preserve_weight": args.preserve_weight,
+            "target_prompt_calibration_id": args.target_prompt_calibration_id,
+            "target_prompt_teacher_base_weight": args.target_prompt_teacher_weight,
+            "target_prompt_teacher_schedule": "2*sigma",
+            "sanity_mean_min": args.target_prompt_sanity_min_output_grad_ratio,
+            "sanity_mean_max": args.target_prompt_sanity_max_output_grad_ratio,
+            "sanity_single_max": (
+                args.target_prompt_sanity_max_single_output_grad_ratio
+            ),
+        },
+    }
+
+
+def validate_target_prompt_run_registration(
+    args: argparse.Namespace,
+    *,
+    manifest_sha256: str,
+    base_cache_sha256: str,
+) -> tuple[Path, str, dict[str, object]]:
+    current_protocol_inputs: dict[str, object] = {
+        "manifest": str(args.manifest),
+        "manifest_sha256": manifest_sha256,
+        "base_cache_dir": str(args.cache_dir),
+        "base_cache_sha256": base_cache_sha256,
+        "teacher_cache_dir": str(args.target_prompt_cache_dir),
+        "teacher_cache_sha256": args.target_prompt_cache_sha256,
+        "output_dir": str(args.output_dir),
+    }
+    frozen_protocol_inputs: dict[str, object] = {
+        "manifest": "data/water_impact_dynamic_v1/train_dynamic_sft_preserve_v2.csv",
+        "manifest_sha256": (
+            "3d4d8cbf9244b1575357f0ac74380cd7cb6265df4d1a85bf450de4cac120aee4"
+        ),
+        "base_cache_dir": "outputs/water_impact_dynamic_v1/cache_dynamic_sft_preserve_v2",
+        "base_cache_sha256": (
+            "4654ee67b8937d248963839b744e59f4f535f8be8b8eee421aef264fb3cd4d65"
+        ),
+        "teacher_cache_dir": (
+            "outputs/water_impact_dynamic_v3b/teacher_prompt_cache_v1"
+        ),
+        "teacher_cache_sha256": (
+            "6cf7ba0112d8df0e0a5253a7a943411fcfd85c56fc6df580446776b49d1ac9a9"
+        ),
+        "output_dir": (
+            "outputs/water_impact_dynamic_v3c/"
+            "adapter_target_prompt_teacher_sigma2_scale4_v1"
+        ),
+    }
+    if current_protocol_inputs != frozen_protocol_inputs:
+        raise ValueError(
+            f"current data/output inputs are outside the frozen protocol: "
+            f"{current_protocol_inputs!r}"
+        )
+    registration_path = args.output_dir / "run_registration.json"
+    registration = json.loads(registration_path.read_text(encoding="utf-8"))
+    expected = expected_target_prompt_run_registration(
+        args,
+        manifest_sha256=manifest_sha256,
+        base_cache_sha256=base_cache_sha256,
+    )
+    frozen_training_config = {
+        "model": "models/Wan2.1-T2V-1.3B-Diffusers",
+        "height": 480,
+        "width": 832,
+        "num_frames": 49,
+        "max_steps": 200,
+        "learning_rate": 5e-5,
+        "rank": 16,
+        "alpha": 16,
+        "grad_accum": 1,
+        "save_every": 25,
+        "seed": 26000,
+        "device": "cuda",
+        "role": "all",
+        "objective": "target_prompt_teacher_sigma_weighted",
+        "balanced_roles": True,
+        "preserve_weight": 4.0,
+        "target_prompt_calibration_id": (
+            "v3c_two_sigma_mean_one_preregistered_v1"
+        ),
+        "target_prompt_teacher_base_weight": 4.0,
+        "target_prompt_teacher_schedule": "2*sigma",
+        "sanity_mean_min": 0.2,
+        "sanity_mean_max": 0.5,
+        "sanity_single_max": 1.0,
+    }
+    if expected["training_config"] != frozen_training_config:
+        raise ValueError(
+            f"current training config is outside the frozen protocol: "
+            f"{expected['training_config']!r}"
+        )
+    for field, expected_value in expected.items():
+        if registration.get(field) != expected_value:
+            raise ValueError(
+                f"run registration {field}={registration.get(field)!r}, "
+                f"expected {expected_value!r}"
+            )
+    for prefix, current_path in (
+        ("trainer", Path(__file__)),
+        ("launcher", Path("scripts/run_water_impact_dynamic_sft_v3c_teacher.sh")),
+        (
+            "protocol_doc",
+            Path("docs/water_impact_dynamic_v3c_sigma_weighted_teacher.md"),
+        ),
+    ):
+        recorded_path = registration.get(f"{prefix}_path")
+        recorded_hash = registration.get(f"{prefix}_sha256")
+        if (
+            not isinstance(recorded_path, str)
+            or Path(recorded_path).resolve() != current_path.resolve()
+            or recorded_hash != file_sha256(current_path)
+        ):
+            raise ValueError(f"run registration {prefix} artifact mismatch")
+    reference_artifacts = registration.get("v3b_reference_artifacts")
+    if not isinstance(reference_artifacts, list) or len(reference_artifacts) != 4:
+        raise ValueError("run registration must bind four v3b reference artifacts")
+    expected_reference_artifacts = {
+        "outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_scale4_v1/"
+        "checkpoint-000200/pytorch_lora_weights.safetensors": (
+            "d3fecf26b7f1ca6c4a8f46c86850a47a7ec5a62762d0e0aa15c49363040875d3"
+        ),
+        "outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_scale4_v1/"
+        "checkpoint-000200/training_state.json": (
+            "0f9aa26e825f4f6f497b1312c507b685c054bc319f2f9f538e45eeb7a7908bea"
+        ),
+        "outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_scale4_v1/"
+        "run_registration.json": (
+            "53f0a7c472ba02a38b90b55651f378e5feda0bcd709f86786702de163b3a87f4"
+        ),
+        "outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_scale4_v1/"
+        "target_prompt_scale_sanity.json": (
+            "26fb8b1ff9e0d446fd186765ba1ff9a9d1a085d75d230cd0a419509ea00bbb12"
+        ),
+    }
+    registered_reference_artifacts: dict[str, str] = {}
+    for record in reference_artifacts:
+        if not isinstance(record, dict):
+            raise ValueError("invalid v3b reference artifact registration")
+        path = Path(str(record.get("path", "")))
+        recorded_hash = str(record.get("sha256", ""))
+        registered_reference_artifacts[str(path)] = recorded_hash
+        if not path.is_file() or file_sha256(path) != recorded_hash:
+            raise ValueError(f"v3b reference artifact mismatch: {path}")
+    if registered_reference_artifacts != expected_reference_artifacts:
+        raise ValueError("run registration v3b reference mapping is not frozen")
+    return registration_path, file_sha256(registration_path), registration
+
+
+def causal_residual_mask(factual: torch.Tensor, clean: torch.Tensor) -> torch.Tensor:
+    """Build a robust soft spatiotemporal mask in Wan latent resolution."""
+    residual = (factual.float() - clean.float()).abs().mean(dim=1, keepdim=True)
+    low = torch.quantile(residual, 0.50)
+    high = torch.quantile(residual, 0.95)
+    mask = ((residual - low) / (high - low).clamp_min(1e-6)).clamp(0.0, 1.0)
+    mask = torch.nn.functional.avg_pool3d(mask, kernel_size=3, stride=1, padding=1)
+    return mask.to(dtype=torch.bfloat16)
+
+
+def paired_separation_loss(
+    prediction: torch.Tensor,
+    counterfactual_target: torch.Tensor,
+    factual_target: torch.Tensor,
+    mask: torch.Tensor,
+    margin: float,
+) -> torch.Tensor:
+    """Require the prediction to prefer the counterfactual target in the causal region."""
+    positive_error = (prediction.float() - counterfactual_target.float()).square().mean(
+        dim=1, keepdim=True
+    )
+    negative_error = (prediction.float() - factual_target.float()).square().mean(
+        dim=1, keepdim=True
+    )
+    hinge = torch.relu(margin + positive_error - negative_error)
+    weights = mask.float()
+    return (hinge * weights).sum() / weights.sum().clamp_min(1e-6)
+
+
+def factual_redirect_loss(
+    prediction: torch.Tensor,
+    noisy_factual: torch.Tensor,
+    counterfactual_clean: torch.Tensor,
+    sigma: torch.Tensor,
+    mask: torch.Tensor,
+) -> torch.Tensor:
+    """Pull the clean endpoint predicted from a factual trajectory toward the counterfactual."""
+    predicted_clean = noisy_factual.float() - sigma.float() * prediction.float()
+    error = (predicted_clean - counterfactual_clean.float()).square().mean(dim=1, keepdim=True)
+    weights = mask.float()
+    return (error * weights).sum() / weights.sum().clamp_min(1e-6)
+
+
+def gated_flow_loss(element_loss: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+    error = element_loss.float().mean(dim=1, keepdim=True)
+    weights = mask.float()
+    return (error * weights).sum() / weights.sum().clamp_min(1e-6)
+
+
+def combine_target_prompt_teacher_loss(
+    flow_loss: torch.Tensor,
+    prediction: torch.Tensor,
+    teacher_prediction: torch.Tensor | None,
+    weight: float,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    if teacher_prediction is None:
+        teacher_loss = torch.zeros((), device=prediction.device)
+    else:
+        teacher_loss = torch.nn.functional.mse_loss(
+            prediction.float(), teacher_prediction.detach().float()
+        )
+    return teacher_loss, flow_loss + weight * teacher_loss
+
+
+def target_prompt_effective_teacher_weight(sigma: float, base_weight: float) -> float:
+    if (
+        not np.isfinite(sigma)
+        or sigma < 0
+        or sigma > 1
+        or not np.isfinite(base_weight)
+        or base_weight <= 0
+    ):
+        raise ValueError("v3c sigma and base teacher weight must be finite and valid")
+    return base_weight * 2.0 * sigma
+
+
+def combine_sigma_weighted_target_prompt_teacher_loss(
+    flow_loss: torch.Tensor,
+    prediction: torch.Tensor,
+    teacher_prediction: torch.Tensor | None,
+    *,
+    sigma: float,
+    base_weight: float,
+) -> tuple[torch.Tensor, torch.Tensor, float]:
+    effective_weight = target_prompt_effective_teacher_weight(sigma, base_weight)
+    teacher_loss, combined_loss = combine_target_prompt_teacher_loss(
+        flow_loss,
+        prediction,
+        teacher_prediction,
+        effective_weight,
+    )
+    return teacher_loss, combined_loss, effective_weight
+
+
+def checkpoint_allowed(
+    uses_target_prompt_teacher: bool,
+    scale_sanity: dict[str, object] | None,
+) -> bool:
+    return not uses_target_prompt_teacher or (
+        scale_sanity is not None and scale_sanity.get("passed") is True
+    )
+
+
+def target_prompt_scale_metrics(
+    raw_loss_ratios: list[float], sigmas: list[float], base_weight: float
+) -> dict[str, float]:
+    if not raw_loss_ratios:
+        raise ValueError("target-prompt scale metrics require at least one ratio")
+    if len(raw_loss_ratios) != len(sigmas):
+        raise ValueError("target-prompt scale metrics require one sigma per ratio")
+    values = np.asarray(raw_loss_ratios, dtype=np.float64)
+    sigma_values = np.asarray(sigmas, dtype=np.float64)
+    if (
+        not np.isfinite(values).all()
+        or (values < 0).any()
+        or not np.isfinite(sigma_values).all()
+        or (sigma_values < 0).any()
+        or (sigma_values > 1).any()
+        or not np.isfinite(base_weight)
+        or base_weight <= 0
+    ):
+        raise ValueError(
+            "target-prompt scale ratios, sigmas, and base weight must be finite and valid"
+        )
+    effective_weights = base_weight * 2.0 * sigma_values
+    weighted_loss_ratios = effective_weights * values
+    weighted_output_grad_ratios = effective_weights * np.sqrt(values)
+    return {
+        "mean_raw_loss_ratio": float(values.mean()),
+        "mean_sigma": float(sigma_values.mean()),
+        "mean_effective_teacher_weight": float(effective_weights.mean()),
+        "mean_weighted_loss_ratio": float(weighted_loss_ratios.mean()),
+        "mean_weighted_output_grad_ratio": float(
+            weighted_output_grad_ratios.mean()
+        ),
+        "median_weighted_output_grad_ratio": float(
+            np.median(weighted_output_grad_ratios)
+        ),
+    }
+
+
+def write_target_prompt_scale_sanity(
+    output_dir: Path,
+    observations: list[dict[str, object]],
+    *,
+    base_weight: float,
+    mean_min: float,
+    mean_max: float,
+    single_max: float,
+    calibration_id: str,
+    run_registration_sha256: str,
+) -> dict[str, object]:
+    if len(observations) != 16:
+        raise ValueError(f"scale sanity requires 16 erase observations, found {len(observations)}")
+    raw_ratios = [float(row["raw_loss_ratio"]) for row in observations]
+    sigmas = [float(row["sigma"]) for row in observations]
+    metrics = target_prompt_scale_metrics(raw_ratios, sigmas, base_weight)
+    individual = [
+        base_weight * 2.0 * sigma * float(np.sqrt(value))
+        for value, sigma in zip(raw_ratios, sigmas)
+    ]
+    normalized_observations: list[dict[str, object]] = []
+    for observation, raw_ratio, sigma, output_grad_ratio in zip(
+        observations, raw_ratios, sigmas, individual
+    ):
+        normalized = dict(observation)
+        effective_weight = target_prompt_effective_teacher_weight(sigma, base_weight)
+        normalized.update(
+            {
+                "sigma": sigma,
+                "effective_teacher_weight": effective_weight,
+                "raw_loss_ratio": raw_ratio,
+                "weighted_loss_ratio": effective_weight * raw_ratio,
+                "weighted_output_gradient_norm_ratio": output_grad_ratio,
+            }
+        )
+        normalized_observations.append(normalized)
+    passed = (
+        all(np.isfinite(value) for value in individual)
+        and mean_min <= metrics["mean_weighted_output_grad_ratio"] <= mean_max
+        and max(individual) <= single_max
+    )
+    payload: dict[str, object] = {
+        "protocol": "water_impact_dynamic_v3c_sigma_weighted_scale_sanity_v1",
+        "calibration_id": calibration_id,
+        "run_registration_sha256": run_registration_sha256,
+        "formula": (
+            "g_i = 8 * sigma_i * "
+            "sqrt(target_prompt_teacher_loss / flow_loss)"
+        ),
+        "aggregation": "arithmetic_mean_over_first_16_erase_steps",
+        "base_weight": base_weight,
+        "weight_schedule": "2*sigma",
+        "mean_output_gradient_norm_ratio_min": mean_min,
+        "mean_output_gradient_norm_ratio_max": mean_max,
+        "single_output_gradient_norm_ratio_max": single_max,
+        "observation_count": len(observations),
+        "max_weighted_output_gradient_norm_ratio": max(individual),
+        **metrics,
+        "passed": passed,
+        "observations": normalized_observations,
+    }
+    output_path = output_dir / "target_prompt_scale_sanity.json"
+    if output_path.exists():
+        raise FileExistsError(f"refusing to overwrite scale sanity artifact: {output_path}")
+    temporary_path = output_path.with_suffix(".json.tmp")
+    temporary_path.write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+    temporary_path.replace(output_path)
+    return payload
+
+
+def forward_target_prompt_teacher_pair(
+    transformer: torch.nn.Module,
+    noisy: torch.Tensor,
+    timestep: torch.Tensor,
+    factual_prompt_embeds: torch.Tensor,
+    target_prompt_embeds: torch.Tensor,
+    activation_controller: CausalLoRAActivationGate | None = None,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Run a frozen target-prompt teacher and factual-prompt LoRA student."""
+    if activation_controller is not None:
+        activation_controller.disable()
+    transformer.disable_adapters()
+    try:
+        with torch.no_grad():
+            teacher_prediction = transformer(
+                hidden_states=noisy,
+                timestep=timestep,
+                encoder_hidden_states=target_prompt_embeds,
+                return_dict=False,
+            )[0].detach()
+    finally:
+        transformer.enable_adapters()
+        if activation_controller is not None:
+            activation_controller.enable()
+    prediction = transformer(
+        hidden_states=noisy,
+        timestep=timestep,
+        encoder_hidden_states=factual_prompt_embeds,
+        return_dict=False,
+    )[0]
+    return teacher_prediction, prediction
+
+
+def load_causal_gate(args: argparse.Namespace, scene_id: str, mask: torch.Tensor) -> torch.Tensor:
+    gate_path = args.causal_gate_dir / f"{scene_id}.pt"
+    if not gate_path.exists():
+        raise FileNotFoundError(f"Missing causal gate for {scene_id}: {gate_path}")
+    payload = torch.load(gate_path, map_location="cpu", weights_only=True)
+    gate = payload["gate"].float()[None, None]
+    gate = torch.nn.functional.interpolate(
+        gate,
+        size=mask.shape[-3:],
+        mode="trilinear",
+        align_corners=False,
+    ).to(device=mask.device)
+    gate = args.gate_floor + (1.0 - args.gate_floor) * gate.clamp(0.0, 1.0)
+    combined = mask.float() * gate
+    return make_temporally_persistent_gate(combined) if args.persistent_causal_time else combined
+
+
+def load_activation_gate(
+    gate_dir: Path,
+    scene_id: str,
+    device: torch.device,
+    *,
+    persistent_time: bool = False,
+) -> torch.Tensor:
+    gate_path = gate_dir / f"{scene_id}.pt"
+    if not gate_path.exists():
+        raise FileNotFoundError(f"Missing activation gate for {scene_id}: {gate_path}")
+    payload = torch.load(gate_path, map_location="cpu", weights_only=True)
+    gate = payload["gate"].float().unsqueeze(0)
+    if persistent_time:
+        gate = make_temporally_persistent_gate(gate)
+    return gate.to(device=device)
+
+
+def load_component_gates(
+    gate_dir: Path,
+    scene_id: str,
+    reference: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    gate_path = gate_dir / f"{scene_id}.pt"
+    if not gate_path.exists():
+        raise FileNotFoundError(f"Missing component supervision gate for {scene_id}: {gate_path}")
+    payload = torch.load(gate_path, map_location="cpu", weights_only=True)
+    gates = []
+    for name in ("object_gate", "receiver_gate"):
+        if name not in payload:
+            raise KeyError(f"{gate_path} does not contain {name}")
+        gate = payload[name].float()[None, None]
+        gate = torch.nn.functional.interpolate(
+            gate,
+            size=reference.shape[-3:],
+            mode="trilinear",
+            align_corners=False,
+        ).to(device=reference.device)
+        gates.append(gate.clamp(0.0, 1.0))
+    return gates[0], gates[1]
+
+
+@torch.no_grad()
+def cache_prompt_embeddings(args: argparse.Namespace, rows: list[dict[str, str]]) -> dict[str, torch.Tensor]:
+    device = torch.device(args.device)
+    pipe = WanPipeline.from_pretrained(
+        str(args.model), transformer=None, vae=None, torch_dtype=torch.bfloat16
+    ).to(device)
+    embeddings: dict[str, torch.Tensor] = {}
+    for row in rows:
+        prompt = row["prompt"]
+        if prompt not in embeddings:
+            prompt_embeds, _ = pipe.encode_prompt(
+                prompt=prompt,
+                do_classifier_free_guidance=False,
+                num_videos_per_prompt=1,
+                device=device,
+                dtype=torch.bfloat16,
+            )
+            embeddings[prompt] = prompt_embeds.cpu()
+    del pipe
+    clear_memory()
+    return embeddings
+
+
+@torch.no_grad()
+def build_cache(args: argparse.Namespace, rows: list[dict[str, str]], project_root: Path) -> list[Path]:
+    args.cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_paths = [args.cache_dir / f"{index:03d}_{row['scene_id']}.pt" for index, row in enumerate(rows)]
+    if not args.rebuild_cache and all(path.exists() for path in cache_paths):
+        print(f"Using {len(cache_paths)} existing cache files in {args.cache_dir}", flush=True)
+        return cache_paths
+
+    prompt_embeddings = cache_prompt_embeddings(args, rows)
+    device = torch.device(args.device)
+    vae = AutoencoderKLWan.from_pretrained(
+        str(args.model), subfolder="vae", torch_dtype=torch.bfloat16
+    ).to(device)
+    vae.eval()
+    if hasattr(vae, "enable_tiling"):
+        vae.enable_tiling()
+    processor = WanPipeline.from_pretrained(
+        str(args.model), transformer=None, text_encoder=None, tokenizer=None, vae=None
+    ).video_processor
+    mean = torch.tensor(vae.config.latents_mean, device=device, dtype=torch.bfloat16).view(1, -1, 1, 1, 1)
+    std = torch.tensor(vae.config.latents_std, device=device, dtype=torch.bfloat16).view(1, -1, 1, 1, 1)
+
+    for index, (row, cache_path) in enumerate(zip(rows, cache_paths, strict=True)):
+        target_path = resolve_path(project_root, row["desired_target_video"])
+        target_frames = read_video(target_path, args.num_frames)
+        target_video = processor.preprocess_video(target_frames, height=args.height, width=args.width).to(
+            device=device, dtype=torch.bfloat16
+        )
+        raw_latents = vae.encode(target_video).latent_dist.mode()
+        latents = ((raw_latents - mean) / std).cpu()
+        payload = {
+            "scene_id": row["scene_id"],
+            "prompt": row["prompt"],
+            "training_role": row["training_role"],
+            "target_video": str(target_path),
+            "latents": latents,
+            "prompt_embeds": prompt_embeddings[row["prompt"]],
+        }
+        if args.objective in {
+            "mask_bg",
+            "paired_sep",
+            "dual_traj",
+            "causal_gate",
+            "counterfactual_sft",
+            "target_conditioned_sft",
+            "target_conditioned_redirect",
+            "target_conditioned_components",
+        } and row.get("residual_mask_enabled") == "yes":
+            factual_path = resolve_path(project_root, row["residual_mask_factual_video"])
+            factual_frames = read_video(factual_path, args.num_frames)
+            factual_video = processor.preprocess_video(
+                factual_frames, height=args.height, width=args.width
+            ).to(device=device, dtype=torch.bfloat16)
+            factual_raw_latents = vae.encode(factual_video).latent_dist.mode()
+            factual_latents = (factual_raw_latents - mean) / std
+            mask = causal_residual_mask(factual_latents, latents.to(device))
+            payload["factual_video"] = str(factual_path)
+            payload["factual_latents"] = factual_latents.cpu()
+            payload["residual_mask"] = mask.cpu()
+            payload["mask_mean"] = float(mask.float().mean())
+            payload["mask_peak"] = float(mask.float().max())
+            del factual_video, factual_raw_latents, factual_latents, mask
+        torch.save(payload, cache_path)
+        mask_note = f" mask_mean={payload['mask_mean']:.4f}" if "mask_mean" in payload else ""
+        print(
+            f"Cached {index + 1}/{len(rows)}: {row['scene_id']} {tuple(latents.shape)}{mask_note}",
+            flush=True,
+        )
+        del target_video, raw_latents, latents, payload
+        clear_memory()
+
+    del vae, processor
+    clear_memory()
+    return cache_paths
+
+
+def require_existing_v3c_cache(
+    args: argparse.Namespace, rows: list[dict[str, str]]
+) -> list[Path]:
+    expected = [
+        args.cache_dir / f"{index:03d}_{row['scene_id']}.pt"
+        for index, row in enumerate(rows)
+    ]
+    actual = sorted(args.cache_dir.glob("*.pt"))
+    missing = [path for path in expected if not path.is_file()]
+    unexpected = sorted(set(actual) - set(expected))
+    if missing or unexpected or len(actual) != len(expected):
+        raise FileNotFoundError(
+            "v3c requires the complete frozen base cache and will not build it: "
+            f"expected={len(expected)} actual={len(actual)} "
+            f"missing={len(missing)} unexpected={len(unexpected)}"
+        )
+    return expected
+
+
+def save_lora(transformer: WanTransformer3DModel, output_dir: Path, metadata: dict[str, object]) -> None:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    state = get_peft_model_state_dict(transformer)
+    WanPipeline.save_lora_weights(
+        str(output_dir), transformer_lora_layers=convert_state_dict_to_diffusers(state), safe_serialization=True
+    )
+    (output_dir / "training_state.json").write_text(
+        json.dumps(metadata, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+
+
+def train(
+    args: argparse.Namespace,
+    cache_paths: list[Path],
+    rows: list[dict[str, str]],
+) -> None:
+    seed_training(args.seed)
+    validate_cached_rows(cache_paths, rows)
+    manifest_sha256 = file_sha256(args.manifest)
+    cache_sha256 = cache_inventory_sha256(cache_paths)
+    uses_target_prompt_teacher = (
+        args.objective == "target_prompt_teacher_sigma_weighted"
+        and args.target_prompt_teacher_weight > 0
+    )
+    target_prompt_cache_paths: dict[int, Path] = {}
+    target_prompt_provenance: dict[str, object] = {}
+    transformer_provenance: dict[str, object] = {}
+    run_registration_path: Path | None = None
+    run_registration_sha256: str | None = None
+    run_registration: dict[str, object] = {}
+    if uses_target_prompt_teacher:
+        target_prompt_cache_paths, target_prompt_provenance = validate_target_prompt_cache(
+            args, rows
+        )
+        (
+            run_registration_path,
+            run_registration_sha256,
+            run_registration,
+        ) = validate_target_prompt_run_registration(
+            args,
+            manifest_sha256=manifest_sha256,
+            base_cache_sha256=cache_sha256,
+        )
+        transformer_provenance = validate_frozen_transformer_inventory(args.model)
+    device = torch.device(args.device)
+    transformer = WanTransformer3DModel.from_pretrained(
+        str(args.model), subfolder="transformer", torch_dtype=torch.bfloat16
+    ).to(device)
+    transformer.requires_grad_(False)
+    transformer.enable_gradient_checkpointing()
+    # Reset immediately before the only randomly initialized model component.
+    # This keeps controlled arms identical even if model loading starts using
+    # randomness in a future dependency version.
+    seed_training(args.seed)
+    transformer.add_adapter(
+        LoraConfig(
+            r=args.rank,
+            lora_alpha=args.alpha,
+            init_lora_weights="gaussian",
+            target_modules=["to_q", "to_k", "to_v", "to_out.0"],
+        )
+    )
+    activation_controller = (
+        CausalLoRAActivationGate(transformer)
+        if args.activation_gate_dir is not None
+        else None
+    )
+    if activation_controller is not None:
+        print(
+            f"Activation-gated LoRA modules: {activation_controller.module_count}",
+            flush=True,
+        )
+    target_tokenizer = (
+        AutoTokenizer.from_pretrained(str(args.model), subfolder="tokenizer")
+        if args.objective in {
+            "target_conditioned_sft",
+            "target_conditioned_redirect",
+            "target_conditioned_components",
+        }
+        else None
+    )
+    trainable = [parameter for parameter in transformer.parameters() if parameter.requires_grad]
+    trainable_count = sum(parameter.numel() for parameter in trainable)
+    initial_lora_sha256 = trainable_state_sha256(transformer)
+    if uses_target_prompt_teacher and initial_lora_sha256 != run_registration.get(
+        "expected_initial_lora_sha256"
+    ):
+        raise ValueError(
+            "initial LoRA hash does not match the frozen run registration: "
+            f"{initial_lora_sha256}"
+        )
+    print(
+        f"Trainable LoRA parameters: {trainable_count:,} "
+        f"initial_sha256={initial_lora_sha256}",
+        flush=True,
+    )
+    optimizer = torch.optim.AdamW(trainable, lr=args.learning_rate, betas=(0.9, 0.999), weight_decay=0.01)
+    generator = torch.Generator(device="cpu").manual_seed(args.seed)
+    noise_sigma_rng_initial_sha256 = tensor_sha256(generator.get_state())
+    if (
+        uses_target_prompt_teacher
+        and noise_sigma_rng_initial_sha256
+        != run_registration.get("expected_noise_sigma_rng_initial_sha256")
+    ):
+        raise ValueError(
+            "v3c noise/sigma RNG does not match the frozen v3b initial state: "
+            f"{noise_sigma_rng_initial_sha256}"
+        )
+    order_rng = random.Random(args.seed)
+    order = list(range(len(cache_paths)))
+    role_indices = {"erase": [], "preserve": []}
+    if args.balanced_roles and args.role == "all":
+        for index, cache_path in enumerate(cache_paths):
+            metadata = torch.load(cache_path, map_location="cpu", weights_only=True)
+            role_indices[metadata["training_role"]].append(index)
+        if not all(role_indices.values()):
+            raise ValueError("--balanced-roles requires both erase and preserve rows")
+        for role in role_indices:
+            order_rng.shuffle(role_indices[role])
+        role_cursors = {"erase": 0, "preserve": 0}
+    losses: list[float] = []
+    remove_losses: list[float] = []
+    background_losses: list[float] = []
+    pair_losses: list[float] = []
+    redirect_losses: list[float] = []
+    object_losses: list[float] = []
+    receiver_losses: list[float] = []
+    preserve_losses: list[float] = []
+    target_prompt_teacher_losses: list[float] = []
+    target_prompt_teacher_raw_loss_ratios: list[float] = []
+    target_prompt_teacher_sigmas: list[float] = []
+    target_prompt_scale_observations: list[dict[str, object]] = []
+    target_prompt_teacher_grad_norms_first_16: list[float] = []
+    target_prompt_scale_sanity: dict[str, object] | None = None
+    gate_means: list[float] = []
+    role_step_counts = {"erase": 0, "preserve": 0}
+    sample_order_digest = hashlib.sha256()
+    optimizer.zero_grad(set_to_none=True)
+    started = time.time()
+
+    transformer.train()
+    for step in range(1, args.max_steps + 1):
+        if args.balanced_roles and args.role == "all":
+            role = "erase" if step % 2 else "preserve"
+            cursor = role_cursors[role]
+            if cursor >= len(role_indices[role]):
+                order_rng.shuffle(role_indices[role])
+                cursor = 0
+            sample_index = role_indices[role][cursor]
+            role_cursors[role] = cursor + 1
+        else:
+            if (step - 1) % len(order) == 0:
+                order_rng.shuffle(order)
+            sample_index = order[(step - 1) % len(order)]
+        sample = torch.load(cache_paths[sample_index], map_location="cpu", weights_only=True)
+        is_preserve = sample["training_role"] == "preserve"
+        role_step_counts[sample["training_role"]] += 1
+        sample_order_digest.update(
+            f"{step}:{sample['training_role']}:{sample['scene_id']}\n".encode("utf-8")
+        )
+        clean = sample["latents"].to(device=device, dtype=torch.bfloat16)
+        prompt_embeds = sample["prompt_embeds"].to(device=device, dtype=torch.bfloat16)
+        target_prompt_embeds = None
+        if uses_target_prompt_teacher and not is_preserve:
+            target_payload = torch.load(
+                target_prompt_cache_paths[sample_index],
+                map_location="cpu",
+                weights_only=True,
+            )
+            if target_payload["scene_id"] != sample["scene_id"]:
+                raise ValueError(
+                    f"target-prompt cache scene mismatch at manifest index {sample_index}"
+                )
+            target_prompt_embeds = target_payload["teacher_prompt_embeds"].to(
+                device=device, dtype=torch.bfloat16
+            )
+            if target_prompt_embeds.shape != prompt_embeds.shape:
+                raise ValueError(
+                    f"target/factual prompt embedding shape mismatch for {sample['scene_id']}: "
+                    f"{tuple(target_prompt_embeds.shape)} != {tuple(prompt_embeds.shape)}"
+                )
+        if activation_controller is not None:
+            if is_preserve:
+                activation_controller.clear_gate()
+            else:
+                activation_controller.set_gate(
+                    load_activation_gate(
+                        args.activation_gate_dir,
+                        sample["scene_id"],
+                        device,
+                        persistent_time=args.persistent_causal_time,
+                    )
+                )
+                if target_tokenizer is not None:
+                    activation_controller.set_text_gate(
+                        find_token_mask(
+                            target_tokenizer,
+                            sample["prompt"],
+                            args.target_phrase,
+                            max_length=prompt_embeds.shape[1],
+                        ).to(device=device)
+                    )
+        noise = torch.randn(clean.shape, generator=generator, dtype=torch.float32).to(device, dtype=torch.bfloat16)
+        sigma = torch.rand((clean.shape[0],), generator=generator, dtype=torch.float32).to(device)
+        sigma = sigma.view(-1, 1, 1, 1, 1)
+        noisy = ((1.0 - sigma) * clean + sigma * noise).to(dtype=torch.bfloat16)
+        target = (noise - clean).to(dtype=torch.bfloat16)
+        timestep = (sigma.flatten() * 1000.0).to(dtype=torch.bfloat16)
+        sigma_value = float(sigma.detach().float().flatten()[0])
+        target_prompt_effective_teacher_weight = 0.0
+
+        teacher_prediction = None
+        teacher_factual_prediction = None
+        target_prompt_teacher_prediction = None
+        has_residual_mask = (
+            args.objective in {
+                "mask_bg",
+                "paired_sep",
+                "dual_traj",
+                "causal_gate",
+                "counterfactual_sft",
+                "target_conditioned_sft",
+                "target_conditioned_redirect",
+                "target_conditioned_components",
+            }
+            and "residual_mask" in sample
+        )
+        uses_factual = has_residual_mask and args.objective in {
+            "paired_sep",
+            "dual_traj",
+            "causal_gate",
+            "target_conditioned_redirect",
+            "target_conditioned_components",
+        }
+        if uses_factual:
+            factual = sample["factual_latents"].to(device=device, dtype=torch.bfloat16)
+            factual_target = (noise - factual).to(dtype=torch.bfloat16)
+        if has_residual_mask and args.objective in {
+            "dual_traj",
+            "causal_gate",
+            "target_conditioned_redirect",
+            "target_conditioned_components",
+        }:
+            noisy_factual = ((1.0 - sigma) * factual + sigma * noise).to(dtype=torch.bfloat16)
+        needs_teacher = is_preserve or (has_residual_mask and args.background_weight > 0)
+        if needs_teacher:
+            if activation_controller is not None:
+                activation_controller.disable()
+            transformer.disable_adapters()
+            with torch.no_grad():
+                teacher_prediction = transformer(
+                    hidden_states=noisy,
+                    timestep=timestep,
+                    encoder_hidden_states=prompt_embeds,
+                    return_dict=False,
+                )[0]
+                if has_residual_mask and args.objective in {
+                    "dual_traj",
+                    "causal_gate",
+                    "target_conditioned_redirect",
+                    "target_conditioned_components",
+                }:
+                    teacher_factual_prediction = transformer(
+                        hidden_states=noisy_factual,
+                        timestep=timestep,
+                        encoder_hidden_states=prompt_embeds,
+                        return_dict=False,
+                    )[0]
+            transformer.enable_adapters()
+            if activation_controller is not None:
+                activation_controller.enable()
+
+        if target_prompt_embeds is not None:
+            target_prompt_teacher_prediction, prediction = (
+                forward_target_prompt_teacher_pair(
+                    transformer,
+                    noisy,
+                    timestep,
+                    prompt_embeds,
+                    target_prompt_embeds,
+                    activation_controller,
+                )
+            )
+        else:
+            prediction = transformer(
+                hidden_states=noisy,
+                timestep=timestep,
+                encoder_hidden_states=prompt_embeds,
+                return_dict=False,
+            )[0]
+        element_loss = torch.nn.functional.mse_loss(
+            prediction.float(), target.float(), reduction="none"
+        )
+        if is_preserve:
+            preserve_loss = torch.nn.functional.mse_loss(
+                prediction.float(), teacher_prediction.float()
+            )
+            remove_loss = torch.zeros((), device=device)
+            background_loss = torch.zeros((), device=device)
+            pair_loss = torch.zeros((), device=device)
+            redirect_loss = torch.zeros((), device=device)
+            object_loss = torch.zeros((), device=device)
+            receiver_loss = torch.zeros((), device=device)
+            target_prompt_teacher_loss = torch.zeros((), device=device)
+            combined_loss = args.preserve_weight * preserve_loss
+        elif has_residual_mask:
+            preserve_loss = torch.zeros((), device=device)
+            mask = sample["residual_mask"].to(device=device, dtype=torch.float32)
+            if args.objective in {
+                "causal_gate",
+                "counterfactual_sft",
+                "target_conditioned_sft",
+                "target_conditioned_redirect",
+                "target_conditioned_components",
+            }:
+                mask = load_causal_gate(args, sample["scene_id"], mask)
+                remove_loss = gated_flow_loss(element_loss, mask)
+            elif args.objective == "mask_bg":
+                remove_loss = (element_loss * (1.0 + args.mask_weight * mask)).mean()
+            else:
+                # Concentrate the counterfactual flow-matching signal on the
+                # observed causal residual while retaining a base-weighted
+                # signal outside it through background_loss.
+                remove_loss = (element_loss * (1.0 + args.mask_weight * mask)).mean()
+            if args.objective == "target_conditioned_components":
+                object_gate, receiver_gate = load_component_gates(
+                    args.component_gate_dir, sample["scene_id"], mask
+                )
+                background_mask = torch.maximum(object_gate, receiver_gate)
+            else:
+                object_gate = receiver_gate = None
+                background_mask = mask
+            if teacher_prediction is not None:
+                background_loss = (
+                    (prediction.float() - teacher_prediction.float()).square()
+                    * (1.0 - background_mask)
+                ).mean()
+            else:
+                background_loss = torch.zeros((), device=device)
+            if args.objective in {"paired_sep", "dual_traj", "causal_gate"}:
+                pair_loss = paired_separation_loss(
+                    prediction, target, factual_target, mask, args.pair_margin
+                )
+            else:
+                pair_loss = torch.zeros((), device=device)
+            if args.objective in {
+                "dual_traj",
+                "causal_gate",
+                "target_conditioned_redirect",
+                "target_conditioned_components",
+            }:
+                factual_prediction = transformer(
+                    hidden_states=noisy_factual,
+                    timestep=timestep,
+                    encoder_hidden_states=prompt_embeds,
+                    return_dict=False,
+                )[0]
+                if args.objective == "target_conditioned_components":
+                    redirect_loss = torch.zeros((), device=device)
+                    object_loss = factual_redirect_loss(
+                        factual_prediction, noisy_factual, clean, sigma, object_gate
+                    )
+                    receiver_loss = factual_redirect_loss(
+                        factual_prediction, noisy_factual, clean, sigma, receiver_gate
+                    )
+                else:
+                    redirect_loss = factual_redirect_loss(
+                        factual_prediction, noisy_factual, clean, sigma, mask
+                    )
+                    object_loss = torch.zeros((), device=device)
+                    receiver_loss = torch.zeros((), device=device)
+                if teacher_factual_prediction is not None:
+                    factual_background_loss = (
+                        (factual_prediction.float() - teacher_factual_prediction.float()).square()
+                        * (1.0 - background_mask)
+                    ).mean()
+                    background_loss = 0.5 * (background_loss + factual_background_loss)
+            else:
+                redirect_loss = torch.zeros((), device=device)
+                object_loss = torch.zeros((), device=device)
+                receiver_loss = torch.zeros((), device=device)
+            target_prompt_teacher_loss = torch.zeros((), device=device)
+            combined_loss = (
+                remove_loss
+                + args.background_weight * background_loss
+                + args.pair_weight * pair_loss
+                + args.redirect_weight * redirect_loss
+                + args.object_weight * object_loss
+                + args.receiver_weight * receiver_loss
+            )
+        else:
+            preserve_loss = torch.zeros((), device=device)
+            remove_loss = element_loss.mean()
+            background_loss = torch.zeros((), device=device)
+            pair_loss = torch.zeros((), device=device)
+            redirect_loss = torch.zeros((), device=device)
+            object_loss = torch.zeros((), device=device)
+            receiver_loss = torch.zeros((), device=device)
+            (
+                target_prompt_teacher_loss,
+                combined_loss,
+                target_prompt_effective_teacher_weight,
+            ) = combine_sigma_weighted_target_prompt_teacher_loss(
+                remove_loss,
+                prediction,
+                target_prompt_teacher_prediction,
+                sigma=sigma_value,
+                base_weight=args.target_prompt_teacher_weight,
+            )
+        if not torch.isfinite(combined_loss):
+            raise FloatingPointError(
+                f"non-finite combined loss at step {step} for {sample['scene_id']}"
+            )
+        target_prompt_raw_loss_ratio_value = 0.0
+        target_prompt_weighted_loss_ratio_value = 0.0
+        target_prompt_weighted_output_grad_ratio_value = 0.0
+        if target_prompt_teacher_prediction is not None:
+            flow_for_scale = float(remove_loss.detach())
+            teacher_for_scale = float(target_prompt_teacher_loss.detach())
+            if (
+                not np.isfinite(flow_for_scale)
+                or not np.isfinite(teacher_for_scale)
+                or flow_for_scale <= 0
+                or teacher_for_scale < 0
+            ):
+                raise FloatingPointError(
+                    f"invalid target-prompt scale losses at step {step}: "
+                    f"flow={flow_for_scale} teacher={teacher_for_scale}"
+                )
+            target_prompt_raw_loss_ratio_value = teacher_for_scale / flow_for_scale
+            target_prompt_weighted_loss_ratio_value = (
+                target_prompt_effective_teacher_weight
+                * target_prompt_raw_loss_ratio_value
+            )
+            target_prompt_weighted_output_grad_ratio_value = (
+                target_prompt_effective_teacher_weight
+                * float(np.sqrt(target_prompt_raw_loss_ratio_value))
+            )
+            target_prompt_teacher_raw_loss_ratios.append(
+                target_prompt_raw_loss_ratio_value
+            )
+            target_prompt_teacher_sigmas.append(sigma_value)
+            if len(target_prompt_scale_observations) < 16:
+                target_prompt_scale_observations.append(
+                    {
+                        "global_step": step,
+                        "scene_id": sample["scene_id"],
+                        "flow_loss": flow_for_scale,
+                        "target_prompt_teacher_loss": teacher_for_scale,
+                        "sigma": sigma_value,
+                        "effective_teacher_weight": (
+                            target_prompt_effective_teacher_weight
+                        ),
+                        "raw_loss_ratio": target_prompt_raw_loss_ratio_value,
+                        "weighted_loss_ratio": target_prompt_weighted_loss_ratio_value,
+                        "weighted_output_gradient_norm_ratio": (
+                            target_prompt_weighted_output_grad_ratio_value
+                        ),
+                    }
+                )
+                if len(target_prompt_scale_observations) == 16:
+                    if run_registration_sha256 is None:
+                        raise RuntimeError("target-prompt run registration is unavailable")
+                    target_prompt_scale_sanity = write_target_prompt_scale_sanity(
+                        args.output_dir,
+                        target_prompt_scale_observations,
+                        base_weight=args.target_prompt_teacher_weight,
+                        mean_min=args.target_prompt_sanity_min_output_grad_ratio,
+                        mean_max=args.target_prompt_sanity_max_output_grad_ratio,
+                        single_max=(
+                            args.target_prompt_sanity_max_single_output_grad_ratio
+                        ),
+                        calibration_id=args.target_prompt_calibration_id,
+                        run_registration_sha256=run_registration_sha256,
+                    )
+                    if not target_prompt_scale_sanity["passed"]:
+                        raise RuntimeError(
+                            "pre-registered target-teacher output-gradient sanity "
+                            "failed before evaluation: "
+                            f"mean={target_prompt_scale_sanity['mean_weighted_output_grad_ratio']:.6f} "
+                            f"max={target_prompt_scale_sanity['max_weighted_output_gradient_norm_ratio']:.6f}"
+                        )
+        loss = combined_loss / args.grad_accum
+        loss.backward()
+        if activation_controller is not None:
+            activation_controller.clear_gate()
+        grad_norm_value = 0.0
+        if step % args.grad_accum == 0:
+            grad_norm = torch.nn.utils.clip_grad_norm_(trainable, 1.0)
+            grad_norm_value = float(grad_norm.detach())
+            optimizer.step()
+            optimizer.zero_grad(set_to_none=True)
+
+        loss_value = float(loss.detach()) * args.grad_accum
+        remove_value = float(remove_loss.detach())
+        background_value = float(background_loss.detach())
+        pair_value = float(pair_loss.detach())
+        redirect_value = float(redirect_loss.detach())
+        object_value = float(object_loss.detach())
+        receiver_value = float(receiver_loss.detach())
+        preserve_value = float(preserve_loss.detach())
+        target_prompt_teacher_value = float(target_prompt_teacher_loss.detach())
+        gate_mean = float(mask.mean()) if has_residual_mask else 0.0
+        losses.append(loss_value)
+        remove_losses.append(remove_value)
+        background_losses.append(background_value)
+        pair_losses.append(pair_value)
+        redirect_losses.append(redirect_value)
+        object_losses.append(object_value)
+        receiver_losses.append(receiver_value)
+        preserve_losses.append(preserve_value)
+        if target_prompt_teacher_prediction is not None:
+            target_prompt_teacher_losses.append(target_prompt_teacher_value)
+            if len(target_prompt_teacher_grad_norms_first_16) < 16:
+                target_prompt_teacher_grad_norms_first_16.append(grad_norm_value)
+        gate_means.append(gate_mean)
+        elapsed = time.time() - started
+        print(
+            f"step={step}/{args.max_steps} scene={sample['scene_id']} "
+            f"role={sample['training_role']} masked={has_residual_mask} "
+            f"loss={loss_value:.6f} "
+            f"remove={remove_value:.6f} bg={background_value:.6f} "
+            f"pair={pair_value:.6f} redirect={redirect_value:.6f} "
+            f"object={object_value:.6f} receiver={receiver_value:.6f} "
+            f"preserve={preserve_value:.6f} "
+            f"target_teacher={target_prompt_teacher_value:.6f} "
+            f"target_teacher_base_weight={args.target_prompt_teacher_weight:.6f} "
+            f"target_teacher_effective_weight={target_prompt_effective_teacher_weight:.6f} "
+            f"target_teacher_weighted={target_prompt_effective_teacher_weight * target_prompt_teacher_value:.6f} "
+            f"target_raw_loss_ratio={target_prompt_raw_loss_ratio_value:.6f} "
+            f"target_weighted_loss_ratio={target_prompt_weighted_loss_ratio_value:.6f} "
+            f"target_output_grad_ratio={target_prompt_weighted_output_grad_ratio_value:.6f} "
+            f"grad_norm={grad_norm_value:.6f} "
+            f"gate={gate_mean:.6f} "
+            f"mean20={np.mean(losses[-20:]):.6f} elapsed={elapsed:.1f}s",
+            flush=True,
+        )
+        del sample, clean, prompt_embeds, noise, noisy, target, prediction, loss, element_loss
+        if teacher_prediction is not None:
+            del teacher_prediction
+        if target_prompt_teacher_prediction is not None:
+            del target_prompt_teacher_prediction, target_prompt_embeds, target_payload
+        if has_residual_mask:
+            del mask
+        if uses_factual:
+            del factual, factual_target, pair_loss
+        if has_residual_mask and args.objective in {
+            "dual_traj",
+            "causal_gate",
+            "target_conditioned_redirect",
+            "target_conditioned_components",
+        }:
+            del noisy_factual, factual_prediction, redirect_loss
+            if teacher_factual_prediction is not None:
+                del teacher_factual_prediction, factual_background_loss
+
+        should_save_checkpoint = step % args.save_every == 0 or step == args.max_steps
+        if (
+            should_save_checkpoint
+            and not checkpoint_allowed(
+                uses_target_prompt_teacher, target_prompt_scale_sanity
+            )
+        ):
+            if target_prompt_scale_sanity is not None:
+                raise RuntimeError("refusing to save a checkpoint after failed v3c sanity")
+            print(
+                f"Deferred checkpoint-{step:06d}: v3c scale sanity has not passed",
+                flush=True,
+            )
+            continue
+
+        if should_save_checkpoint:
+            if (
+                run_registration_path is not None
+                and file_sha256(run_registration_path) != run_registration_sha256
+            ):
+                raise ValueError("run registration changed during training")
+            if (
+                uses_target_prompt_teacher
+                and step == args.max_steps
+                and sample_order_digest.hexdigest()
+                != run_registration.get("expected_sample_order_sha256")
+            ):
+                raise ValueError(
+                    "v3c sample order differs from the frozen v3b order: "
+                    f"{sample_order_digest.hexdigest()}"
+                )
+            if (
+                uses_target_prompt_teacher
+                and step == args.max_steps
+                and tensor_sha256(generator.get_state())
+                != run_registration.get("expected_noise_sigma_rng_final_sha256")
+            ):
+                raise ValueError(
+                    "v3c noise/sigma RNG stream differs from the frozen v3b stream: "
+                    f"{tensor_sha256(generator.get_state())}"
+                )
+            first_scale_metrics = (
+                target_prompt_scale_metrics(
+                    [
+                        float(row["raw_loss_ratio"])
+                        for row in target_prompt_scale_observations
+                    ],
+                    [float(row["sigma"]) for row in target_prompt_scale_observations],
+                    args.target_prompt_teacher_weight,
+                )
+                if target_prompt_scale_observations
+                else None
+            )
+            recent_scale_metrics = (
+                target_prompt_scale_metrics(
+                    target_prompt_teacher_raw_loss_ratios[-20:],
+                    target_prompt_teacher_sigmas[-20:],
+                    args.target_prompt_teacher_weight,
+                )
+                if target_prompt_teacher_raw_loss_ratios
+                else None
+            )
+            sanity_path = args.output_dir / "target_prompt_scale_sanity.json"
+            checkpoint = args.output_dir / f"checkpoint-{step:06d}"
+            save_lora(
+                transformer,
+                checkpoint,
+                {
+                    "step": step,
+                    "max_steps": args.max_steps,
+                    "mean_loss_last_20": float(np.mean(losses[-20:])),
+                    "manifest": str(args.manifest),
+                    "manifest_sha256": manifest_sha256,
+                    "model": str(args.model),
+                    "cache_dir": str(args.cache_dir),
+                    "cache_entry_count": len(cache_paths),
+                    "cache_inventory_sha256": cache_sha256,
+                    "height": args.height,
+                    "width": args.width,
+                    "num_frames": args.num_frames,
+                    "grad_accum": args.grad_accum,
+                    "device": args.device,
+                    "rank": args.rank,
+                    "alpha": args.alpha,
+                    "learning_rate": args.learning_rate,
+                    "seed": args.seed,
+                    "initial_lora_sha256": initial_lora_sha256,
+                    "role": args.role,
+                    "objective": args.objective,
+                    "mask_weight": args.mask_weight,
+                    "background_weight": args.background_weight,
+                    "pair_weight": args.pair_weight,
+                    "pair_margin": args.pair_margin,
+                    "redirect_weight": args.redirect_weight,
+                    "object_weight": args.object_weight,
+                    "receiver_weight": args.receiver_weight,
+                    "preserve_weight": args.preserve_weight,
+                    "balanced_roles": args.balanced_roles,
+                    "role_step_counts": dict(role_step_counts),
+                    "sample_order_sha256": sample_order_digest.hexdigest(),
+                    "causal_gate_dir": str(args.causal_gate_dir) if args.causal_gate_dir else None,
+                    "gate_floor": args.gate_floor,
+                    "activation_gate_dir": (
+                        str(args.activation_gate_dir) if args.activation_gate_dir else None
+                    ),
+                    "component_gate_dir": (
+                        str(args.component_gate_dir) if args.component_gate_dir else None
+                    ),
+                    "target_phrase": args.target_phrase,
+                    "persistent_causal_time": args.persistent_causal_time,
+                    "target_prompt_teacher_enabled": uses_target_prompt_teacher,
+                    "target_prompt_teacher_weight": (
+                        args.target_prompt_teacher_weight
+                        if uses_target_prompt_teacher
+                        else 0.0
+                    ),
+                    "target_prompt_teacher_weight_semantics": (
+                        "base_weight_before_2*sigma_schedule"
+                        if uses_target_prompt_teacher
+                        else None
+                    ),
+                    "target_prompt_teacher_schedule": (
+                        "2*sigma" if uses_target_prompt_teacher else None
+                    ),
+                    "target_prompt_teacher_effective_weight_formula": (
+                        "4 * (2 * sigma)" if uses_target_prompt_teacher else None
+                    ),
+                    "target_prompt_calibration_id": (
+                        args.target_prompt_calibration_id
+                        if uses_target_prompt_teacher
+                        else None
+                    ),
+                    "teacher_prompt_field": (
+                        "target_generation_prompt" if uses_target_prompt_teacher else None
+                    ),
+                    "teacher_adapter_mode": (
+                        "disabled" if uses_target_prompt_teacher else None
+                    ),
+                    "teacher_stop_gradient": uses_target_prompt_teacher,
+                    "teacher_uses_same_noisy_latent": uses_target_prompt_teacher,
+                    "teacher_uses_same_timestep": uses_target_prompt_teacher,
+                    "trainer_sha256": file_sha256(Path(__file__)),
+                    "run_registration_path": (
+                        str(run_registration_path) if run_registration_path else None
+                    ),
+                    "run_registration_sha256": run_registration_sha256,
+                    "noise_sigma_rng_initial_sha256": noise_sigma_rng_initial_sha256,
+                    "noise_sigma_rng_current_sha256": tensor_sha256(generator.get_state()),
+                    **target_prompt_provenance,
+                    **transformer_provenance,
+                    "mean_remove_loss_last_20": float(np.mean(remove_losses[-20:])),
+                    "mean_background_loss_last_20": float(np.mean(background_losses[-20:])),
+                    "mean_pair_loss_last_20": float(np.mean(pair_losses[-20:])),
+                    "mean_redirect_loss_last_20": float(np.mean(redirect_losses[-20:])),
+                    "mean_object_loss_last_20": float(np.mean(object_losses[-20:])),
+                    "mean_receiver_loss_last_20": float(np.mean(receiver_losses[-20:])),
+                    "mean_preserve_loss_last_20": float(np.mean(preserve_losses[-20:])),
+                    "mean_target_prompt_teacher_loss_last_20": (
+                        float(np.mean(target_prompt_teacher_losses[-20:]))
+                        if target_prompt_teacher_losses
+                        else 0.0
+                    ),
+                    "teacher_scale_sanity_protocol": (
+                        "water_impact_dynamic_v3c_sigma_weighted_scale_sanity_v1"
+                        if uses_target_prompt_teacher
+                        else None
+                    ),
+                    "teacher_scale_sanity_count": len(target_prompt_scale_observations),
+                    "teacher_scale_sanity_mean_ratio": (
+                        first_scale_metrics["mean_raw_loss_ratio"]
+                        if first_scale_metrics
+                        else None
+                    ),
+                    "teacher_scale_sanity_mean_raw_loss_ratio": (
+                        first_scale_metrics["mean_raw_loss_ratio"]
+                        if first_scale_metrics
+                        else None
+                    ),
+                    "teacher_scale_sanity_mean_sigma": (
+                        first_scale_metrics["mean_sigma"]
+                        if first_scale_metrics
+                        else None
+                    ),
+                    "teacher_scale_sanity_mean_effective_teacher_weight": (
+                        first_scale_metrics["mean_effective_teacher_weight"]
+                        if first_scale_metrics
+                        else None
+                    ),
+                    "teacher_scale_sanity_mean_weighted_loss_ratio": (
+                        first_scale_metrics["mean_weighted_loss_ratio"]
+                        if first_scale_metrics
+                        else None
+                    ),
+                    "teacher_scale_sanity_mean_weighted_output_gradient_norm_ratio": (
+                        first_scale_metrics["mean_weighted_output_grad_ratio"]
+                        if first_scale_metrics
+                        else None
+                    ),
+                    "teacher_scale_sanity_median_weighted_output_gradient_norm_ratio": (
+                        first_scale_metrics["median_weighted_output_grad_ratio"]
+                        if first_scale_metrics
+                        else None
+                    ),
+                    "teacher_scale_sanity_mean_output_gradient_norm_ratio_min": (
+                        args.target_prompt_sanity_min_output_grad_ratio
+                        if uses_target_prompt_teacher
+                        else None
+                    ),
+                    "teacher_scale_sanity_mean_output_gradient_norm_ratio_max": (
+                        args.target_prompt_sanity_max_output_grad_ratio
+                        if uses_target_prompt_teacher
+                        else None
+                    ),
+                    "teacher_scale_sanity_single_output_gradient_norm_ratio_max": (
+                        args.target_prompt_sanity_max_single_output_grad_ratio
+                        if uses_target_prompt_teacher
+                        else None
+                    ),
+                    "teacher_scale_sanity_mean_combined_grad_norm": (
+                        float(np.mean(target_prompt_teacher_grad_norms_first_16))
+                        if target_prompt_teacher_grad_norms_first_16
+                        else None
+                    ),
+                    "teacher_scale_sanity_passed": (
+                        target_prompt_scale_sanity["passed"]
+                        if target_prompt_scale_sanity is not None
+                        else None
+                    ),
+                    "teacher_scale_sanity_path": (
+                        str(sanity_path) if sanity_path.is_file() else None
+                    ),
+                    "teacher_scale_sanity_sha256": (
+                        file_sha256(sanity_path) if sanity_path.is_file() else None
+                    ),
+                    "mean_target_prompt_raw_loss_ratio_last_20": (
+                        recent_scale_metrics["mean_raw_loss_ratio"]
+                        if recent_scale_metrics
+                        else None
+                    ),
+                    "mean_target_prompt_sigma_last_20": (
+                        recent_scale_metrics["mean_sigma"]
+                        if recent_scale_metrics
+                        else None
+                    ),
+                    "mean_target_prompt_effective_teacher_weight_last_20": (
+                        recent_scale_metrics["mean_effective_teacher_weight"]
+                        if recent_scale_metrics
+                        else None
+                    ),
+                    "mean_target_prompt_weighted_loss_ratio_last_20": (
+                        recent_scale_metrics["mean_weighted_loss_ratio"]
+                        if recent_scale_metrics
+                        else None
+                    ),
+                    "mean_target_prompt_weighted_output_gradient_norm_ratio_last_20": (
+                        recent_scale_metrics["mean_weighted_output_grad_ratio"]
+                        if recent_scale_metrics
+                        else None
+                    ),
+                    "mean_gate_last_20": float(np.mean(gate_means[-20:])),
+                },
+            )
+            print(f"Saved {checkpoint}", flush=True)
+
+
+def main() -> int:
+    args = parse_args()
+    project_root = Path.cwd()
+    rows = load_rows(args)
+    print(
+        f"Selected {len(rows)} manifest rows with role={args.role}, objective={args.objective}",
+        flush=True,
+    )
+    if args.dry_run:
+        for row in rows:
+            target = resolve_path(project_root, row["desired_target_video"])
+            if not target.exists():
+                raise FileNotFoundError(target)
+            if args.objective in {
+                "mask_bg",
+                "paired_sep",
+                "dual_traj",
+                "causal_gate",
+                "counterfactual_sft",
+                "target_conditioned_sft",
+                "target_conditioned_redirect",
+            } and row.get("residual_mask_enabled") == "yes":
+                factual = resolve_path(project_root, row["residual_mask_factual_video"])
+                if not factual.exists():
+                    raise FileNotFoundError(factual)
+                if args.objective in {
+                    "causal_gate",
+                    "counterfactual_sft",
+                    "target_conditioned_sft",
+                    "target_conditioned_redirect",
+                    "target_conditioned_components",
+                }:
+                    gate = args.causal_gate_dir / f"{row['scene_id']}.pt"
+                    if not gate.exists():
+                        raise FileNotFoundError(gate)
+                if args.activation_gate_dir is not None and row["training_role"] == "erase":
+                    activation_gate = args.activation_gate_dir / f"{row['scene_id']}.pt"
+                    if not activation_gate.exists():
+                        raise FileNotFoundError(activation_gate)
+                if args.objective == "target_conditioned_components":
+                    component_gate = args.component_gate_dir / f"{row['scene_id']}.pt"
+                    if not component_gate.exists():
+                        raise FileNotFoundError(component_gate)
+        print("Dry run passed: manifest and target videos are valid.")
+        return 0
+    if args.objective == "target_prompt_teacher_sigma_weighted":
+        cache_paths = require_existing_v3c_cache(args, rows)
+    else:
+        cache_paths = build_cache(args, rows, project_root)
+    train(args, cache_paths, rows)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -57,6 +57,26 @@ class V3CSplitTests(unittest.TestCase):
         self.assertEqual(payload["status"], "frozen_before_v3c_generation")
         self.assertEqual(len(protocol.SPLIT_REGISTRY_SHA256), 64)
 
+    def test_another_validly_stratified_selection_cannot_impersonate_frozen_rank(self) -> None:
+        test_rows = rows(PROJECT_ROOT / protocol.TEST_PAIRS)
+        eval12_rows = rows(PROJECT_ROOT / protocol.EXHAUSTED_EVAL12)
+        fresh, final = builder.derive_partition(test_rows, eval12_rows)
+        actual = [
+            {"pair_id": row["pair_id"]}
+            for _, row in fresh
+        ]
+        first_group = fresh[0][1]["generalization_group"]
+        first_variant = fresh[0][1]["prompt_variant"]
+        replacement = next(
+            row
+            for _, row in final
+            if row["generalization_group"] == first_group
+            and row["prompt_variant"] == first_variant
+        )
+        actual[0] = {"pair_id": replacement["pair_id"]}
+        with self.assertRaisesRegex(ValueError, "registered SHA-rank selection"):
+            protocol.validate_exact_selection(actual, fresh, "fresh-dev")
+
     def test_split_builder_refuses_to_overwrite_frozen_outputs(self) -> None:
         with self.assertRaisesRegex(FileExistsError, "refusing to overwrite"):
             builder.build(PROJECT_ROOT)

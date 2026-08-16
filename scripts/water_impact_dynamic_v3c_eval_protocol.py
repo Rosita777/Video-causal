@@ -6,6 +6,8 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import math
+import statistics
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -45,6 +47,35 @@ BLIND_SEED = 26016002
 
 MODEL = "models/Wan2.1-T2V-1.3B-Diffusers"
 MODEL_REVISION = "0fad780a534b6463e45facd96134c9f345acfa5b"
+MODEL_INVENTORY_ALGORITHM = (
+    "sha256_ordered_relative_path_nul_bytes_newline_with_file_records_v1"
+)
+TRANSFORMER_INVENTORY_ALGORITHM = "sha256_ordered_name_nul_bytes_lf_v1"
+FROZEN_TRANSFORMER_INVENTORY = [
+    {
+        "path": "transformer/config.json",
+        "size": 465,
+        "sha256": "0b093fa072e9ff28763febe9b964ee582f566733a6d6709deb9dfba1bde16b81",
+    },
+    {
+        "path": "transformer/diffusion_pytorch_model-00001-of-00002.safetensors",
+        "size": 4_998_781_576,
+        "sha256": "6d011927dbd2cc8afe53d57abab04a8fd86f615d83324770d985fb058ece3a24",
+    },
+    {
+        "path": "transformer/diffusion_pytorch_model-00002-of-00002.safetensors",
+        "size": 677_289_072,
+        "sha256": "b92ec2309b1f239af6f746431815a881afcc938abb26a4f08d9a2fd6c892f872",
+    },
+    {
+        "path": "transformer/diffusion_pytorch_model.safetensors.index.json",
+        "size": 73_296,
+        "sha256": "dcbcf3497134a3f50557ff069dd7d2c84b5c4d8c5932472f6bdb780fb4016589",
+    },
+]
+FROZEN_TRANSFORMER_INVENTORY_SHA256 = (
+    "fe0c20ba99318c4b6d28d153b839888bbcf8a7a856796979566c305788dc18ac"
+)
 V3B_CHECKPOINT = (
     "outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_scale4_v1/"
     "checkpoint-000200"
@@ -54,6 +85,9 @@ V3C_TRAINING_ROOT = (
     "outputs/water_impact_dynamic_v3c/adapter_target_prompt_teacher_sigma2_scale4_v1"
 )
 V3C_CHECKPOINT = f"{V3C_TRAINING_ROOT}/checkpoint-000200"
+V3C_TRAINING_PROTOCOL = "water_impact_dynamic_v3c_sigma_weighted_target_prompt_teacher_v1"
+V3C_SANITY_PROTOCOL = "water_impact_dynamic_v3c_sigma_weighted_scale_sanity_v1"
+V3C_CALIBRATION_ID = "v3c_two_sigma_mean_one_preregistered_v1"
 ORIGINAL_RUN = "outputs/water_impact_dynamic_v3c/fresh_dev24_base"
 V3B_RUN = (
     "outputs/water_impact_dynamic_v3b/"
@@ -134,6 +168,59 @@ def artifact_sha256(path: Path) -> str:
             for chunk in iter(lambda: handle.read(1024 * 1024), b""):
                 digest.update(chunk)
     return digest.hexdigest()
+
+
+def model_artifact_inventory(project_root: Path) -> dict[str, Any]:
+    """Hash all meaningful pipeline files while excluding cache metadata/temp files."""
+
+    root = resolve_path(project_root, MODEL)
+    if not root.is_dir():
+        raise FileNotFoundError(f"missing frozen model directory: {root}")
+    excluded_suffixes = (".tmp", ".lock", ".incomplete", "~")
+    files = sorted(
+        path
+        for path in root.rglob("*")
+        if path.is_file()
+        and ".cache" not in path.relative_to(root).parts
+        and not path.name.endswith(excluded_suffixes)
+    )
+    if not files:
+        raise ValueError("model artifact inventory is empty")
+    digest = hashlib.sha256()
+    records: list[dict[str, Any]] = []
+    for path in files:
+        relative = path.relative_to(root).as_posix()
+        digest.update(relative.encode("utf-8"))
+        digest.update(b"\0")
+        file_digest = hashlib.sha256()
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+                file_digest.update(chunk)
+        digest.update(b"\n")
+        records.append(
+            {"path": relative, "size": path.stat().st_size, "sha256": file_digest.hexdigest()}
+        )
+    return {
+        "algorithm": MODEL_INVENTORY_ALGORITHM,
+        "root": MODEL,
+        "excluded": ["any .cache directory", "*.tmp", "*.lock", "*.incomplete", "*~"],
+        "file_count": len(files),
+        "sha256": digest.hexdigest(),
+        "files": records,
+    }
+
+
+def validate_frozen_transformer_in_model_inventory(inventory: dict[str, Any]) -> None:
+    records = inventory.get("files")
+    if not isinstance(records, list):
+        raise ValueError("model inventory has no per-file records")
+    by_path = {
+        str(record.get("path")): record for record in records if isinstance(record, dict)
+    }
+    actual = [by_path.get(record["path"]) for record in FROZEN_TRANSFORMER_INVENTORY]
+    if actual != FROZEN_TRANSFORMER_INVENTORY:
+        raise ValueError("generation transformer files differ from the training-frozen inventory")
 
 
 def resolve_path(project_root: Path, registered: str | Path) -> Path:
@@ -217,6 +304,15 @@ def derive_expected_partition(
     fresh.sort(key=lambda item: item[0])
     final.sort(key=lambda item: item[0])
     return fresh, final
+
+
+def validate_exact_selection(
+    actual_rows: list[dict[str, str]],
+    expected_rows: list[tuple[int, dict[str, str]]],
+    label: str,
+) -> None:
+    if [row["pair_id"] for row in actual_rows] != [row["pair_id"] for _, row in expected_rows]:
+        raise ValueError(f"{label} rows do not match the registered SHA-rank selection")
 
 
 def validate_split_registration(project_root: Path) -> dict[str, Any]:
@@ -319,10 +415,8 @@ def validate_split_registration(project_root: Path) -> dict[str, Any]:
     if eval_pairs | fresh_pairs | final_pairs != set(test_by_pair):
         raise ValueError("12/24/36 split is not exhaustive over test_pairs")
     expected_fresh, expected_final = derive_expected_partition(test_rows, eval12_rows)
-    if [row["pair_id"] for row in fresh_rows] != [row["pair_id"] for _, row in expected_fresh]:
-        raise ValueError("fresh-dev rows do not match the registered SHA-rank selection")
-    if [row["pair_id"] for row in final_rows] != [row["pair_id"] for _, row in expected_final]:
-        raise ValueError("sealed-final rows do not match the registered SHA-rank selection")
+    validate_exact_selection(fresh_rows, expected_fresh, "fresh-dev")
+    validate_exact_selection(final_rows, expected_final, "sealed-final")
     for rows, name in ((fresh_rows, "fresh-dev"), (final_rows, "sealed-final")):
         for index, row in enumerate(rows):
             if int(row["eval_index"]) != index:
@@ -371,6 +465,170 @@ def _contains_placeholder(value: Any) -> bool:
     return False
 
 
+def _close(actual: Any, expected: float, label: str) -> None:
+    if (
+        not isinstance(actual, (int, float))
+        or not math.isfinite(float(actual))
+        or not math.isclose(float(actual), expected, rel_tol=1e-10, abs_tol=1e-14)
+    ):
+        raise ValueError(f"{label}: {actual!r} != {expected!r}")
+
+
+def validate_v3c_training_semantics(
+    *, state: dict[str, Any], registration: dict[str, Any], sanity: dict[str, Any],
+    registration_sha256: str, sanity_sha256: str,
+) -> None:
+    """Reject a hashable but ineligible/non-v3c checkpoint before stage-2 registration."""
+
+    expected_registration = {
+        "protocol": V3C_TRAINING_PROTOCOL,
+        "output_dir": V3C_TRAINING_ROOT,
+        "calibration_id": V3C_CALIBRATION_ID,
+        "target_prompt_teacher_base_weight": 4.0,
+        "target_prompt_teacher_schedule": "2*sigma",
+        "target_prompt_teacher_effective_weight_formula": "4 * (2 * sigma)",
+        "target_prompt_teacher_expected_mean_weight": 4.0,
+        "sanity_mean_min": 0.2,
+        "sanity_mean_max": 0.5,
+        "sanity_single_max": 1.0,
+        "checkpoint_policy": "no_checkpoint_before_scale_sanity_passes",
+        "model_revision": MODEL_REVISION,
+        "transformer_inventory_algorithm": TRANSFORMER_INVENTORY_ALGORITHM,
+        "transformer_inventory": FROZEN_TRANSFORMER_INVENTORY,
+        "transformer_inventory_sha256": FROZEN_TRANSFORMER_INVENTORY_SHA256,
+    }
+    _require_mapping(registration, expected_registration, "v3c training registration")
+    training_config = registration.get("training_config")
+    if not isinstance(training_config, dict):
+        raise ValueError("v3c training registration has no training_config")
+    _require_mapping(
+        training_config,
+        {
+            "model": MODEL,
+            "height": 480,
+            "width": 832,
+            "num_frames": 49,
+            "max_steps": 200,
+            "learning_rate": 5e-5,
+            "rank": 16,
+            "alpha": 16,
+            "grad_accum": 1,
+            "seed": 26000,
+            "device": "cuda",
+            "role": "all",
+            "objective": "target_prompt_teacher_sigma_weighted",
+            "balanced_roles": True,
+            "preserve_weight": 4.0,
+            "save_every": 25,
+            "target_prompt_calibration_id": V3C_CALIBRATION_ID,
+            "target_prompt_teacher_base_weight": 4.0,
+            "target_prompt_teacher_schedule": "2*sigma",
+            "sanity_mean_min": 0.2,
+            "sanity_mean_max": 0.5,
+            "sanity_single_max": 1.0,
+        },
+        "v3c training config",
+    )
+    _require_mapping(
+        state,
+        {
+            "step": 200,
+            "max_steps": 200,
+            "model": MODEL,
+            "objective": "target_prompt_teacher_sigma_weighted",
+            "target_prompt_teacher_enabled": True,
+            "target_prompt_teacher_weight": 4.0,
+            "target_prompt_teacher_weight_semantics": "base_weight_before_2*sigma_schedule",
+            "target_prompt_teacher_schedule": "2*sigma",
+            "target_prompt_teacher_effective_weight_formula": "4 * (2 * sigma)",
+            "target_prompt_calibration_id": V3C_CALIBRATION_ID,
+            "teacher_adapter_mode": "disabled",
+            "teacher_stop_gradient": True,
+            "teacher_uses_same_noisy_latent": True,
+            "teacher_uses_same_timestep": True,
+            "teacher_scale_sanity_protocol": V3C_SANITY_PROTOCOL,
+            "teacher_scale_sanity_count": 16,
+            "teacher_scale_sanity_passed": True,
+            "run_registration_path": f"{V3C_TRAINING_ROOT}/run_registration.json",
+            "run_registration_sha256": registration_sha256,
+            "teacher_scale_sanity_path": f"{V3C_TRAINING_ROOT}/target_prompt_scale_sanity.json",
+            "teacher_scale_sanity_sha256": sanity_sha256,
+            "transformer_inventory_algorithm": TRANSFORMER_INVENTORY_ALGORITHM,
+            "transformer_inventory": FROZEN_TRANSFORMER_INVENTORY,
+            "transformer_inventory_sha256": FROZEN_TRANSFORMER_INVENTORY_SHA256,
+        },
+        "v3c checkpoint training state",
+    )
+    _require_mapping(
+        sanity,
+        {
+            "protocol": V3C_SANITY_PROTOCOL,
+            "calibration_id": V3C_CALIBRATION_ID,
+            "run_registration_sha256": registration_sha256,
+            "formula": "g_i = 8 * sigma_i * sqrt(target_prompt_teacher_loss / flow_loss)",
+            "aggregation": "arithmetic_mean_over_first_16_erase_steps",
+            "base_weight": 4.0,
+            "weight_schedule": "2*sigma",
+            "mean_output_gradient_norm_ratio_min": 0.2,
+            "mean_output_gradient_norm_ratio_max": 0.5,
+            "single_output_gradient_norm_ratio_max": 1.0,
+            "observation_count": 16,
+            "passed": True,
+        },
+        "v3c scale sanity",
+    )
+    observations = sanity.get("observations")
+    if not isinstance(observations, list) or len(observations) != 16:
+        raise ValueError("v3c scale sanity must contain exactly 16 observations")
+    ratios: list[float] = []
+    sigmas: list[float] = []
+    output_ratios: list[float] = []
+    for position, row in enumerate(observations):
+        if not isinstance(row, dict) or row.get("global_step") != 2 * position + 1:
+            raise ValueError("v3c scale sanity observations are not the first 16 erase updates")
+        flow = float(row.get("flow_loss", float("nan")))
+        teacher = float(row.get("target_prompt_teacher_loss", float("nan")))
+        sigma = float(row.get("sigma", float("nan")))
+        if (
+            not math.isfinite(flow) or flow <= 0
+            or not math.isfinite(teacher) or teacher < 0
+            or not math.isfinite(sigma) or not 0 <= sigma <= 1
+        ):
+            raise ValueError("v3c scale sanity contains an invalid loss or sigma")
+        ratio = teacher / flow
+        effective = 8.0 * sigma
+        weighted_loss = effective * ratio
+        output_ratio = effective * math.sqrt(ratio)
+        _close(row.get("raw_loss_ratio"), ratio, "v3c sanity raw ratio")
+        _close(row.get("effective_teacher_weight"), effective, "v3c sanity effective weight")
+        _close(row.get("weighted_loss_ratio"), weighted_loss, "v3c sanity weighted loss")
+        _close(
+            row.get("weighted_output_gradient_norm_ratio"),
+            output_ratio,
+            "v3c sanity output-gradient ratio",
+        )
+        ratios.append(ratio)
+        sigmas.append(sigma)
+        output_ratios.append(output_ratio)
+    derived = {
+        "mean_raw_loss_ratio": statistics.fmean(ratios),
+        "mean_sigma": statistics.fmean(sigmas),
+        "mean_effective_teacher_weight": statistics.fmean(8.0 * sigma for sigma in sigmas),
+        "mean_weighted_loss_ratio": statistics.fmean(
+            8.0 * sigma * ratio for sigma, ratio in zip(sigmas, ratios)
+        ),
+        "mean_weighted_output_grad_ratio": statistics.fmean(output_ratios),
+        "median_weighted_output_grad_ratio": statistics.median(output_ratios),
+        "max_weighted_output_gradient_norm_ratio": max(output_ratios),
+    }
+    for field, expected in derived.items():
+        _close(sanity.get(field), expected, f"v3c sanity {field}")
+    if not 0.2 <= derived["mean_weighted_output_grad_ratio"] <= 0.5:
+        raise ValueError("v3c scale sanity mean output-gradient ratio failed")
+    if derived["max_weighted_output_gradient_norm_ratio"] > 1.0:
+        raise ValueError("v3c scale sanity maximum output-gradient ratio failed")
+
+
 def _require_artifact_record(project_root: Path, record: Any, label: str) -> Path:
     if not isinstance(record, dict) or set(record) != {"path", "sha256"}:
         raise ValueError(f"{label}: expected exact path/SHA-256 record")
@@ -387,6 +645,7 @@ def build_stage2_registration(project_root: Path, *, created_utc: str | None = N
     """Hash the completed v3c checkpoint; caller must persist before generation."""
 
     validate_split_registration(project_root)
+    validate_model_revision(project_root)
     if resolve_path(project_root, V3C_RUN).exists():
         raise RuntimeError("stage-2 registration must be frozen before the v3c run exists")
     checkpoint = resolve_path(project_root, V3C_CHECKPOINT)
@@ -407,6 +666,18 @@ def build_stage2_registration(project_root: Path, *, created_utc: str | None = N
     v3b_checkpoint = resolve_path(project_root, V3B_CHECKPOINT)
     if not v3b_checkpoint.is_dir() or artifact_sha256(v3b_checkpoint) != V3B_CHECKPOINT_SHA256:
         raise ValueError("frozen v3b checkpoint artifact is missing or changed")
+    state_payload = json.loads(state.read_text(encoding="utf-8"))
+    registration_payload = json.loads(registration.read_text(encoding="utf-8"))
+    sanity_payload = json.loads(sanity.read_text(encoding="utf-8"))
+    validate_v3c_training_semantics(
+        state=state_payload,
+        registration=registration_payload,
+        sanity=sanity_payload,
+        registration_sha256=file_sha256(registration),
+        sanity_sha256=file_sha256(sanity),
+    )
+    model_inventory = model_artifact_inventory(project_root)
+    validate_frozen_transformer_in_model_inventory(model_inventory)
     return {
         "protocol": STAGE2_PROTOCOL,
         "status": "frozen_after_training_before_v3c_generation",
@@ -440,6 +711,7 @@ def build_stage2_registration(project_root: Path, *, created_utc: str | None = N
         "generation_spec": {
             "model": MODEL,
             "model_revision": MODEL_REVISION,
+            "model_artifact_inventory": model_inventory,
             "prompts": FRESH_DEV_PROMPTS,
             "prompts_sha256": validate_split_registration(project_root)["registered_files"][
                 FRESH_DEV_PROMPTS
@@ -463,6 +735,7 @@ def build_stage2_registration(project_root: Path, *, created_utc: str | None = N
 
 def validate_stage2_payload(project_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
     validate_split_registration(project_root)
+    validate_model_revision(project_root)
     if _contains_placeholder(payload):
         raise ValueError("stage-2 registration contains a fail-closed placeholder")
     if payload.get("protocol") != STAGE2_PROTOCOL:
@@ -497,9 +770,24 @@ def validate_stage2_payload(project_root: Path, payload: dict[str, Any]) -> dict
         expected_digest = artifact_sha256(path) if name == "checkpoint" else file_sha256(path)
         if str(v3c[name]["sha256"]) != expected_digest:
             raise ValueError(f"stage-2 v3c {name} hash mismatch")
+    state_payload = json.loads(
+        resolve_path(project_root, expected_v3c_paths["training_state"]).read_text(encoding="utf-8")
+    )
+    registration_path = resolve_path(project_root, expected_v3c_paths["run_registration"])
+    sanity_path = resolve_path(project_root, expected_v3c_paths["scale_sanity"])
+    validate_v3c_training_semantics(
+        state=state_payload,
+        registration=json.loads(registration_path.read_text(encoding="utf-8")),
+        sanity=json.loads(sanity_path.read_text(encoding="utf-8")),
+        registration_sha256=file_sha256(registration_path),
+        sanity_sha256=file_sha256(sanity_path),
+    )
+    model_inventory = model_artifact_inventory(project_root)
+    validate_frozen_transformer_in_model_inventory(model_inventory)
     expected_generation = {
         "model": MODEL,
         "model_revision": MODEL_REVISION,
+        "model_artifact_inventory": model_inventory,
         "prompts": FRESH_DEV_PROMPTS,
         "prompts_sha256": validate_split_registration(project_root)["registered_files"][
             FRESH_DEV_PROMPTS
@@ -558,6 +846,7 @@ def load_generation_run(
     eval_rows: list[dict[str, str]],
     stage2_path: Path | None = None,
     stage2: dict[str, Any] | None = None,
+    verified_model_inventory: dict[str, Any] | None = None,
 ) -> tuple[Path, dict[str, Any], dict[int, Path]]:
     """Validate one frozen 24-video arm, including pre-generation sidecars."""
 
@@ -572,16 +861,24 @@ def load_generation_run(
     split_sidecar = run_path / ".split_registry_sha256"
     if not split_sidecar.is_file() or split_sidecar.read_text(encoding="utf-8").strip() != SPLIT_REGISTRY_SHA256:
         raise ValueError(f"{label}: missing or changed pre-generation split binding")
-    if label == "v3c":
-        if stage2_path is None or stage2 is None:
-            raise ValueError("v3c generation validation requires frozen stage-2 provenance")
-        stage2_sidecar = run_path / ".stage2_registration_sha256"
-        expected_stage2_hash = file_sha256(stage2_path)
-        if (
-            not stage2_sidecar.is_file()
-            or stage2_sidecar.read_text(encoding="utf-8").strip() != expected_stage2_hash
-        ):
-            raise ValueError("v3c: missing or changed pre-generation stage-2 binding")
+    if stage2_path is None or stage2 is None:
+        raise ValueError(f"{label}: generation validation requires frozen stage-2 provenance")
+    stage2_sidecar = run_path / ".stage2_registration_sha256"
+    expected_stage2_hash = file_sha256(stage2_path)
+    if (
+        not stage2_sidecar.is_file()
+        or stage2_sidecar.read_text(encoding="utf-8").strip() != expected_stage2_hash
+    ):
+        raise ValueError(f"{label}: missing or changed pre-generation stage-2 binding")
+    current_model_inventory = verified_model_inventory or model_artifact_inventory(project_root)
+    if stage2.get("generation_spec", {}).get("model_artifact_inventory") != current_model_inventory:
+        raise ValueError(f"{label}: model artifact inventory changed after stage-2 registration")
+    model_sidecar = run_path / ".model_inventory_sha256"
+    if (
+        not model_sidecar.is_file()
+        or model_sidecar.read_text(encoding="utf-8").strip() != current_model_inventory["sha256"]
+    ):
+        raise ValueError(f"{label}: missing or changed pre-generation model binding")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     _require_mapping(
         manifest,

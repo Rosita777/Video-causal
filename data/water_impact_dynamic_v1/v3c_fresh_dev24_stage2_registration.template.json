@@ -1,0 +1,10 @@
+{
+  "protocol": "water_impact_dynamic_v3c_fresh_dev24_stage2_v1",
+  "status": "placeholder_fail_closed",
+  "instructions": "After checkpoint-000200 passes training sanity, run scripts/register_water_impact_dynamic_v3c_eval_stage2.py and commit the resulting registration before v3c generation.",
+  "v3c_checkpoint_sha256": "REQUIRED_AFTER_TRAINING_BEFORE_V3C_GENERATION",
+  "v3c_weights_sha256": "REQUIRED_AFTER_TRAINING_BEFORE_V3C_GENERATION",
+  "v3c_training_state_sha256": "REQUIRED_AFTER_TRAINING_BEFORE_V3C_GENERATION",
+  "v3c_run_registration_sha256": "REQUIRED_AFTER_TRAINING_BEFORE_V3C_GENERATION",
+  "v3c_scale_sanity_sha256": "REQUIRED_AFTER_TRAINING_BEFORE_V3C_GENERATION"
+}
