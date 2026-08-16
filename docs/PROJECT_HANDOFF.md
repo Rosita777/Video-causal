@@ -18,8 +18,10 @@ project is not currently claiming a universal adapter across all mechanisms.
 ## 2. Current Operating Point
 
 The retained operating point is the seeded-balanced Wan LoRA trained with
-dynamic counterfactual SFT and a generic preservation branch. V3b is an
-archived negative development ablation and has **not** replaced this control.
+dynamic counterfactual SFT and a generic preservation branch. V3b and v3c are
+archived negative development ablations and have **not** replaced this
+control. No method has yet passed the gate required to start the paper main
+experiment.
 
 The data construction is:
 
@@ -72,11 +74,13 @@ The original eval12 (now an exhausted development set) contains:
 
 Eval12 has now been inspected repeatedly while designing v3a and v3b. Treat it
 as an exhausted development set, not as a paper-final test. The remaining 60
-rows in `data/water_impact_dynamic_v1/test_pairs.csv` have not been used for
-the v3b decision. Before producing any v3c videos, deterministically freeze a
-stratified fresh-dev24 split (8 per generalization group, with 4 direct and 4
-natural prompts) and a sealed-final36 split. Do not inspect the final36 while
-developing v3c.
+rows in `data/water_impact_dynamic_v1/test_pairs.csv` were deterministically
+partitioned before v3c generation into a stratified fresh-dev24 split (8 per
+generalization group, with 4 direct and 4 natural prompts) and sealed-final36.
+The split registry SHA-256 is
+`4f31a291e8ffca07da4bf057e9a86df72f656c03aab65bc06d4c3c155b72962a`.
+V3c failed its fresh-dev24 promotion gate, so final36 remains sealed and has
+not been generated, inspected, or scored.
 
 Do not silently regenerate or replace a row. If a row changes, create a new
 manifest version and record why.
@@ -135,6 +139,24 @@ no strict success. Therefore `mechanism_positive=false` and
 a promoted method. The full interpretation and frozen hashes are in
 `docs/water_impact_dynamic_v3b_eval12_results_2026-08-16.md`.
 
+V3c kept the v3b teacher weight and mean teacher budget fixed while assigning
+the erase-row teacher term weight `4 * (2 * sigma)`. It was trained from the
+same initialization and evaluated only on the frozen fresh-dev24 split. Two
+independent blinded reviewers inspected all videos in full, and a third
+blinded reviewer adjudicated all 26 atomic disagreements.
+
+| Method | Usable | Receiver /48 | Quality /48 | Target suppression /48 | Footprint suppression /48 | Absent target | Strict |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| V3b | 24/24 | 47 | 32 | 11 | 17 | 4 | 0 |
+| V3c sigma-weighted teacher | 24/24 | 47 | 32 | 12 | 18 | 3 | 0 |
+
+V3c preserved usability, receiver, and quality, but gained only one target
+point and one footprint point. It produced zero clear-to-absent improvements,
+zero strict successes, and one fewer usable absent-target output. Six
+registered checks failed, so
+`promote_v3c_and_unseal_final36=false`. The full result and frozen hashes are
+in `docs/water_impact_dynamic_v3c_fresh_dev24_results_2026-08-16.md`.
+
 ## 5. Exact Reproduction Path
 
 On the A100 machine:
@@ -182,6 +204,25 @@ the 12 generated treatment videos are under
 `outputs/water_impact_dynamic_v3b/eval12_target_prompt_teacher_scale4_v1_ckpt200_scale1p25`.
 Do not rerun or overwrite these frozen paths.
 
+The completed v3c development run can be verified in the clean checkout with:
+
+```bash
+cd /data/xiaohuang_workspace/ljc/Video-causal-v3
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts \
+  models/.wan-runtime/bin/python -m unittest -v \
+  tests.test_train_wan_waterdrop_lora_v3c \
+  tests.test_water_impact_dynamic_v3c_split \
+  tests.test_water_impact_dynamic_v3c_eval
+bash scripts/run_water_impact_dynamic_v3c_fresh_dev24.sh preflight
+bash scripts/run_water_impact_dynamic_v3c_fresh_dev24.sh stage2-preflight
+```
+
+The frozen v3c checkpoint is
+`outputs/water_impact_dynamic_v3c/adapter_target_prompt_teacher_sigma2_scale4_v1/checkpoint-000200`.
+The fresh-dev24 generations and review media remain server artifacts; the
+small manifests, raw blind scores, canonical scores, and gate are committed.
+Do not invoke any generation or review action again on these frozen paths.
+
 Weights and generated videos are not in Git. Check them before starting. The
 baseline runners are local Wan proxy implementations, not claims of official
 released baseline training code.
@@ -203,48 +244,36 @@ released baseline training code.
 7. V3b suppresses the causal footprint strongly, but source objects usually
    move only from clear to partial rather than clear to absent. This is the
    immediate failure mode to target.
+8. V3c's high-noise teacher redistribution preserves scene quality but does
+   not materially improve complete source deletion over v3b. Fresh-dev24 is
+   now also exhausted for method selection.
 
 ## 7. Next Research Task
 
-The single recommended next ablation is v3c: keep v3b's data, initialization,
-sample order, teacher weight, preservation branch, and 200-step budget fixed,
-but allocate the teacher term toward the high-noise part of the diffusion
-trajectory:
+V3c failed the frozen development gate. The immediate task is therefore **not**
+to start the paper main experiment and not to tune v3c. Keep sealed-final36
+closed.
 
-```text
-L_erase = L_flow + 4 * (2 * sigma) * L_target_prompt_teacher
-```
+The next method must address source-object deletion structurally rather than
+redistributing the same teacher loss. Before another GPU run:
 
-Because `E[2*sigma]=1`, this keeps the mean teacher budget at 4; it is a
-schedule ablation, not another weight sweep. Train from the same initialization
-rather than continuing from v3b. Before any eligible checkpoint, the first 16
-erase updates must have finite
-`g_i = 8*sigma_i*sqrt(L_teacher/L_flow)`, arithmetic mean in `[0.20, 0.50]`,
-and maximum at most `1.0`. A frozen-RNG arithmetic replay predicts mean
-`0.2868` and maximum `0.8582`; this is only a pre-run safety check.
+1. diagnose whether the remaining object is driven primarily by factual-prompt
+   conditioning, independent-target misalignment, or insufficient
+   counterfactual supervision;
+2. specify one source-deletion intervention while holding the backbone,
+   preservation branch, training budget, and generation settings fixed;
+3. construct and freeze a new development set disjoint from eval12,
+   fresh-dev24, and sealed-final36;
+4. preregister a blind paired gate whose primary conditions require multiple
+   clear-to-absent improvements and nonzero strict successes;
+5. run only that single-factor experiment, record a failure as a failure, and
+   prohibit weight, sigma-window, checkpoint, prompt, or seed selection on any
+   already inspected set.
 
-Do not evaluate v3c on eval12. Freeze the fresh-dev24/sealed-final36 split
-described above before generation, compare only frozen v3b versus v3c on
-fresh-dev24 using two blinded reviewers plus adjudication, and preregister the
-gate before viewing outputs. The proposed all-or-nothing gate is:
-
-- at least 20 usable v3b controls;
-- v3c target-suppression points at least v3b plus 6;
-- at least 6 usable paired target improvements, including at least two
-  clear-to-absent (`2 -> 0`) cases across at least two generalization groups;
-- at least two more absent-target cases than v3b;
-- v3c usable at least 22/24;
-- receiver at least `max(38, v3b_receiver - 2)` and quality at least
-  `max(32, v3b_quality - 2)`;
-- no loss in footprint suppression on the v3b-usable set;
-- at least two strict `(0, 0, 2, 2)` successes.
-
-Only after v3c passes every condition should final36 be unsealed for a
-multi-seed paper main experiment. If it fails, record the negative result and
-do not sweep teacher weight, sigma window, or checkpoint.
-
-Do not expand to five mechanisms or add another backbone until this
-water-impact method has passed the fresh-development gate.
+Only a method that passes a genuinely fresh development gate may be frozen and
+evaluated on sealed-final36 in a multi-seed paper main experiment. Do not
+expand to five mechanisms or add another backbone before the water-impact
+method reaches that point.
 
 ## 8. Git Policy
 

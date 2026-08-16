@@ -10,21 +10,26 @@ The active experiment is **water impact** on **Wan 2.1 T2V 1.3B**:
 
 `object enters water -> splash and expanding ripples`
 
-The current adapter is a training-based, preservation-balanced dynamic SFT
+The retained control is a training-based, preservation-balanced dynamic SFT
 LoRA. It is trained from 178 accepted counterfactual targets plus 36 generic
-preservation videos. The current reported checkpoint is step 200, inferred at
-LoRA scale 1.25. This is a working research prototype, not a finished method
-or a universal adapter.
+preservation videos. The reported checkpoint is step 200, inferred at LoRA
+scale 1.25. This is a working research prototype, not a finished method or a
+universal adapter.
 
 The first controlled eval has 12 held-out prompts covering unseen source
 objects, unseen receivers, and both unseen. All methods use the same prompts,
 seeds, Wan backbone, resolution, frame count, and inference steps.
 
-The latest preliminary result is in
-[`docs/water_impact_dynamic_eval12_results_2026-08-13.md`](docs/water_impact_dynamic_eval12_results_2026-08-13.md).
-The important metric is **valid footprint suppression**, computed only on
-outputs whose receiver and video quality remain usable. Apparent suppression
-from a collapsed video is not counted as success.
+The latest development result is the frozen v3b-versus-v3c comparison on a
+fresh 24-case split, documented in
+[`docs/water_impact_dynamic_v3c_fresh_dev24_results_2026-08-16.md`](docs/water_impact_dynamic_v3c_fresh_dev24_results_2026-08-16.md).
+V3c preserved quality but failed the preregistered complete-deletion gate, so
+it was not promoted and the sealed 36-case final set remains unopened. The
+paper main experiment has not started.
+
+The important metrics are valid target and footprint suppression, computed
+only on outputs whose receiver and video quality remain usable. Apparent
+suppression from a collapsed video is not counted as success.
 
 ## Start Here
 

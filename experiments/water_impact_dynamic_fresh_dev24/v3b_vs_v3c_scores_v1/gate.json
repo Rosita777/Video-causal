@@ -1,0 +1,107 @@
+{
+  "protocol": "water_impact_dynamic_v3c_fresh_dev24_v1",
+  "gate_spec": {
+    "decision": "all_checks_must_pass",
+    "control_method": "v3b",
+    "treatment_method": "v3c",
+    "control_usable_min": 20,
+    "target_suppression_margin_on_control_usable_min": 6,
+    "paired_target_improvements_min": 6,
+    "clear_to_absent_improvements_min": 2,
+    "clear_to_absent_generalization_groups_min": 2,
+    "absent_target_count_margin_min": 2,
+    "treatment_usable_min": 22,
+    "receiver_points_floor": "max(38, v3b_receiver_points - 2)",
+    "quality_points_floor": "max(32, v3b_quality_points - 2)",
+    "footprint_suppression_on_control_usable": "v3c >= v3b",
+    "strict_success_min": 2,
+    "usable_definition": "receiver>=1 and quality>=1",
+    "strict_definition": "target=0, footprint=0, receiver=2, quality=2",
+    "control_usable_set": "C={sample: usable(v3b_sample)}",
+    "valid_suppression_on_control_usable": "a v3c target or footprint contribution on C is 0 when that v3c output is unusable",
+    "absent_target_count": "count only usable outputs with target=0",
+    "paired_target_improvement": "sample in C with usable v3c and v3c_target < v3b_target"
+  },
+  "control_usable_set": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23
+  ],
+  "control_usable_n": 24,
+  "v3b_target_suppression_points_on_C": 11,
+  "v3c_target_suppression_points_on_C": 12,
+  "v3b_footprint_suppression_points_on_C": 17,
+  "v3c_footprint_suppression_points_on_C": 18,
+  "paired_target_improvements": [
+    {
+      "sample_index": 9,
+      "generalization_group": "unseen_receiver",
+      "v3b_target_visibility": 2,
+      "v3c_target_visibility": 1
+    },
+    {
+      "sample_index": 11,
+      "generalization_group": "unseen_receiver",
+      "v3b_target_visibility": 2,
+      "v3c_target_visibility": 1
+    },
+    {
+      "sample_index": 12,
+      "generalization_group": "unseen_receiver",
+      "v3b_target_visibility": 1,
+      "v3c_target_visibility": 0
+    },
+    {
+      "sample_index": 21,
+      "generalization_group": "unseen_source_and_receiver",
+      "v3b_target_visibility": 2,
+      "v3c_target_visibility": 1
+    }
+  ],
+  "clear_to_absent_improvements": [],
+  "checks": {
+    "control_usable_at_least_20": true,
+    "target_suppression_margin_at_least_6_on_C": false,
+    "paired_target_improvements_at_least_6": false,
+    "clear_to_absent_at_least_2": false,
+    "clear_to_absent_groups_at_least_2": false,
+    "usable_absent_target_margin_at_least_2": false,
+    "v3c_usable_at_least_22": true,
+    "receiver_floor_max_38_control_minus_2": true,
+    "quality_floor_max_32_control_minus_2": true,
+    "footprint_nonworse_on_C": true,
+    "strict_success_at_least_2": false
+  },
+  "promote_v3c_and_unseal_final36": false,
+  "input_provenance": {
+    "review_template_sha256": "1ad48c94b7c91c0295275ac75ae9877aa74101520558f16eb6f8eb667624eb7d",
+    "reviewer_a_sha256": "0a28f9bf556772d6ca6d1f13db51785d9679013e2348c29489ec8fedce1b2334",
+    "reviewer_b_sha256": "e645d2afbb3180437cd642e3f4f06ef7730f42daf4c110ca6ef34a8f360698d1",
+    "adjudicator_sha256": "3cc7db0bfe86b9aa9a7ba23dc5d8b92538741ebdb5ccb65b7ae7d01303afad03",
+    "answer_key_sha256": "7cb45b48514c76ab74d14e60af65f0c6c49bd6ce8d7e1123ec2c7d36630c05b3",
+    "review_manifest_sha256": "f4ae07798313f53f31b42223a2578d4f1972e4b039c077f841268e5d590b2118",
+    "stage2_registration_sha256": "a7e8be6a259d6afb12fed3f3bdb1823dbe9fa1ef6faaf40f074f34326b407696",
+    "split_registry_sha256": "4f31a291e8ffca07da4bf057e9a86df72f656c03aab65bc06d4c3c155b72962a"
+  }
+}
