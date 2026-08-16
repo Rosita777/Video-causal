@@ -1,0 +1,338 @@
+{
+  "protocol": "water_impact_dynamic_v3b_eval12_v1",
+  "eval_csv": "data/water_impact_dynamic_v1/eval12.csv",
+  "eval_csv_sha256": "dca68f8632e10ef83cc5f3867679c9cba54f4cbce96426db5db8c5214ac1ec1a",
+  "prompts_sha256": "06dae57a0202e2d53e32fc02f9b26fd694237755a18f85bdd67c728bf706681c",
+  "train_manifest": "data/water_impact_dynamic_v1/train_dynamic_sft_preserve_v2.csv",
+  "train_manifest_sha256": "3d4d8cbf9244b1575357f0ac74380cd7cb6265df4d1a85bf450de4cac120aee4",
+  "blind_seed": 26016,
+  "frame_indices": [
+    0,
+    8,
+    16,
+    24,
+    32,
+    40,
+    48
+  ],
+  "sample_count": 12,
+  "review_rows": 24,
+  "methods": [
+    "balanced",
+    "v3b"
+  ],
+  "answer_key_sha256": "17310d0f6538ed50f763750a4b6c7114453b8412332f72fe3542c1c047421bde",
+  "review_binding_sha256": "c77875c3e9e26db8f3ead8fdd5699d042dc5de31bf28dfb900f9b2343e3782e4",
+  "training_provenance": {
+    "inputs": {
+      "base_cache_dir": "outputs/water_impact_dynamic_v1/cache_dynamic_sft_preserve_v2",
+      "base_cache_entry_count": 214,
+      "base_cache_sha256": "4654ee67b8937d248963839b744e59f4f535f8be8b8eee421aef264fb3cd4d65",
+      "target_prompt_cache_dir": "outputs/water_impact_dynamic_v3b/teacher_prompt_cache_v1",
+      "target_prompt_cache_entry_count": 178,
+      "target_prompt_cache_sha256": "6cf7ba0112d8df0e0a5253a7a943411fcfd85c56fc6df580446776b49d1ac9a9",
+      "target_prompt_cache_manifest_path": "outputs/water_impact_dynamic_v3b/teacher_prompt_cache_v1/cache_manifest.json",
+      "target_prompt_cache_manifest_sha256": "c467d7f81ee22b2c4b1ff719537487fbfc808eacc98e730c3d24f0a17aca77cb"
+    },
+    "balanced": {
+      "checkpoint_path": "outputs/water_impact_dynamic_v1/adapter_dynamic_sft_v3_balanced_seeded/checkpoint-000200",
+      "checkpoint_sha256": "e61eb33235da3ad68f08e31c451c6690db194bc9b3aa498df58194549955d7f0",
+      "weights_path": "outputs/water_impact_dynamic_v1/adapter_dynamic_sft_v3_balanced_seeded/checkpoint-000200/pytorch_lora_weights.safetensors",
+      "weights_sha256": "efbd57cc118f05c2ce82a55429057aa03874cc7a615de73063c564cef3f11701",
+      "training_state_path": "outputs/water_impact_dynamic_v1/adapter_dynamic_sft_v3_balanced_seeded/checkpoint-000200/training_state.json",
+      "training_state_sha256": "91593e27a0bfde232c7cc344a1579e3f1c203d825bd3252e6160532a833f1142"
+    },
+    "v3b": {
+      "checkpoint_path": "outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_scale4_v1/checkpoint-000200",
+      "checkpoint_sha256": "f40f15f0a51c840db3e4fa8e2f931bdf89a4e5787f642513161e48d848fd723f",
+      "weights_path": "outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_scale4_v1/checkpoint-000200/pytorch_lora_weights.safetensors",
+      "weights_sha256": "d3fecf26b7f1ca6c4a8f46c86850a47a7ec5a62762d0e0aa15c49363040875d3",
+      "training_state_path": "outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_scale4_v1/checkpoint-000200/training_state.json",
+      "training_state_sha256": "0f9aa26e825f4f6f497b1312c507b685c054bc319f2f9f538e45eeb7a7908bea",
+      "run_registration_path": "outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_scale4_v1/run_registration.json",
+      "run_registration_sha256": "53f0a7c472ba02a38b90b55651f378e5feda0bcd709f86786702de163b3a87f4",
+      "scale_sanity_path": "outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_scale4_v1/target_prompt_scale_sanity.json",
+      "scale_sanity_sha256": "26fb8b1ff9e0d446fd186765ba1ff9a9d1a085d75d230cd0a419509ea00bbb12",
+      "scale_sanity_mean_output_gradient_norm_ratio": 0.2815118219615773,
+      "scale_sanity_max_output_gradient_norm_ratio": 0.46736767805873564
+    }
+  },
+  "video_sha256": {
+    "original": {
+      "0": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_base/videos/000_a-simple-realistic-close-up-video-in-one-continuous-shot-one-smooth-gray_seed26000.mp4",
+        "sha256": "d61a07c6f5808eb7991d171b0a08210b4d1a3c6e7a3468bcfb69d9860829e8ca"
+      },
+      "1": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_base/videos/001_a-simple-realistic-close-up-video-in-one-continuous-shot-in-a-single-nat_seed26005.mp4",
+        "sha256": "b37d451458baaf018fecf5f4eb1ce35d653dc1a0b400adfb49c6ac1d9a037506"
+      },
+      "2": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_base/videos/002_a-simple-realistic-close-up-video-in-one-continuous-shot-one-whole-brown_seed26010.mp4",
+        "sha256": "3f057f6b53e7a71c64b9368b1615a6b3124a04b676f0ede477393c3cd56e5ca1"
+      },
+      "3": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_base/videos/003_a-simple-realistic-close-up-video-in-one-continuous-shot-in-a-single-nat_seed26015.mp4",
+        "sha256": "572d773390463c47eb01ce8b9db362aa34d10411dc8ab1427c7af3f178e4e64f"
+      },
+      "4": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_base/videos/004_a-simple-realistic-close-up-video-in-one-continuous-shot-one-large-clear_seed26024.mp4",
+        "sha256": "716c2a564657d5fd407676240359c213b0e01f7c843c14a80ad235ed54235915"
+      },
+      "5": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_base/videos/005_a-simple-realistic-close-up-video-in-one-continuous-shot-in-a-single-nat_seed26031.mp4",
+        "sha256": "99cde68c94c99635a33a4189a9c3af96377e2346ed4117621f8425d0291fe78d"
+      },
+      "6": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_base/videos/006_a-simple-realistic-close-up-video-in-one-continuous-shot-one-small-red-a_seed26040.mp4",
+        "sha256": "267647fc288dc6331e58c9a5b07f273d113d5ca547c75a99c459732e95bb618e"
+      },
+      "7": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_base/videos/007_a-simple-realistic-close-up-video-in-one-continuous-shot-in-a-single-nat_seed26047.mp4",
+        "sha256": "dd85dfc758570bdde2bb02cc9dcfc76c623256bf192ce2a012fbdf2dea809473"
+      },
+      "8": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_base/videos/008_a-simple-realistic-close-up-video-in-one-continuous-shot-one-smooth-gray_seed26048.mp4",
+        "sha256": "286cef71f6f7e3dc0eea8049090a6eea81202bd882dc0aaf5da9efa50927ed97"
+      },
+      "9": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_base/videos/009_a-simple-realistic-close-up-video-in-one-continuous-shot-in-a-single-nat_seed26055.mp4",
+        "sha256": "811f2c0da55db43eb35022a079d15ba76c787781805537ef7e3e043612d90e0b"
+      },
+      "10": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_base/videos/010_a-simple-realistic-close-up-video-in-one-continuous-shot-one-white-ceram_seed26064.mp4",
+        "sha256": "672a1a2ad5a3a71d077d7c24109ab1ff4b3167eec1e069184cebb723fec2b463"
+      },
+      "11": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_base/videos/011_a-simple-realistic-close-up-video-in-one-continuous-shot-in-a-single-nat_seed26071.mp4",
+        "sha256": "e0645d33060bf2cc7bb4430206ba72ab6f27d014100e845c0ce23dbd062d875f"
+      }
+    },
+    "balanced": {
+      "0": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_v3_balanced_seeded_ckpt200_scale1p25/videos/000_a-simple-realistic-close-up-video-in-one-continuous-shot-one-smooth-gray_seed26000.mp4",
+        "sha256": "12ee5b44bae3ea642609eda8d3842654aad4a015231ddef78892ce44bf302ddb"
+      },
+      "1": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_v3_balanced_seeded_ckpt200_scale1p25/videos/001_a-simple-realistic-close-up-video-in-one-continuous-shot-in-a-single-nat_seed26005.mp4",
+        "sha256": "0afdc081da4a1b5fbd952776d756259a98792fcf392660731966040cb068168f"
+      },
+      "2": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_v3_balanced_seeded_ckpt200_scale1p25/videos/002_a-simple-realistic-close-up-video-in-one-continuous-shot-one-whole-brown_seed26010.mp4",
+        "sha256": "7d1d2135145fc04ea21491db12d1c67117337429f77ad1600320d83e99d1f2e9"
+      },
+      "3": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_v3_balanced_seeded_ckpt200_scale1p25/videos/003_a-simple-realistic-close-up-video-in-one-continuous-shot-in-a-single-nat_seed26015.mp4",
+        "sha256": "845b434f79158128dd4d3e1562528203db0ad76f7e14524404e801ed4810c16a"
+      },
+      "4": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_v3_balanced_seeded_ckpt200_scale1p25/videos/004_a-simple-realistic-close-up-video-in-one-continuous-shot-one-large-clear_seed26024.mp4",
+        "sha256": "5cd6e2859a84dcb594ab69feabfcb7b9ba654eb78dfade94a4e95e4d533997c8"
+      },
+      "5": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_v3_balanced_seeded_ckpt200_scale1p25/videos/005_a-simple-realistic-close-up-video-in-one-continuous-shot-in-a-single-nat_seed26031.mp4",
+        "sha256": "27e9885b86d74c1b6b1845b6c92ab5428c3d475ad051c3ddd83cfabc4365d055"
+      },
+      "6": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_v3_balanced_seeded_ckpt200_scale1p25/videos/006_a-simple-realistic-close-up-video-in-one-continuous-shot-one-small-red-a_seed26040.mp4",
+        "sha256": "6da0980d09f1d538be653fb045b9165013eae58d5682bd60849bf296e565aca1"
+      },
+      "7": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_v3_balanced_seeded_ckpt200_scale1p25/videos/007_a-simple-realistic-close-up-video-in-one-continuous-shot-in-a-single-nat_seed26047.mp4",
+        "sha256": "9a4b018c28c730ae910359a71585c87580914feb3a6dc0aa9754453a535b2438"
+      },
+      "8": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_v3_balanced_seeded_ckpt200_scale1p25/videos/008_a-simple-realistic-close-up-video-in-one-continuous-shot-one-smooth-gray_seed26048.mp4",
+        "sha256": "9660c81d84483464d8c8b80788a805c831c7ad8cbd10892c26724837e773a379"
+      },
+      "9": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_v3_balanced_seeded_ckpt200_scale1p25/videos/009_a-simple-realistic-close-up-video-in-one-continuous-shot-in-a-single-nat_seed26055.mp4",
+        "sha256": "586820dd8889bfb0d2ba30cecab0344acebdc34bad2ab06fb41b9f74dc164af5"
+      },
+      "10": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_v3_balanced_seeded_ckpt200_scale1p25/videos/010_a-simple-realistic-close-up-video-in-one-continuous-shot-one-white-ceram_seed26064.mp4",
+        "sha256": "5ef5637c5c76e1e546f8ed4dba966797e55e499bd66e0ff9cfce14a5028d73b9"
+      },
+      "11": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_v3_balanced_seeded_ckpt200_scale1p25/videos/011_a-simple-realistic-close-up-video-in-one-continuous-shot-in-a-single-nat_seed26071.mp4",
+        "sha256": "527c797d0f519ef6d8357e5ba1d7a5335c990b451686d643e9354ce719988f60"
+      }
+    },
+    "v3b": {
+      "0": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v3b/eval12_target_prompt_teacher_scale4_v1_ckpt200_scale1p25/videos/000_a-simple-realistic-close-up-video-in-one-continuous-shot-one-smooth-gray_seed26000.mp4",
+        "sha256": "d48f1dfcacc3f22aecab40b795d5fc9f42e98f4d3d4f9e33e4e022701c91ad1e"
+      },
+      "1": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v3b/eval12_target_prompt_teacher_scale4_v1_ckpt200_scale1p25/videos/001_a-simple-realistic-close-up-video-in-one-continuous-shot-in-a-single-nat_seed26005.mp4",
+        "sha256": "de5035ff8cdfdf0f6df2ac9cd8e5933065531edb89bf9d9f07e29c7e708bcae3"
+      },
+      "2": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v3b/eval12_target_prompt_teacher_scale4_v1_ckpt200_scale1p25/videos/002_a-simple-realistic-close-up-video-in-one-continuous-shot-one-whole-brown_seed26010.mp4",
+        "sha256": "3e2437ec5385660cfaef06bc654a15d5ea32de1dc401b156a1956fb3f806d3b2"
+      },
+      "3": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v3b/eval12_target_prompt_teacher_scale4_v1_ckpt200_scale1p25/videos/003_a-simple-realistic-close-up-video-in-one-continuous-shot-in-a-single-nat_seed26015.mp4",
+        "sha256": "4345d74d1d0f763de52adbb83b0b931406355e79af56483d9bd078288ca6a6f3"
+      },
+      "4": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v3b/eval12_target_prompt_teacher_scale4_v1_ckpt200_scale1p25/videos/004_a-simple-realistic-close-up-video-in-one-continuous-shot-one-large-clear_seed26024.mp4",
+        "sha256": "a3280248f280e0a2fc8e36053972e4ec87dfe3e795f81b0fe35a5ff3702212c3"
+      },
+      "5": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v3b/eval12_target_prompt_teacher_scale4_v1_ckpt200_scale1p25/videos/005_a-simple-realistic-close-up-video-in-one-continuous-shot-in-a-single-nat_seed26031.mp4",
+        "sha256": "800c8c5828745c64175633463ab16f1e5c32285fac99bb589d302e23a31443bd"
+      },
+      "6": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v3b/eval12_target_prompt_teacher_scale4_v1_ckpt200_scale1p25/videos/006_a-simple-realistic-close-up-video-in-one-continuous-shot-one-small-red-a_seed26040.mp4",
+        "sha256": "9c36b7673ddf59c212384b638abc3ed24b57530b6738f843a32e2e82582a73bd"
+      },
+      "7": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v3b/eval12_target_prompt_teacher_scale4_v1_ckpt200_scale1p25/videos/007_a-simple-realistic-close-up-video-in-one-continuous-shot-in-a-single-nat_seed26047.mp4",
+        "sha256": "667293c3e4dbde81150f082fb3ef5bd7e9008539188cfb8fbd6baf1e0abe69f1"
+      },
+      "8": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v3b/eval12_target_prompt_teacher_scale4_v1_ckpt200_scale1p25/videos/008_a-simple-realistic-close-up-video-in-one-continuous-shot-one-smooth-gray_seed26048.mp4",
+        "sha256": "1eafa9d50821870ac5e724a1144625c7d22f3468e15b0638cae973ed074ae1e9"
+      },
+      "9": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v3b/eval12_target_prompt_teacher_scale4_v1_ckpt200_scale1p25/videos/009_a-simple-realistic-close-up-video-in-one-continuous-shot-in-a-single-nat_seed26055.mp4",
+        "sha256": "e7794aeccf9d3b696aa6a4b9a609f2dff50312ab7934ed351859a30a10c89cfd"
+      },
+      "10": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v3b/eval12_target_prompt_teacher_scale4_v1_ckpt200_scale1p25/videos/010_a-simple-realistic-close-up-video-in-one-continuous-shot-one-white-ceram_seed26064.mp4",
+        "sha256": "d94adb4bb582bb347277ad6a9dc45234078a170fa7bb2c2e5e0d84b75b3d1b30"
+      },
+      "11": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v3b/eval12_target_prompt_teacher_scale4_v1_ckpt200_scale1p25/videos/011_a-simple-realistic-close-up-video-in-one-continuous-shot-in-a-single-nat_seed26071.mp4",
+        "sha256": "99133a3d1ee20798842d3d57052c88141ffe417055ac283d2c7729ee163f51bc"
+      }
+    }
+  },
+  "anonymous_media_sha256": {
+    "r000_A.mp4": {
+      "path": "experiments/water_impact_dynamic_eval12/v3b_target_prompt_teacher_blind_review_v3_public/media/r000_A.mp4",
+      "sha256": "de5035ff8cdfdf0f6df2ac9cd8e5933065531edb89bf9d9f07e29c7e708bcae3"
+    },
+    "r000_B.mp4": {
+      "path": "experiments/water_impact_dynamic_eval12/v3b_target_prompt_teacher_blind_review_v3_public/media/r000_B.mp4",
+      "sha256": "0afdc081da4a1b5fbd952776d756259a98792fcf392660731966040cb068168f"
+    },
+    "r001_A.mp4": {
+      "path": "experiments/water_impact_dynamic_eval12/v3b_target_prompt_teacher_blind_review_v3_public/media/r001_A.mp4",
+      "sha256": "12ee5b44bae3ea642609eda8d3842654aad4a015231ddef78892ce44bf302ddb"
+    },
+    "r001_B.mp4": {
+      "path": "experiments/water_impact_dynamic_eval12/v3b_target_prompt_teacher_blind_review_v3_public/media/r001_B.mp4",
+      "sha256": "d48f1dfcacc3f22aecab40b795d5fc9f42e98f4d3d4f9e33e4e022701c91ad1e"
+    },
+    "r002_A.mp4": {
+      "path": "experiments/water_impact_dynamic_eval12/v3b_target_prompt_teacher_blind_review_v3_public/media/r002_A.mp4",
+      "sha256": "e7794aeccf9d3b696aa6a4b9a609f2dff50312ab7934ed351859a30a10c89cfd"
+    },
+    "r002_B.mp4": {
+      "path": "experiments/water_impact_dynamic_eval12/v3b_target_prompt_teacher_blind_review_v3_public/media/r002_B.mp4",
+      "sha256": "586820dd8889bfb0d2ba30cecab0344acebdc34bad2ab06fb41b9f74dc164af5"
+    },
+    "r003_A.mp4": {
+      "path": "experiments/water_impact_dynamic_eval12/v3b_target_prompt_teacher_blind_review_v3_public/media/r003_A.mp4",
+      "sha256": "4345d74d1d0f763de52adbb83b0b931406355e79af56483d9bd078288ca6a6f3"
+    },
+    "r003_B.mp4": {
+      "path": "experiments/water_impact_dynamic_eval12/v3b_target_prompt_teacher_blind_review_v3_public/media/r003_B.mp4",
+      "sha256": "845b434f79158128dd4d3e1562528203db0ad76f7e14524404e801ed4810c16a"
+    },
+    "r004_A.mp4": {
+      "path": "experiments/water_impact_dynamic_eval12/v3b_target_prompt_teacher_blind_review_v3_public/media/r004_A.mp4",
+      "sha256": "5ef5637c5c76e1e546f8ed4dba966797e55e499bd66e0ff9cfce14a5028d73b9"
+    },
+    "r004_B.mp4": {
+      "path": "experiments/water_impact_dynamic_eval12/v3b_target_prompt_teacher_blind_review_v3_public/media/r004_B.mp4",
+      "sha256": "d94adb4bb582bb347277ad6a9dc45234078a170fa7bb2c2e5e0d84b75b3d1b30"
+    },
+    "r005_A.mp4": {
+      "path": "experiments/water_impact_dynamic_eval12/v3b_target_prompt_teacher_blind_review_v3_public/media/r005_A.mp4",
+      "sha256": "527c797d0f519ef6d8357e5ba1d7a5335c990b451686d643e9354ce719988f60"
+    },
+    "r005_B.mp4": {
+      "path": "experiments/water_impact_dynamic_eval12/v3b_target_prompt_teacher_blind_review_v3_public/media/r005_B.mp4",
+      "sha256": "99133a3d1ee20798842d3d57052c88141ffe417055ac283d2c7729ee163f51bc"
+    },
+    "r006_A.mp4": {
+      "path": "experiments/water_impact_dynamic_eval12/v3b_target_prompt_teacher_blind_review_v3_public/media/r006_A.mp4",
+      "sha256": "a3280248f280e0a2fc8e36053972e4ec87dfe3e795f81b0fe35a5ff3702212c3"
+    },
+    "r006_B.mp4": {
+      "path": "experiments/water_impact_dynamic_eval12/v3b_target_prompt_teacher_blind_review_v3_public/media/r006_B.mp4",
+      "sha256": "5cd6e2859a84dcb594ab69feabfcb7b9ba654eb78dfade94a4e95e4d533997c8"
+    },
+    "r007_A.mp4": {
+      "path": "experiments/water_impact_dynamic_eval12/v3b_target_prompt_teacher_blind_review_v3_public/media/r007_A.mp4",
+      "sha256": "7d1d2135145fc04ea21491db12d1c67117337429f77ad1600320d83e99d1f2e9"
+    },
+    "r007_B.mp4": {
+      "path": "experiments/water_impact_dynamic_eval12/v3b_target_prompt_teacher_blind_review_v3_public/media/r007_B.mp4",
+      "sha256": "3e2437ec5385660cfaef06bc654a15d5ea32de1dc401b156a1956fb3f806d3b2"
+    },
+    "r008_A.mp4": {
+      "path": "experiments/water_impact_dynamic_eval12/v3b_target_prompt_teacher_blind_review_v3_public/media/r008_A.mp4",
+      "sha256": "9660c81d84483464d8c8b80788a805c831c7ad8cbd10892c26724837e773a379"
+    },
+    "r008_B.mp4": {
+      "path": "experiments/water_impact_dynamic_eval12/v3b_target_prompt_teacher_blind_review_v3_public/media/r008_B.mp4",
+      "sha256": "1eafa9d50821870ac5e724a1144625c7d22f3468e15b0638cae973ed074ae1e9"
+    },
+    "r009_A.mp4": {
+      "path": "experiments/water_impact_dynamic_eval12/v3b_target_prompt_teacher_blind_review_v3_public/media/r009_A.mp4",
+      "sha256": "27e9885b86d74c1b6b1845b6c92ab5428c3d475ad051c3ddd83cfabc4365d055"
+    },
+    "r009_B.mp4": {
+      "path": "experiments/water_impact_dynamic_eval12/v3b_target_prompt_teacher_blind_review_v3_public/media/r009_B.mp4",
+      "sha256": "800c8c5828745c64175633463ab16f1e5c32285fac99bb589d302e23a31443bd"
+    },
+    "r010_A.mp4": {
+      "path": "experiments/water_impact_dynamic_eval12/v3b_target_prompt_teacher_blind_review_v3_public/media/r010_A.mp4",
+      "sha256": "6da0980d09f1d538be653fb045b9165013eae58d5682bd60849bf296e565aca1"
+    },
+    "r010_B.mp4": {
+      "path": "experiments/water_impact_dynamic_eval12/v3b_target_prompt_teacher_blind_review_v3_public/media/r010_B.mp4",
+      "sha256": "9c36b7673ddf59c212384b638abc3ed24b57530b6738f843a32e2e82582a73bd"
+    },
+    "r011_A.mp4": {
+      "path": "experiments/water_impact_dynamic_eval12/v3b_target_prompt_teacher_blind_review_v3_public/media/r011_A.mp4",
+      "sha256": "667293c3e4dbde81150f082fb3ef5bd7e9008539188cfb8fbd6baf1e0abe69f1"
+    },
+    "r011_B.mp4": {
+      "path": "experiments/water_impact_dynamic_eval12/v3b_target_prompt_teacher_blind_review_v3_public/media/r011_B.mp4",
+      "sha256": "9a4b018c28c730ae910359a71585c87580914feb3a6dc0aa9754453a535b2438"
+    }
+  },
+  "composite_sha256": {
+    "r000.jpg": "b898fc75db00e14bcd68d231f83194e56a62f90ce09f7d388d609928c5e12124",
+    "r001.jpg": "20eefe6c2ff383280c084b3c58877ca8d70831ab08710dcd82b7e2ced1638703",
+    "r002.jpg": "596c24a17a659359655c76b36e793af5b0a5ee53ef627b0b6dd84f1fbf43440d",
+    "r003.jpg": "be1f0f618f108af3f0a0002be7f3165e64bf585ad36bd13d7e1f864dc317c4ce",
+    "r004.jpg": "76e22234691e0ae8bb8e603a935fd9f8cac3f73d1c6f461d1c7b49d84f0ee2a8",
+    "r005.jpg": "4f3ffd45b16f079e5c0b542ca4814edbb96730bd7d89ca1c6e7a6afa0823b183",
+    "r006.jpg": "7fe99de0a1ff19d8392571559776544ba33e9e0c03ebd7d91f8d047222357574",
+    "r007.jpg": "8633616f859b406fe78b5b283e36847530f1394d04e40e8322834649f1cf7faf",
+    "r008.jpg": "5c48af22749e077c7d42c1c1fd488e8acd6f672db1d8a7276d1ccc2c756d8f7f",
+    "r009.jpg": "598c4537222dc619e653d300ca6923113adc6d2215f3fc0c06ad46a30f7f733c",
+    "r010.jpg": "23ebfc392a1881755318d61da351e3b54c32a41c1babc08eba3d15fe01006c8d",
+    "r011.jpg": "121188638cf2399f432d19cd1eb48ecf01f6467e1751c272e99ae51037ebbc83"
+  },
+  "generation_manifests": {
+    "original": {
+      "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_base/generation_manifest.json",
+      "sha256": "c29e159f8722728c1e4ce08d67895281518f0f7c0fe6cecb3a28cdc43a39deba"
+    },
+    "balanced": {
+      "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_v3_balanced_seeded_ckpt200_scale1p25/generation_manifest.json",
+      "sha256": "af1ada55eb56fe28261765e23b4b24b782d403736f6310216602fee069eecf1a"
+    },
+    "v3b": {
+      "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v3b/eval12_target_prompt_teacher_scale4_v1_ckpt200_scale1p25/generation_manifest.json",
+      "sha256": "f9d6ad4ee85a9ddbc2be0d20a5423d6338ee9bef166ad5e5d67bc5ea5954823c"
+    }
+  }
+}

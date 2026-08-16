@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 
-PROTOCOL = "water_impact_dynamic_v3b_eval12_v3"
+PROTOCOL = "water_impact_dynamic_v3b_eval12_v1"
 METHODS = ("balanced", "v3b")
 FRAME_INDICES = (0, 8, 16, 24, 32, 40, 48)
 

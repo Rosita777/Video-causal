@@ -1,0 +1,3 @@
+method,n,usable_n,receiver_points,quality_points,target_suppression_points,footprint_suppression_points,strict_success_n
+balanced,12,11,21,17,3,3,0
+v3b,12,12,22,18,7,12,0

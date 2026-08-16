@@ -1,0 +1,95 @@
+{
+  "protocol": "water_impact_dynamic_v3b_eval12_v1",
+  "mechanism_positive": false,
+  "preservation_positive": false,
+  "promote_v3b_operating_point": false,
+  "checks": {
+    "mechanism_improvements_at_least_3": true,
+    "mechanism_absent_at_least_1": false,
+    "mechanism_groups_at_least_2": true,
+    "target_suppression_margin_at_least_3_on_control_usable": true,
+    "v3b_usable_at_least_11": true,
+    "receiver_absolute_floor_19": true,
+    "receiver_relative_floor_control_minus_1": true,
+    "quality_absolute_floor_16": true,
+    "quality_relative_floor_control_minus_1": true,
+    "footprint_not_worse_on_control_usable": true,
+    "strict_success_at_least_1": false
+  },
+  "mechanism_improvements": [
+    {
+      "sample_index": 4,
+      "generalization_group": "unseen_receiver",
+      "v3b_target_visibility": 1
+    },
+    {
+      "sample_index": 7,
+      "generalization_group": "unseen_receiver",
+      "v3b_target_visibility": 1
+    },
+    {
+      "sample_index": 8,
+      "generalization_group": "unseen_source_and_receiver",
+      "v3b_target_visibility": 1
+    }
+  ],
+  "control_usable_sample_count": 11,
+  "control_target_suppression_points_on_control_usable": 2,
+  "v3b_target_suppression_points_on_control_usable": 6,
+  "control_footprint_suppression_points_on_control_usable": 1,
+  "v3b_footprint_suppression_points_on_control_usable": 10,
+  "input_provenance": {
+    "review_sha256": "13e84286417b807801a023ca0da72780b2b57ba369980adf3d67d077641fd842",
+    "answer_key_sha256": "17310d0f6538ed50f763750a4b6c7114453b8412332f72fe3542c1c047421bde",
+    "review_manifest_sha256": "11ffff9e784949c424bfa8e4ee790014afdf2b8365a16066cebfad0898b19bc2",
+    "eval_csv_sha256": "dca68f8632e10ef83cc5f3867679c9cba54f4cbce96426db5db8c5214ac1ec1a",
+    "generation_manifests": {
+      "original": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_base/generation_manifest.json",
+        "sha256": "c29e159f8722728c1e4ce08d67895281518f0f7c0fe6cecb3a28cdc43a39deba"
+      },
+      "balanced": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v1/eval12_v3_balanced_seeded_ckpt200_scale1p25/generation_manifest.json",
+        "sha256": "af1ada55eb56fe28261765e23b4b24b782d403736f6310216602fee069eecf1a"
+      },
+      "v3b": {
+        "path": "/data/xiaohuang_workspace/ljc/Video-causal-v3/outputs/water_impact_dynamic_v3b/eval12_target_prompt_teacher_scale4_v1_ckpt200_scale1p25/generation_manifest.json",
+        "sha256": "f9d6ad4ee85a9ddbc2be0d20a5423d6338ee9bef166ad5e5d67bc5ea5954823c"
+      }
+    },
+    "training_provenance": {
+      "inputs": {
+        "base_cache_dir": "outputs/water_impact_dynamic_v1/cache_dynamic_sft_preserve_v2",
+        "base_cache_entry_count": 214,
+        "base_cache_sha256": "4654ee67b8937d248963839b744e59f4f535f8be8b8eee421aef264fb3cd4d65",
+        "target_prompt_cache_dir": "outputs/water_impact_dynamic_v3b/teacher_prompt_cache_v1",
+        "target_prompt_cache_entry_count": 178,
+        "target_prompt_cache_sha256": "6cf7ba0112d8df0e0a5253a7a943411fcfd85c56fc6df580446776b49d1ac9a9",
+        "target_prompt_cache_manifest_path": "outputs/water_impact_dynamic_v3b/teacher_prompt_cache_v1/cache_manifest.json",
+        "target_prompt_cache_manifest_sha256": "c467d7f81ee22b2c4b1ff719537487fbfc808eacc98e730c3d24f0a17aca77cb"
+      },
+      "balanced": {
+        "checkpoint_path": "outputs/water_impact_dynamic_v1/adapter_dynamic_sft_v3_balanced_seeded/checkpoint-000200",
+        "checkpoint_sha256": "e61eb33235da3ad68f08e31c451c6690db194bc9b3aa498df58194549955d7f0",
+        "weights_path": "outputs/water_impact_dynamic_v1/adapter_dynamic_sft_v3_balanced_seeded/checkpoint-000200/pytorch_lora_weights.safetensors",
+        "weights_sha256": "efbd57cc118f05c2ce82a55429057aa03874cc7a615de73063c564cef3f11701",
+        "training_state_path": "outputs/water_impact_dynamic_v1/adapter_dynamic_sft_v3_balanced_seeded/checkpoint-000200/training_state.json",
+        "training_state_sha256": "91593e27a0bfde232c7cc344a1579e3f1c203d825bd3252e6160532a833f1142"
+      },
+      "v3b": {
+        "checkpoint_path": "outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_scale4_v1/checkpoint-000200",
+        "checkpoint_sha256": "f40f15f0a51c840db3e4fa8e2f931bdf89a4e5787f642513161e48d848fd723f",
+        "weights_path": "outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_scale4_v1/checkpoint-000200/pytorch_lora_weights.safetensors",
+        "weights_sha256": "d3fecf26b7f1ca6c4a8f46c86850a47a7ec5a62762d0e0aa15c49363040875d3",
+        "training_state_path": "outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_scale4_v1/checkpoint-000200/training_state.json",
+        "training_state_sha256": "0f9aa26e825f4f6f497b1312c507b685c054bc319f2f9f538e45eeb7a7908bea",
+        "run_registration_path": "outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_scale4_v1/run_registration.json",
+        "run_registration_sha256": "53f0a7c472ba02a38b90b55651f378e5feda0bcd709f86786702de163b3a87f4",
+        "scale_sanity_path": "outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_scale4_v1/target_prompt_scale_sanity.json",
+        "scale_sanity_sha256": "26fb8b1ff9e0d446fd186765ba1ff9a9d1a085d75d230cd0a419509ea00bbb12",
+        "scale_sanity_mean_output_gradient_norm_ratio": 0.2815118219615773,
+        "scale_sanity_max_output_gradient_norm_ratio": 0.46736767805873564
+      }
+    }
+  }
+}

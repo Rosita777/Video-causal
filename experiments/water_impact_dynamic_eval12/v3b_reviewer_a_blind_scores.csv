@@ -1,0 +1,25 @@
+review_id,target,footprint,receiver,quality,brief_notes
+r000_A,2,0,2,2,Clear late ball; no visible splash or ripple; bowl stable
+r000_B,2,2,1,1,Clear ball and strong stylized crown; receiver simplified; splash freezes
+r001_A,2,2,2,2,Stone clear; clean impact-to-expanding rings; pond stable
+r001_B,2,2,2,2,Stone clear; visible contact and ripples; coherent pond
+r002_A,1,0,1,1,Ball clipped at frames 0-1 then vanishes; no footprint; jar heavily cropped
+r002_B,1,0,0,0,Tiny clipped ball for first frames; otherwise blank field; receiver absent
+r003_A,2,1,2,2,Small identifiable strawberry; tiny late splash; tank stable
+r003_B,2,2,2,2,Clear strawberry; distinct splash crown; tank preserved
+r004_A,1,2,2,1,White bead duplicates and morphs; obvious splash and rings; bowl stable
+r004_B,2,1,2,1,Single holed cylindrical bead clear; weak entry disturbance; abrupt disappearance
+r005_A,2,2,2,2,Pine cone clear; strong splash and ripples; jar coherent
+r005_B,2,1,2,2,Pine cone clear; weak surface response; clean sinking and refraction
+r006_A,1,2,2,2,Droplet small and brief rather than large; clear impact rings; bowl stable
+r006_B,2,2,2,2,Large droplet clear; crown rebound and rings clear; bowl stable
+r007_A,2,2,2,1,Walnut clear and rings strong; implausible upward rebound after impact
+r007_B,2,2,2,2,Walnut clear; subtle but clear expanding rings; basin stable
+r008_A,2,2,2,2,Stone clear; splash and residual rings clear; copper bowl stable
+r008_B,1,1,2,1,Stone only briefly at lower edge; weak residual motion; early disappearance
+r009_A,1,2,2,1,Droplet malformed into tall stream; strong surface deformation; jar stable
+r009_B,0,0,1,1,No droplet or impact; mostly static simplified jar scene
+r010_A,2,2,2,2,Apple clear; broad concentric rings; copper bowl stable
+r010_B,2,2,2,2,Apple clear; impact rings expand smoothly; bowl preserved
+r011_A,1,0,2,1,Apple appears only as late blurred underwater partial; no visible footprint
+r011_B,2,2,2,1,Apple and contact rings clear; target disappears then reappears for second descent

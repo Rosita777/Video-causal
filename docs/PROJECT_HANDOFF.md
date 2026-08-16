@@ -1,6 +1,6 @@
 # Project Handoff
 
-Last updated: 2026-08-13
+Last updated: 2026-08-16
 
 This is the authoritative handoff document. When another document conflicts
 with this one, treat the other document as historical until explicitly updated.
@@ -15,10 +15,13 @@ and the downstream visual footprint caused by it. For the current prototype:
 The receiver, camera, lighting, and unrelated motion should remain usable. The
 project is not currently claiming a universal adapter across all mechanisms.
 
-## 2. Current Method
+## 2. Current Operating Point
 
-The active method is a Wan LoRA trained with dynamic counterfactual SFT and a
-generic preservation branch:
+The retained operating point is the seeded-balanced Wan LoRA trained with
+dynamic counterfactual SFT and a generic preservation branch. V3b is an
+archived negative development ablation and has **not** replaced this control.
+
+The data construction is:
 
 1. Generate factual videos containing the object and water-impact event.
 2. Generate target videos describing the same receiver without the object or
@@ -40,8 +43,13 @@ generic preservation branch:
 | Frames / resolution | 49 / 480x832 |
 | FPS / diffusion steps | 8 / 25 |
 
-The exact launcher is `scripts/run_water_impact_dynamic_sft_preserve_v2.sh`.
-The training manifest is `data/water_impact_dynamic_v1/train_dynamic_sft_preserve_v2.csv`.
+The original v2 launcher is `scripts/run_water_impact_dynamic_sft_preserve_v2.sh`.
+The frozen seeded-balanced control used for the v3 comparisons is
+`outputs/water_impact_dynamic_v1/adapter_dynamic_sft_v3_balanced_seeded/checkpoint-000200`.
+Both use
+`data/water_impact_dynamic_v1/train_dynamic_sft_preserve_v2.csv`; the seeded
+control fixes the 200-step sample order at exactly 100 erase and 100 preserve
+updates.
 
 ## 3. Data and Splits
 
@@ -55,21 +63,29 @@ Current training data:
 - direct and natural wording variants;
 - generic preservation rows from `data/protocol_v1/wan_train_manifest.csv`.
 
-Current held-out eval12:
+The original eval12 (now an exhausted development set) contains:
 
 - 4 unseen-source cases;
 - 4 unseen-receiver cases;
 - 4 cases with both source and receiver unseen;
 - one fixed seed per row, recorded in `data/water_impact_dynamic_v1/eval12.csv`.
 
+Eval12 has now been inspected repeatedly while designing v3a and v3b. Treat it
+as an exhausted development set, not as a paper-final test. The remaining 60
+rows in `data/water_impact_dynamic_v1/test_pairs.csv` have not been used for
+the v3b decision. Before producing any v3c videos, deterministically freeze a
+stratified fresh-dev24 split (8 per generalization group, with 4 direct and 4
+natural prompts) and a sealed-final36 split. Do not inspect the final36 while
+developing v3c.
+
 Do not silently regenerate or replace a row. If a row changes, create a new
 manifest version and record why.
 
 ## 4. Evaluation
 
-The main comparison contains Original, Negative Prompt, the local Wan
-T2VUnlearning proxy, the local Wan VideoEraser proxy, and the current adapter.
-All use the same prompts, seeds, and Wan generation settings.
+The preliminary five-way comparison contains Original, Negative Prompt, the
+local Wan T2VUnlearning proxy, the local Wan VideoEraser proxy, and the current
+adapter. All use the same prompts, seeds, and Wan generation settings.
 
 The review sheet samples seven frames per video. Atomic fields are:
 
@@ -101,6 +117,24 @@ These are first manual scores on 12 samples, not final paper statistics. A
 larger evaluation should use the same rubric with a second reviewer or a
 calibrated VLM plus spot-checks.
 
+The completed v3b development comparison used two independent blinded
+reviewers plus blinded adjudication of every disagreement. The treatment adds
+a source-free target-prompt frozen teacher to the erase loss with weight 4;
+training used the same initialization, data, sample order, and 200-step budget
+as the seeded-balanced control.
+
+| Method | Usable | Receiver /24 | Quality /24 | Target suppression /24 | Footprint suppression /24 | Strict |
+|---|---:|---:|---:|---:|---:|---:|
+| Seeded-balanced control | 11/12 | 21 | 17 | 3 | 3 | 0 |
+| V3b target-prompt teacher | 12/12 | 22 | 18 | 7 | 12 | 0 |
+
+V3b passed the usability, preservation, paired target-gain, and footprint
+floors, but it produced no registered clear-to-absent target improvement and
+no strict success. Therefore `mechanism_positive=false` and
+`promote_v3b_operating_point=false`. It is promising mechanistic evidence, not
+a promoted method. The full interpretation and frozen hashes are in
+`docs/water_impact_dynamic_v3b_eval12_results_2026-08-16.md`.
+
 ## 5. Exact Reproduction Path
 
 On the A100 machine:
@@ -128,6 +162,26 @@ $PYTHON scripts/build_water_impact_dynamic_eval12_review.py \
   --output experiments/water_impact_dynamic_eval12/review.csv
 ```
 
+The actively maintained clean checkout for the v3 work is
+`/data/xiaohuang_workspace/ljc/Video-causal-v3`. The original checkout at
+`/data/xiaohuang_workspace/ljc/Video-causal` is intentionally preserved and
+must not be reset or cleaned: it contains a large mixed historical working
+tree. In the clean checkout, the completed v3b protocol can be verified with:
+
+```bash
+cd /data/xiaohuang_workspace/ljc/Video-causal-v3
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts \
+  models/.wan-runtime/bin/python -m unittest -v \
+  tests.test_water_impact_dynamic_v3b_eval
+bash scripts/run_water_impact_dynamic_v3b_eval12.sh preflight
+```
+
+The v3b training checkpoint is
+`outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_scale4_v1/checkpoint-000200`;
+the 12 generated treatment videos are under
+`outputs/water_impact_dynamic_v3b/eval12_target_prompt_teacher_scale4_v1_ckpt200_scale1p25`.
+Do not rerun or overwrite these frozen paths.
+
 Weights and generated videos are not in Git. Check them before starting. The
 baseline runners are local Wan proxy implementations, not claims of official
 released baseline training code.
@@ -144,14 +198,53 @@ released baseline training code.
    but one pipeline per GPU remains the safe default.
 5. CogVideoX and Hunyuan probes are historical capability checks, not part of
    the current main experiment.
+6. Eval12 is exhausted for method selection. Reusing it to select another
+   teacher weight, noise schedule, or checkpoint would be adaptive tuning.
+7. V3b suppresses the causal footprint strongly, but source objects usually
+   move only from clear to partial rather than clear to absent. This is the
+   immediate failure mode to target.
 
 ## 7. Next Research Task
 
-Improve source-object deletion without losing current preservation behavior.
-The conservative next experiment is a v3 loss ablation using the same data and
-eval12, followed by a larger held-out set. Do not expand to five mechanisms or
-add another backbone until the water-impact pipeline has a stable,
-independently reviewed score table.
+The single recommended next ablation is v3c: keep v3b's data, initialization,
+sample order, teacher weight, preservation branch, and 200-step budget fixed,
+but allocate the teacher term toward the high-noise part of the diffusion
+trajectory:
+
+```text
+L_erase = L_flow + 4 * (2 * sigma) * L_target_prompt_teacher
+```
+
+Because `E[2*sigma]=1`, this keeps the mean teacher budget at 4; it is a
+schedule ablation, not another weight sweep. Train from the same initialization
+rather than continuing from v3b. Before any eligible checkpoint, the first 16
+erase updates must have finite
+`g_i = 8*sigma_i*sqrt(L_teacher/L_flow)`, arithmetic mean in `[0.20, 0.50]`,
+and maximum at most `1.0`. A frozen-RNG arithmetic replay predicts mean
+`0.2868` and maximum `0.8582`; this is only a pre-run safety check.
+
+Do not evaluate v3c on eval12. Freeze the fresh-dev24/sealed-final36 split
+described above before generation, compare only frozen v3b versus v3c on
+fresh-dev24 using two blinded reviewers plus adjudication, and preregister the
+gate before viewing outputs. The proposed all-or-nothing gate is:
+
+- at least 20 usable v3b controls;
+- v3c target-suppression points at least v3b plus 6;
+- at least 6 usable paired target improvements, including at least two
+  clear-to-absent (`2 -> 0`) cases across at least two generalization groups;
+- at least two more absent-target cases than v3b;
+- v3c usable at least 22/24;
+- receiver at least `max(38, v3b_receiver - 2)` and quality at least
+  `max(32, v3b_quality - 2)`;
+- no loss in footprint suppression on the v3b-usable set;
+- at least two strict `(0, 0, 2, 2)` successes.
+
+Only after v3c passes every condition should final36 be unsealed for a
+multi-seed paper main experiment. If it fails, record the negative result and
+do not sweep teacher weight, sigma window, or checkpoint.
+
+Do not expand to five mechanisms or add another backbone until this
+water-impact method has passed the fresh-development gate.
 
 ## 8. Git Policy
 
