@@ -274,21 +274,22 @@ are the only explicit legacy exception and must still pass full-video Original
 screening. The deterministic 178-row public mapping is frozen at
 `data/water_impact_dynamic_v4/source_mapping_v2.json`.
 
-No v4 GPU run is authorized yet. The remaining order is strict:
+The implementation/public artifacts are committed, the remote runtime and
+full-model byte inventories validate, and the causal Stage-0 opening is now
+frozen at `data/water_impact_dynamic_v4/causal_stage0_commitment_v2.json`
+(SHA-256 `29696ad8031bb164fe1c6819c8c382d7e4e828835f750f0d245e4877d4167b38`).
+This authorizes only the 48-case Original screening run; it does not authorize
+v4 training or any treatment-arm generation. The remaining order is strict:
 
-1. commit and deploy the approved implementation and public v2 artifacts;
-2. independently freeze the remote runtime registry, full-model inventory,
-   forbidden historical seed inventory, and the private causal Stage-0
-   opening; Stage 0 must remain fail-closed until all bindings validate;
-3. generate and independently screen only the 48 committed causal Original
+1. generate and independently screen only the 48 committed causal Original
    videos, then freeze the causal Stage-1 selected 24 cases and 72 units;
-4. construct, authorize, generate, and screen the dependent specificity pool,
+2. construct, authorize, generate, and screen the dependent specificity pool,
    then freeze its selected 18 cases, 36 units, and six same-noun mappings;
-5. only after both Stage-1 registries exist, create the prompt sidecar and
+3. only after both Stage-1 registries exist, create the prompt sidecar and
    independent augmented-prompt re-encoding preflight, freeze code/gate/runtime
    registries and the final training authorization, and run the sole eligible
    200-step v4 training job;
-6. generate the registered v3b/v4 development arms and run the committed
+4. generate the registered v3b/v4 development arms and run the committed
    public/private blind-review protocol. Sealed-final36 remains inaccessible
    unless every causal, specificity, and role-selectivity gate passes.
 
