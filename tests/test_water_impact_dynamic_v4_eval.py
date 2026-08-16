@@ -4,6 +4,7 @@ import argparse
 import csv
 import hashlib
 import json
+import os
 import shutil
 import struct
 from pathlib import Path
@@ -11,6 +12,7 @@ import sys
 import tempfile
 import unittest
 from unittest import mock
+from contextlib import AbstractContextManager
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -21,6 +23,16 @@ import score_water_impact_dynamic_v4 as scorer  # noqa: E402
 import select_water_impact_dynamic_v4_eval as selector  # noqa: E402
 import water_impact_dynamic_v4_eval_protocol as protocol  # noqa: E402
 import run_water_impact_dynamic_v4_eval as runner  # noqa: E402
+
+
+def synthetic_public_hash_patch(
+    fixture: dict[str, object],
+) -> AbstractContextManager[object]:
+    """Pin a temporary fixture exactly without weakening production defaults."""
+
+    frozen = fixture["synthetic_public_hashes"]
+    assert isinstance(frozen, dict)
+    return mock.patch.multiple(protocol, **frozen)
 
 
 def read_csv(path: Path) -> list[dict[str, str]]:
@@ -133,6 +145,8 @@ def make_synthetic_stage0_fixture(root: Path) -> dict[str, object]:
 
     templates_payload = {
         "schema": protocol.SOURCE_SLOT_REGISTRY_SCHEMA,
+        "protocol": protocol.SOURCE_SLOT_REGISTRY_SCHEMA,
+        "dataset_version": protocol.DATASET_VERSION,
         "canonical_builder_sha256": protocol.file_sha256(
             root / "scripts/build_water_impact_dynamic_pairs_v1.py"
         ),
@@ -212,7 +226,7 @@ def make_synthetic_stage0_fixture(root: Path) -> dict[str, object]:
                     source_head = str(source_row["head_lemma"])
                 if group == "holdout_source_seen_receiver":
                     receiver_id, receiver = historical_items[within]
-                    receiver_membership = "historical_receiver"
+                    receiver_membership = "seen_receiver"
                 else:
                     receiver_id = f"receiver_new_{new_receiver_index:03d}"
                     receiver = f"a synthetic water receiver {new_receiver_index:03d}"
@@ -260,6 +274,7 @@ def make_synthetic_stage0_fixture(root: Path) -> dict[str, object]:
         component_paths["causal_stage0_candidates_private_v2.json"],
         {
             "schema": protocol.SOURCE_SLOT_REGISTRY_SCHEMA,
+            "protocol": protocol.SOURCE_SLOT_REGISTRY_SCHEMA,
             "dataset_version": protocol.DATASET_VERSION,
             "stage": 0,
             "candidate_count": 48,
@@ -288,6 +303,8 @@ def make_synthetic_stage0_fixture(root: Path) -> dict[str, object]:
         component_paths["causal_stage0_secrets_private_v2.json"],
         {
             "schema": protocol.SOURCE_SLOT_REGISTRY_SCHEMA,
+            "protocol": protocol.SOURCE_SLOT_REGISTRY_SCHEMA,
+            "dataset_version": protocol.DATASET_VERSION,
             "evaluation_seed_namespace": "v4-causal-evaluation-v2",
             "evaluation_seed_salt": evaluation_salt,
             "screening_seed": screening_seed,
@@ -525,37 +542,45 @@ def make_synthetic_stage0_fixture(root: Path) -> dict[str, object]:
         },
     )
     binding = private / "selection_binding.json"
-    expected_binding = protocol.prepare_selection_binding(
-        root,
-        dataset="causal",
-        private_root=private,
-        candidate_manifest_path=component_paths[
-            "causal_stage0_candidates_private_v2.json"
-        ],
-        canonical_templates_path=component_paths[
-            "causal_stage0_templates_private_v2.json"
-        ],
-        field_rules_path=component_paths[
-            "causal_stage0_field_rules_private_v2.json"
-        ],
-        render_configuration_path=component_paths[
-            "causal_stage0_render_config_private_v2.json"
-        ],
-        selection_rules_path=component_paths[
-            "causal_stage0_selection_rules_private_v2.json"
-        ],
-        secrets_path=component_paths["causal_stage0_secrets_private_v2.json"],
-        root_bundle_path=bundle,
-        generation_spec_path=generation_spec,
-        screening_seed_path=screening_seed_path,
-        selector_salt_path=selector_salt_path,
-        evaluation_seed_salt_path=evaluation_salt_path,
-        forbidden_seed_inventory_path=forbidden,
-        source_ontology_path=ontology_paths["source_ontology_80"],
-        source_split_path=ontology_paths["source_split_80"],
-        holdout_registry_path=ontology_paths["holdout_registry_24"],
-        receiver_ontology_path=ontology_paths["receiver_ontology_32"],
-    )
+    synthetic_public_hashes = {
+        "FROZEN_CAUSAL_STAGE0_PUBLIC_COMMITMENT_SHA256": protocol.file_sha256(
+            pending
+        ),
+        "FROZEN_PUBLIC_SOURCE_BANK_SHA256": protocol.file_sha256(bank),
+        "FROZEN_PUBLIC_HOLDOUT_COMMITMENT_SHA256": protocol.file_sha256(holdout),
+    }
+    with mock.patch.multiple(protocol, **synthetic_public_hashes):
+        expected_binding = protocol.prepare_selection_binding(
+            root,
+            dataset="causal",
+            private_root=private,
+            candidate_manifest_path=component_paths[
+                "causal_stage0_candidates_private_v2.json"
+            ],
+            canonical_templates_path=component_paths[
+                "causal_stage0_templates_private_v2.json"
+            ],
+            field_rules_path=component_paths[
+                "causal_stage0_field_rules_private_v2.json"
+            ],
+            render_configuration_path=component_paths[
+                "causal_stage0_render_config_private_v2.json"
+            ],
+            selection_rules_path=component_paths[
+                "causal_stage0_selection_rules_private_v2.json"
+            ],
+            secrets_path=component_paths["causal_stage0_secrets_private_v2.json"],
+            root_bundle_path=bundle,
+            generation_spec_path=generation_spec,
+            screening_seed_path=screening_seed_path,
+            selector_salt_path=selector_salt_path,
+            evaluation_seed_salt_path=evaluation_salt_path,
+            forbidden_seed_inventory_path=forbidden,
+            source_ontology_path=ontology_paths["source_ontology_80"],
+            source_split_path=ontology_paths["source_split_80"],
+            holdout_registry_path=ontology_paths["holdout_registry_24"],
+            receiver_ontology_path=ontology_paths["receiver_ontology_32"],
+        )
     write_json(binding, expected_binding)
 
     def record(path: Path, rows: int | None = None) -> dict[str, object]:
@@ -632,6 +657,7 @@ def make_synthetic_stage0_fixture(root: Path) -> dict[str, object]:
         "normalized": normalized,
         "model_sha256": model_sha,
         "runtime_sha256": runtime_sha,
+        "synthetic_public_hashes": synthetic_public_hashes,
     }
 
 
@@ -1813,6 +1839,228 @@ class CommitmentAndFailClosedTests(unittest.TestCase):
             specificity["ranking_contract"]["domain"], "specificity-selector-v2"
         )
 
+    def test_real_v2_curator_bytes_open_when_private_fixture_is_available(self) -> None:
+        """Exercise the frozen curator bytes without publishing a Stage-0 wrapper."""
+
+        registered_private = os.environ.get("V4_PRIVATE_REGISTRY_V2_DIR")
+        if not registered_private:
+            self.skipTest("V4_PRIVATE_REGISTRY_V2_DIR is not configured")
+        source_private = Path(registered_private)
+        if not source_private.is_dir() or source_private.is_symlink():
+            self.fail("V4_PRIVATE_REGISTRY_V2_DIR must be a real directory")
+
+        required_private = (
+            *protocol.CAUSAL_PRIVATE_COMPONENT_FILENAMES,
+            *protocol.CAUSAL_ONTOLOGY_FILENAMES,
+            "causal_stage0_bundle_private_v2.json",
+        )
+        for name in required_private:
+            path = source_private / name
+            if not path.is_file() or path.is_symlink():
+                self.fail(f"missing real v2 private fixture component: {name}")
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            private = root / "private"
+            private.mkdir()
+            for name in required_private:
+                shutil.copyfile(source_private / name, private / name)
+            (root / "scripts").mkdir()
+            shutil.copyfile(
+                PROJECT_ROOT / "scripts/build_water_impact_dynamic_pairs_v1.py",
+                root / "scripts/build_water_impact_dynamic_pairs_v1.py",
+            )
+            for registered in (
+                protocol.PUBLIC_SOURCE_BANK,
+                protocol.PUBLIC_HOLDOUT_COMMITMENT,
+                protocol.PENDING_STAGE0_COMMITMENTS["causal"],
+            ):
+                destination = root / registered
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(PROJECT_ROOT / registered, destination)
+
+            def write_json(path: Path, payload: object) -> None:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(
+                    json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+                    encoding="utf-8",
+                )
+
+            runtime = root / protocol.RUNTIME_REGISTRY
+            write_json(runtime, protocol.RUNTIME_REGISTRY_PAYLOAD)
+            generation_spec = private / "causal_generation_spec_v2.json"
+            write_json(
+                generation_spec,
+                {
+                    "protocol": protocol.GENERATION_SPEC_PROTOCOL,
+                    "status": "frozen_before_original_render",
+                    "model_inventory_sha256": protocol.FROZEN_MODEL_CONTENT_INVENTORY_SHA256,
+                    "runtime_registry": {
+                        "path": protocol.RUNTIME_REGISTRY,
+                        "sha256": protocol.file_sha256(runtime),
+                    },
+                    "generation_spec": protocol.GENERATION_SPEC,
+                    "source_mode": "Original_screening_then_matched_O_v3b_v4",
+                },
+            )
+            secrets = json.loads(
+                (private / "causal_stage0_secrets_private_v2.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            screening = private / "causal_screening_seed_v2.txt"
+            selector_salt = private / "causal_selector_salt_v2.txt"
+            evaluation_salt = private / "causal_evaluation_seed_salt_v2.txt"
+            screening.write_text(f"{secrets['screening_seed']}\n", encoding="ascii")
+            selector_salt.write_text(f"{secrets['selector_salt']}\n", encoding="ascii")
+            evaluation_salt.write_text(
+                f"{secrets['evaluation_seed_salt']}\n", encoding="ascii"
+            )
+            forbidden = private / "causal_forbidden_seed_inventory_v2.json"
+            write_json(
+                forbidden,
+                {
+                    "protocol": protocol.FORBIDDEN_SEED_INVENTORY_PROTOCOL,
+                    "dataset": "causal",
+                    "status": "frozen_by_independent_seed_auditor",
+                    "seed_encoding": "nonnegative JSON integer below 2^63",
+                    "source_commitments": [
+                        {
+                            "name": "synthetic_empty_history_for_schema_regression",
+                            "sha256": "e" * 64,
+                            "seed_count": 0,
+                        }
+                    ],
+                    "seeds": [],
+                },
+            )
+            binding = protocol.prepare_selection_binding(
+                root,
+                dataset="causal",
+                private_root=private,
+                candidate_manifest_path=private
+                / "causal_stage0_candidates_private_v2.json",
+                canonical_templates_path=private
+                / "causal_stage0_templates_private_v2.json",
+                field_rules_path=private
+                / "causal_stage0_field_rules_private_v2.json",
+                render_configuration_path=private
+                / "causal_stage0_render_config_private_v2.json",
+                selection_rules_path=private
+                / "causal_stage0_selection_rules_private_v2.json",
+                secrets_path=private / "causal_stage0_secrets_private_v2.json",
+                root_bundle_path=private / "causal_stage0_bundle_private_v2.json",
+                generation_spec_path=generation_spec,
+                screening_seed_path=screening,
+                selector_salt_path=selector_salt,
+                evaluation_seed_salt_path=evaluation_salt,
+                forbidden_seed_inventory_path=forbidden,
+                source_ontology_path=private / "source_ontology_private80_v2.json",
+                source_split_path=private / "source_split_private_v2.json",
+                holdout_registry_path=private / "holdout_registry_private24_v2.json",
+                receiver_ontology_path=private / "receiver_ontology_private32_v2.json",
+            )
+            self.assertEqual(binding["dataset_version"], protocol.DATASET_VERSION)
+            self.assertEqual(
+                binding["seed_contract"]["preselection_audit"]["derived_seed_count"],
+                144,
+            )
+            binding_path = private / "causal_selection_binding_v2.json"
+            write_json(binding_path, binding)
+
+            def record(path: Path, rows: int | None = None) -> dict[str, object]:
+                return {
+                    "sha256": protocol.file_sha256(path),
+                    "size_bytes": path.stat().st_size,
+                    "row_count": rows,
+                }
+
+            rules = private / "causal_stage0_selection_rules_private_v2.json"
+            rules_record = record(rules)
+            stage0_payload = {
+                "protocol": protocol.COMMITMENT_PROTOCOL,
+                "dataset": "causal",
+                "dataset_version": protocol.DATASET_VERSION,
+                "stage": 0,
+                "status": "committed",
+                "sealed_final36_status": "unopened",
+                "artifacts": {
+                    "candidate_manifest_48": record(
+                        private / "causal_stage0_candidates_private_v2.json", 48
+                    ),
+                    "source_bank_registry_64": record(
+                        root / protocol.PUBLIC_SOURCE_BANK, 64
+                    ),
+                    "source_ontology_80": record(
+                        private / "source_ontology_private80_v2.json", 80
+                    ),
+                    "source_split_80": record(
+                        private / "source_split_private_v2.json", 80
+                    ),
+                    "holdout_registry_24": record(
+                        private / "holdout_registry_private24_v2.json", 24
+                    ),
+                    "receiver_ontology_32": record(
+                        private / "receiver_ontology_private32_v2.json", 32
+                    ),
+                    "canonical_templates": record(
+                        private / "causal_stage0_templates_private_v2.json"
+                    ),
+                    "field_normalization": record(
+                        private / "causal_stage0_field_rules_private_v2.json"
+                    ),
+                    "raw_root_bundle": record(
+                        private / "causal_stage0_bundle_private_v2.json"
+                    ),
+                    "raw_render_configuration": record(
+                        private / "causal_stage0_render_config_private_v2.json"
+                    ),
+                    "stage0_secrets": record(
+                        private / "causal_stage0_secrets_private_v2.json"
+                    ),
+                    "screening_seed": record(screening),
+                    "screening_generation_spec": record(generation_spec),
+                    "selector_salt": record(selector_salt),
+                    "ranking_formula": rules_record,
+                    "constrained_subset_algorithm": dict(rules_record),
+                    "evaluation_seed_salt": record(evaluation_salt),
+                    "seed_derivation_formula": record(binding_path),
+                    "forbidden_seed_inventory": record(forbidden),
+                },
+            }
+            stage0_path = root / protocol.CAUSAL_STAGE0
+            write_json(stage0_path, stage0_payload)
+            stage0 = protocol.validate_commitment_registry(
+                stage0_path, dataset="causal", stage=0
+            )
+            protocol.validate_selection_contract_opening(
+                root,
+                dataset="causal",
+                stage0_registry=stage0,
+                private_root=private,
+                candidate_manifest_path=private
+                / "causal_stage0_candidates_private_v2.json",
+                canonical_templates_path=private
+                / "causal_stage0_templates_private_v2.json",
+                field_rules_path=private
+                / "causal_stage0_field_rules_private_v2.json",
+                render_configuration_path=private
+                / "causal_stage0_render_config_private_v2.json",
+                selection_rules_path=rules,
+                secrets_path=private / "causal_stage0_secrets_private_v2.json",
+                root_bundle_path=private / "causal_stage0_bundle_private_v2.json",
+                generation_spec_path=generation_spec,
+                screening_seed_path=screening,
+                selector_salt_path=selector_salt,
+                evaluation_seed_salt_path=evaluation_salt,
+                forbidden_seed_inventory_path=forbidden,
+                selection_binding_path=binding_path,
+                source_ontology_path=private / "source_ontology_private80_v2.json",
+                source_split_path=private / "source_split_private_v2.json",
+                holdout_registry_path=private / "holdout_registry_private24_v2.json",
+                receiver_ontology_path=private / "receiver_ontology_private32_v2.json",
+            )
+
     def test_full_stage0_opening_rejects_component_and_binding_tamper(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             fixture = make_synthetic_stage0_fixture(Path(directory))
@@ -1825,10 +2073,74 @@ class CommitmentAndFailClosedTests(unittest.TestCase):
             def validate() -> None:
                 ontologies = fixture["ontologies"]
                 assert isinstance(ontologies, dict)
-                protocol.validate_selection_contract_opening(
+                with synthetic_public_hash_patch(fixture):
+                    protocol.validate_selection_contract_opening(
+                        fixture["root"],
+                        dataset="causal",
+                        stage0_registry=stage0,
+                        private_root=fixture["private"],
+                        candidate_manifest_path=components[
+                            "causal_stage0_candidates_private_v2.json"
+                        ],
+                        canonical_templates_path=components[
+                            "causal_stage0_templates_private_v2.json"
+                        ],
+                        field_rules_path=components[
+                            "causal_stage0_field_rules_private_v2.json"
+                        ],
+                        render_configuration_path=components[
+                            "causal_stage0_render_config_private_v2.json"
+                        ],
+                        selection_rules_path=components[
+                            "causal_stage0_selection_rules_private_v2.json"
+                        ],
+                        secrets_path=components[
+                            "causal_stage0_secrets_private_v2.json"
+                        ],
+                        root_bundle_path=fixture["bundle"],
+                        generation_spec_path=fixture["generation_spec"],
+                        screening_seed_path=fixture["screening_seed"],
+                        selector_salt_path=fixture["selector_salt"],
+                        evaluation_seed_salt_path=fixture["evaluation_salt"],
+                        forbidden_seed_inventory_path=fixture["forbidden"],
+                        selection_binding_path=fixture["binding"],
+                        source_ontology_path=ontologies["source_ontology_80"],
+                        source_split_path=ontologies["source_split_80"],
+                        holdout_registry_path=ontologies["holdout_registry_24"],
+                        receiver_ontology_path=ontologies["receiver_ontology_32"],
+                    )
+
+            validate()
+            pending = fixture["root"] / protocol.PENDING_STAGE0_COMMITMENTS["causal"]
+            pending_bytes = pending.read_bytes()
+            pending_payload = json.loads(pending.read_text(encoding="utf-8"))
+            pending_payload["supersedes"]["aggregate_audit"][
+                "stage0_global_constraint_feasible"
+            ] = True
+            pending.write_text(
+                json.dumps(pending_payload, indent=2) + "\n", encoding="utf-8"
+            )
+            with self.assertRaisesRegex(
+                ValueError, "public causal Stage-0 pending bytes"
+            ):
+                validate()
+            pending.write_bytes(pending_bytes)
+            validate()
+            field_rules = components["causal_stage0_field_rules_private_v2.json"]
+            field_rules.write_text(field_rules.read_text() + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "component digest"):
+                validate()
+
+    def test_causal_opening_pins_public_bytes_and_rejects_hash_rebinding(self) -> None:
+        def prepare(fixture: dict[str, object]) -> None:
+            components = fixture["components"]
+            ontologies = fixture["ontologies"]
+            assert isinstance(components, dict)
+            assert isinstance(ontologies, dict)
+            with synthetic_public_hash_patch(fixture):
+                protocol.prepare_selection_binding(
                     fixture["root"],
                     dataset="causal",
-                    stage0_registry=stage0,
                     private_root=fixture["private"],
                     candidate_manifest_path=components[
                         "causal_stage0_candidates_private_v2.json"
@@ -1845,38 +2157,101 @@ class CommitmentAndFailClosedTests(unittest.TestCase):
                     selection_rules_path=components[
                         "causal_stage0_selection_rules_private_v2.json"
                     ],
-                    secrets_path=components["causal_stage0_secrets_private_v2.json"],
+                    secrets_path=components[
+                        "causal_stage0_secrets_private_v2.json"
+                    ],
                     root_bundle_path=fixture["bundle"],
                     generation_spec_path=fixture["generation_spec"],
                     screening_seed_path=fixture["screening_seed"],
                     selector_salt_path=fixture["selector_salt"],
                     evaluation_seed_salt_path=fixture["evaluation_salt"],
                     forbidden_seed_inventory_path=fixture["forbidden"],
-                    selection_binding_path=fixture["binding"],
                     source_ontology_path=ontologies["source_ontology_80"],
                     source_split_path=ontologies["source_split_80"],
                     holdout_registry_path=ontologies["holdout_registry_24"],
                     receiver_ontology_path=ontologies["receiver_ontology_32"],
                 )
 
-            validate()
-            pending = fixture["root"] / protocol.PENDING_STAGE0_COMMITMENTS["causal"]
-            pending_bytes = pending.read_bytes()
-            pending_payload = json.loads(pending.read_text(encoding="utf-8"))
-            pending_payload["supersedes"]["aggregate_audit"][
-                "stage0_global_constraint_feasible"
-            ] = True
-            pending.write_text(
-                json.dumps(pending_payload, indent=2) + "\n", encoding="utf-8"
+        public_cases = (
+            (
+                "pending",
+                protocol.PENDING_STAGE0_COMMITMENTS["causal"],
+                "public causal Stage-0 pending bytes",
+            ),
+            (
+                "source_bank",
+                protocol.PUBLIC_SOURCE_BANK,
+                "public source bank bytes",
+            ),
+            (
+                "holdout",
+                protocol.PUBLIC_HOLDOUT_COMMITMENT,
+                "public holdout commitment bytes",
+            ),
+        )
+        for label, registered, error in public_cases:
+            with self.subTest(public_artifact=label), tempfile.TemporaryDirectory() as directory:
+                fixture = make_synthetic_stage0_fixture(Path(directory))
+                path = Path(fixture["root"]) / registered
+                path.write_bytes(path.read_bytes() + b"\n")
+                with self.assertRaisesRegex(ValueError, error):
+                    prepare(fixture)
+
+        with tempfile.TemporaryDirectory() as directory:
+            fixture = make_synthetic_stage0_fixture(Path(directory))
+            components = fixture["components"]
+            assert isinstance(components, dict)
+            candidate_path = components[
+                "causal_stage0_candidates_private_v2.json"
+            ]
+            candidates = json.loads(candidate_path.read_text(encoding="utf-8"))
+            candidate = candidates["candidates"][0]
+            candidate["case_id"] = "attacker_rebound_case_id"
+            canonical = dict(candidate)
+            canonical.pop("canonical_record_sha256")
+            candidate["canonical_record_sha256"] = hashlib.sha256(
+                (
+                    json.dumps(
+                        canonical,
+                        sort_keys=True,
+                        separators=(",", ":"),
+                        ensure_ascii=False,
+                    )
+                    + "\n"
+                ).encode("utf-8")
+            ).hexdigest()
+            candidate_path.write_text(
+                json.dumps(candidates, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
             )
-            with self.assertRaisesRegex(ValueError, "frozen scope"):
-                validate()
-            pending.write_bytes(pending_bytes)
-            validate()
-            field_rules = components["causal_stage0_field_rules_private_v2.json"]
-            field_rules.write_text(field_rules.read_text() + "\n", encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "component digest"):
-                validate()
+            bundle_path = Path(fixture["bundle"])
+            bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
+            bundle["components"][
+                "causal_stage0_candidates_private_v2.json"
+            ] = protocol.file_sha256(candidate_path)
+            bundle_path.write_text(
+                json.dumps(bundle, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+            pending_path = (
+                Path(fixture["root"])
+                / protocol.PENDING_STAGE0_COMMITMENTS["causal"]
+            )
+            pending = json.loads(pending_path.read_text(encoding="utf-8"))
+            pending["candidate_manifest_sha256"] = protocol.file_sha256(
+                candidate_path
+            )
+            pending["stage0_bundle_file_sha256"] = protocol.file_sha256(
+                bundle_path
+            )
+            pending_path.write_text(
+                json.dumps(pending, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                ValueError, "public causal Stage-0 pending bytes"
+            ):
+                prepare(fixture)
 
     def test_specificity_stage0_authorizer_selector_W_M_and_stage1_are_reachable(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

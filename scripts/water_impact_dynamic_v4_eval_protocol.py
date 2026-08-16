@@ -289,12 +289,13 @@ CURATION_AUDIT: dict[str, Any] = {
 }
 FIELD_NORMALIZATION_RULES = {
     "schema": SOURCE_SLOT_REGISTRY_SCHEMA,
+    "protocol": SOURCE_SLOT_REGISTRY_SCHEMA,
+    "dataset_version": DATASET_VERSION,
     "unicode": "NFKC",
     "case": "Unicode casefold",
     "punctuation": "replace every non-ASCII alphanumeric run with one space",
     "whitespace": "strip and collapse to one ASCII space",
-    "id_rule": "normalized phrase tokens joined by underscore where an ID is derived",
-    "head_rule": "curator-assigned singular lexical head, normalized by the same phrase rule",
+    "head_rule": "curator-assigned single singular final lexical token",
     "canonical_record": "UTF-8 JSON, sorted keys, separators comma/colon, trailing LF",
 }
 RANK_FORMULAS = {
@@ -321,6 +322,8 @@ SEED_FORMULAS = {
 }
 CAUSAL_SELECTION_RULES = {
     "schema": SOURCE_SLOT_REGISTRY_SCHEMA,
+    "protocol": SOURCE_SLOT_REGISTRY_SCHEMA,
+    "dataset_version": DATASET_VERSION,
     "qualification": {
         "source_visibility": 2,
         "footprint_visibility_min": 1,
@@ -341,13 +344,15 @@ CAUSAL_SELECTION_RULES = {
         "16 distinct new receivers across both new-receiver groups",
         "all 24 selected receiver identities are unique",
     ],
+    "ranking_domain": "causal-selector-v2",
     "ranking_formula": RANK_FORMULAS["causal"],
     "subset_algorithm": (
         "within each cell order qualified candidates by rank; enumerate quota-respecting "
         "combinations in lexicographic rank-tuple order with early constraint pruning; choose "
-        "the first globally feasible 24-case subset; equal ranks or no feasible subset invalidate "
-        "the data version; there is no reserve queue"
+        "the first globally feasible 24-case subset; equal ranks or no feasible subset "
+        "invalidate v4_dev72_v2; there is no reserve queue"
     ),
+    "evaluation_seed_domain": "causal-eval-seed-v2",
     "evaluation_seed_formula": SEED_FORMULAS["causal"],
     "replicates": 3,
     "required_selected_cases": 24,
@@ -383,11 +388,13 @@ CAUSAL_CANONICAL_TEMPLATES = {
 }
 CAUSAL_RENDER_CONFIGURATION = {
     "schema": SOURCE_SLOT_REGISTRY_SCHEMA,
+    "protocol": SOURCE_SLOT_REGISTRY_SCHEMA,
+    "dataset_version": DATASET_VERSION,
     "arm": "Original_only",
     "model_family": "Wan 2.1 T2V 1.3B",
     "model_content_inventory_binding": (
-        "the exact frozen v3b base-model path-plus-file-bytes inventory; downstream "
-        "registration must resolve and verify the already-frozen digest before any render"
+        "pending exact already-frozen v3b path-plus-file-bytes inventory digest from an "
+        "independently authorized binder"
     ),
     "steps": 25,
     "cfg": 5,
@@ -1732,6 +1739,8 @@ def prepare_selection_binding(
 
     pending_path = resolve_path(project_root, PENDING_STAGE0_COMMITMENTS[dataset])
     pending = _load_exact_json(pending_path, "public pending Stage-0 commitment")
+    if file_sha256(pending_path) != FROZEN_CAUSAL_STAGE0_PUBLIC_COMMITMENT_SHA256:
+        raise ValueError("public causal Stage-0 pending bytes differ from canonical v2")
     expected_pending_keys = {
         "authorization_status",
         "candidate_count",
@@ -1855,10 +1864,14 @@ def prepare_selection_binding(
         or pending["stage0_bundle_file_sha256"] != file_sha256(root_bundle_path)
     ):
         raise ValueError("private Stage-0 root/component binding mismatch")
-    bank = _load_exact_json(resolve_path(project_root, PUBLIC_SOURCE_BANK), "public source bank")
-    holdout = _load_exact_json(
-        resolve_path(project_root, PUBLIC_HOLDOUT_COMMITMENT), "public holdout commitment"
-    )
+    bank_path = resolve_path(project_root, PUBLIC_SOURCE_BANK)
+    holdout_path = resolve_path(project_root, PUBLIC_HOLDOUT_COMMITMENT)
+    bank = _load_exact_json(bank_path, "public source bank")
+    holdout = _load_exact_json(holdout_path, "public holdout commitment")
+    if file_sha256(bank_path) != FROZEN_PUBLIC_SOURCE_BANK_SHA256:
+        raise ValueError("public source bank bytes differ from canonical v2")
+    if file_sha256(holdout_path) != FROZEN_PUBLIC_HOLDOUT_COMMITMENT_SHA256:
+        raise ValueError("public holdout commitment bytes differ from canonical v2")
     if (
         bundle["source_bank_entries_sha256"] != bank.get("bank_entries_sha256")
         or bundle["holdout_registry_file_sha256"]
@@ -1878,6 +1891,8 @@ def prepare_selection_binding(
     templates = _load_exact_json(canonical_templates_path, "canonical templates")
     if templates != {
         "schema": SOURCE_SLOT_REGISTRY_SCHEMA,
+        "protocol": SOURCE_SLOT_REGISTRY_SCHEMA,
+        "dataset_version": DATASET_VERSION,
         "canonical_builder_sha256": file_sha256(
             resolve_path(project_root, "scripts/build_water_impact_dynamic_pairs_v1.py")
         ),
@@ -1906,6 +1921,8 @@ def prepare_selection_binding(
     secrets = _load_exact_json(secrets_path, "Stage-0 secrets")
     if set(secrets) != {
         "schema",
+        "protocol",
+        "dataset_version",
         "evaluation_seed_namespace",
         "evaluation_seed_salt",
         "screening_seed",
@@ -1913,6 +1930,8 @@ def prepare_selection_binding(
         "selector_salt",
     } or (
         secrets["schema"] != SOURCE_SLOT_REGISTRY_SCHEMA
+        or secrets["protocol"] != SOURCE_SLOT_REGISTRY_SCHEMA
+        or secrets["dataset_version"] != DATASET_VERSION
         or secrets["evaluation_seed_namespace"] != "v4-causal-evaluation-v2"
         or secrets["screening_seed_namespace"] != "v4-causal-stage0-screening-v2"
         or not isinstance(secrets["screening_seed"], int)
@@ -2600,10 +2619,18 @@ def load_normalized_candidate_manifest(
     if dataset != "causal":
         raise ValueError("unsupported candidate projection dataset")
     payload = _load_exact_json(path, "private causal candidate manifest")
-    if set(payload) != {"schema", "dataset_version", "stage", "candidate_count", "candidates"}:
+    if set(payload) != {
+        "schema",
+        "protocol",
+        "dataset_version",
+        "stage",
+        "candidate_count",
+        "candidates",
+    }:
         raise ValueError("causal candidate-manifest top-level fields are not exact")
     if (
         payload["schema"] != SOURCE_SLOT_REGISTRY_SCHEMA
+        or payload["protocol"] != SOURCE_SLOT_REGISTRY_SCHEMA
         or payload["dataset_version"] != DATASET_VERSION
         or payload["stage"] != 0
         or payload["candidate_count"] != 48
@@ -2662,7 +2689,7 @@ def load_normalized_candidate_manifest(
             else "holdout_source"
         )
         expected_receiver_membership = (
-            "historical_receiver"
+            "seen_receiver"
             if group == "holdout_source_seen_receiver"
             else "new_receiver"
         )
