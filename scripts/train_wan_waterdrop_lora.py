@@ -59,6 +59,7 @@ def parse_args() -> argparse.Namespace:
         "--objective",
         choices=[
             "plain",
+            "target_prompt_teacher",
             "mask_bg",
             "paired_sep",
             "dual_traj",
@@ -116,6 +117,21 @@ def parse_args() -> argparse.Namespace:
         help="Weight for frozen-teacher matching on training_role=preserve rows.",
     )
     parser.add_argument(
+        "--target-prompt-cache-dir",
+        type=Path,
+        help="Read-only sidecar with target_generation_prompt embeddings for erase rows.",
+    )
+    parser.add_argument(
+        "--target-prompt-cache-sha256",
+        help="Expected byte-level SHA-256 of the ordered target-prompt sidecar.",
+    )
+    parser.add_argument(
+        "--target-prompt-teacher-weight",
+        type=float,
+        default=1.0,
+        help="Weight for target-prompt frozen-teacher consistency on erase rows.",
+    )
+    parser.add_argument(
         "--balanced-roles",
         action="store_true",
         help="Alternate erase and preserve rows when training with --role all.",
@@ -139,6 +155,7 @@ def parse_args() -> argparse.Namespace:
         args.object_weight,
         args.receiver_weight,
         args.preserve_weight,
+        args.target_prompt_teacher_weight,
         args.gate_floor,
     ) < 0:
         parser.error("all loss weights and margins must be non-negative")
@@ -166,6 +183,16 @@ def parse_args() -> argparse.Namespace:
             parser.error("target-conditioned objectives currently support --role erase only")
     if args.objective == "target_conditioned_components" and args.component_gate_dir is None:
         parser.error("--component-gate-dir is required for component supervision")
+    if args.objective == "target_prompt_teacher" and args.target_prompt_teacher_weight > 0:
+        if args.target_prompt_cache_dir is None or not args.target_prompt_cache_sha256:
+            parser.error(
+                "--target-prompt-cache-dir and --target-prompt-cache-sha256 are required "
+                "for target-prompt teacher consistency"
+            )
+        if args.role != "all" or not args.balanced_roles:
+            parser.error(
+                "target-prompt teacher consistency requires --role all --balanced-roles"
+            )
     return args
 
 
@@ -182,9 +209,23 @@ def load_rows(args: argparse.Namespace) -> list[dict[str, str]]:
     if not rows:
         raise ValueError(f"No rows found for role={args.role!r}, objective={args.objective!r}")
     required = {"scene_id", "prompt", "desired_target_video", "training_role"}
+    if args.objective == "target_prompt_teacher" and args.target_prompt_teacher_weight > 0:
+        required.add("target_generation_prompt")
     missing = required - rows[0].keys()
     if missing:
         raise ValueError(f"Manifest is missing columns: {sorted(missing)}")
+    if args.objective == "target_prompt_teacher" and args.target_prompt_teacher_weight > 0:
+        missing_prompts = [
+            row["scene_id"]
+            for row in rows
+            if row["training_role"] == "erase"
+            and not row["target_generation_prompt"].strip()
+        ]
+        if missing_prompts:
+            raise ValueError(
+                "Erase rows have empty target_generation_prompt values: "
+                + ", ".join(missing_prompts[:5])
+            )
     return rows
 
 
@@ -259,6 +300,144 @@ def validate_cached_rows(cache_paths: list[Path], rows: list[dict[str, str]]) ->
                 )
 
 
+def tensor_sha256(tensor: torch.Tensor) -> str:
+    value = tensor.detach().contiguous().cpu()
+    digest = hashlib.sha256()
+    digest.update(str(tuple(value.shape)).encode("ascii"))
+    digest.update(str(value.dtype).encode("ascii"))
+    digest.update(value.view(torch.uint8).numpy().tobytes())
+    return digest.hexdigest()
+
+
+def target_prompt_binding_sha256(rows: list[dict[str, str]]) -> str:
+    digest = hashlib.sha256()
+    for row in rows:
+        if row["training_role"] != "erase":
+            continue
+        digest.update(row["scene_id"].encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(row["target_generation_prompt"].encode("utf-8"))
+        digest.update(b"\n")
+    return digest.hexdigest()
+
+
+def validate_target_prompt_cache(
+    args: argparse.Namespace, rows: list[dict[str, str]]
+) -> tuple[dict[int, Path], dict[str, object]]:
+    if args.target_prompt_cache_dir is None or not args.target_prompt_cache_sha256:
+        raise ValueError("target-prompt sidecar path and frozen hash are required")
+    expected_model_revision = "0fad780a534b6463e45facd96134c9f345acfa5b"
+    revision_path = (
+        args.model / ".cache/huggingface/download/model_index.json.metadata"
+    )
+    try:
+        model_revision = revision_path.read_text(encoding="utf-8").splitlines()[0]
+    except (FileNotFoundError, IndexError) as exc:
+        raise ValueError(
+            f"cannot verify frozen model revision from {revision_path}: {exc}"
+        ) from exc
+    if model_revision != expected_model_revision:
+        raise ValueError(
+            f"frozen model revision mismatch: {model_revision} != {expected_model_revision}"
+        )
+    expected = {
+        index: args.target_prompt_cache_dir / f"{index:03d}_{row['scene_id']}.pt"
+        for index, row in enumerate(rows)
+        if row["training_role"] == "erase"
+    }
+    actual = sorted(args.target_prompt_cache_dir.glob("*.pt"))
+    expected_paths = [expected[index] for index in sorted(expected)]
+    missing = [path for path in expected_paths if not path.is_file()]
+    unexpected = sorted(set(actual) - set(expected_paths))
+    if missing or unexpected or len(actual) != len(expected_paths):
+        raise ValueError(
+            f"target-prompt cache inventory mismatch: expected={len(expected_paths)} "
+            f"actual={len(actual)} missing={len(missing)} unexpected={len(unexpected)}"
+        )
+    unique_embedding_hashes: dict[str, str] = {}
+    for manifest_index, cache_path in expected.items():
+        row = rows[manifest_index]
+        payload = torch.load(cache_path, map_location="cpu", weights_only=True)
+        expected_fields: dict[str, object] = {
+            "manifest_index": manifest_index,
+            "scene_id": row["scene_id"],
+            "training_role": "erase",
+            "target_generation_prompt": row["target_generation_prompt"],
+            "model": str(args.model),
+            "manifest_sha256": file_sha256(args.manifest),
+        }
+        for field, expected_value in expected_fields.items():
+            if payload.get(field) != expected_value:
+                raise ValueError(
+                    f"{cache_path}: cached {field}={payload.get(field)!r}, "
+                    f"expected {expected_value!r}"
+                )
+        embedding = payload.get("teacher_prompt_embeds")
+        if not isinstance(embedding, torch.Tensor):
+            raise ValueError(f"{cache_path}: missing teacher_prompt_embeds tensor")
+        if tuple(embedding.shape) != (1, 226, 4096) or embedding.dtype != torch.bfloat16:
+            raise ValueError(
+                f"{cache_path}: unexpected embedding {tuple(embedding.shape)} {embedding.dtype}"
+            )
+        embedding_hash = tensor_sha256(embedding)
+        if payload.get("teacher_prompt_embeds_sha256") != embedding_hash:
+            raise ValueError(f"{cache_path}: teacher embedding hash mismatch")
+        prompt = row["target_generation_prompt"]
+        previous_hash = unique_embedding_hashes.setdefault(prompt, embedding_hash)
+        if previous_hash != embedding_hash:
+            raise ValueError(
+                f"{cache_path}: repeated target prompt has inconsistent embeddings"
+            )
+    inventory_hash = cache_inventory_sha256(expected_paths)
+    if inventory_hash != args.target_prompt_cache_sha256:
+        raise ValueError(
+            f"target-prompt cache content hash mismatch: {inventory_hash} != "
+            f"{args.target_prompt_cache_sha256}"
+        )
+    manifest_path = args.target_prompt_cache_dir / "cache_manifest.json"
+    cache_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    prompt_binding_hash = target_prompt_binding_sha256(rows)
+    unique_embedding_digest = hashlib.sha256()
+    for prompt, embedding_hash in unique_embedding_hashes.items():
+        unique_embedding_digest.update(prompt.encode("utf-8"))
+        unique_embedding_digest.update(b"\0")
+        unique_embedding_digest.update(embedding_hash.encode("ascii"))
+        unique_embedding_digest.update(b"\n")
+    unique_embedding_hash = unique_embedding_digest.hexdigest()
+    expected_manifest = {
+        "protocol": "water_impact_dynamic_v3b_target_prompt_teacher_v1",
+        "source_manifest": str(args.manifest),
+        "source_manifest_sha256": file_sha256(args.manifest),
+        "model": str(args.model),
+        "dtype": "torch.bfloat16",
+        "do_classifier_free_guidance": False,
+        "max_sequence_length": 226,
+        "model_revision": expected_model_revision,
+        "erase_row_count": len(expected_paths),
+        "unique_prompt_count": len(
+            {row["target_generation_prompt"] for row in rows if row["training_role"] == "erase"}
+        ),
+        "prompt_binding_sha256": prompt_binding_hash,
+        "unique_embedding_sha256": unique_embedding_hash,
+        "cache_inventory_sha256": inventory_hash,
+    }
+    for field, expected_value in expected_manifest.items():
+        if cache_manifest.get(field) != expected_value:
+            raise ValueError(
+                f"target-prompt cache manifest {field}={cache_manifest.get(field)!r}, "
+                f"expected {expected_value!r}"
+            )
+    return expected, {
+        "target_prompt_cache_dir": str(args.target_prompt_cache_dir),
+        "target_prompt_cache_entry_count": len(expected_paths),
+        "target_prompt_cache_inventory_sha256": inventory_hash,
+        "target_prompt_cache_manifest_sha256": file_sha256(manifest_path),
+        "target_prompt_binding_sha256": prompt_binding_hash,
+        "target_prompt_unique_count": expected_manifest["unique_prompt_count"],
+        "target_prompt_unique_embedding_sha256": unique_embedding_hash,
+    }
+
+
 def causal_residual_mask(factual: torch.Tensor, clean: torch.Tensor) -> torch.Tensor:
     """Build a robust soft spatiotemporal mask in Wan latent resolution."""
     residual = (factual.float() - clean.float()).abs().mean(dim=1, keepdim=True)
@@ -306,6 +485,54 @@ def gated_flow_loss(element_loss: torch.Tensor, mask: torch.Tensor) -> torch.Ten
     error = element_loss.float().mean(dim=1, keepdim=True)
     weights = mask.float()
     return (error * weights).sum() / weights.sum().clamp_min(1e-6)
+
+
+def combine_target_prompt_teacher_loss(
+    flow_loss: torch.Tensor,
+    prediction: torch.Tensor,
+    teacher_prediction: torch.Tensor | None,
+    weight: float,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    if teacher_prediction is None:
+        teacher_loss = torch.zeros((), device=prediction.device)
+    else:
+        teacher_loss = torch.nn.functional.mse_loss(
+            prediction.float(), teacher_prediction.detach().float()
+        )
+    return teacher_loss, flow_loss + weight * teacher_loss
+
+
+def forward_target_prompt_teacher_pair(
+    transformer: torch.nn.Module,
+    noisy: torch.Tensor,
+    timestep: torch.Tensor,
+    factual_prompt_embeds: torch.Tensor,
+    target_prompt_embeds: torch.Tensor,
+    activation_controller: CausalLoRAActivationGate | None = None,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Run a frozen target-prompt teacher and factual-prompt LoRA student."""
+    if activation_controller is not None:
+        activation_controller.disable()
+    transformer.disable_adapters()
+    try:
+        with torch.no_grad():
+            teacher_prediction = transformer(
+                hidden_states=noisy,
+                timestep=timestep,
+                encoder_hidden_states=target_prompt_embeds,
+                return_dict=False,
+            )[0].detach()
+    finally:
+        transformer.enable_adapters()
+        if activation_controller is not None:
+            activation_controller.enable()
+    prediction = transformer(
+        hidden_states=noisy,
+        timestep=timestep,
+        encoder_hidden_states=factual_prompt_embeds,
+        return_dict=False,
+    )[0]
+    return teacher_prediction, prediction
 
 
 def load_causal_gate(args: argparse.Namespace, scene_id: str, mask: torch.Tensor) -> torch.Tensor:
@@ -485,6 +712,16 @@ def train(
     validate_cached_rows(cache_paths, rows)
     manifest_sha256 = file_sha256(args.manifest)
     cache_sha256 = cache_inventory_sha256(cache_paths)
+    uses_target_prompt_teacher = (
+        args.objective == "target_prompt_teacher"
+        and args.target_prompt_teacher_weight > 0
+    )
+    target_prompt_cache_paths: dict[int, Path] = {}
+    target_prompt_provenance: dict[str, object] = {}
+    if uses_target_prompt_teacher:
+        target_prompt_cache_paths, target_prompt_provenance = validate_target_prompt_cache(
+            args, rows
+        )
     device = torch.device(args.device)
     transformer = WanTransformer3DModel.from_pretrained(
         str(args.model), subfolder="transformer", torch_dtype=torch.bfloat16
@@ -532,6 +769,7 @@ def train(
     )
     optimizer = torch.optim.AdamW(trainable, lr=args.learning_rate, betas=(0.9, 0.999), weight_decay=0.01)
     generator = torch.Generator(device="cpu").manual_seed(args.seed)
+    noise_sigma_rng_initial_sha256 = tensor_sha256(generator.get_state())
     order_rng = random.Random(args.seed)
     order = list(range(len(cache_paths)))
     role_indices = {"erase": [], "preserve": []}
@@ -552,6 +790,9 @@ def train(
     object_losses: list[float] = []
     receiver_losses: list[float] = []
     preserve_losses: list[float] = []
+    target_prompt_teacher_losses: list[float] = []
+    target_prompt_teacher_ratios_first_16: list[float] = []
+    target_prompt_teacher_grad_norms_first_16: list[float] = []
     gate_means: list[float] = []
     role_step_counts = {"erase": 0, "preserve": 0}
     sample_order_digest = hashlib.sha256()
@@ -580,6 +821,25 @@ def train(
         )
         clean = sample["latents"].to(device=device, dtype=torch.bfloat16)
         prompt_embeds = sample["prompt_embeds"].to(device=device, dtype=torch.bfloat16)
+        target_prompt_embeds = None
+        if uses_target_prompt_teacher and not is_preserve:
+            target_payload = torch.load(
+                target_prompt_cache_paths[sample_index],
+                map_location="cpu",
+                weights_only=True,
+            )
+            if target_payload["scene_id"] != sample["scene_id"]:
+                raise ValueError(
+                    f"target-prompt cache scene mismatch at manifest index {sample_index}"
+                )
+            target_prompt_embeds = target_payload["teacher_prompt_embeds"].to(
+                device=device, dtype=torch.bfloat16
+            )
+            if target_prompt_embeds.shape != prompt_embeds.shape:
+                raise ValueError(
+                    f"target/factual prompt embedding shape mismatch for {sample['scene_id']}: "
+                    f"{tuple(target_prompt_embeds.shape)} != {tuple(prompt_embeds.shape)}"
+                )
         if activation_controller is not None:
             if is_preserve:
                 activation_controller.clear_gate()
@@ -610,6 +870,7 @@ def train(
 
         teacher_prediction = None
         teacher_factual_prediction = None
+        target_prompt_teacher_prediction = None
         has_residual_mask = (
             args.objective in {
                 "mask_bg",
@@ -668,12 +929,24 @@ def train(
             if activation_controller is not None:
                 activation_controller.enable()
 
-        prediction = transformer(
-            hidden_states=noisy,
-            timestep=timestep,
-            encoder_hidden_states=prompt_embeds,
-            return_dict=False,
-        )[0]
+        if target_prompt_embeds is not None:
+            target_prompt_teacher_prediction, prediction = (
+                forward_target_prompt_teacher_pair(
+                    transformer,
+                    noisy,
+                    timestep,
+                    prompt_embeds,
+                    target_prompt_embeds,
+                    activation_controller,
+                )
+            )
+        else:
+            prediction = transformer(
+                hidden_states=noisy,
+                timestep=timestep,
+                encoder_hidden_states=prompt_embeds,
+                return_dict=False,
+            )[0]
         element_loss = torch.nn.functional.mse_loss(
             prediction.float(), target.float(), reduction="none"
         )
@@ -687,6 +960,7 @@ def train(
             redirect_loss = torch.zeros((), device=device)
             object_loss = torch.zeros((), device=device)
             receiver_loss = torch.zeros((), device=device)
+            target_prompt_teacher_loss = torch.zeros((), device=device)
             combined_loss = args.preserve_weight * preserve_loss
         elif has_residual_mask:
             preserve_loss = torch.zeros((), device=device)
@@ -764,6 +1038,7 @@ def train(
                 redirect_loss = torch.zeros((), device=device)
                 object_loss = torch.zeros((), device=device)
                 receiver_loss = torch.zeros((), device=device)
+            target_prompt_teacher_loss = torch.zeros((), device=device)
             combined_loss = (
                 remove_loss
                 + args.background_weight * background_loss
@@ -780,13 +1055,26 @@ def train(
             redirect_loss = torch.zeros((), device=device)
             object_loss = torch.zeros((), device=device)
             receiver_loss = torch.zeros((), device=device)
-            combined_loss = remove_loss
+            target_prompt_teacher_loss, combined_loss = (
+                combine_target_prompt_teacher_loss(
+                    remove_loss,
+                    prediction,
+                    target_prompt_teacher_prediction,
+                    args.target_prompt_teacher_weight,
+                )
+            )
+        if not torch.isfinite(combined_loss):
+            raise FloatingPointError(
+                f"non-finite combined loss at step {step} for {sample['scene_id']}"
+            )
         loss = combined_loss / args.grad_accum
         loss.backward()
         if activation_controller is not None:
             activation_controller.clear_gate()
+        grad_norm_value = 0.0
         if step % args.grad_accum == 0:
-            torch.nn.utils.clip_grad_norm_(trainable, 1.0)
+            grad_norm = torch.nn.utils.clip_grad_norm_(trainable, 1.0)
+            grad_norm_value = float(grad_norm.detach())
             optimizer.step()
             optimizer.zero_grad(set_to_none=True)
 
@@ -798,6 +1086,7 @@ def train(
         object_value = float(object_loss.detach())
         receiver_value = float(receiver_loss.detach())
         preserve_value = float(preserve_loss.detach())
+        target_prompt_teacher_value = float(target_prompt_teacher_loss.detach())
         gate_mean = float(mask.mean()) if has_residual_mask else 0.0
         losses.append(loss_value)
         remove_losses.append(remove_value)
@@ -807,6 +1096,19 @@ def train(
         object_losses.append(object_value)
         receiver_losses.append(receiver_value)
         preserve_losses.append(preserve_value)
+        if target_prompt_teacher_prediction is not None:
+            target_prompt_teacher_losses.append(target_prompt_teacher_value)
+            ratio = target_prompt_teacher_value / max(remove_value, 1e-12)
+            if len(target_prompt_teacher_ratios_first_16) < 16:
+                target_prompt_teacher_ratios_first_16.append(ratio)
+                target_prompt_teacher_grad_norms_first_16.append(grad_norm_value)
+                if len(target_prompt_teacher_ratios_first_16) == 16:
+                    sanity_mean = float(np.mean(target_prompt_teacher_ratios_first_16))
+                    if not np.isfinite(sanity_mean) or not 0.1 <= sanity_mean <= 10.0:
+                        raise RuntimeError(
+                            "pre-registered target-teacher scale sanity failed before "
+                            f"evaluation: mean teacher/flow ratio={sanity_mean:.6f}"
+                        )
         gate_means.append(gate_mean)
         elapsed = time.time() - started
         print(
@@ -817,6 +1119,8 @@ def train(
             f"pair={pair_value:.6f} redirect={redirect_value:.6f} "
             f"object={object_value:.6f} receiver={receiver_value:.6f} "
             f"preserve={preserve_value:.6f} "
+            f"target_teacher={target_prompt_teacher_value:.6f} "
+            f"grad_norm={grad_norm_value:.6f} "
             f"gate={gate_mean:.6f} "
             f"mean20={np.mean(losses[-20:]):.6f} elapsed={elapsed:.1f}s",
             flush=True,
@@ -824,6 +1128,8 @@ def train(
         del sample, clean, prompt_embeds, noise, noisy, target, prediction, loss, element_loss
         if teacher_prediction is not None:
             del teacher_prediction
+        if target_prompt_teacher_prediction is not None:
+            del target_prompt_teacher_prediction, target_prompt_embeds, target_payload
         if has_residual_mask:
             del mask
         if uses_factual:
@@ -886,6 +1192,25 @@ def train(
                     ),
                     "target_phrase": args.target_phrase,
                     "persistent_causal_time": args.persistent_causal_time,
+                    "target_prompt_teacher_enabled": uses_target_prompt_teacher,
+                    "target_prompt_teacher_weight": (
+                        args.target_prompt_teacher_weight
+                        if uses_target_prompt_teacher
+                        else 0.0
+                    ),
+                    "teacher_prompt_field": (
+                        "target_generation_prompt" if uses_target_prompt_teacher else None
+                    ),
+                    "teacher_adapter_mode": (
+                        "disabled" if uses_target_prompt_teacher else None
+                    ),
+                    "teacher_stop_gradient": uses_target_prompt_teacher,
+                    "teacher_uses_same_noisy_latent": uses_target_prompt_teacher,
+                    "teacher_uses_same_timestep": uses_target_prompt_teacher,
+                    "trainer_sha256": file_sha256(Path(__file__)),
+                    "noise_sigma_rng_initial_sha256": noise_sigma_rng_initial_sha256,
+                    "noise_sigma_rng_current_sha256": tensor_sha256(generator.get_state()),
+                    **target_prompt_provenance,
                     "mean_remove_loss_last_20": float(np.mean(remove_losses[-20:])),
                     "mean_background_loss_last_20": float(np.mean(background_losses[-20:])),
                     "mean_pair_loss_last_20": float(np.mean(pair_losses[-20:])),
@@ -893,6 +1218,31 @@ def train(
                     "mean_object_loss_last_20": float(np.mean(object_losses[-20:])),
                     "mean_receiver_loss_last_20": float(np.mean(receiver_losses[-20:])),
                     "mean_preserve_loss_last_20": float(np.mean(preserve_losses[-20:])),
+                    "mean_target_prompt_teacher_loss_last_20": (
+                        float(np.mean(target_prompt_teacher_losses[-20:]))
+                        if target_prompt_teacher_losses
+                        else 0.0
+                    ),
+                    "teacher_scale_sanity_count": len(
+                        target_prompt_teacher_ratios_first_16
+                    ),
+                    "teacher_scale_sanity_mean_ratio": (
+                        float(np.mean(target_prompt_teacher_ratios_first_16))
+                        if target_prompt_teacher_ratios_first_16
+                        else None
+                    ),
+                    "teacher_scale_sanity_mean_combined_grad_norm": (
+                        float(np.mean(target_prompt_teacher_grad_norms_first_16))
+                        if target_prompt_teacher_grad_norms_first_16
+                        else None
+                    ),
+                    "teacher_scale_sanity_passed": (
+                        None
+                        if len(target_prompt_teacher_ratios_first_16) < 16
+                        else 0.1
+                        <= float(np.mean(target_prompt_teacher_ratios_first_16))
+                        <= 10.0
+                    ),
                     "mean_gate_last_20": float(np.mean(gate_means[-20:])),
                 },
             )
