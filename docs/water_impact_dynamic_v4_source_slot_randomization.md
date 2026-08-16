@@ -163,6 +163,17 @@ Bank size, ontology membership, assignment salt, and collision policy are not
 tunable hyperparameters. A failed sanity check does not authorize another
 bank on the same development set.
 
+The canonical public interface is dataset version `v4_dev72_v2`. Its bank and
+holdout files are `source_bank_public64_registry_v2.json` and
+`holdout_public_commitment_v2.json`; both carry the exact public
+`supersedes` record for the invalid v1 preflight. Every new-bank item also
+publishes the frozen 21-field physical audit (including density, mass,
+dimensions, state, negative buoyancy, recognizability, and the registered
+failure flags). The assignment algorithm constructs one fixed permutation
+from the `permute-v2` SHA-256 domain, repeats it by erase ordinal, and repairs
+collisions only within `[0,100)` or `[100,178)` using the `swap-v2` domain.
+Neither operation consumes sample-order or noise/sigma RNG.
+
 ## 5. Prompt sidecar and implementation boundary
 
 The frozen base cache and v3b target-prompt teacher cache remain read-only.
@@ -192,18 +203,29 @@ V3b and v3c files are immutable because completed registrations bind their
 hashes. V4 therefore uses dedicated files and paths, proposed as:
 
 ```text
-scripts/build_water_impact_dynamic_v4_source_bank.py
+scripts/build_water_impact_dynamic_v4_source_mapping.py
+scripts/build_water_impact_dynamic_v4_runtime_registry.py
 scripts/prepare_water_impact_dynamic_v4_prompt_cache.py
 scripts/train_wan_waterdrop_lora_v4.py
 scripts/run_water_impact_dynamic_sft_v4_source_slot.sh
 docs/water_impact_dynamic_v4_source_slot_randomization.md
-outputs/water_impact_dynamic_v4/source_slot_prompt_cache_v1
-outputs/water_impact_dynamic_v4/adapter_source_slot_randomized_v1
+data/water_impact_dynamic_v4/source_bank_public64_registry_v2.json
+data/water_impact_dynamic_v4/holdout_public_commitment_v2.json
+data/water_impact_dynamic_v4/source_mapping_v2.json
+data/water_impact_dynamic_v4/v4_runtime_registry_v2.json
+data/water_impact_dynamic_v4/v4_training_code_registry_v2.json
+data/water_impact_dynamic_v4/v4_training_authorization_v2.json
+outputs/water_impact_dynamic_v4/source_slot_prompt_cache_v2
+outputs/water_impact_dynamic_v4/null_sidecar_preflight_v2.json
+outputs/water_impact_dynamic_v4/adapter_source_slot_randomized_v2
 ```
 
 The dedicated trainer must reject cache rebuilding, cache-only modes, output
 reuse, non-frozen paths, unexpected files, and any configuration differing
 from the registered v3b control except the augmented factual-prompt sidecar.
+Every v2 commitment, authorization, registration, preflight, training state,
+and checkpoint-eligibility record that carries dataset identity must require
+`dataset_version == "v4_dev72_v2"`; a v1 path or alias is not a fallback.
 
 ## 6. Training invariants and fail-closed sanity
 
@@ -267,7 +289,7 @@ well as bank nouns. This diagnostic is explanatory only: it cannot choose a
 checkpoint, change the bank, control whether generation proceeds, or alter the
 registered visual decision.
 
-## 8. New causal development set: `v4_dev72_v1`
+## 8. New causal development set: `v4_dev72_v2`
 
 No independent existing water-impact development row remains. Changing seeds
 on eval12 or fresh-dev24 would not make those semantic cases fresh.
@@ -320,7 +342,7 @@ Qualification and selection proceed as follows:
 6. Rank each candidate by a frozen salted SHA-256 of its canonical record.
    Choose the feasible subset whose ordered tuple of ranks is
    lexicographically smallest. There is no post-hoc reserve queue.
-7. If no feasible subset exists, `v4_dev72_v1` is invalid before training. Do
+7. If no feasible subset exists, `v4_dev72_v2` is invalid before training. Do
    not replace prompts, sources, receivers, or seeds within this version.
 
 The selected 24 cases contain eight per group and four direct plus four

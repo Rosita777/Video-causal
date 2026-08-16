@@ -264,24 +264,33 @@ replacement of the erase-row factual prompt's causal-source phrase from a
 frozen 64-item bank. This directly tests whether the adapter can learn the
 causal-source role rather than memorize the eight training nouns.
 
-V4 is a reviewed design, not yet an executable preregistration, and no v4 GPU
-run is authorized. Before training:
+V4 now has an independently approved fail-closed implementation and a valid
+`v4_dev72_v2` public registry. The first v1 registry and the first pre-freeze
+v2 draft were rejected by physical/source audits; their aggregate failures and
+public hashes remain recorded in the final v2 registry. The final curated new
+ontology passes 80/80 strict physical checks, with 56 public bank sources and
+24 committed private holdout sources. The eight historical training sources
+are the only explicit legacy exception and must still pass full-video Original
+screening. The deterministic 178-row public mapping is frozen at
+`data/water_impact_dynamic_v4/source_mapping_v2.json`.
 
-1. an isolated evaluator must curate the private 80-item new-source ontology,
-   publish its 56-item new-source training projection, combine that projection
-   with the eight historical training sources into the 64-item bank, publish
-   the 24-item holdout commitment, and keep the holdout hidden from method
-   development;
-2. build and screen the frozen causal candidate pool plus the exact same-noun
-   and new-bank-noun noncausal specificity pool using Original videos only;
-3. implement the deterministic bank mapping, read-only prompt sidecar,
-   null-sidecar equivalence test, dedicated fail-closed trainer, and frozen
-   registration;
-4. turn the documented causal and specificity gates into independently tested
-   machine scorers, including full-video Original scoring and holdout-only
-   thresholds;
-5. independently audit every registry, content hash, split, threshold, and
-   output path before the first treatment video or GPU training run.
+No v4 GPU run is authorized yet. The remaining order is strict:
+
+1. commit and deploy the approved implementation and public v2 artifacts;
+2. independently freeze the remote runtime registry, full-model inventory,
+   forbidden historical seed inventory, and the private causal Stage-0
+   opening; Stage 0 must remain fail-closed until all bindings validate;
+3. generate and independently screen only the 48 committed causal Original
+   videos, then freeze the causal Stage-1 selected 24 cases and 72 units;
+4. construct, authorize, generate, and screen the dependent specificity pool,
+   then freeze its selected 18 cases, 36 units, and six same-noun mappings;
+5. only after both Stage-1 registries exist, create the prompt sidecar and
+   independent augmented-prompt re-encoding preflight, freeze code/gate/runtime
+   registries and the final training authorization, and run the sole eligible
+   200-step v4 training job;
+6. generate the registered v3b/v4 development arms and run the committed
+   public/private blind-review protocol. Sealed-final36 remains inaccessible
+   unless every causal, specificity, and role-selectivity gate passes.
 
 Only the single source-slot intervention may be run. Do not combine it with
 anti-guidance, masks, span gates, hard-negative preserve training, another

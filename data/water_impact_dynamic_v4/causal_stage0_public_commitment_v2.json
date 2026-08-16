@@ -1,0 +1,128 @@
+{
+  "authorization_status": "not_authorized",
+  "candidate_count": 48,
+  "candidate_manifest_sha256": "438bd36a89bc5f367c20b7b24645a5f550ca84cbaac805778805977052f06ccd",
+  "canonical_json": "UTF-8 JSON, sorted keys, separators comma/colon, trailing LF",
+  "canonical_templates_sha256": "76d3b2be61389a26cc5feb9b1211c5e7b0830a85369e27783fb56e5286ce0559",
+  "cell_counts": {
+    "holdout_source_new_receiver:direct": 8,
+    "holdout_source_new_receiver:natural": 8,
+    "holdout_source_seen_receiver:direct": 8,
+    "holdout_source_seen_receiver:natural": 8,
+    "seen_source_new_receiver:direct": 8,
+    "seen_source_new_receiver:natural": 8
+  },
+  "curation_audit": {
+    "legacy_original_source_policy": {
+      "certificate_policy": "do not fabricate v2 mass, density, dimensions, or negative-buoyancy certificates for historical sources",
+      "count": 8,
+      "eligibility_gate": "full 49-frame Original screening requires source_visibility=2, footprint_visibility>=1, receiver>=1, quality>=1, and causal_link=2",
+      "specificity_gate": "the matched Original hard-negative must independently satisfy the frozen specificity eligibility rule",
+      "stage0_scope": "seen_source_new_receiver only; never count legacy original sources as heldout generalization",
+      "status": "legacy_original_source_exempt"
+    },
+    "pre_freeze_rejected_drafts": [
+      {
+        "aggregate_audit": {
+          "curated_new80_fail": 2,
+          "curated_new80_pass": 78,
+          "maximum_solid_fill_ratio": 1.0728,
+          "new_bank56_fail": 2,
+          "new_bank56_pass": 54,
+          "private_holdout24_fail": 0,
+          "private_holdout24_pass": 24
+        },
+        "reason_code": "solid_mass_exceeded_density_times_bounding_volume",
+        "rejected_public_sha256": {
+          "causal_stage0_public_commitment_v2.json": "8792133f709a1736c30fdc8172687837f24bf6f1f2616109b56474a7136c1a66",
+          "holdout_public_commitment_v2.json": "24b8a7a4fb587c1ecc66b239024a716c47ed77346b0a703a2aef5c1cad3eff5a",
+          "source_bank_public64_registry_v2.json": "cea52e0b4948462825175655e4c893820205d10c51d12ef2943cee7593fa3952"
+        },
+        "status": "pre_freeze_draft_rejected"
+      }
+    ],
+    "status": "strict_new80_pass_after_pre_freeze_revision",
+    "strict_physical_result": {
+      "curated_new80_fail": 0,
+      "curated_new80_pass": 80,
+      "mass_density_bounding_volume_inconsistency_count": 0,
+      "new_bank56_fail": 0,
+      "new_bank56_pass": 56,
+      "private_holdout24_fail": 0,
+      "private_holdout24_pass": 24
+    },
+    "strict_physical_scope": {
+      "curated_new_source_count": 80,
+      "new_bank_source_count": 56,
+      "private_holdout_source_count": 24
+    }
+  },
+  "dataset_version": "v4_dev72_v2",
+  "evaluation_seed_salt_commitment_sha256": "6c943c09a6429df0cc3d1c098e685911110f7510abd8a53e25f307881b9e0dfc",
+  "field_normalization_sha256": "a1e23230b199a96e9f458c135e6ce2d18bf377966a6867dc5a2cca88d124e2ce",
+  "protocol": "water_impact_dynamic_v4_source_slot_registry_v2",
+  "public_metadata": {
+    "candidates_per_cell": 8,
+    "evaluation_seed_domain": "causal-eval-seed-v2",
+    "evaluation_seed_namespace": "v4-causal-evaluation-v2",
+    "evaluation_unit_target": 72,
+    "full_frame_screening_required": true,
+    "groups": [
+      "holdout_source_seen_receiver",
+      "seen_source_new_receiver",
+      "holdout_source_new_receiver"
+    ],
+    "no_reserve_queue": true,
+    "prompt_variants": [
+      "direct",
+      "natural"
+    ],
+    "ranking_domain": "causal-selector-v2",
+    "replicates_per_selected_case": 3,
+    "screening_arm": "Original_only",
+    "screening_seed_namespace": "v4-causal-stage0-screening-v2",
+    "selected_case_target": 24,
+    "selection_per_cell": 4,
+    "source_physical_policy": {
+      "certificate_policy": "do not fabricate v2 mass, density, dimensions, or negative-buoyancy certificates for historical sources",
+      "count": 8,
+      "eligibility_gate": "full 49-frame Original screening requires source_visibility=2, footprint_visibility>=1, receiver>=1, quality>=1, and causal_link=2",
+      "specificity_gate": "the matched Original hard-negative must independently satisfy the frozen specificity eligibility rule",
+      "stage0_scope": "seen_source_new_receiver only; never count legacy original sources as heldout generalization",
+      "status": "legacy_original_source_exempt"
+    }
+  },
+  "registry": "causal_stage0_public_commitment_v2",
+  "remaining_blockers": [
+    "an independent seed auditor must commit the complete forbidden numeric seed inventory and prove disjointness",
+    "an independent binder must commit the exact already-frozen v3b path-plus-file-bytes model inventory digest"
+  ],
+  "render_configuration_sha256": "4cccd6a53a41c28adbd1a1f80bb04f1925719ba5f727109d0287aaed1f9b617a",
+  "schema": "water_impact_dynamic_v4_source_slot_registry_v2",
+  "screening_seed_commitment_sha256": "2f13931ff08c790bfd5f37b76407afc9707ece65e355ec9dc2b884056a681004",
+  "selector_rules_sha256": "aa41a6da40ae107fafa36ef96c18db6fc7446b9a504123aaaff9a0465f53ed36",
+  "selector_salt_commitment_sha256": "a944183ed47f0024b65f49bb1af172964be934f0aa9151034d7f11fec54ea893",
+  "stage": 0,
+  "stage0_bundle_file_sha256": "6237e865d8819fb08cf8b4d82eaac9c28dab6cbc5a5f8bb99b85352c98105470",
+  "status": "frozen_components_pending_external_bindings",
+  "supersedes": {
+    "aggregate_audit": {
+      "private_holdout_fail": 11,
+      "private_holdout_pass": 13,
+      "public_new_bank_fail": 22,
+      "public_new_bank_pass": 34,
+      "stage0_affected_candidates": 16,
+      "stage0_distinct_valid_holdout_heads": 13,
+      "stage0_global_constraint_feasible": false,
+      "stage0_required_distinct_holdout_heads": 16
+    },
+    "dataset_version": "v4_dev72_v1",
+    "prior_public_sha256": {
+      "causal_stage0_public_commitment_v1.json": "994de60571606d46a016d2f15a41b024c68860940f35e7c002845077affab9c0",
+      "holdout_public_commitment_v1.json": "3f56fee55ab0b93cd26a3478d73d84f5560e306eb2e9510cd7b47de574a98ce1",
+      "source_bank_public64_registry_v1.json": "1bb725f66ec2303b32b7a7681c5afe6013c333d908477d1713bf898855ec7177"
+    },
+    "reason_code": "physical_source_ontology_invalid",
+    "status": "preflight_dataset_invalid"
+  }
+}

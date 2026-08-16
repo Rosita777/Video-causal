@@ -1,0 +1,52 @@
+{
+  "authorization_status": "not_authorized",
+  "candidate_count": 48,
+  "candidate_manifest_sha256": "d355c5eb06c42ceeda58438f595e2712a131f10d5ded2b8f4532ac6993c50bdc",
+  "canonical_json": "UTF-8 JSON, sorted keys, separators comma/colon, trailing LF",
+  "canonical_templates_sha256": "c014e0628aafd1ccd472dbba866b80d619ba76521b41b93ab58a69bd795a30db",
+  "cell_counts": {
+    "holdout_source_new_receiver:direct": 8,
+    "holdout_source_new_receiver:natural": 8,
+    "holdout_source_seen_receiver:direct": 8,
+    "holdout_source_seen_receiver:natural": 8,
+    "seen_source_new_receiver:direct": 8,
+    "seen_source_new_receiver:natural": 8
+  },
+  "dataset_version": "v4_dev72_v1",
+  "evaluation_seed_salt_commitment_sha256": "9aaa23c3a2bf2673011277aefd9ff2502989b67e1df933f880e46a3f7aeddb4b",
+  "field_normalization_sha256": "d180a73929c2248bfb91ad8c882e0d78191d16c136bb8a013bac60c235eb8978",
+  "public_metadata": {
+    "candidates_per_cell": 8,
+    "evaluation_unit_target": 72,
+    "full_frame_screening_required": true,
+    "groups": [
+      "holdout_source_seen_receiver",
+      "seen_source_new_receiver",
+      "holdout_source_new_receiver"
+    ],
+    "no_reserve_queue": true,
+    "prompt_variants": [
+      "direct",
+      "natural"
+    ],
+    "replicates_per_selected_case": 3,
+    "screening_arm": "Original_only",
+    "screening_seed_is_not_an_evaluation_seed": true,
+    "screening_seed_is_private": true,
+    "selected_case_target": 24,
+    "selection_per_cell": 4,
+    "selector_is_global_constrained_lexicographic_sha256": true
+  },
+  "remaining_blockers": [
+    "an independent seed auditor must commit the complete forbidden numeric seed inventory and prove disjointness; this clean-room allowlist permits only aggregate source/receiver identities from test_pairs.csv",
+    "the downstream registration must resolve the exact already-frozen v3b base-model path-plus-file-bytes inventory digest without expanding this curator's read allowlist"
+  ],
+  "render_configuration_sha256": "1f24d4e11cfc0f0cc84abe3e9ba81d4557d8f260939494b5bd510dbd3041a57c",
+  "schema": "water_impact_dynamic_v4_source_slot_registry_v1",
+  "screening_seed_commitment_sha256": "ed8d414accabc3300a9bf7244e61831f13b2ceb20ce03675c201a39f4ea0e10b",
+  "selector_rules_sha256": "6e2e49e306b96c91514d7b4cc8d26c7b8acf5728c5a260990763f12e26a129c1",
+  "selector_salt_commitment_sha256": "700dc24e688530beb7033da27f9ce793d776b935e9776c752f3ec39f75338734",
+  "stage": 0,
+  "stage0_bundle_file_sha256": "c67cfcfa894f34c5e4af8d8b5770a2e6adc592e90be1201c6a6d97d5dc8ebbea",
+  "status": "frozen_components_pending_forbidden_seed_inventory"
+}
