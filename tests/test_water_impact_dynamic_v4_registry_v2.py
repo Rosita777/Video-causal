@@ -7,6 +7,9 @@ import copy
 import importlib.util
 import json
 import os
+import shutil
+import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -19,17 +22,29 @@ if SPEC is None or SPEC.loader is None:
     raise RuntimeError("v2 validator import failed")
 validator = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(validator)
+sys.path.insert(0, str(REPO / "scripts"))
+import water_impact_dynamic_v4_eval_protocol as eval_protocol  # noqa: E402
 
 
-def load_public() -> tuple[dict, dict, dict]:
+def load_public(staging: Path = DATA) -> tuple[dict, dict, dict]:
     return tuple(
-        validator.load_json(DATA / name)
+        validator.load_json(staging / name)
         for name in (
             validator.PUBLIC_BANK_NAME,
             validator.PUBLIC_HOLDOUT_NAME,
             validator.PUBLIC_STAGE0_NAME,
         )
     )
+
+
+def copy_pending_public_staging(destination: Path) -> None:
+    destination.mkdir(parents=True)
+    for name in (
+        validator.PUBLIC_BANK_NAME,
+        validator.PUBLIC_HOLDOUT_NAME,
+        validator.PUBLIC_STAGE0_NAME,
+    ):
+        shutil.copyfile(DATA / name, destination / name)
 
 
 def rebind_bank_entries(bank: dict) -> None:
@@ -39,14 +54,23 @@ def rebind_bank_entries(bank: dict) -> None:
 class PublicRegistryV2Tests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.bank, cls.holdout, cls.stage0 = load_public()
+        cls._temporary = tempfile.TemporaryDirectory()
+        cls.staging = Path(cls._temporary.name) / "water_impact_dynamic_v4"
+        copy_pending_public_staging(cls.staging)
+        cls.bank, cls.holdout, cls.stage0 = load_public(cls.staging)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls._temporary.cleanup()
 
     def assert_public_invalid(self, bank: dict, holdout: dict, stage0: dict) -> None:
         with self.assertRaises(validator.ValidationError):
-            validator.validate_public_objects(REPO, DATA, bank, holdout, stage0)
+            validator.validate_public_objects(
+                REPO, self.staging, bank, holdout, stage0
+            )
 
     def test_public_baseline_is_valid_and_non_authorizing(self) -> None:
-        summary = validator.validate_public(REPO, DATA)
+        summary = validator.validate_public(REPO, self.staging)
         self.assertEqual(summary, {
             "bank_count": 64,
             "new_bank_count": 56,
@@ -54,10 +78,31 @@ class PublicRegistryV2Tests(unittest.TestCase):
             "stage0_candidate_count": 48,
         })
         self.assertEqual(self.stage0["authorization_status"], "not_authorized")
-        self.assertFalse((DATA / validator.STANDARD_STAGE0_NAME).exists())
+        self.assertFalse(
+            (self.staging / validator.STANDARD_STAGE0_NAME).exists()
+        )
         self.assertEqual(self.bank["curation_audit"], validator.CURATION_AUDIT)
         self.assertEqual(self.holdout["curation_audit"], validator.CURATION_AUDIT)
         self.assertEqual(self.stage0["curation_audit"], validator.CURATION_AUDIT)
+
+    def test_live_authorized_wrapper_coexists_with_pending_registry_validation(self) -> None:
+        wrapper_path = DATA / validator.STANDARD_STAGE0_NAME
+        self.assertTrue(wrapper_path.is_file())
+        self.assertFalse(wrapper_path.is_symlink())
+        wrapper = eval_protocol.validate_commitment_registry(
+            wrapper_path, dataset="causal", stage=0
+        )
+        self.assertEqual(wrapper["status"], "committed")
+        self.assertEqual(wrapper["sealed_final36_status"], "unopened")
+        self.assertEqual(
+            wrapper["artifacts"]["candidate_manifest_48"]["sha256"],
+            self.stage0["candidate_manifest_sha256"],
+        )
+        self.assertEqual(
+            wrapper["artifacts"]["source_bank_registry_64"]["sha256"],
+            validator.sha256_file(DATA / validator.PUBLIC_BANK_NAME),
+        )
+        validator.validate_public(REPO, self.staging)
 
     def test_exactly_original_eight_are_legacy_exempt(self) -> None:
         self.assertEqual(
@@ -186,9 +231,16 @@ class PrivateRegistryV2Tests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.private = Path(PRIVATE_ENV).resolve()
+        cls._temporary = tempfile.TemporaryDirectory()
+        cls.staging = Path(cls._temporary.name) / "water_impact_dynamic_v4"
+        copy_pending_public_staging(cls.staging)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls._temporary.cleanup()
 
     def test_private_opening_is_valid(self) -> None:
-        summary = validator.validate_private(REPO, DATA, self.private)
+        summary = validator.validate_private(REPO, self.staging, self.private)
         self.assertEqual(summary["ontology_count"], 80)
         self.assertEqual(summary["holdout_impact_pass_count"], 24)
         self.assertEqual(summary["stage0_candidate_count"], 48)
