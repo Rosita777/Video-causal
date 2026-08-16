@@ -330,6 +330,15 @@ Qualification and selection proceed as follows:
    clearly precedes the water response, `1` is ambiguous, and `0` is absent or
    temporally incompatible. A third screening reviewer adjudicates every
    atomic disagreement.
+   Derive the anonymous dispute CSV from the frozen public template and two
+   returned public review sheets with the public-only `derive-disputes`
+   command. The private `freeze-screening` command requires that exact file
+   plus completed adjudication and never synthesizes either artifact.
+   `derive-disputes` requires an explicit `--public-root`; the template and
+   both review sheets must be exact, non-symlink CSVs below that root. Its
+   `--output` may live in a separate review directory, but that parent must
+   already exist and contain no symlink component. Publication is exclusive
+   and atomic, including the header-only zero-dispute case.
 4. A candidate qualifies only with source `2`, footprint `>=1`, receiver
    `>=1`, quality `>=1`, and `causal_link=2`.
 5. Enumerate subsets containing exactly four qualified cases per cell. A

@@ -9,11 +9,13 @@ artifacts later bound by the Stage-1 commitment registry.
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import json
 import os
 import re
 import shutil
+import stat
 import statistics
 import tempfile
 from collections import Counter, defaultdict
@@ -718,6 +720,229 @@ def derive_screening_disputes(
     ]
 
 
+def _public_screening_columns(dataset: str) -> tuple[str, ...]:
+    return (
+        "review_id",
+        "object_phrase",
+        "receiver_description",
+        "video_path",
+        "composite_path",
+        *_screening_fields(dataset).values(),
+        "notes",
+    )
+
+
+def _absolute_lexical_path(path: Path) -> Path:
+    """Normalize ``.``/``..`` without following any filesystem link."""
+
+    return Path(os.path.abspath(os.fspath(path)))
+
+
+def _open_real_directory(path: Path, *, label: str) -> int:
+    """Open an existing directory while rejecting a symlink in every component."""
+
+    absolute = _absolute_lexical_path(path)
+    flags = (
+        os.O_RDONLY
+        | getattr(os, "O_CLOEXEC", 0)
+        | getattr(os, "O_DIRECTORY", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+    )
+    descriptor = -1
+    try:
+        descriptor = os.open(absolute.anchor, flags)
+        for component in absolute.parts[1:]:
+            child = os.open(component, flags, dir_fd=descriptor)
+            os.close(descriptor)
+            descriptor = child
+        if not stat.S_ISDIR(os.fstat(descriptor).st_mode):
+            raise ValueError(f"{label} must be a real directory")
+        return descriptor
+    except BaseException as exc:
+        if descriptor >= 0:
+            os.close(descriptor)
+        if isinstance(exc, (FileNotFoundError, ValueError)):
+            raise
+        raise ValueError(
+            f"{label} must be an existing real directory with no symlink ancestor"
+        ) from exc
+
+
+def _directory_descriptor_matches_path(
+    descriptor: int,
+    path: Path,
+    *,
+    label: str,
+) -> bool:
+    """Re-open the real path and compare it with an already pinned directory."""
+
+    try:
+        probe = _open_real_directory(path, label=label)
+    except (OSError, ValueError):
+        return False
+    try:
+        opened = os.fstat(descriptor)
+        current = os.fstat(probe)
+        return (opened.st_dev, opened.st_ino) == (current.st_dev, current.st_ino)
+    finally:
+        os.close(probe)
+
+
+def _open_real_file_beneath(
+    root_descriptor: int,
+    relative_path: Path,
+    *,
+    label: str,
+) -> int:
+    """Open one regular file beneath a pinned root without following links."""
+
+    if relative_path.is_absolute() or not relative_path.parts:
+        raise ValueError(f"screening {label} must be a file below the public root")
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    directory_flags = flags | getattr(os, "O_DIRECTORY", 0)
+    directory_descriptor = os.dup(root_descriptor)
+    descriptor = -1
+    try:
+        for component in relative_path.parts[:-1]:
+            child = os.open(component, directory_flags, dir_fd=directory_descriptor)
+            os.close(directory_descriptor)
+            directory_descriptor = child
+        descriptor = os.open(
+            relative_path.name,
+            flags | getattr(os, "O_NONBLOCK", 0),
+            dir_fd=directory_descriptor,
+        )
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            os.close(descriptor)
+            descriptor = -1
+            raise ValueError(f"screening {label} must be a real regular file")
+        return descriptor
+    except BaseException as exc:
+        if descriptor >= 0:
+            os.close(descriptor)
+        if isinstance(exc, ValueError):
+            raise
+        if isinstance(exc, FileNotFoundError):
+            raise FileNotFoundError(f"screening {label} is missing") from exc
+        raise ValueError(
+            f"screening {label} must be a real file with no symlink component"
+        ) from exc
+    finally:
+        os.close(directory_descriptor)
+
+
+def _read_exact_public_screening_csv(
+    *,
+    root_descriptor: int,
+    public_root: Path,
+    resolved_public_root: Path,
+    path: Path,
+    dataset: str,
+    label: str,
+) -> list[dict[str, str]]:
+    absolute = _absolute_lexical_path(path)
+    try:
+        relative = absolute.relative_to(public_root)
+    except ValueError as exc:
+        raise ValueError(f"screening {label} must be contained by --public-root") from exc
+    if not relative.parts:
+        raise ValueError(f"screening {label} must be a file below --public-root")
+    resolved = absolute.resolve(strict=True)
+    protocol.reject_sealed_final36_path(resolved)
+    try:
+        resolved.relative_to(resolved_public_root)
+    except ValueError as exc:
+        raise ValueError(f"screening {label} resolves outside --public-root") from exc
+    expected = os.stat(absolute, follow_symlinks=False)
+    if stat.S_ISLNK(expected.st_mode):
+        raise ValueError(f"screening {label} must have no symlink component")
+    if not stat.S_ISREG(expected.st_mode):
+        raise ValueError(f"screening {label} must be a real regular file")
+    descriptor = _open_real_file_beneath(root_descriptor, relative, label=label)
+    with os.fdopen(descriptor, "r", newline="", encoding="utf-8") as handle:
+        opened = os.fstat(handle.fileno())
+        if (expected.st_dev, expected.st_ino) != (opened.st_dev, opened.st_ino):
+            raise ValueError(f"screening {label} changed during validation")
+        reader = csv.DictReader(handle)
+        expected_header = _public_screening_columns(dataset)
+        if tuple(reader.fieldnames or ()) != expected_header:
+            raise ValueError(f"screening {label} header is not exact")
+        rows = list(reader)
+        after = os.fstat(handle.fileno())
+        if (
+            opened.st_size,
+            opened.st_mtime_ns,
+            opened.st_ctime_ns,
+        ) != (
+            after.st_size,
+            after.st_mtime_ns,
+            after.st_ctime_ns,
+        ):
+            raise ValueError(f"screening {label} changed while it was read")
+        return rows
+
+
+def derive_public_screening_disputes(
+    dataset: str,
+    template_rows: Sequence[Mapping[str, str]],
+    reviewer_a: Sequence[Mapping[str, str]],
+    reviewer_b: Sequence[Mapping[str, str]],
+) -> list[dict[str, str]]:
+    """Derive the exact anonymous disagreement set without opening private data."""
+
+    if dataset not in protocol.DATASETS:
+        raise ValueError("unknown screening dataset")
+    expected_n = protocol.CANDIDATE_COUNTS[dataset]
+    if any(len(rows) != expected_n for rows in (template_rows, reviewer_a, reviewer_b)):
+        raise ValueError(
+            f"{dataset}: public template and both reviews must each contain {expected_n} rows"
+        )
+    score_fields = tuple(_screening_fields(dataset).values())
+    expected_columns = set(_public_screening_columns(dataset))
+    for label, rows in (
+        ("public template", template_rows),
+        ("review A", reviewer_a),
+        ("review B", reviewer_b),
+    ):
+        if any(set(row) != expected_columns for row in rows):
+            raise ValueError(f"screening {label} columns are not exact")
+    if any(
+        str(row[field])
+        for row in template_rows
+        for field in (*score_fields, "notes")
+    ):
+        raise ValueError("screening public template scores/notes are not blank")
+
+    expected_ids = [f"s{index:03d}" for index in range(expected_n)]
+    if [str(row["review_id"]) for row in template_rows] != expected_ids:
+        raise ValueError("screening public template review IDs/order are not exact")
+    template = {str(row["review_id"]): row for row in template_rows}
+    left = {str(row["review_id"]): row for row in reviewer_a}
+    right = {str(row["review_id"]): row for row in reviewer_b}
+    expected_id_set = set(expected_ids)
+    if (
+        set(template) != expected_id_set
+        or set(left) != expected_id_set
+        or set(right) != expected_id_set
+        or len(left) != expected_n
+        or len(right) != expected_n
+    ):
+        raise ValueError("screening public review IDs are duplicate or differ from template")
+    metadata = expected_columns - set(score_fields) - {"notes"}
+    disputes: list[dict[str, str]] = []
+    for review_id in expected_ids:
+        frozen = template[review_id]
+        for reviewer in (left[review_id], right[review_id]):
+            if any(str(reviewer[field]) != str(frozen[field]) for field in metadata):
+                raise ValueError("screening reviewer changed blinded public metadata")
+            for field in score_fields:
+                _score(reviewer, field)
+        for short, field in _screening_fields(dataset).items():
+            if _score(left[review_id], field) != _score(right[review_id], field):
+                disputes.append({"review_id": review_id, "field": short})
+    return disputes
+
+
 def _validate_screening_reviews(
     dataset: str,
     candidates: Sequence[Mapping[str, str]],
@@ -833,16 +1058,17 @@ def _freeze_unbound_screening_rows(
     for path in (canonical_path, audit_path, freeze_manifest_path):
         if path.exists():
             raise FileExistsError(f"refusing to overwrite screening freeze artifact: {path}")
+    if not dispute_path.is_file() or dispute_path.is_symlink():
+        raise FileNotFoundError(
+            "screening dispute template is missing; derive it before freezing"
+        )
+    if not adjudication_path.is_file() or adjudication_path.is_symlink():
+        raise FileNotFoundError(
+            "screening adjudication is missing; complete it before freezing"
+        )
     candidates = protocol.read_csv(candidate_path)
     reviewer_a = protocol.read_csv(reviewer_a_path)
     reviewer_b = protocol.read_csv(reviewer_b_path)
-    expected_disputes = derive_screening_disputes(dataset, candidates, reviewer_a, reviewer_b)
-    if not dispute_path.exists():
-        protocol.write_csv(
-            dispute_path,
-            expected_disputes,
-            fieldnames=("candidate_id", "field"),
-        )
     canonical, audit = merge_screening_reviews(
         dataset,
         candidates,
@@ -1075,6 +1301,14 @@ def freeze_screening_reviews(
     for path in (canonical_path, audit_path, freeze_manifest_path):
         if path.exists():
             raise FileExistsError(f"refusing to overwrite screening freeze artifact: {path}")
+    if not dispute_path.is_file() or dispute_path.is_symlink():
+        raise FileNotFoundError(
+            "screening dispute template is missing; run derive-disputes first"
+        )
+    if not adjudication_path.is_file() or adjudication_path.is_symlink():
+        raise FileNotFoundError(
+            "screening adjudication is missing; complete it before freezing"
+        )
     package, candidates, template, key_rows = validate_screening_review_package(
         project_root,
         dataset=dataset,
@@ -1097,10 +1331,6 @@ def freeze_screening_reviews(
         reviewer_a=reviewer_a,
         reviewer_b=reviewer_b,
     )
-    if not dispute_path.exists():
-        protocol.write_csv(
-            dispute_path, expected_disputes, fieldnames=("review_id", "field")
-        )
     public_disputes = protocol.read_csv(dispute_path)
     if public_disputes != expected_disputes:
         raise ValueError("screening public dispute template is not the exact disagreement set")
@@ -1877,6 +2107,149 @@ def _atomic_write_new_json(path: Path, payload: Mapping[str, Any]) -> None:
             temporary.unlink()
 
 
+def _atomic_write_new_csv(
+    path: Path,
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    fieldnames: Sequence[str],
+) -> str:
+    """Atomically publish one CSV without replacing an existing path."""
+
+    absolute = _absolute_lexical_path(path)
+    protocol.reject_sealed_final36_path(absolute)
+    if not absolute.name or len(set(fieldnames)) != len(fieldnames):
+        raise ValueError("dispute output path/columns are not exact")
+    resolved_parent = absolute.parent.resolve(strict=True)
+    protocol.reject_sealed_final36_path(resolved_parent, resolved_parent / absolute.name)
+    parent_descriptor = _open_real_directory(
+        absolute.parent, label="screening dispute output parent"
+    )
+    temporary_name = f".{absolute.name}.tmp.{os.getpid()}"
+    temporary_descriptor = -1
+    temporary_identity: tuple[int, int] | None = None
+    try:
+        if not _directory_descriptor_matches_path(
+            parent_descriptor,
+            absolute.parent,
+            label="screening dispute output parent",
+        ):
+            raise ValueError("screening dispute output parent changed during validation")
+        try:
+            os.stat(absolute.name, dir_fd=parent_descriptor, follow_symlinks=False)
+        except FileNotFoundError:
+            pass
+        else:
+            raise FileExistsError(
+                f"refusing to overwrite frozen dispute template: {absolute}"
+            )
+        flags = (
+            os.O_RDWR
+            | os.O_CREAT
+            | os.O_EXCL
+            | getattr(os, "O_CLOEXEC", 0)
+            | getattr(os, "O_NOFOLLOW", 0)
+        )
+        temporary_descriptor = os.open(
+            temporary_name,
+            flags,
+            0o600,
+            dir_fd=parent_descriptor,
+        )
+        opened_temporary = os.fstat(temporary_descriptor)
+        temporary_identity = (opened_temporary.st_dev, opened_temporary.st_ino)
+        with os.fdopen(
+            temporary_descriptor,
+            "w",
+            newline="",
+            encoding="utf-8",
+            closefd=False,
+        ) as handle:
+            writer = csv.DictWriter(
+                handle,
+                fieldnames=list(fieldnames),
+                lineterminator="\n",
+                extrasaction="raise",
+            )
+            writer.writeheader()
+            writer.writerows(rows)
+            handle.flush()
+            os.fsync(temporary_descriptor)
+        os.lseek(temporary_descriptor, 0, os.SEEK_SET)
+        digest = hashlib.sha256()
+        for chunk in iter(lambda: os.read(temporary_descriptor, 1024 * 1024), b""):
+            digest.update(chunk)
+        temporary_stat = os.fstat(temporary_descriptor)
+        named_temporary_stat = os.stat(
+            temporary_name, dir_fd=parent_descriptor, follow_symlinks=False
+        )
+        if (temporary_stat.st_dev, temporary_stat.st_ino) != (
+            named_temporary_stat.st_dev,
+            named_temporary_stat.st_ino,
+        ):
+            raise RuntimeError("screening dispute temporary changed before publication")
+        if not _directory_descriptor_matches_path(
+            parent_descriptor,
+            absolute.parent,
+            label="screening dispute output parent",
+        ):
+            raise ValueError("screening dispute output parent changed before publication")
+        try:
+            os.link(
+                temporary_name,
+                absolute.name,
+                src_dir_fd=parent_descriptor,
+                dst_dir_fd=parent_descriptor,
+                follow_symlinks=False,
+            )
+        except FileExistsError as exc:
+            raise FileExistsError(
+                f"refusing to overwrite frozen dispute template: {absolute}"
+            ) from exc
+        published_stat = os.stat(
+            absolute.name, dir_fd=parent_descriptor, follow_symlinks=False
+        )
+        if (temporary_stat.st_dev, temporary_stat.st_ino) != (
+            published_stat.st_dev,
+            published_stat.st_ino,
+        ):
+            raise RuntimeError("screening dispute output changed during publication")
+        if not _directory_descriptor_matches_path(
+            parent_descriptor,
+            absolute.parent,
+            label="screening dispute output parent",
+        ):
+            current_output = os.stat(
+                absolute.name,
+                dir_fd=parent_descriptor,
+                follow_symlinks=False,
+            )
+            if (temporary_stat.st_dev, temporary_stat.st_ino) == (
+                current_output.st_dev,
+                current_output.st_ino,
+            ):
+                os.unlink(absolute.name, dir_fd=parent_descriptor)
+            raise ValueError("screening dispute output parent changed during publication")
+        return digest.hexdigest()
+    finally:
+        try:
+            if temporary_descriptor >= 0:
+                try:
+                    named = os.stat(
+                        temporary_name,
+                        dir_fd=parent_descriptor,
+                        follow_symlinks=False,
+                    )
+                except FileNotFoundError:
+                    pass
+                else:
+                    if temporary_identity == (named.st_dev, named.st_ino):
+                        os.unlink(temporary_name, dir_fd=parent_descriptor)
+        finally:
+            if temporary_descriptor >= 0:
+                os.close(temporary_descriptor)
+            os.close(parent_descriptor)
+
+
 def _publish_stage1_registry(
     project_root: Path,
     *,
@@ -2001,6 +2374,78 @@ def _publish_stage1_registry(
         stage=1,
         expected_stage0_sha256=protocol.file_sha256(stage0_registry_path),
     )
+
+
+def _cmd_derive_disputes(args: argparse.Namespace) -> int:
+    protocol.reject_sealed_final36_path(
+        args.public_root,
+        args.template,
+        args.reviewer_a,
+        args.reviewer_b,
+        args.output,
+    )
+    public_root = _absolute_lexical_path(args.public_root)
+    resolved_public_root = public_root.resolve(strict=True)
+    protocol.reject_sealed_final36_path(resolved_public_root)
+    root_descriptor = _open_real_directory(
+        public_root, label="screening public root"
+    )
+    try:
+        resolved_root_stat = os.stat(resolved_public_root, follow_symlinks=False)
+        opened_root_stat = os.fstat(root_descriptor)
+        if (resolved_root_stat.st_dev, resolved_root_stat.st_ino) != (
+            opened_root_stat.st_dev,
+            opened_root_stat.st_ino,
+        ):
+            raise ValueError("screening public root changed during validation")
+        if not _directory_descriptor_matches_path(
+            root_descriptor,
+            public_root,
+            label="screening public root",
+        ):
+            raise ValueError("screening public root changed during validation")
+        rows = {
+            label: _read_exact_public_screening_csv(
+                root_descriptor=root_descriptor,
+                public_root=public_root,
+                resolved_public_root=resolved_public_root,
+                path=path,
+                dataset=args.dataset,
+                label=label,
+            )
+            for label, path in (
+                ("public template", args.template),
+                ("review A", args.reviewer_a),
+                ("review B", args.reviewer_b),
+            )
+        }
+    finally:
+        os.close(root_descriptor)
+    disputes = derive_public_screening_disputes(
+        args.dataset,
+        rows["public template"],
+        rows["review A"],
+        rows["review B"],
+    )
+    output_sha256 = _atomic_write_new_csv(
+        args.output,
+        disputes,
+        fieldnames=("review_id", "field"),
+    )
+    print(
+        json.dumps(
+            {
+                "status": "disputes_derived",
+                "dataset": args.dataset,
+                "review_count": protocol.CANDIDATE_COUNTS[args.dataset],
+                "dispute_count": len(disputes),
+                "output": str(args.output),
+                "sha256": output_sha256,
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
 
 
 def _cmd_freeze_screening(args: argparse.Namespace) -> int:
@@ -2263,6 +2708,17 @@ def _cmd_select(args: argparse.Namespace) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
+    derive = sub.add_parser(
+        "derive-disputes",
+        help="derive the anonymous screening disagreement set from public reviews only",
+    )
+    derive.add_argument("--dataset", choices=protocol.DATASETS, required=True)
+    derive.add_argument("--public-root", type=Path, required=True)
+    derive.add_argument("--template", type=Path, required=True)
+    derive.add_argument("--reviewer-a", type=Path, required=True)
+    derive.add_argument("--reviewer-b", type=Path, required=True)
+    derive.add_argument("--output", type=Path, required=True)
+    derive.set_defaults(func=_cmd_derive_disputes)
     freeze = sub.add_parser(
         "freeze-screening", help="merge and freeze Original-only screening before selection"
     )

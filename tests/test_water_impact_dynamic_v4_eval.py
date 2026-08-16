@@ -2591,6 +2591,304 @@ class ScreeningFreezeTests(unittest.TestCase):
         reviewer_b[0][fields[0]] = "0"
         return candidates, reviewer_a, reviewer_b
 
+    def _public_inputs(self, dataset: str = "causal"):
+        fields = tuple(selector._screening_fields(dataset).values())
+        row_count = protocol.CANDIDATE_COUNTS[dataset]
+        template = [
+            {
+                "review_id": f"s{index:03d}",
+                "object_phrase": f"anonymous object {index}",
+                "receiver_description": f"anonymous receiver {index}",
+                "video_path": f"/public/media/s{index:03d}.mp4",
+                "composite_path": f"/public/composites/s{index:03d}.jpg",
+                **{field: "" for field in fields},
+                "notes": "",
+            }
+            for index in range(row_count)
+        ]
+        reviewer_a = [
+            {**row, **{field: "2" for field in fields}} for row in template
+        ]
+        reviewer_b = [dict(row) for row in reviewer_a]
+        reviewer_b[0][fields[0]] = "0"
+        reviewer_b[1][fields[1]] = "1"
+        return template, reviewer_a, reviewer_b
+
+    def test_public_dispute_derivation_is_exact_atomic_and_exclusive(self) -> None:
+        template, reviewer_a, reviewer_b = self._public_inputs()
+        disputes = selector.derive_public_screening_disputes(
+            "causal", template, reviewer_a, reviewer_b
+        )
+        self.assertEqual(
+            disputes,
+            [
+                {"review_id": "s000", "field": "source"},
+                {"review_id": "s001", "field": "footprint"},
+            ],
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            template_path = root / "template.csv"
+            reviewer_a_path = root / "review_a.csv"
+            reviewer_b_path = root / "review_b.csv"
+            output = root / "disputes.csv"
+            protocol.write_csv(template_path, template)
+            protocol.write_csv(reviewer_a_path, reviewer_a)
+            protocol.write_csv(reviewer_b_path, reviewer_b)
+            args = argparse.Namespace(
+                dataset="causal",
+                public_root=root,
+                template=template_path,
+                reviewer_a=reviewer_a_path,
+                reviewer_b=reviewer_b_path,
+                output=output,
+            )
+            with mock.patch("builtins.print") as emit:
+                self.assertEqual(selector._cmd_derive_disputes(args), 0)
+            status = json.loads(emit.call_args.args[0])
+            self.assertEqual(status["status"], "disputes_derived")
+            self.assertEqual(status["dispute_count"], 2)
+            self.assertEqual(status["sha256"], protocol.file_sha256(output))
+            self.assertEqual(protocol.read_csv(output), disputes)
+            with self.assertRaisesRegex(FileExistsError, "refusing to overwrite"):
+                selector._cmd_derive_disputes(args)
+
+    def test_public_dispute_derivation_rejects_mutation_and_handles_no_disputes(self) -> None:
+        template, reviewer_a, reviewer_b = self._public_inputs()
+        changed = [dict(row) for row in reviewer_a]
+        changed[0]["video_path"] = "/changed.mp4"
+        with self.assertRaisesRegex(ValueError, "changed blinded public metadata"):
+            selector.derive_public_screening_disputes(
+                "causal", template, changed, reviewer_b
+            )
+        changed = [dict(row) for row in reviewer_a]
+        changed[0][selector.CAUSAL_SCREENING_FIELDS["source"]] = "3"
+        with self.assertRaisesRegex(ValueError, "must be 0, 1, or 2"):
+            selector.derive_public_screening_disputes(
+                "causal", template, changed, reviewer_b
+            )
+        identical = [dict(row) for row in reviewer_a]
+        self.assertEqual(
+            selector.derive_public_screening_disputes(
+                "causal", template, reviewer_a, identical
+            ),
+            [],
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory).resolve() / "disputes.csv"
+            selector._atomic_write_new_csv(
+                output, [], fieldnames=("review_id", "field")
+            )
+            self.assertEqual(output.read_text(encoding="utf-8"), "review_id,field\n")
+
+    def test_public_dispute_derivation_enforces_specificity_inventory_and_ids(self) -> None:
+        template, reviewer_a, reviewer_b = self._public_inputs("specificity")
+        fields = tuple(selector.SPECIFICITY_SCREENING_FIELDS.values())
+        self.assertEqual(len(template), 36)
+        self.assertEqual(
+            selector.derive_public_screening_disputes(
+                "specificity", template, reviewer_a, reviewer_b
+            ),
+            [
+                {"review_id": "s000", "field": "protected"},
+                {"review_id": "s001", "field": "receiver"},
+            ],
+        )
+        with self.assertRaisesRegex(ValueError, "each contain 36 rows"):
+            selector.derive_public_screening_disputes(
+                "specificity", template[:-1], reviewer_a, reviewer_b
+            )
+        duplicate = [dict(row) for row in reviewer_a]
+        duplicate[-1]["review_id"] = "s000"
+        with self.assertRaisesRegex(ValueError, "duplicate or differ"):
+            selector.derive_public_screening_disputes(
+                "specificity", template, duplicate, reviewer_b
+            )
+        invalid = [dict(row) for row in reviewer_a]
+        invalid[0][fields[0]] = ""
+        with self.assertRaisesRegex(ValueError, "invalid"):
+            selector.derive_public_screening_disputes(
+                "specificity", template, invalid, reviewer_b
+            )
+
+    def test_public_dispute_cli_rejects_duplicate_or_reordered_raw_header(self) -> None:
+        template, reviewer_a, reviewer_b = self._public_inputs()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            template_path = root / "template.csv"
+            reviewer_b_path = root / "review_b.csv"
+            malformed_path = root / "review_a_malformed.csv"
+            output = root / "disputes.csv"
+            protocol.write_csv(template_path, template)
+            protocol.write_csv(reviewer_b_path, reviewer_b)
+            header = list(selector._public_screening_columns("causal"))
+
+            def write_raw(columns: list[str]) -> None:
+                with malformed_path.open("w", newline="", encoding="utf-8") as handle:
+                    writer = csv.writer(handle, lineterminator="\n")
+                    writer.writerow(columns)
+                    for row in reviewer_a:
+                        writer.writerow([row[column] for column in columns])
+
+            duplicate_header = [*header, header[-2]]
+            write_raw(duplicate_header)
+            args = argparse.Namespace(
+                dataset="causal",
+                public_root=root,
+                template=template_path,
+                reviewer_a=malformed_path,
+                reviewer_b=reviewer_b_path,
+                output=output,
+            )
+            with self.assertRaisesRegex(ValueError, "header is not exact"):
+                selector._cmd_derive_disputes(args)
+            self.assertFalse(output.exists())
+
+            reordered_header = list(header)
+            reordered_header[1], reordered_header[2] = (
+                reordered_header[2],
+                reordered_header[1],
+            )
+            write_raw(reordered_header)
+            with self.assertRaisesRegex(ValueError, "header is not exact"):
+                selector._cmd_derive_disputes(args)
+            self.assertFalse(output.exists())
+
+    def test_public_dispute_cli_rejects_nonpublic_or_symlink_paths_without_output(self) -> None:
+        template, reviewer_a, reviewer_b = self._public_inputs()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            public_root = root / "public"
+            public_root.mkdir()
+            reviews = root / "review_results"
+            reviews.mkdir()
+            template_path = public_root / "template.csv"
+            reviewer_a_path = public_root / "review_a.csv"
+            reviewer_b_path = public_root / "review_b.csv"
+            for path, rows in (
+                (template_path, template),
+                (reviewer_a_path, reviewer_a),
+                (reviewer_b_path, reviewer_b),
+            ):
+                protocol.write_csv(path, rows)
+            output = reviews / "disputes.csv"
+            args = argparse.Namespace(
+                dataset="causal",
+                public_root=public_root,
+                template=template_path,
+                reviewer_a=reviewer_a_path,
+                reviewer_b=reviewer_b_path,
+                output=output,
+            )
+
+            outside = root / "outside.csv"
+            protocol.write_csv(outside, reviewer_a)
+            args.reviewer_a = outside
+            with self.assertRaisesRegex(ValueError, "contained by --public-root"):
+                selector._cmd_derive_disputes(args)
+            self.assertFalse(output.exists())
+
+            leaf_link = public_root / "review_a_link.csv"
+            leaf_link.symlink_to(reviewer_a_path.name)
+            args.reviewer_a = leaf_link
+            with self.assertRaisesRegex(ValueError, "no symlink component"):
+                selector._cmd_derive_disputes(args)
+            self.assertFalse(output.exists())
+
+            nested = public_root / "nested"
+            nested.mkdir()
+            nested_review = nested / "review_a.csv"
+            protocol.write_csv(nested_review, reviewer_a)
+            directory_link = public_root / "nested_link"
+            directory_link.symlink_to(nested.name, target_is_directory=True)
+            args.reviewer_a = directory_link / nested_review.name
+            with self.assertRaisesRegex(ValueError, "no symlink component"):
+                selector._cmd_derive_disputes(args)
+            self.assertFalse(output.exists())
+
+            args.reviewer_a = reviewer_a_path
+            linked_reviews = root / "linked_review_results"
+            linked_reviews.symlink_to(reviews.name, target_is_directory=True)
+            args.output = linked_reviews / output.name
+            with self.assertRaisesRegex(ValueError, "no symlink ancestor"):
+                selector._cmd_derive_disputes(args)
+            self.assertFalse(output.exists())
+
+            output_link = reviews / "disputes_link.csv"
+            output_target = reviews / "must_not_be_created.csv"
+            output_link.symlink_to(output_target.name)
+            args.output = output_link
+            with self.assertRaisesRegex(FileExistsError, "refusing to overwrite"):
+                selector._cmd_derive_disputes(args)
+            self.assertTrue(output_link.is_symlink())
+            self.assertFalse(output_target.exists())
+
+            args.output = root / "missing_review_results" / output.name
+            with self.assertRaises(FileNotFoundError):
+                selector._cmd_derive_disputes(args)
+            self.assertFalse(args.output.parent.exists())
+
+            args.output = output
+            with mock.patch("builtins.print"):
+                self.assertEqual(selector._cmd_derive_disputes(args), 0)
+            self.assertEqual(
+                protocol.read_csv(output),
+                selector.derive_public_screening_disputes(
+                    "causal", template, reviewer_a, reviewer_b
+                ),
+            )
+
+    def test_public_dispute_atomic_publish_does_not_touch_stale_temp_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            output = root / "disputes.csv"
+            stale = root / f".{output.name}.tmp.{os.getpid()}"
+            target = root / "must_not_be_created.csv"
+            stale.symlink_to(target.name)
+            with self.assertRaises(FileExistsError):
+                selector._atomic_write_new_csv(
+                    output, [], fieldnames=("review_id", "field")
+                )
+            self.assertTrue(stale.is_symlink())
+            self.assertFalse(output.exists())
+            self.assertFalse(target.exists())
+
+    def test_freeze_missing_public_inputs_fails_without_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            private_root = Path(directory)
+            frozen_dir = private_root / "frozen"
+            arguments = {
+                "project_root": private_root,
+                "dataset": "causal",
+                "package_manifest_path": private_root / "package.json",
+                "private_root": private_root,
+                "candidate_manifest_path": private_root / "candidates.json",
+                "canonical_templates_path": private_root / "templates.json",
+                "screening_seed_path": private_root / "seed.txt",
+                "generation_spec_path": private_root / "generation.json",
+                "reviewer_a_path": private_root / "review_a.csv",
+                "reviewer_b_path": private_root / "review_b.csv",
+                "dispute_path": private_root / "disputes.csv",
+                "adjudication_path": private_root / "adjudication.csv",
+                "canonical_path": frozen_dir / "eligibility.csv",
+                "audit_path": frozen_dir / "audit.csv",
+                "freeze_manifest_path": private_root / "freeze.json",
+            }
+            before = sorted(path.relative_to(private_root) for path in private_root.rglob("*"))
+            with self.assertRaisesRegex(FileNotFoundError, "derive-disputes"):
+                selector.freeze_screening_reviews(**arguments)
+            after = sorted(path.relative_to(private_root) for path in private_root.rglob("*"))
+            self.assertEqual(after, before)
+
+            protocol.write_csv(
+                arguments["dispute_path"], [], fieldnames=("review_id", "field")
+            )
+            before = sorted(path.relative_to(private_root) for path in private_root.rglob("*"))
+            with self.assertRaisesRegex(FileNotFoundError, "adjudication"):
+                selector.freeze_screening_reviews(**arguments)
+            after = sorted(path.relative_to(private_root) for path in private_root.rglob("*"))
+            self.assertEqual(after, before)
+
     def test_screening_merge_rejects_metadata_dispute_and_adjudication_tamper(self) -> None:
         candidates, reviewer_a, reviewer_b = self._inputs()
         disputes = selector.derive_screening_disputes(
@@ -2642,6 +2940,10 @@ class ScreeningFreezeTests(unittest.TestCase):
             protocol.write_csv(candidate_path, candidates)
             protocol.write_csv(a_path, reviewer_a)
             protocol.write_csv(b_path, reviewer_b)
+            protocol.write_csv(
+                dispute_path,
+                [{"candidate_id": "candidate_0", "field": "source"}],
+            )
             protocol.write_csv(
                 adjudication_path,
                 [
@@ -2771,6 +3073,13 @@ class ScreeningFreezeTests(unittest.TestCase):
             adjudication_path = reviews / "adjudication.csv"
             protocol.write_csv(a_path, reviewer_a)
             protocol.write_csv(b_path, reviewer_b)
+            protocol.write_csv(
+                dispute_path,
+                selector.derive_public_screening_disputes(
+                    "causal", template, reviewer_a, reviewer_b
+                ),
+                fieldnames=("review_id", "field"),
+            )
             protocol.write_csv(
                 adjudication_path,
                 [
