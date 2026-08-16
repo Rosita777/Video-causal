@@ -27,6 +27,12 @@ V3c preserved quality but failed the preregistered complete-deletion gate, so
 it was not promoted and the sealed 36-case final set remains unopened. The
 paper main experiment has not started.
 
+The selected next hypothesis is source-slot randomized counterfactual
+distillation, documented in
+[`docs/water_impact_dynamic_v4_source_slot_randomization.md`](docs/water_impact_dynamic_v4_source_slot_randomization.md).
+It is a reviewed design only; its private ontology, fresh development data,
+implementation, and machine gate must be frozen before any v4 GPU run.
+
 The important metrics are valid target and footprint suppression, computed
 only on outputs whose receiver and video quality remain usable. Apparent
 suppression from a collapsed video is not counted as success.

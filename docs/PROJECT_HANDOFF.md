@@ -254,21 +254,41 @@ V3c failed the frozen development gate. The immediate task is therefore **not**
 to start the paper main experiment and not to tune v3c. Keep sealed-final36
 closed.
 
-The next method must address source-object deletion structurally rather than
-redistributing the same teacher loss. Before another GPU run:
+The selected v4 hypothesis is **Source-slot Randomized Counterfactual
+Distillation**, specified in
+`docs/water_impact_dynamic_v4_source_slot_randomization.md`. It keeps the v3b
+loss, target latent, target-prompt teacher, preservation branch, teacher
+weight, initialization, 100/100 schedule, optimizer, 200-step budget, and
+generation settings fixed. The only training treatment is deterministic
+replacement of the erase-row factual prompt's causal-source phrase from a
+frozen 64-item bank. This directly tests whether the adapter can learn the
+causal-source role rather than memorize the eight training nouns.
 
-1. diagnose whether the remaining object is driven primarily by factual-prompt
-   conditioning, independent-target misalignment, or insufficient
-   counterfactual supervision;
-2. specify one source-deletion intervention while holding the backbone,
-   preservation branch, training budget, and generation settings fixed;
-3. construct and freeze a new development set disjoint from eval12,
-   fresh-dev24, and sealed-final36;
-4. preregister a blind paired gate whose primary conditions require multiple
-   clear-to-absent improvements and nonzero strict successes;
-5. run only that single-factor experiment, record a failure as a failure, and
-   prohibit weight, sigma-window, checkpoint, prompt, or seed selection on any
-   already inspected set.
+V4 is a reviewed design, not yet an executable preregistration, and no v4 GPU
+run is authorized. Before training:
+
+1. an isolated evaluator must curate the private 80-item new-source ontology,
+   publish its 56-item new-source training projection, combine that projection
+   with the eight historical training sources into the 64-item bank, publish
+   the 24-item holdout commitment, and keep the holdout hidden from method
+   development;
+2. build and screen the frozen causal candidate pool plus the exact same-noun
+   and new-bank-noun noncausal specificity pool using Original videos only;
+3. implement the deterministic bank mapping, read-only prompt sidecar,
+   null-sidecar equivalence test, dedicated fail-closed trainer, and frozen
+   registration;
+4. turn the documented causal and specificity gates into independently tested
+   machine scorers, including full-video Original scoring and holdout-only
+   thresholds;
+5. independently audit every registry, content hash, split, threshold, and
+   output path before the first treatment video or GPU training run.
+
+Only the single source-slot intervention may be run. Do not combine it with
+anti-guidance, masks, span gates, hard-negative preserve training, another
+teacher weight, or another sigma schedule. Both the fresh causal gate and the
+same-noun specificity gate must pass completely before any paper-final use.
+An invalid or negative v4 result does not authorize tuning on the inspected
+set.
 
 Only a method that passes a genuinely fresh development gate may be frozen and
 evaluated on sealed-final36 in a multi-seed paper main experiment. Do not
