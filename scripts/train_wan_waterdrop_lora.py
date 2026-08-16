@@ -491,6 +491,39 @@ def validate_target_prompt_run_registration(
     manifest_sha256: str,
     base_cache_sha256: str,
 ) -> tuple[Path, str, dict[str, object]]:
+    current_protocol_inputs: dict[str, object] = {
+        "manifest": str(args.manifest),
+        "manifest_sha256": manifest_sha256,
+        "base_cache_dir": str(args.cache_dir),
+        "base_cache_sha256": base_cache_sha256,
+        "teacher_cache_dir": str(args.target_prompt_cache_dir),
+        "teacher_cache_sha256": args.target_prompt_cache_sha256,
+        "output_dir": str(args.output_dir),
+    }
+    frozen_protocol_inputs: dict[str, object] = {
+        "manifest": "data/water_impact_dynamic_v1/train_dynamic_sft_preserve_v2.csv",
+        "manifest_sha256": (
+            "3d4d8cbf9244b1575357f0ac74380cd7cb6265df4d1a85bf450de4cac120aee4"
+        ),
+        "base_cache_dir": "outputs/water_impact_dynamic_v1/cache_dynamic_sft_preserve_v2",
+        "base_cache_sha256": (
+            "4654ee67b8937d248963839b744e59f4f535f8be8b8eee421aef264fb3cd4d65"
+        ),
+        "teacher_cache_dir": (
+            "outputs/water_impact_dynamic_v3b/teacher_prompt_cache_v1"
+        ),
+        "teacher_cache_sha256": (
+            "6cf7ba0112d8df0e0a5253a7a943411fcfd85c56fc6df580446776b49d1ac9a9"
+        ),
+        "output_dir": (
+            "outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_scale4_v1"
+        ),
+    }
+    if current_protocol_inputs != frozen_protocol_inputs:
+        raise ValueError(
+            f"current data/output inputs are outside the frozen protocol: "
+            f"{current_protocol_inputs!r}"
+        )
     registration_path = args.output_dir / "run_registration.json"
     registration = json.loads(registration_path.read_text(encoding="utf-8"))
     expected: dict[str, object] = {
@@ -501,6 +534,11 @@ def validate_target_prompt_run_registration(
         "sanity_mean_min": args.target_prompt_sanity_min_output_grad_ratio,
         "sanity_mean_max": args.target_prompt_sanity_max_output_grad_ratio,
         "sanity_single_max": args.target_prompt_sanity_max_single_output_grad_ratio,
+        "sanity_formula": (
+            "s_i = weight * sqrt(target_prompt_teacher_loss / flow_loss)"
+        ),
+        "sanity_aggregation": "arithmetic_mean_over_first_16_erase_steps",
+        "selection_rule": "nearest_power_of_two(0.30 / mean_i(sqrt(r_i)))",
         "train_manifest_sha256": manifest_sha256,
         "base_cache_sha256": base_cache_sha256,
         "teacher_cache_sha256": args.target_prompt_cache_sha256,
@@ -526,6 +564,13 @@ def validate_target_prompt_run_registration(
             "objective": args.objective,
             "balanced_roles": args.balanced_roles,
             "preserve_weight": args.preserve_weight,
+            "target_prompt_calibration_id": args.target_prompt_calibration_id,
+            "target_prompt_teacher_weight": args.target_prompt_teacher_weight,
+            "sanity_mean_min": args.target_prompt_sanity_min_output_grad_ratio,
+            "sanity_mean_max": args.target_prompt_sanity_max_output_grad_ratio,
+            "sanity_single_max": (
+                args.target_prompt_sanity_max_single_output_grad_ratio
+            ),
         },
     }
     frozen_training_config = {
@@ -544,6 +589,13 @@ def validate_target_prompt_run_registration(
         "objective": "target_prompt_teacher",
         "balanced_roles": True,
         "preserve_weight": 4.0,
+        "target_prompt_calibration_id": (
+            "lambda4_from_lambda1_first16_output_gradient_v1"
+        ),
+        "target_prompt_teacher_weight": 4.0,
+        "sanity_mean_min": 0.2,
+        "sanity_mean_max": 0.5,
+        "sanity_single_max": 1.0,
     }
     if expected["training_config"] != frozen_training_config:
         raise ValueError(

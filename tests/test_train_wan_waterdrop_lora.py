@@ -165,8 +165,11 @@ class TargetPromptTeacherTest(unittest.TestCase):
         module = load_module()
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            output_dir = root / "output"
-            output_dir.mkdir()
+            output_dir_relative = Path(
+                "outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_scale4_v1"
+            )
+            output_dir = root / output_dir_relative
+            output_dir.mkdir(parents=True)
             launcher = root / "scripts/run_water_impact_dynamic_sft_v3b_teacher.sh"
             protocol_doc = root / "docs/water_impact_dynamic_v3b_target_prompt_teacher.md"
             launcher.parent.mkdir()
@@ -191,13 +194,24 @@ class TargetPromptTeacherTest(unittest.TestCase):
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(b"fixture")
             args = SimpleNamespace(
-                output_dir=output_dir,
+                output_dir=output_dir_relative,
+                manifest=Path(
+                    "data/water_impact_dynamic_v1/train_dynamic_sft_preserve_v2.csv"
+                ),
+                cache_dir=Path(
+                    "outputs/water_impact_dynamic_v1/cache_dynamic_sft_preserve_v2"
+                ),
+                target_prompt_cache_dir=Path(
+                    "outputs/water_impact_dynamic_v3b/teacher_prompt_cache_v1"
+                ),
                 target_prompt_calibration_id="lambda4_from_lambda1_first16_output_gradient_v1",
                 target_prompt_teacher_weight=4.0,
                 target_prompt_sanity_min_output_grad_ratio=0.2,
                 target_prompt_sanity_max_output_grad_ratio=0.5,
                 target_prompt_sanity_max_single_output_grad_ratio=1.0,
-                target_prompt_cache_sha256="teacher-cache",
+                target_prompt_cache_sha256=(
+                    "6cf7ba0112d8df0e0a5253a7a943411fcfd85c56fc6df580446776b49d1ac9a9"
+                ),
                 model=Path("models/Wan2.1-T2V-1.3B-Diffusers"),
                 height=480,
                 width=832,
@@ -230,18 +244,36 @@ class TargetPromptTeacherTest(unittest.TestCase):
                 "objective": "target_prompt_teacher",
                 "balanced_roles": True,
                 "preserve_weight": 4.0,
-            }
-            registration = {
-                "protocol": "water_impact_dynamic_v3b_target_prompt_teacher_scale4_v1",
-                "calibration_id": args.target_prompt_calibration_id,
-                "output_dir": str(output_dir),
+                "target_prompt_calibration_id": (
+                    "lambda4_from_lambda1_first16_output_gradient_v1"
+                ),
                 "target_prompt_teacher_weight": 4.0,
                 "sanity_mean_min": 0.2,
                 "sanity_mean_max": 0.5,
                 "sanity_single_max": 1.0,
-                "train_manifest_sha256": "manifest",
-                "base_cache_sha256": "base-cache",
-                "teacher_cache_sha256": "teacher-cache",
+            }
+            registration = {
+                "protocol": "water_impact_dynamic_v3b_target_prompt_teacher_scale4_v1",
+                "calibration_id": args.target_prompt_calibration_id,
+                "output_dir": str(output_dir_relative),
+                "target_prompt_teacher_weight": 4.0,
+                "sanity_mean_min": 0.2,
+                "sanity_mean_max": 0.5,
+                "sanity_single_max": 1.0,
+                "sanity_formula": (
+                    "s_i = weight * sqrt(target_prompt_teacher_loss / flow_loss)"
+                ),
+                "sanity_aggregation": "arithmetic_mean_over_first_16_erase_steps",
+                "selection_rule": "nearest_power_of_two(0.30 / mean_i(sqrt(r_i)))",
+                "train_manifest_sha256": (
+                    "3d4d8cbf9244b1575357f0ac74380cd7cb6265df4d1a85bf450de4cac120aee4"
+                ),
+                "base_cache_sha256": (
+                    "4654ee67b8937d248963839b744e59f4f535f8be8b8eee421aef264fb3cd4d65"
+                ),
+                "teacher_cache_sha256": (
+                    "6cf7ba0112d8df0e0a5253a7a943411fcfd85c56fc6df580446776b49d1ac9a9"
+                ),
                 "expected_initial_lora_sha256": (
                     "af163fcb6706c8403ffb1eaa9001cb2b9ac8ef86110663e8b20000961bb270a8"
                 ),
@@ -283,22 +315,35 @@ class TargetPromptTeacherTest(unittest.TestCase):
                     os.chdir(root)
                     path, digest, payload = module.validate_target_prompt_run_registration(
                         args,
-                        manifest_sha256="manifest",
-                        base_cache_sha256="base-cache",
+                        manifest_sha256=(
+                            "3d4d8cbf9244b1575357f0ac74380cd7cb6265df4d1a85bf450de4cac120aee4"
+                        ),
+                        base_cache_sha256=(
+                            "4654ee67b8937d248963839b744e59f4f535f8be8b8eee421aef264fb3cd4d65"
+                        ),
                     )
                 finally:
                     os.chdir(previous)
-            self.assertEqual(path, output_dir / "run_registration.json")
+            self.assertEqual(path, output_dir_relative / "run_registration.json")
             self.assertEqual(digest, "registration-hash")
             self.assertEqual(payload["training_config"], training_config)
 
             args.learning_rate = 1e-4
-            with self.assertRaisesRegex(ValueError, "outside the frozen protocol"):
-                module.validate_target_prompt_run_registration(
-                    args,
-                    manifest_sha256="manifest",
-                    base_cache_sha256="base-cache",
-                )
+            previous = Path.cwd()
+            try:
+                os.chdir(root)
+                with self.assertRaisesRegex(ValueError, "outside the frozen protocol"):
+                    module.validate_target_prompt_run_registration(
+                        args,
+                        manifest_sha256=(
+                            "3d4d8cbf9244b1575357f0ac74380cd7cb6265df4d1a85bf450de4cac120aee4"
+                        ),
+                        base_cache_sha256=(
+                            "4654ee67b8937d248963839b744e59f4f535f8be8b8eee421aef264fb3cd4d65"
+                        ),
+                    )
+            finally:
+                os.chdir(previous)
 
     def test_scale_sanity_uses_weighted_per_step_output_gradient_ratio(self) -> None:
         module = load_module()
