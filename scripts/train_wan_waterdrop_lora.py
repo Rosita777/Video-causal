@@ -132,6 +132,29 @@ def parse_args() -> argparse.Namespace:
         help="Weight for target-prompt frozen-teacher consistency on erase rows.",
     )
     parser.add_argument(
+        "--target-prompt-calibration-id",
+        default="",
+        help="Frozen identifier for the training-only teacher-scale calibration.",
+    )
+    parser.add_argument(
+        "--target-prompt-sanity-min-output-grad-ratio",
+        type=float,
+        default=0.2,
+        help="Minimum mean weighted teacher/flow output-gradient ratio in the first 16 erase steps.",
+    )
+    parser.add_argument(
+        "--target-prompt-sanity-max-output-grad-ratio",
+        type=float,
+        default=0.5,
+        help="Maximum mean weighted teacher/flow output-gradient ratio in the first 16 erase steps.",
+    )
+    parser.add_argument(
+        "--target-prompt-sanity-max-single-output-grad-ratio",
+        type=float,
+        default=1.0,
+        help="Maximum individual weighted teacher/flow output-gradient ratio in the first 16 erase steps.",
+    )
+    parser.add_argument(
         "--balanced-roles",
         action="store_true",
         help="Alternate erase and preserve rows when training with --role all.",
@@ -156,6 +179,9 @@ def parse_args() -> argparse.Namespace:
         args.receiver_weight,
         args.preserve_weight,
         args.target_prompt_teacher_weight,
+        args.target_prompt_sanity_min_output_grad_ratio,
+        args.target_prompt_sanity_max_output_grad_ratio,
+        args.target_prompt_sanity_max_single_output_grad_ratio,
         args.gate_floor,
     ) < 0:
         parser.error("all loss weights and margins must be non-negative")
@@ -183,7 +209,14 @@ def parse_args() -> argparse.Namespace:
             parser.error("target-conditioned objectives currently support --role erase only")
     if args.objective == "target_conditioned_components" and args.component_gate_dir is None:
         parser.error("--component-gate-dir is required for component supervision")
-    if args.objective == "target_prompt_teacher" and args.target_prompt_teacher_weight > 0:
+    if args.objective == "target_prompt_teacher":
+        if (
+            not np.isfinite(args.target_prompt_teacher_weight)
+            or args.target_prompt_teacher_weight <= 0
+        ):
+            parser.error("target-prompt teacher consistency requires a positive weight")
+        if not args.target_prompt_calibration_id.strip():
+            parser.error("target-prompt teacher consistency requires a calibration id")
         if args.target_prompt_cache_dir is None or not args.target_prompt_cache_sha256:
             parser.error(
                 "--target-prompt-cache-dir and --target-prompt-cache-sha256 are required "
@@ -193,6 +226,20 @@ def parse_args() -> argparse.Namespace:
             parser.error(
                 "target-prompt teacher consistency requires --role all --balanced-roles"
             )
+        sanity_values = (
+            args.target_prompt_sanity_min_output_grad_ratio,
+            args.target_prompt_sanity_max_output_grad_ratio,
+            args.target_prompt_sanity_max_single_output_grad_ratio,
+        )
+        if not all(np.isfinite(value) for value in sanity_values):
+            parser.error("target-prompt sanity bounds must be finite")
+        if (
+            args.target_prompt_sanity_min_output_grad_ratio
+            >= args.target_prompt_sanity_max_output_grad_ratio
+            or args.target_prompt_sanity_max_output_grad_ratio
+            > args.target_prompt_sanity_max_single_output_grad_ratio
+        ):
+            parser.error("target-prompt sanity minimum must be smaller than maximum")
     return args
 
 
@@ -438,6 +485,120 @@ def validate_target_prompt_cache(
     }
 
 
+def validate_target_prompt_run_registration(
+    args: argparse.Namespace,
+    *,
+    manifest_sha256: str,
+    base_cache_sha256: str,
+) -> tuple[Path, str, dict[str, object]]:
+    registration_path = args.output_dir / "run_registration.json"
+    registration = json.loads(registration_path.read_text(encoding="utf-8"))
+    expected: dict[str, object] = {
+        "protocol": "water_impact_dynamic_v3b_target_prompt_teacher_scale4_v1",
+        "calibration_id": args.target_prompt_calibration_id,
+        "output_dir": str(args.output_dir),
+        "target_prompt_teacher_weight": args.target_prompt_teacher_weight,
+        "sanity_mean_min": args.target_prompt_sanity_min_output_grad_ratio,
+        "sanity_mean_max": args.target_prompt_sanity_max_output_grad_ratio,
+        "sanity_single_max": args.target_prompt_sanity_max_single_output_grad_ratio,
+        "train_manifest_sha256": manifest_sha256,
+        "base_cache_sha256": base_cache_sha256,
+        "teacher_cache_sha256": args.target_prompt_cache_sha256,
+        "expected_initial_lora_sha256": (
+            "af163fcb6706c8403ffb1eaa9001cb2b9ac8ef86110663e8b20000961bb270a8"
+        ),
+        "lambda1_scale_invalid": True,
+        "lambda1_generation_count": 0,
+        "lambda1_mean_raw_loss_ratio_first_16": 0.005843,
+        "training_config": {
+            "model": str(args.model),
+            "height": args.height,
+            "width": args.width,
+            "num_frames": args.num_frames,
+            "max_steps": args.max_steps,
+            "learning_rate": args.learning_rate,
+            "rank": args.rank,
+            "alpha": args.alpha,
+            "grad_accum": args.grad_accum,
+            "seed": args.seed,
+            "device": args.device,
+            "role": args.role,
+            "objective": args.objective,
+            "balanced_roles": args.balanced_roles,
+            "preserve_weight": args.preserve_weight,
+        },
+    }
+    frozen_training_config = {
+        "model": "models/Wan2.1-T2V-1.3B-Diffusers",
+        "height": 480,
+        "width": 832,
+        "num_frames": 49,
+        "max_steps": 200,
+        "learning_rate": 5e-5,
+        "rank": 16,
+        "alpha": 16,
+        "grad_accum": 1,
+        "seed": 26000,
+        "device": "cuda",
+        "role": "all",
+        "objective": "target_prompt_teacher",
+        "balanced_roles": True,
+        "preserve_weight": 4.0,
+    }
+    if expected["training_config"] != frozen_training_config:
+        raise ValueError(
+            f"current training config is outside the frozen protocol: "
+            f"{expected['training_config']!r}"
+        )
+    for field, expected_value in expected.items():
+        if registration.get(field) != expected_value:
+            raise ValueError(
+                f"run registration {field}={registration.get(field)!r}, "
+                f"expected {expected_value!r}"
+            )
+    for prefix, current_path in (
+        ("trainer", Path(__file__)),
+        ("launcher", Path("scripts/run_water_impact_dynamic_sft_v3b_teacher.sh")),
+        ("protocol_doc", Path("docs/water_impact_dynamic_v3b_target_prompt_teacher.md")),
+    ):
+        recorded_path = registration.get(f"{prefix}_path")
+        recorded_hash = registration.get(f"{prefix}_sha256")
+        if (
+            not isinstance(recorded_path, str)
+            or Path(recorded_path).resolve() != current_path.resolve()
+            or recorded_hash != file_sha256(current_path)
+        ):
+            raise ValueError(f"run registration {prefix} artifact mismatch")
+    pilot_artifacts = registration.get("lambda1_artifacts")
+    if not isinstance(pilot_artifacts, list) or len(pilot_artifacts) != 3:
+        raise ValueError("run registration must bind three lambda=1 pilot artifacts")
+    expected_pilot_artifacts = {
+        "outputs/water_impact_dynamic_v3b/logs/train_target_prompt_teacher_v1.log": (
+            "c0f35542d9be763ea4a446af773e0e22fe44913b019b89aca51588780f5719ba"
+        ),
+        "outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_v1/"
+        "checkpoint-000025/pytorch_lora_weights.safetensors": (
+            "2ee9f08c83d291630c09efcdf5bf0f8ae082f7b23b4c6be0ed89de791377ff3b"
+        ),
+        "outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_v1/"
+        "checkpoint-000025/training_state.json": (
+            "d51fe90cedc168125e773f4c44ad458cc2baf84f409df6ed29f20cc09bcae854"
+        ),
+    }
+    registered_pilot_artifacts: dict[str, str] = {}
+    for record in pilot_artifacts:
+        if not isinstance(record, dict):
+            raise ValueError("invalid lambda=1 pilot artifact registration")
+        path = Path(str(record.get("path", "")))
+        recorded_hash = str(record.get("sha256", ""))
+        registered_pilot_artifacts[str(path)] = recorded_hash
+        if not path.is_file() or file_sha256(path) != recorded_hash:
+            raise ValueError(f"lambda=1 pilot artifact mismatch: {path}")
+    if registered_pilot_artifacts != expected_pilot_artifacts:
+        raise ValueError("run registration lambda=1 pilot mapping is not frozen")
+    return registration_path, file_sha256(registration_path), registration
+
+
 def causal_residual_mask(factual: torch.Tensor, clean: torch.Tensor) -> torch.Tensor:
     """Build a robust soft spatiotemporal mask in Wan latent resolution."""
     residual = (factual.float() - clean.float()).abs().mean(dim=1, keepdim=True)
@@ -500,6 +661,70 @@ def combine_target_prompt_teacher_loss(
             prediction.float(), teacher_prediction.detach().float()
         )
     return teacher_loss, flow_loss + weight * teacher_loss
+
+
+def target_prompt_scale_metrics(
+    raw_loss_ratios: list[float], weight: float
+) -> dict[str, float]:
+    if not raw_loss_ratios:
+        raise ValueError("target-prompt scale metrics require at least one ratio")
+    values = np.asarray(raw_loss_ratios, dtype=np.float64)
+    if not np.isfinite(values).all() or (values < 0).any():
+        raise ValueError("target-prompt scale ratios must be finite and non-negative")
+    return {
+        "mean_raw_loss_ratio": float(values.mean()),
+        "mean_weighted_loss_ratio": float(weight * values.mean()),
+        "mean_weighted_output_grad_ratio": float(weight * np.sqrt(values).mean()),
+        "median_weighted_output_grad_ratio": float(weight * np.median(np.sqrt(values))),
+    }
+
+
+def write_target_prompt_scale_sanity(
+    output_dir: Path,
+    observations: list[dict[str, object]],
+    *,
+    weight: float,
+    mean_min: float,
+    mean_max: float,
+    single_max: float,
+    calibration_id: str,
+    run_registration_sha256: str,
+) -> dict[str, object]:
+    if len(observations) != 16:
+        raise ValueError(f"scale sanity requires 16 erase observations, found {len(observations)}")
+    raw_ratios = [float(row["raw_loss_ratio"]) for row in observations]
+    metrics = target_prompt_scale_metrics(raw_ratios, weight)
+    individual = [weight * float(np.sqrt(value)) for value in raw_ratios]
+    passed = (
+        all(np.isfinite(value) for value in individual)
+        and mean_min <= metrics["mean_weighted_output_grad_ratio"] <= mean_max
+        and max(individual) <= single_max
+    )
+    payload: dict[str, object] = {
+        "protocol": "water_impact_dynamic_v3b_scale_sanity_v2",
+        "calibration_id": calibration_id,
+        "run_registration_sha256": run_registration_sha256,
+        "formula": "s_i = weight * sqrt(target_prompt_teacher_loss / flow_loss)",
+        "aggregation": "arithmetic_mean_over_first_16_erase_steps",
+        "weight": weight,
+        "mean_output_gradient_norm_ratio_min": mean_min,
+        "mean_output_gradient_norm_ratio_max": mean_max,
+        "single_output_gradient_norm_ratio_max": single_max,
+        "observation_count": len(observations),
+        "max_weighted_output_gradient_norm_ratio": max(individual),
+        **metrics,
+        "passed": passed,
+        "observations": observations,
+    }
+    output_path = output_dir / "target_prompt_scale_sanity.json"
+    if output_path.exists():
+        raise FileExistsError(f"refusing to overwrite scale sanity artifact: {output_path}")
+    temporary_path = output_path.with_suffix(".json.tmp")
+    temporary_path.write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+    temporary_path.replace(output_path)
+    return payload
 
 
 def forward_target_prompt_teacher_pair(
@@ -718,9 +943,21 @@ def train(
     )
     target_prompt_cache_paths: dict[int, Path] = {}
     target_prompt_provenance: dict[str, object] = {}
+    run_registration_path: Path | None = None
+    run_registration_sha256: str | None = None
+    run_registration: dict[str, object] = {}
     if uses_target_prompt_teacher:
         target_prompt_cache_paths, target_prompt_provenance = validate_target_prompt_cache(
             args, rows
+        )
+        (
+            run_registration_path,
+            run_registration_sha256,
+            run_registration,
+        ) = validate_target_prompt_run_registration(
+            args,
+            manifest_sha256=manifest_sha256,
+            base_cache_sha256=cache_sha256,
         )
     device = torch.device(args.device)
     transformer = WanTransformer3DModel.from_pretrained(
@@ -762,6 +999,13 @@ def train(
     trainable = [parameter for parameter in transformer.parameters() if parameter.requires_grad]
     trainable_count = sum(parameter.numel() for parameter in trainable)
     initial_lora_sha256 = trainable_state_sha256(transformer)
+    if uses_target_prompt_teacher and initial_lora_sha256 != run_registration.get(
+        "expected_initial_lora_sha256"
+    ):
+        raise ValueError(
+            "initial LoRA hash does not match the frozen run registration: "
+            f"{initial_lora_sha256}"
+        )
     print(
         f"Trainable LoRA parameters: {trainable_count:,} "
         f"initial_sha256={initial_lora_sha256}",
@@ -791,8 +1035,10 @@ def train(
     receiver_losses: list[float] = []
     preserve_losses: list[float] = []
     target_prompt_teacher_losses: list[float] = []
-    target_prompt_teacher_ratios_first_16: list[float] = []
+    target_prompt_teacher_raw_loss_ratios: list[float] = []
+    target_prompt_scale_observations: list[dict[str, object]] = []
     target_prompt_teacher_grad_norms_first_16: list[float] = []
+    target_prompt_scale_sanity: dict[str, object] | None = None
     gate_means: list[float] = []
     role_step_counts = {"erase": 0, "preserve": 0}
     sample_order_digest = hashlib.sha256()
@@ -1067,6 +1313,69 @@ def train(
             raise FloatingPointError(
                 f"non-finite combined loss at step {step} for {sample['scene_id']}"
             )
+        target_prompt_raw_loss_ratio_value = 0.0
+        target_prompt_weighted_loss_ratio_value = 0.0
+        target_prompt_weighted_output_grad_ratio_value = 0.0
+        if target_prompt_teacher_prediction is not None:
+            flow_for_scale = float(remove_loss.detach())
+            teacher_for_scale = float(target_prompt_teacher_loss.detach())
+            if (
+                not np.isfinite(flow_for_scale)
+                or not np.isfinite(teacher_for_scale)
+                or flow_for_scale <= 0
+                or teacher_for_scale < 0
+            ):
+                raise FloatingPointError(
+                    f"invalid target-prompt scale losses at step {step}: "
+                    f"flow={flow_for_scale} teacher={teacher_for_scale}"
+                )
+            target_prompt_raw_loss_ratio_value = teacher_for_scale / flow_for_scale
+            target_prompt_weighted_loss_ratio_value = (
+                args.target_prompt_teacher_weight * target_prompt_raw_loss_ratio_value
+            )
+            target_prompt_weighted_output_grad_ratio_value = (
+                args.target_prompt_teacher_weight
+                * float(np.sqrt(target_prompt_raw_loss_ratio_value))
+            )
+            target_prompt_teacher_raw_loss_ratios.append(
+                target_prompt_raw_loss_ratio_value
+            )
+            if len(target_prompt_scale_observations) < 16:
+                target_prompt_scale_observations.append(
+                    {
+                        "global_step": step,
+                        "scene_id": sample["scene_id"],
+                        "flow_loss": flow_for_scale,
+                        "target_prompt_teacher_loss": teacher_for_scale,
+                        "raw_loss_ratio": target_prompt_raw_loss_ratio_value,
+                        "weighted_loss_ratio": target_prompt_weighted_loss_ratio_value,
+                        "weighted_output_gradient_norm_ratio": (
+                            target_prompt_weighted_output_grad_ratio_value
+                        ),
+                    }
+                )
+                if len(target_prompt_scale_observations) == 16:
+                    if run_registration_sha256 is None:
+                        raise RuntimeError("target-prompt run registration is unavailable")
+                    target_prompt_scale_sanity = write_target_prompt_scale_sanity(
+                        args.output_dir,
+                        target_prompt_scale_observations,
+                        weight=args.target_prompt_teacher_weight,
+                        mean_min=args.target_prompt_sanity_min_output_grad_ratio,
+                        mean_max=args.target_prompt_sanity_max_output_grad_ratio,
+                        single_max=(
+                            args.target_prompt_sanity_max_single_output_grad_ratio
+                        ),
+                        calibration_id=args.target_prompt_calibration_id,
+                        run_registration_sha256=run_registration_sha256,
+                    )
+                    if not target_prompt_scale_sanity["passed"]:
+                        raise RuntimeError(
+                            "pre-registered target-teacher output-gradient sanity "
+                            "failed before evaluation: "
+                            f"mean={target_prompt_scale_sanity['mean_weighted_output_grad_ratio']:.6f} "
+                            f"max={target_prompt_scale_sanity['max_weighted_output_gradient_norm_ratio']:.6f}"
+                        )
         loss = combined_loss / args.grad_accum
         loss.backward()
         if activation_controller is not None:
@@ -1098,17 +1407,8 @@ def train(
         preserve_losses.append(preserve_value)
         if target_prompt_teacher_prediction is not None:
             target_prompt_teacher_losses.append(target_prompt_teacher_value)
-            ratio = target_prompt_teacher_value / max(remove_value, 1e-12)
-            if len(target_prompt_teacher_ratios_first_16) < 16:
-                target_prompt_teacher_ratios_first_16.append(ratio)
+            if len(target_prompt_teacher_grad_norms_first_16) < 16:
                 target_prompt_teacher_grad_norms_first_16.append(grad_norm_value)
-                if len(target_prompt_teacher_ratios_first_16) == 16:
-                    sanity_mean = float(np.mean(target_prompt_teacher_ratios_first_16))
-                    if not np.isfinite(sanity_mean) or not 0.1 <= sanity_mean <= 10.0:
-                        raise RuntimeError(
-                            "pre-registered target-teacher scale sanity failed before "
-                            f"evaluation: mean teacher/flow ratio={sanity_mean:.6f}"
-                        )
         gate_means.append(gate_mean)
         elapsed = time.time() - started
         print(
@@ -1120,6 +1420,10 @@ def train(
             f"object={object_value:.6f} receiver={receiver_value:.6f} "
             f"preserve={preserve_value:.6f} "
             f"target_teacher={target_prompt_teacher_value:.6f} "
+            f"target_teacher_weighted={args.target_prompt_teacher_weight * target_prompt_teacher_value:.6f} "
+            f"target_raw_loss_ratio={target_prompt_raw_loss_ratio_value:.6f} "
+            f"target_weighted_loss_ratio={target_prompt_weighted_loss_ratio_value:.6f} "
+            f"target_output_grad_ratio={target_prompt_weighted_output_grad_ratio_value:.6f} "
             f"grad_norm={grad_norm_value:.6f} "
             f"gate={gate_mean:.6f} "
             f"mean20={np.mean(losses[-20:]):.6f} elapsed={elapsed:.1f}s",
@@ -1145,6 +1449,31 @@ def train(
                 del teacher_factual_prediction, factual_background_loss
 
         if step % args.save_every == 0 or step == args.max_steps:
+            if (
+                run_registration_path is not None
+                and file_sha256(run_registration_path) != run_registration_sha256
+            ):
+                raise ValueError("run registration changed during training")
+            first_scale_metrics = (
+                target_prompt_scale_metrics(
+                    [
+                        float(row["raw_loss_ratio"])
+                        for row in target_prompt_scale_observations
+                    ],
+                    args.target_prompt_teacher_weight,
+                )
+                if target_prompt_scale_observations
+                else None
+            )
+            recent_scale_metrics = (
+                target_prompt_scale_metrics(
+                    target_prompt_teacher_raw_loss_ratios[-20:],
+                    args.target_prompt_teacher_weight,
+                )
+                if target_prompt_teacher_raw_loss_ratios
+                else None
+            )
+            sanity_path = args.output_dir / "target_prompt_scale_sanity.json"
             checkpoint = args.output_dir / f"checkpoint-{step:06d}"
             save_lora(
                 transformer,
@@ -1198,6 +1527,11 @@ def train(
                         if uses_target_prompt_teacher
                         else 0.0
                     ),
+                    "target_prompt_calibration_id": (
+                        args.target_prompt_calibration_id
+                        if uses_target_prompt_teacher
+                        else None
+                    ),
                     "teacher_prompt_field": (
                         "target_generation_prompt" if uses_target_prompt_teacher else None
                     ),
@@ -1208,6 +1542,10 @@ def train(
                     "teacher_uses_same_noisy_latent": uses_target_prompt_teacher,
                     "teacher_uses_same_timestep": uses_target_prompt_teacher,
                     "trainer_sha256": file_sha256(Path(__file__)),
+                    "run_registration_path": (
+                        str(run_registration_path) if run_registration_path else None
+                    ),
+                    "run_registration_sha256": run_registration_sha256,
                     "noise_sigma_rng_initial_sha256": noise_sigma_rng_initial_sha256,
                     "noise_sigma_rng_current_sha256": tensor_sha256(generator.get_state()),
                     **target_prompt_provenance,
@@ -1223,12 +1561,50 @@ def train(
                         if target_prompt_teacher_losses
                         else 0.0
                     ),
-                    "teacher_scale_sanity_count": len(
-                        target_prompt_teacher_ratios_first_16
+                    "teacher_scale_sanity_protocol": (
+                        "water_impact_dynamic_v3b_scale_sanity_v2"
+                        if uses_target_prompt_teacher
+                        else None
                     ),
+                    "teacher_scale_sanity_count": len(target_prompt_scale_observations),
                     "teacher_scale_sanity_mean_ratio": (
-                        float(np.mean(target_prompt_teacher_ratios_first_16))
-                        if target_prompt_teacher_ratios_first_16
+                        first_scale_metrics["mean_raw_loss_ratio"]
+                        if first_scale_metrics
+                        else None
+                    ),
+                    "teacher_scale_sanity_mean_raw_loss_ratio": (
+                        first_scale_metrics["mean_raw_loss_ratio"]
+                        if first_scale_metrics
+                        else None
+                    ),
+                    "teacher_scale_sanity_mean_weighted_loss_ratio": (
+                        first_scale_metrics["mean_weighted_loss_ratio"]
+                        if first_scale_metrics
+                        else None
+                    ),
+                    "teacher_scale_sanity_mean_weighted_output_gradient_norm_ratio": (
+                        first_scale_metrics["mean_weighted_output_grad_ratio"]
+                        if first_scale_metrics
+                        else None
+                    ),
+                    "teacher_scale_sanity_median_weighted_output_gradient_norm_ratio": (
+                        first_scale_metrics["median_weighted_output_grad_ratio"]
+                        if first_scale_metrics
+                        else None
+                    ),
+                    "teacher_scale_sanity_mean_output_gradient_norm_ratio_min": (
+                        args.target_prompt_sanity_min_output_grad_ratio
+                        if uses_target_prompt_teacher
+                        else None
+                    ),
+                    "teacher_scale_sanity_mean_output_gradient_norm_ratio_max": (
+                        args.target_prompt_sanity_max_output_grad_ratio
+                        if uses_target_prompt_teacher
+                        else None
+                    ),
+                    "teacher_scale_sanity_single_output_gradient_norm_ratio_max": (
+                        args.target_prompt_sanity_max_single_output_grad_ratio
+                        if uses_target_prompt_teacher
                         else None
                     ),
                     "teacher_scale_sanity_mean_combined_grad_norm": (
@@ -1237,11 +1613,30 @@ def train(
                         else None
                     ),
                     "teacher_scale_sanity_passed": (
-                        None
-                        if len(target_prompt_teacher_ratios_first_16) < 16
-                        else 0.1
-                        <= float(np.mean(target_prompt_teacher_ratios_first_16))
-                        <= 10.0
+                        target_prompt_scale_sanity["passed"]
+                        if target_prompt_scale_sanity is not None
+                        else None
+                    ),
+                    "teacher_scale_sanity_path": (
+                        str(sanity_path) if sanity_path.is_file() else None
+                    ),
+                    "teacher_scale_sanity_sha256": (
+                        file_sha256(sanity_path) if sanity_path.is_file() else None
+                    ),
+                    "mean_target_prompt_raw_loss_ratio_last_20": (
+                        recent_scale_metrics["mean_raw_loss_ratio"]
+                        if recent_scale_metrics
+                        else None
+                    ),
+                    "mean_target_prompt_weighted_loss_ratio_last_20": (
+                        recent_scale_metrics["mean_weighted_loss_ratio"]
+                        if recent_scale_metrics
+                        else None
+                    ),
+                    "mean_target_prompt_weighted_output_gradient_norm_ratio_last_20": (
+                        recent_scale_metrics["mean_weighted_output_grad_ratio"]
+                        if recent_scale_metrics
+                        else None
                     ),
                     "mean_gate_last_20": float(np.mean(gate_means[-20:])),
                 },

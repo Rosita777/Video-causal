@@ -3,12 +3,14 @@ from __future__ import annotations
 import importlib.util
 import hashlib
 import json
+import os
 from pathlib import Path
 import random
 import sys
 from types import SimpleNamespace
 import tempfile
 import unittest
+from unittest import mock
 
 import numpy as np
 import torch
@@ -159,6 +161,215 @@ class TrainingSeedTest(unittest.TestCase):
 
 
 class TargetPromptTeacherTest(unittest.TestCase):
+    def test_run_registration_binds_canonical_code_and_frozen_training_config(self) -> None:
+        module = load_module()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            output_dir = root / "output"
+            output_dir.mkdir()
+            launcher = root / "scripts/run_water_impact_dynamic_sft_v3b_teacher.sh"
+            protocol_doc = root / "docs/water_impact_dynamic_v3b_target_prompt_teacher.md"
+            launcher.parent.mkdir()
+            protocol_doc.parent.mkdir()
+            launcher.write_text("launcher\n", encoding="utf-8")
+            protocol_doc.write_text("protocol\n", encoding="utf-8")
+            frozen_artifacts = {
+                "outputs/water_impact_dynamic_v3b/logs/train_target_prompt_teacher_v1.log": (
+                    "c0f35542d9be763ea4a446af773e0e22fe44913b019b89aca51588780f5719ba"
+                ),
+                "outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_v1/"
+                "checkpoint-000025/pytorch_lora_weights.safetensors": (
+                    "2ee9f08c83d291630c09efcdf5bf0f8ae082f7b23b4c6be0ed89de791377ff3b"
+                ),
+                "outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_v1/"
+                "checkpoint-000025/training_state.json": (
+                    "d51fe90cedc168125e773f4c44ad458cc2baf84f409df6ed29f20cc09bcae854"
+                ),
+            }
+            for relative in frozen_artifacts:
+                path = root / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b"fixture")
+            args = SimpleNamespace(
+                output_dir=output_dir,
+                target_prompt_calibration_id="lambda4_from_lambda1_first16_output_gradient_v1",
+                target_prompt_teacher_weight=4.0,
+                target_prompt_sanity_min_output_grad_ratio=0.2,
+                target_prompt_sanity_max_output_grad_ratio=0.5,
+                target_prompt_sanity_max_single_output_grad_ratio=1.0,
+                target_prompt_cache_sha256="teacher-cache",
+                model=Path("models/Wan2.1-T2V-1.3B-Diffusers"),
+                height=480,
+                width=832,
+                num_frames=49,
+                max_steps=200,
+                learning_rate=5e-5,
+                rank=16,
+                alpha=16,
+                grad_accum=1,
+                seed=26000,
+                device="cuda",
+                role="all",
+                objective="target_prompt_teacher",
+                balanced_roles=True,
+                preserve_weight=4.0,
+            )
+            training_config = {
+                "model": "models/Wan2.1-T2V-1.3B-Diffusers",
+                "height": 480,
+                "width": 832,
+                "num_frames": 49,
+                "max_steps": 200,
+                "learning_rate": 5e-5,
+                "rank": 16,
+                "alpha": 16,
+                "grad_accum": 1,
+                "seed": 26000,
+                "device": "cuda",
+                "role": "all",
+                "objective": "target_prompt_teacher",
+                "balanced_roles": True,
+                "preserve_weight": 4.0,
+            }
+            registration = {
+                "protocol": "water_impact_dynamic_v3b_target_prompt_teacher_scale4_v1",
+                "calibration_id": args.target_prompt_calibration_id,
+                "output_dir": str(output_dir),
+                "target_prompt_teacher_weight": 4.0,
+                "sanity_mean_min": 0.2,
+                "sanity_mean_max": 0.5,
+                "sanity_single_max": 1.0,
+                "train_manifest_sha256": "manifest",
+                "base_cache_sha256": "base-cache",
+                "teacher_cache_sha256": "teacher-cache",
+                "expected_initial_lora_sha256": (
+                    "af163fcb6706c8403ffb1eaa9001cb2b9ac8ef86110663e8b20000961bb270a8"
+                ),
+                "lambda1_scale_invalid": True,
+                "lambda1_generation_count": 0,
+                "lambda1_mean_raw_loss_ratio_first_16": 0.005843,
+                "training_config": training_config,
+                "trainer_path": str(Path(module.__file__).resolve()),
+                "trainer_sha256": "trainer-hash",
+                "launcher_path": "scripts/run_water_impact_dynamic_sft_v3b_teacher.sh",
+                "launcher_sha256": "launcher-hash",
+                "protocol_doc_path": "docs/water_impact_dynamic_v3b_target_prompt_teacher.md",
+                "protocol_doc_sha256": "protocol-hash",
+                "lambda1_artifacts": [
+                    {"path": path, "sha256": digest}
+                    for path, digest in frozen_artifacts.items()
+                ],
+            }
+            (output_dir / "run_registration.json").write_text(
+                json.dumps(registration), encoding="utf-8"
+            )
+
+            def fake_hash(path: Path) -> str:
+                resolved = Path(path).resolve()
+                if resolved == Path(module.__file__).resolve():
+                    return "trainer-hash"
+                if resolved == launcher.resolve():
+                    return "launcher-hash"
+                if resolved == protocol_doc.resolve():
+                    return "protocol-hash"
+                relative = str(resolved.relative_to(root))
+                if relative in frozen_artifacts:
+                    return frozen_artifacts[relative]
+                return "registration-hash"
+
+            with mock.patch.object(module, "file_sha256", side_effect=fake_hash):
+                previous = Path.cwd()
+                try:
+                    os.chdir(root)
+                    path, digest, payload = module.validate_target_prompt_run_registration(
+                        args,
+                        manifest_sha256="manifest",
+                        base_cache_sha256="base-cache",
+                    )
+                finally:
+                    os.chdir(previous)
+            self.assertEqual(path, output_dir / "run_registration.json")
+            self.assertEqual(digest, "registration-hash")
+            self.assertEqual(payload["training_config"], training_config)
+
+            args.learning_rate = 1e-4
+            with self.assertRaisesRegex(ValueError, "outside the frozen protocol"):
+                module.validate_target_prompt_run_registration(
+                    args,
+                    manifest_sha256="manifest",
+                    base_cache_sha256="base-cache",
+                )
+
+    def test_scale_sanity_uses_weighted_per_step_output_gradient_ratio(self) -> None:
+        module = load_module()
+        raw_ratios = [0.01] * 8 + [0.09] * 8
+        observations = [
+            {
+                "global_step": 2 * index + 1,
+                "scene_id": f"scene_{index}",
+                "flow_loss": 0.1,
+                "target_prompt_teacher_loss": 0.1 * raw_ratio,
+                "raw_loss_ratio": raw_ratio,
+                "weighted_loss_ratio": raw_ratio,
+                "weighted_output_gradient_norm_ratio": raw_ratio**0.5,
+            }
+            for index, raw_ratio in enumerate(raw_ratios)
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            payload = module.write_target_prompt_scale_sanity(
+                Path(directory),
+                observations,
+                weight=1.0,
+                mean_min=0.19,
+                mean_max=0.21,
+                single_max=1.0,
+                calibration_id="fixture-calibration",
+                run_registration_sha256="a" * 64,
+            )
+
+            self.assertTrue(payload["passed"])
+            self.assertAlmostEqual(
+                payload["mean_weighted_output_grad_ratio"], 0.2
+            )
+            self.assertAlmostEqual(payload["mean_weighted_loss_ratio"], 0.05)
+            self.assertEqual(payload["calibration_id"], "fixture-calibration")
+            self.assertEqual(payload["run_registration_sha256"], "a" * 64)
+            self.assertTrue(
+                (Path(directory) / "target_prompt_scale_sanity.json").is_file()
+            )
+            with self.assertRaises(FileExistsError):
+                module.write_target_prompt_scale_sanity(
+                    Path(directory),
+                    observations,
+                    weight=1.0,
+                    mean_min=0.19,
+                    mean_max=0.21,
+                    single_max=1.0,
+                    calibration_id="fixture-calibration",
+                    run_registration_sha256="a" * 64,
+                )
+
+        with tempfile.TemporaryDirectory() as directory:
+            payload = module.write_target_prompt_scale_sanity(
+                Path(directory),
+                observations,
+                weight=4.0,
+                mean_min=0.1,
+                mean_max=1.0,
+                single_max=1.0,
+                calibration_id="fixture-calibration",
+                run_registration_sha256="a" * 64,
+            )
+            self.assertFalse(payload["passed"])
+
+        calibrated = module.target_prompt_scale_metrics([0.005843] * 16, 4.0)
+        self.assertAlmostEqual(
+            calibrated["mean_weighted_output_grad_ratio"],
+            4.0 * 0.005843**0.5,
+        )
+        with self.assertRaisesRegex(ValueError, "finite and non-negative"):
+            module.target_prompt_scale_metrics([float("nan")], 4.0)
+
     def test_pair_forward_restores_adapters_when_teacher_raises(self) -> None:
         module = load_module()
 

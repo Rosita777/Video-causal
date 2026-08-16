@@ -6,6 +6,10 @@ cd "$(dirname "$0")/.."
 PYTHON="${WAN_PYTHON:-models/.wan-runtime/bin/python}"
 MODEL="${WAN_MODEL:-models/Wan2.1-T2V-1.3B-Diffusers}"
 DEVICE="${WAN_DEVICE:-cuda}"
+if [[ "$MODEL" != "models/Wan2.1-T2V-1.3B-Diffusers" || "$DEVICE" != "cuda" ]]; then
+  echo "v3b scale protocol requires the frozen Wan model path and cuda device" >&2
+  exit 1
+fi
 MANIFEST="data/water_impact_dynamic_v1/train_dynamic_sft_preserve_v2.csv"
 EXPECTED_MANIFEST_SHA256="3d4d8cbf9244b1575357f0ac74380cd7cb6265df4d1a85bf450de4cac120aee4"
 BASE_CACHE_DIR="outputs/water_impact_dynamic_v1/cache_dynamic_sft_preserve_v2"
@@ -15,7 +19,6 @@ EXPECTED_TEACHER_CACHE_SHA256="6cf7ba0112d8df0e0a5253a7a943411fcfd85c56fc6df5804
 EXPECTED_TEACHER_CACHE_MANIFEST_SHA256="c467d7f81ee22b2c4b1ff719537487fbfc808eacc98e730c3d24f0a17aca77cb"
 EXPECTED_UNIQUE_EMBEDDING_SHA256="a15f5e910358d5e95bcdd995303abb7eb7e7302fd9ee649c4cfebf3b8f6b6330"
 EXPECTED_PROMPT_BINDING_SHA256="9b1cc6e5bbdbe60b8f9f8378dc0ea11fea2fe82d8c73d6f9afed3f72b2bd00cc"
-OUTPUT_DIR="outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_v1"
 
 verify_manifest() {
   "$PYTHON" - "$MANIFEST" "$EXPECTED_MANIFEST_SHA256" <<'PY'
@@ -133,6 +136,107 @@ print(f"Validated {len(expected)} teacher cache entries; SHA-256={actual_invento
 PY
 }
 
+write_run_registration() {
+  "$PYTHON" - \
+    "$OUTPUT_DIR" \
+    "$CALIBRATION_ID" \
+    "$TEACHER_WEIGHT" \
+    "$SANITY_MEAN_MIN" \
+    "$SANITY_MEAN_MAX" \
+    "$SANITY_SINGLE_MAX" \
+    "$EXPECTED_MANIFEST_SHA256" \
+    "$EXPECTED_BASE_CACHE_SHA256" \
+    "$EXPECTED_TEACHER_CACHE_SHA256" <<'PY'
+from datetime import datetime, timezone
+from hashlib import sha256
+import json
+from pathlib import Path
+import sys
+
+def file_sha256(path: Path) -> str:
+    digest = sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+output_dir = Path(sys.argv[1])
+pilot = [
+    {
+        "path": "outputs/water_impact_dynamic_v3b/logs/train_target_prompt_teacher_v1.log",
+        "sha256": "c0f35542d9be763ea4a446af773e0e22fe44913b019b89aca51588780f5719ba",
+    },
+    {
+        "path": "outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_v1/checkpoint-000025/pytorch_lora_weights.safetensors",
+        "sha256": "2ee9f08c83d291630c09efcdf5bf0f8ae082f7b23b4c6be0ed89de791377ff3b",
+    },
+    {
+        "path": "outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_v1/checkpoint-000025/training_state.json",
+        "sha256": "d51fe90cedc168125e773f4c44ad458cc2baf84f409df6ed29f20cc09bcae854",
+    },
+]
+for record in pilot:
+    path = Path(record["path"])
+    if not path.is_file() or file_sha256(path) != record["sha256"]:
+        raise SystemExit(f"lambda=1 pilot artifact mismatch: {path}")
+
+trainer = Path("scripts/train_wan_waterdrop_lora.py")
+launcher = Path("scripts/run_water_impact_dynamic_sft_v3b_teacher.sh")
+protocol_doc = Path("docs/water_impact_dynamic_v3b_target_prompt_teacher.md")
+registration = {
+    "protocol": "water_impact_dynamic_v3b_target_prompt_teacher_scale4_v1",
+    "created_utc": datetime.now(timezone.utc).isoformat(),
+    "calibration_id": sys.argv[2],
+    "output_dir": str(output_dir),
+    "target_prompt_teacher_weight": float(sys.argv[3]),
+    "sanity_mean_min": float(sys.argv[4]),
+    "sanity_mean_max": float(sys.argv[5]),
+    "sanity_single_max": float(sys.argv[6]),
+    "sanity_formula": "s_i = weight * sqrt(target_prompt_teacher_loss / flow_loss)",
+    "sanity_aggregation": "arithmetic_mean_over_first_16_erase_steps",
+    "selection_rule": "nearest_power_of_two(0.30 / mean_i(sqrt(r_i)))",
+    "train_manifest_sha256": sys.argv[7],
+    "base_cache_sha256": sys.argv[8],
+    "teacher_cache_sha256": sys.argv[9],
+    "expected_initial_lora_sha256": "af163fcb6706c8403ffb1eaa9001cb2b9ac8ef86110663e8b20000961bb270a8",
+    "lambda1_scale_invalid": True,
+    "lambda1_generation_count": 0,
+    "lambda1_mean_raw_loss_ratio_first_16": 0.005843,
+    "lambda1_logged_mean_sqrt_raw_ratio_first_15": 0.07529824553306262,
+    "lambda1_logged_median_sqrt_raw_ratio_first_15": 0.07650179622526487,
+    "lambda1_artifacts": pilot,
+    "training_config": {
+        "model": "models/Wan2.1-T2V-1.3B-Diffusers",
+        "height": 480,
+        "width": 832,
+        "num_frames": 49,
+        "max_steps": 200,
+        "learning_rate": 5e-5,
+        "rank": 16,
+        "alpha": 16,
+        "grad_accum": 1,
+        "seed": 26000,
+        "device": "cuda",
+        "role": "all",
+        "objective": "target_prompt_teacher",
+        "balanced_roles": True,
+        "preserve_weight": 4.0,
+    },
+    "trainer_path": str(trainer),
+    "trainer_sha256": file_sha256(trainer),
+    "launcher_path": str(launcher),
+    "launcher_sha256": file_sha256(launcher),
+    "protocol_doc_path": str(protocol_doc),
+    "protocol_doc_sha256": file_sha256(protocol_doc),
+}
+path = output_dir / "run_registration.json"
+temporary = path.with_suffix(".json.tmp")
+temporary.write_text(json.dumps(registration, indent=2) + "\n", encoding="utf-8")
+temporary.replace(path)
+print(f"Wrote frozen run registration: {path} SHA-256={file_sha256(path)}")
+PY
+}
+
 verify_manifest
 
 case "${1:-}" in
@@ -144,9 +248,19 @@ case "${1:-}" in
       --device "$DEVICE"
     ;;
   train)
+    echo "the lambda=1 run is frozen scale-invalid; use commit a1598ec to reproduce it" >&2
+    exit 1
+    ;;
+  train-scale4)
+    OUTPUT_DIR="outputs/water_impact_dynamic_v3b/adapter_target_prompt_teacher_scale4_v1"
+    TEACHER_WEIGHT="4.0"
+    CALIBRATION_ID="lambda4_from_lambda1_first16_output_gradient_v1"
+    SANITY_MEAN_MIN="0.2"
+    SANITY_MEAN_MAX="0.5"
+    SANITY_SINGLE_MAX="1.0"
     ;;
   *)
-    echo "usage: $0 {prepare|train}" >&2
+    echo "usage: $0 {prepare|train-scale4}" >&2
     exit 2
     ;;
 esac
@@ -158,6 +272,7 @@ if ! mkdir "$OUTPUT_DIR" 2>/dev/null; then
   exit 1
 fi
 printf '%s\n' "pid=$$ started_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$OUTPUT_DIR/.run_reservation"
+write_run_registration
 
 exec "$PYTHON" scripts/train_wan_waterdrop_lora.py \
   --manifest "$MANIFEST" \
@@ -178,6 +293,10 @@ exec "$PYTHON" scripts/train_wan_waterdrop_lora.py \
   --device "$DEVICE" \
   --role all \
   --objective target_prompt_teacher \
-  --target-prompt-teacher-weight 1.0 \
+  --target-prompt-teacher-weight "$TEACHER_WEIGHT" \
+  --target-prompt-calibration-id "$CALIBRATION_ID" \
+  --target-prompt-sanity-min-output-grad-ratio "$SANITY_MEAN_MIN" \
+  --target-prompt-sanity-max-output-grad-ratio "$SANITY_MEAN_MAX" \
+  --target-prompt-sanity-max-single-output-grad-ratio "$SANITY_SINGLE_MAX" \
   --preserve-weight 4.0 \
   --balanced-roles
