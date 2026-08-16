@@ -264,41 +264,40 @@ replacement of the erase-row factual prompt's causal-source phrase from a
 frozen 64-item bank. This directly tests whether the adapter can learn the
 causal-source role rather than memorize the eight training nouns.
 
-V4 now has an independently approved fail-closed implementation and a valid
-`v4_dev72_v2` public registry. The first v1 registry and the first pre-freeze
-v2 draft were rejected by physical/source audits; their aggregate failures and
-public hashes remain recorded in the final v2 registry. The final curated new
-ontology passes 80/80 strict physical checks, with 56 public bank sources and
-24 committed private holdout sources. The eight historical training sources
-are the only explicit legacy exception and must still pass full-video Original
-screening. The deterministic 178-row public mapping is frozen at
+V4 has an independently approved fail-closed implementation and a formally
+frozen `v4_dev72_v2` Stage-0 public registry. The first v1 registry and the
+first pre-freeze v2 draft were rejected by physical/source audits; their
+aggregate failures and public hashes remain recorded in the final v2 registry.
+The final curated new ontology passes 80/80 strict physical checks, with 56
+public bank sources and 24 committed private holdout sources. The eight
+historical training sources are the only explicit legacy exception and were
+still subject to full-video Original screening. The deterministic 178-row
+public mapping is frozen at
 `data/water_impact_dynamic_v4/source_mapping_v2.json`.
 
 The implementation/public artifacts are committed, the remote runtime and
-full-model byte inventories validate, and the causal Stage-0 opening is now
-frozen at `data/water_impact_dynamic_v4/causal_stage0_commitment_v2.json`
-(SHA-256 `29696ad8031bb164fe1c6819c8c382d7e4e828835f750f0d245e4877d4167b38`).
-This authorizes only the 48-case Original screening run; it does not authorize
-v4 training or any treatment-arm generation. The remaining order is strict:
+full-model byte inventories validate, and the causal Stage-0 opening is frozen
+at `data/water_impact_dynamic_v4/causal_stage0_commitment_v2.json` (SHA-256
+`29696ad8031bb164fe1c6819c8c382d7e4e828835f750f0d245e4877d4167b38`).
+The authorized 48-case Original-only screen completed and its review freeze
+succeeded, but only 24 candidates were eligible. Two of the six registered
+cells had one eligible candidate against the exact quota of four. The selector
+therefore failed closed before producing selected24 or U72. The formal outcome
+is `preflight_dataset_invalid`, recorded in
+`results/water_impact_dynamic_v4_causal_screening_termination_v2.md`.
 
-1. generate and independently screen only the 48 committed causal Original
-   videos, then freeze the causal Stage-1 selected 24 cases and 72 units;
-2. construct, authorize, generate, and screen the dependent specificity pool,
-   then freeze its selected 18 cases, 36 units, and six same-noun mappings;
-3. only after both Stage-1 registries exist, create the prompt sidecar and
-   independent augmented-prompt re-encoding preflight, freeze code/gate/runtime
-   registries and the final training authorization, and run the sole eligible
-   200-step v4 training job;
-4. generate the registered v3b/v4 development arms and run the committed
-   public/private blind-review protocol. Sealed-final36 remains inaccessible
-   unless every causal, specificity, and role-selectivity gate passes.
+There is no causal Stage-1 commitment, specificity dataset, prompt sidecar,
+training authorization, v4 training run, checkpoint, treatment generation, or
+v4 evaluation. `v4_dev72_v2` must not be retried or repaired by replacing
+candidates, prompts, sources, receivers, or seeds. Sealed-final36 remains
+unopened.
 
-Only the single source-slot intervention may be run. Do not combine it with
-anti-guidance, masks, span gates, hard-negative preserve training, another
-teacher weight, or another sigma schedule. Both the fresh causal gate and the
-same-noun specificity gate must pass completely before any paper-final use.
-An invalid or negative v4 result does not authorize tuning on the inspected
-set.
+The registered `v4_dev72_v2` intervention may not now be run. Do not combine
+it with anti-guidance, masks, span gates, hard-negative preserve training,
+another teacher weight, or another sigma schedule. Both the fresh causal gate
+and the same-noun specificity gate must pass completely before any paper-final
+use. An invalid or negative v4 result does not authorize tuning on the
+inspected set.
 
 Only a method that passes a genuinely fresh development gate may be frozen and
 evaluated on sealed-final36 in a multi-seed paper main experiment. Do not
