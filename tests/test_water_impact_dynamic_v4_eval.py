@@ -2889,6 +2889,98 @@ class ScreeningFreezeTests(unittest.TestCase):
             after = sorted(path.relative_to(private_root) for path in private_root.rglob("*"))
             self.assertEqual(after, before)
 
+    def test_freeze_rejects_nonexact_adjudication_header_without_writing(self) -> None:
+        candidates = make_causal_screening_candidates()
+        template, reviewer_a, reviewer_b = self._public_inputs()
+        disputes = selector.derive_public_screening_disputes(
+            "causal", template, reviewer_a, reviewer_b
+        )
+        key_rows = [
+            {
+                "review_id": template_row["review_id"],
+                "candidate_id": candidate["candidate_id"],
+            }
+            for template_row, candidate in zip(template, candidates)
+        ]
+        adjudication_rows = [
+            {
+                "review_id": row["review_id"],
+                "field": row["field"],
+                "score": "1",
+                "brief_reason": "blinded review",
+            }
+            for row in disputes
+        ]
+        exact_header = selector.PUBLIC_SCREENING_ADJUDICATION_COLUMNS
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            private_root = root / "private"
+            private_root.mkdir()
+            reviewer_a_path = root / "review_a.csv"
+            reviewer_b_path = root / "review_b.csv"
+            dispute_path = root / "disputes.csv"
+            adjudication_path = root / "adjudication.csv"
+            protocol.write_csv(reviewer_a_path, reviewer_a)
+            protocol.write_csv(reviewer_b_path, reviewer_b)
+            protocol.write_csv(
+                dispute_path, disputes, fieldnames=("review_id", "field")
+            )
+            frozen_dir = private_root / "screening_frozen"
+            canonical_path = frozen_dir / "eligibility.csv"
+            audit_path = frozen_dir / "audit.csv"
+            freeze_manifest_path = private_root / "freeze.json"
+            arguments = {
+                "project_root": root,
+                "dataset": "causal",
+                "package_manifest_path": root / "package.json",
+                "private_root": private_root,
+                "candidate_manifest_path": root / "candidates.json",
+                "canonical_templates_path": root / "templates.json",
+                "screening_seed_path": root / "seed.txt",
+                "generation_spec_path": root / "generation.json",
+                "reviewer_a_path": reviewer_a_path,
+                "reviewer_b_path": reviewer_b_path,
+                "dispute_path": dispute_path,
+                "adjudication_path": adjudication_path,
+                "canonical_path": canonical_path,
+                "audit_path": audit_path,
+                "freeze_manifest_path": freeze_manifest_path,
+            }
+            malformed_headers = {
+                "duplicate": (*exact_header, exact_header[-1]),
+                "reordered": (
+                    exact_header[1],
+                    exact_header[0],
+                    *exact_header[2:],
+                ),
+            }
+            package = ({}, candidates, template, key_rows)
+            with mock.patch.object(
+                selector,
+                "validate_screening_review_package",
+                return_value=package,
+            ):
+                for label, header in malformed_headers.items():
+                    with self.subTest(label=label):
+                        with adjudication_path.open(
+                            "w", newline="", encoding="utf-8"
+                        ) as handle:
+                            writer = csv.writer(handle, lineterminator="\n")
+                            writer.writerow(header)
+                            writer.writerows(
+                                [row[column] for column in header]
+                                for row in adjudication_rows
+                            )
+                        with self.assertRaisesRegex(
+                            ValueError, "adjudication header is not exact"
+                        ):
+                            selector.freeze_screening_reviews(**arguments)
+                        self.assertFalse(frozen_dir.exists())
+                        self.assertFalse(canonical_path.exists())
+                        self.assertFalse(audit_path.exists())
+                        self.assertFalse(freeze_manifest_path.exists())
+
     def test_screening_merge_rejects_metadata_dispute_and_adjudication_tamper(self) -> None:
         candidates, reviewer_a, reviewer_b = self._inputs()
         disputes = selector.derive_screening_disputes(

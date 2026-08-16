@@ -28,6 +28,12 @@ from build_water_impact_dynamic_v4_blind_review import build_screening_composite
 
 SCREENING_FREEZE_PROTOCOL = "water_impact_dynamic_v4_screening_freeze_v2"
 SCREENING_PACKAGE_PROTOCOL = "water_impact_dynamic_v4_screening_review_package_v2"
+PUBLIC_SCREENING_ADJUDICATION_COLUMNS = (
+    "review_id",
+    "field",
+    "score",
+    "brief_reason",
+)
 CAUSAL_SCREENING_FIELDS = {
     "source": "source_visibility_0_absent_2_clear",
     "footprint": "footprint_visibility_0_absent_2_clear",
@@ -882,6 +888,21 @@ def _read_exact_public_screening_csv(
         return rows
 
 
+def _read_csv_with_exact_header(
+    path: Path,
+    *,
+    expected_header: Sequence[str],
+    label: str,
+) -> list[dict[str, str]]:
+    """Read a CSV only when its raw header has the exact registered order."""
+
+    with path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        if tuple(reader.fieldnames or ()) != tuple(expected_header):
+            raise ValueError(f"screening {label} header is not exact")
+        return list(reader)
+
+
 def derive_public_screening_disputes(
     dataset: str,
     template_rows: Sequence[Mapping[str, str]],
@@ -1342,9 +1363,13 @@ def freeze_screening_reviews(
         }
         for row in public_disputes
     ]
-    public_adjudication = protocol.read_csv(adjudication_path)
+    public_adjudication = _read_csv_with_exact_header(
+        adjudication_path,
+        expected_header=PUBLIC_SCREENING_ADJUDICATION_COLUMNS,
+        label="public adjudication",
+    )
     if any(
-        set(row) != {"review_id", "field", "score", "brief_reason"}
+        set(row) != set(PUBLIC_SCREENING_ADJUDICATION_COLUMNS)
         for row in public_adjudication
     ):
         raise ValueError("screening public adjudication columns are not exact")
@@ -1504,9 +1529,13 @@ def validate_screening_freeze(
         }
         for row in expected_disputes
     ]
-    public_adjudication = protocol.read_csv(paths["adjudication"])
+    public_adjudication = _read_csv_with_exact_header(
+        paths["adjudication"],
+        expected_header=PUBLIC_SCREENING_ADJUDICATION_COLUMNS,
+        label="frozen adjudication",
+    )
     if any(
-        set(row) != {"review_id", "field", "score", "brief_reason"}
+        set(row) != set(PUBLIC_SCREENING_ADJUDICATION_COLUMNS)
         for row in public_adjudication
     ):
         raise ValueError("screening frozen adjudication columns are not exact")
