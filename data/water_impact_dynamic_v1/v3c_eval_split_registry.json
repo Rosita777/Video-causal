@@ -1,0 +1,74 @@
+{
+  "protocol": "water_impact_dynamic_v3c_split_v1",
+  "status": "frozen_before_v3c_generation",
+  "selection_seed": 26016001,
+  "selection_algorithm": "sha256_rank_within_generalization_group_x_prompt_variant; lowest_4_of_10_to_fresh_dev",
+  "source_test_pairs": "data/water_impact_dynamic_v1/test_pairs.csv",
+  "source_test_pairs_sha256": "7a8ad92df03a78e8a972a2df552e61554836e225f2a310efc8e906e9cf2d0036",
+  "excluded_eval12": "data/water_impact_dynamic_v1/eval12.csv",
+  "excluded_eval12_sha256": "dca68f8632e10ef83cc5f3867679c9cba54f4cbce96426db5db8c5214ac1ec1a",
+  "fresh_dev_count": 24,
+  "sealed_final_count": 36,
+  "generalization_groups": [
+    "unseen_source",
+    "unseen_receiver",
+    "unseen_source_and_receiver"
+  ],
+  "prompt_variants": [
+    "direct",
+    "natural"
+  ],
+  "fresh_dev_per_group": 8,
+  "fresh_dev_per_group_variant": 4,
+  "assignment_sha256": "81ec2804e94ebc05f6fb09390f366ed9250dc22bd3a5f2c96e24cbb7dff83a26",
+  "registered_files": {
+    "data/water_impact_dynamic_v1/v3c_fresh_dev24.csv": {
+      "sha256": "3b286c4561e4a0671fad7d652fc4356978229f2b6630e4dd6ca661d85d3b9197",
+      "row_count": 24
+    },
+    "data/water_impact_dynamic_v1/v3c_sealed_final36.csv": {
+      "sha256": "983f684c7a798b84f02ce8817b9cf5a3f8ccf45f0697d5553f207661dc023a4b",
+      "row_count": 36
+    },
+    "prompts/water_impact_dynamic_v1/v3c_fresh_dev24.prompts": {
+      "sha256": "1190ae184b444f8fd0741842b0aacfb4331ace5d33f9ec9c09bf5165ec23c77d",
+      "row_count": 24
+    },
+    "prompts/water_impact_dynamic_v1/v3c_sealed_final36.prompts": {
+      "sha256": "ac9a618c4e973f188ca898fa90057a2696ecfacf24b9b47d43f568ac404b79dd",
+      "row_count": 36
+    }
+  },
+  "blind_seed": 26016002,
+  "review_semantics": {
+    "reviewers": 2,
+    "adjudication": "third_blinded_reviewer_for_every_atomic_disagreement",
+    "canonical_agreement": "exact_two_reviewer_agreement",
+    "canonical_disagreement": "majority_of_three; median_1_for_exact_0_1_2",
+    "public_private_packages": "distinct_sibling_directories"
+  },
+  "gate_spec": {
+    "decision": "all_checks_must_pass",
+    "control_method": "v3b",
+    "treatment_method": "v3c",
+    "control_usable_min": 20,
+    "target_suppression_margin_on_control_usable_min": 6,
+    "paired_target_improvements_min": 6,
+    "clear_to_absent_improvements_min": 2,
+    "clear_to_absent_generalization_groups_min": 2,
+    "absent_target_count_margin_min": 2,
+    "treatment_usable_min": 22,
+    "receiver_points_floor": "max(38, v3b_receiver_points - 2)",
+    "quality_points_floor": "max(32, v3b_quality_points - 2)",
+    "footprint_suppression_on_control_usable": "v3c >= v3b",
+    "strict_success_min": 2,
+    "usable_definition": "receiver>=1 and quality>=1",
+    "strict_definition": "target=0, footprint=0, receiver=2, quality=2",
+    "control_usable_set": "C={sample: usable(v3b_sample)}",
+    "valid_suppression_on_control_usable": "a v3c target or footprint contribution on C is 0 when that v3c output is unusable",
+    "absent_target_count": "count only usable outputs with target=0",
+    "paired_target_improvement": "sample in C with usable v3c and v3c_target < v3b_target"
+  },
+  "sealed_final_policy": "do_not_generate_inspect_or_score_until_fresh_dev_gate_passes_all_checks",
+  "stage2_policy": "v3c_checkpoint_and_training_artifact_hashes_must_be_registered_before_v3c_generation"
+}
