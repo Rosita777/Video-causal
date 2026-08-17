@@ -23,6 +23,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -118,6 +119,8 @@ EXPECTED_GENERATION = {
     "worker_count": 1,
 }
 MAX_SCREENING_GENERATION_SECONDS = 576 * 600
+PUBLICATION_MIN_SETTLE_SECONDS = 5.0
+PUBLICATION_VISIBILITY_TIMEOUT_SECONDS = 30.0
 GENERATOR_BOOTSTRAP = """
 import os, runpy, sys, types
 import torch, diffusers, diffusers.utils
@@ -1572,6 +1575,83 @@ def _tree_snapshot(root: Path) -> tuple[dict[str, Any], ...]:
     return tuple(records)
 
 
+def _visibility_projection(
+    snapshot: Sequence[Mapping[str, Any]],
+) -> tuple[dict[str, Any], ...]:
+    return tuple(
+        {
+            key: value
+            for key, value in record.items()
+            if key != "sha256"
+        }
+        for record in snapshot
+    )
+
+
+def _tree_visibility_snapshot(root: Path) -> tuple[dict[str, Any], ...]:
+    protocol.require(root.is_dir() and not root.is_symlink(), "visibility root invalid")
+    records: list[dict[str, Any]] = []
+    for entry in sorted(
+        root.rglob("*"), key=lambda value: value.relative_to(root).as_posix()
+    ):
+        protocol.require(not entry.is_symlink(), "visibility snapshot contains symlink")
+        relative = entry.relative_to(root).as_posix()
+        info = entry.stat()
+        if entry.is_dir():
+            records.append(
+                {
+                    "path": relative,
+                    "kind": "directory",
+                    "mode": stat.S_IMODE(info.st_mode),
+                }
+            )
+        elif entry.is_file():
+            protocol.require(info.st_nlink == 1, "visibility snapshot contains hardlink")
+            records.append(
+                {
+                    "path": relative,
+                    "kind": "file",
+                    "mode": stat.S_IMODE(info.st_mode),
+                    "size_bytes": info.st_size,
+                }
+            )
+        else:
+            raise ValueError("visibility snapshot contains non-regular entry")
+    return tuple(records)
+
+
+def _wait_for_published_visibility(
+    *,
+    public_dir: Path,
+    private_dir: Path,
+    expected_public: Sequence[Mapping[str, Any]],
+    expected_private: Sequence[Mapping[str, Any]],
+) -> None:
+    started = time.monotonic()
+    deadline = started + PUBLICATION_VISIBILITY_TIMEOUT_SECONDS
+    consecutive = 0
+    expected_public_visibility = _visibility_projection(expected_public)
+    expected_private_visibility = _visibility_projection(expected_private)
+    while time.monotonic() < deadline:
+        try:
+            matches = (
+                _tree_visibility_snapshot(public_dir)
+                == expected_public_visibility
+                and _tree_visibility_snapshot(private_dir)
+                == expected_private_visibility
+            )
+        except (FileNotFoundError, OSError):
+            matches = False
+        consecutive = consecutive + 1 if matches else 0
+        if (
+            consecutive >= 3
+            and time.monotonic() - started >= PUBLICATION_MIN_SETTLE_SECONDS
+        ):
+            return
+        time.sleep(0.25)
+    raise OSError("published package did not reach stable filesystem visibility")
+
+
 def _validate_public_package_payload(payload: Mapping[str, Any]) -> None:
     protocol.require_exact_keys(
         payload,
@@ -2010,6 +2090,7 @@ def build_screening_package(
     work_private = staging_root / "private"
     published: list[Path] = []
     reserved_targets: list[Path] = []
+    publication_complete = False
     try:
         work_public.mkdir(mode=0o700)
         work_private.mkdir(mode=0o700)
@@ -2423,6 +2504,13 @@ def build_screening_package(
         os.rename(work_public, public_dir)
         reserved_targets.remove(public_dir)
         published.append(public_dir)
+        publication_complete = True
+        _wait_for_published_visibility(
+            public_dir=public_dir,
+            private_dir=private_dir,
+            expected_public=staged_public_snapshot,
+            expected_private=staged_private_snapshot,
+        )
         return commitment
     except BaseException:
         for published_path in reversed(published):
@@ -2434,7 +2522,27 @@ def build_screening_package(
         raise
     finally:
         if staging_root.is_dir() and not staging_root.is_symlink():
-            shutil.rmtree(staging_root)
+            if publication_complete:
+                # Never recursively traverse the old directory immediately after
+                # rename: eventually-consistent FUSE clients can expose stale
+                # aliases and a recursive cleanup can delete newly published files.
+                removed = False
+                for _ in range(100):
+                    try:
+                        staging_root.rmdir()
+                        removed = True
+                        break
+                    except FileNotFoundError:
+                        removed = True
+                        break
+                    except OSError:
+                        time.sleep(0.05)
+                if not removed:
+                    raise OSError(
+                        "published package staging root did not become empty"
+                    )
+            else:
+                shutil.rmtree(staging_root)
 
 
 def _publish_invalid_outcome(

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import contextlib
+import errno
 import hashlib
 import importlib.util
 import io
@@ -3184,14 +3185,15 @@ class Stage0AuthorizerA2Tests(unittest.TestCase):
     def test_after_binding_opening_drift_rolls_back_both_outputs(self) -> None:
         with tempfile.TemporaryDirectory(dir=REPO) as directory:
             fixture = _make_stage0_authorize_fixture(Path(directory))
-            real_write = stage0_authorizer.protocol.write_json_exclusive_atomic
+            real_binding_write = (
+                stage0_authorizer._write_private_binding_exclusive
+            )
 
-            def write_then_drift(path, payload, *, mode=0o600):
-                result = real_write(path, payload, mode=mode)
-                if path == fixture["binding"]:
-                    fixture["candidate"].write_bytes(
-                        fixture["candidate"].read_bytes() + b" "
-                    )
+            def write_then_drift(path, payload):
+                result = real_binding_write(path, payload)
+                fixture["candidate"].write_bytes(
+                    fixture["candidate"].read_bytes() + b" "
+                )
                 return result
 
             patches = self._patches(fixture)
@@ -3203,8 +3205,8 @@ class Stage0AuthorizerA2Tests(unittest.TestCase):
                 patches[4],
                 patches[5],
                 mock.patch.object(
-                    stage0_authorizer.protocol,
-                    "write_json_exclusive_atomic",
+                    stage0_authorizer,
+                    "_write_private_binding_exclusive",
                     side_effect=write_then_drift,
                 ),
                 self.assertRaisesRegex(ValueError, "opening bytes changed"),
@@ -3317,12 +3319,13 @@ class Stage0AuthorizerA2Tests(unittest.TestCase):
                     if drift_name == "pending"
                     else fixture["project"] / stage0_authorizer.PREREG_PATH
                 )
-                real_write = stage0_authorizer.protocol.write_json_exclusive_atomic
+                real_binding_write = (
+                    stage0_authorizer._write_private_binding_exclusive
+                )
 
-                def write_then_drift(path, payload, *, mode=0o600):
-                    result = real_write(path, payload, mode=mode)
-                    if path == fixture["binding"]:
-                        target.write_bytes(target.read_bytes() + b" ")
+                def write_then_drift(path, payload):
+                    result = real_binding_write(path, payload)
+                    target.write_bytes(target.read_bytes() + b" ")
                     return result
 
                 patches = self._patches(fixture)
@@ -3334,8 +3337,8 @@ class Stage0AuthorizerA2Tests(unittest.TestCase):
                     patches[4],
                     patches[5],
                     mock.patch.object(
-                        stage0_authorizer.protocol,
-                        "write_json_exclusive_atomic",
+                        stage0_authorizer,
+                        "_write_private_binding_exclusive",
                         side_effect=write_then_drift,
                     ),
                     self.assertRaisesRegex(
@@ -4864,8 +4867,275 @@ class ScreeningFreezerV3Tests(unittest.TestCase):
             with screening_runner._screening_mutex(private_root):
                 pass
 
+    def test_portable_noreplace_fallback_reserves_and_pins_target(self) -> None:
+        class UnsupportedRename:
+            def __call__(self, *args) -> int:
+                del args
+                screening_freezer.ctypes.set_errno(errno.EINVAL)
+                return -1
+
+        class SyntheticLibc:
+            def __init__(self) -> None:
+                self.renameat2 = UnsupportedRename()
+
+        with tempfile.TemporaryDirectory(dir=REPO.parent) as directory:
+            parent = Path(directory)
+            source = parent / "staged"
+            target = parent / "freeze"
+            source.mkdir(mode=0o700)
+            staged_file = source / "manifest.json"
+            staged_file.write_bytes(b"synthetic frozen bytes")
+            staged_file.chmod(0o600)
+            source_identity = (source.stat().st_dev, source.stat().st_ino)
+            with mock.patch.object(
+                screening_freezer.ctypes,
+                "CDLL",
+                return_value=SyntheticLibc(),
+            ):
+                screening_freezer._rename_directory_noreplace(source, target)
+            self.assertFalse(source.exists())
+            self.assertEqual(
+                (target.stat().st_dev, target.stat().st_ino), source_identity
+            )
+            self.assertEqual(
+                (target / "manifest.json").read_bytes(),
+                b"synthetic frozen bytes",
+            )
+
+            second = parent / "second-stage"
+            second.mkdir(mode=0o700)
+            (second / "new.json").write_bytes(b"must not overwrite")
+            existing = target / "existing.json"
+            existing.write_bytes(b"existing target")
+            before = sorted(
+                (path.relative_to(target).as_posix(), path.read_bytes())
+                for path in target.iterdir()
+            )
+            with (
+                mock.patch.object(
+                    screening_freezer.ctypes,
+                    "CDLL",
+                    return_value=SyntheticLibc(),
+                ),
+                self.assertRaises(FileExistsError),
+            ):
+                screening_freezer._rename_directory_noreplace(second, target)
+            self.assertTrue(second.exists())
+            self.assertEqual(
+                before,
+                sorted(
+                    (path.relative_to(target).as_posix(), path.read_bytes())
+                    for path in target.iterdir()
+                ),
+            )
+
+            cleanup_source = parent / "cleanup-stage"
+            cleanup_target = parent / "cleanup-freeze"
+            cleanup_source.mkdir(mode=0o700)
+            with (
+                mock.patch.object(
+                    screening_freezer.ctypes,
+                    "CDLL",
+                    return_value=SyntheticLibc(),
+                ),
+                mock.patch.object(
+                    screening_freezer.os,
+                    "rename",
+                    side_effect=OSError(errno.EIO, "synthetic rename failure"),
+                ),
+                self.assertRaises(OSError),
+            ):
+                screening_freezer._rename_directory_noreplace(
+                    cleanup_source, cleanup_target
+                )
+            self.assertTrue(cleanup_source.exists())
+            self.assertFalse(cleanup_target.exists())
+
+            swapped_source = parent / "swapped-stage"
+            swapped_target = parent / "swapped-freeze"
+            swapped_source.mkdir(mode=0o700)
+
+            def swap_target_then_fail(
+                source_name: str,
+                target_name: str,
+                *,
+                src_dir_fd: int,
+                dst_dir_fd: int,
+            ) -> None:
+                del source_name, src_dir_fd
+                os.rmdir(target_name, dir_fd=dst_dir_fd)
+                os.mkdir(target_name, mode=0o700, dir_fd=dst_dir_fd)
+                foreign_fd = os.open(
+                    f"{target_name}/foreign.txt",
+                    os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                    0o600,
+                    dir_fd=dst_dir_fd,
+                )
+                os.write(foreign_fd, b"foreign target data")
+                os.close(foreign_fd)
+                raise OSError(errno.EIO, "synthetic path-swap failure")
+
+            with (
+                mock.patch.object(
+                    screening_freezer.ctypes,
+                    "CDLL",
+                    return_value=SyntheticLibc(),
+                ),
+                mock.patch.object(
+                    screening_freezer.os,
+                    "rename",
+                    side_effect=swap_target_then_fail,
+                ),
+                self.assertRaises(OSError),
+            ):
+                screening_freezer._rename_directory_noreplace(
+                    swapped_source, swapped_target
+                )
+            self.assertTrue(swapped_source.exists())
+            self.assertEqual(
+                (swapped_target / "foreign.txt").read_bytes(),
+                b"foreign target data",
+            )
+
+            expected_snapshot = screening_freezer._tree_integrity_snapshot(
+                target
+            )
+            observations = [
+                expected_snapshot,
+                expected_snapshot,
+                tuple(),
+                expected_snapshot,
+                expected_snapshot,
+                expected_snapshot,
+            ]
+            with (
+                mock.patch.object(
+                    screening_freezer,
+                    "PUBLICATION_MIN_SETTLE_SECONDS",
+                    0.0,
+                ),
+                mock.patch.object(
+                    screening_freezer,
+                    "PUBLICATION_VISIBILITY_TIMEOUT_SECONDS",
+                    1.0,
+                ),
+                mock.patch.object(
+                    screening_freezer,
+                    "_tree_integrity_snapshot",
+                    side_effect=observations,
+                ) as snapshot_mock,
+                mock.patch.object(screening_freezer.time, "sleep"),
+            ):
+                screening_freezer._wait_for_stable_freeze_visibility(
+                    target=target,
+                    expected_identity=(target.stat().st_dev, target.stat().st_ino),
+                    expected_snapshot=expected_snapshot,
+                )
+            self.assertEqual(snapshot_mock.call_count, 6)
+
 
 screening_runner = screening_freezer.screening_runner
+
+
+class Stage0AuthorizerA3Tests(unittest.TestCase):
+    def test_existing_invalid_or_stage1_rejects_before_private_root_access(self) -> None:
+        for relative in (v3_protocol.INVALID_OUTCOME, v3_protocol.STAGE1_REGISTRY):
+            with self.subTest(relative=relative), tempfile.TemporaryDirectory(
+                dir=REPO.parent
+            ) as directory:
+                project = Path(directory) / "project"
+                project.mkdir(mode=0o700)
+                blocker = project / relative
+                blocker.parent.mkdir(parents=True)
+                blocker.write_bytes(b"frozen terminal bytes\n")
+                before = sorted(
+                    (entry.relative_to(project).as_posix(), entry.read_bytes())
+                    for entry in project.rglob("*")
+                    if entry.is_file()
+                )
+                missing_private = Path(directory) / "private_does_not_exist"
+                with self.assertRaisesRegex(FileExistsError, "terminal|Stage-1"):
+                    stage0_authorizer.authorize(
+                        project_root=project,
+                        private_root=missing_private,
+                        pending_path=project / v3_protocol.STAGE0_PUBLIC,
+                        binding_path=missing_private
+                        / "causal_selection_binding_v3.json",
+                        wrapper_path=project / v3_protocol.STAGE0_REGISTRY,
+                    )
+                self.assertFalse(missing_private.exists())
+                self.assertEqual(
+                    before,
+                    sorted(
+                        (entry.relative_to(project).as_posix(), entry.read_bytes())
+                        for entry in project.rglob("*")
+                        if entry.is_file()
+                    ),
+                )
+
+    def test_private_root_mutex_has_one_nonmutating_process_winner(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO.parent) as directory:
+            private = Path(directory)
+            private.chmod(0o700)
+            before = list(private.iterdir())
+            with stage0_authorizer._authorization_mutex(private):
+                child = os.fork()
+                if child == 0:
+                    try:
+                        with stage0_authorizer._authorization_mutex(private):
+                            os._exit(91)
+                    except FileExistsError:
+                        os._exit(0)
+                    except BaseException:
+                        os._exit(92)
+                _, status = os.waitpid(child, 0)
+                self.assertTrue(os.WIFEXITED(status))
+                self.assertEqual(os.WEXITSTATUS(status), 0)
+            self.assertEqual(before, list(private.iterdir()))
+
+    def test_binding_writer_uses_inode_ownership_for_all_baseexceptions(self) -> None:
+        payload = {"protocol": "synthetic_binding_v3", "status": "frozen"}
+        for failure in (KeyboardInterrupt(), SystemExit(7)):
+            with self.subTest(failure=type(failure).__name__), tempfile.TemporaryDirectory(
+                dir=REPO.parent
+            ) as directory:
+                private = Path(directory)
+                private.chmod(0o700)
+                binding = private / "causal_selection_binding_v3.json"
+                real_link = stage0_authorizer.os.link
+
+                def link_then_interrupt(source, target):
+                    real_link(source, target)
+                    raise failure
+
+                with (
+                    mock.patch.object(
+                        stage0_authorizer.os,
+                        "link",
+                        side_effect=link_then_interrupt,
+                    ),
+                    self.assertRaises(type(failure)),
+                ):
+                    stage0_authorizer._write_private_binding_exclusive(
+                        binding, payload
+                    )
+                self.assertFalse(binding.exists())
+                self.assertEqual(list(private.iterdir()), [])
+
+        with tempfile.TemporaryDirectory(dir=REPO.parent) as directory:
+            private = Path(directory)
+            private.chmod(0o700)
+            binding = private / "causal_selection_binding_v3.json"
+            raw = v3_protocol.canonical_json_bytes(payload)
+            binding.write_bytes(raw)
+            binding.chmod(0o600)
+            inode = (binding.stat().st_dev, binding.stat().st_ino)
+            with self.assertRaises(FileExistsError):
+                stage0_authorizer._write_private_binding_exclusive(
+                    binding, payload
+                )
+            self.assertEqual(binding.read_bytes(), raw)
+            self.assertEqual((binding.stat().st_dev, binding.stat().st_ino), inode)
 
 
 class ScreeningRunnerV3Tests(unittest.TestCase):
@@ -5199,6 +5469,16 @@ class ScreeningRunnerV3Tests(unittest.TestCase):
                     for index in range(v3_protocol.CANDIDATE_COUNT)
                 ]
 
+            real_rmtree = screening_runner.shutil.rmtree
+
+            def reject_recursive_published_staging(path, *args, **kwargs):
+                if Path(path).name.startswith(".causal-screening-package-v3-"):
+                    raise AssertionError(
+                        "successful package publication must not recursively "
+                        "clean the renamed staging root"
+                    )
+                return real_rmtree(path, *args, **kwargs)
+
             patches = self._runner_validation_patches(fixture)
             with (
                 patches[0],
@@ -5223,6 +5503,11 @@ class ScreeningRunnerV3Tests(unittest.TestCase):
                     "_build_composite",
                     side_effect=self._fake_composite,
                 ),
+                mock.patch.object(
+                    screening_runner.shutil,
+                    "rmtree",
+                    side_effect=reject_recursive_published_staging,
+                ),
             ):
                 result = screening_runner.run_screening(
                     project_root=project,
@@ -5233,6 +5518,15 @@ class ScreeningRunnerV3Tests(unittest.TestCase):
                 )
             self.assertEqual(result["status"], "succeeded")
             self.assertEqual(result["candidate_count"], 576)
+            self.assertGreaterEqual(
+                screening_runner.PUBLICATION_MIN_SETTLE_SECONDS, 5.0
+            )
+            self.assertFalse(
+                any(
+                    entry.name.startswith(".causal-screening-package-v3-")
+                    for entry in private.iterdir()
+                )
+            )
             generation = private / screening_runner.GENERATION_DIRNAME
             public = private / screening_runner.PUBLIC_PACKAGE_DIRNAME
             private_package = private / screening_runner.PRIVATE_PACKAGE_DIRNAME

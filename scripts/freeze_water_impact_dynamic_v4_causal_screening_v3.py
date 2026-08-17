@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import ctypes
 import csv
+import errno
 import hashlib
 import io
 import json
@@ -21,6 +22,7 @@ import shutil
 import stat
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 from statistics import median
 from typing import Any, Callable, Iterable, Mapping, Sequence
@@ -123,6 +125,8 @@ MEDIA_EXPECTED = {
     "fps_denominator": 1,
 }
 REVIEW_ID_PATTERN = re.compile(r"s[0-9]{3}\Z")
+PUBLICATION_MIN_SETTLE_SECONDS = 5.0
+PUBLICATION_VISIBILITY_TIMEOUT_SECONDS = 30.0
 
 
 def _record(path: Path, row_count: int | None) -> dict[str, Any]:
@@ -1257,6 +1261,13 @@ def _record_bytes(raw: bytes, row_count: int | None) -> dict[str, Any]:
 
 
 def _rename_directory_noreplace(source: Path, target: Path) -> None:
+    source_info = os.lstat(source)
+    protocol.require(
+        stat.S_ISDIR(source_info.st_mode) and not stat.S_ISLNK(source_info.st_mode),
+        "freeze staging source must be a real directory",
+    )
+    source_identity = (source_info.st_dev, source_info.st_ino)
+    expected_snapshot = _tree_integrity_snapshot(source)
     libc = ctypes.CDLL(None, use_errno=True)
     source_raw = os.fsencode(source)
     target_raw = os.fsencode(target)
@@ -1281,9 +1292,202 @@ def _rename_directory_noreplace(source: Path, target: Path) -> None:
         raise RuntimeError("platform lacks atomic no-replace directory rename")
     if result != 0:
         error = ctypes.get_errno()
-        if error == 17:
+        if error == errno.EEXIST:
             raise FileExistsError(error, os.strerror(error), target)
-        raise OSError(error, os.strerror(error), target)
+        if error in {errno.EINVAL, errno.ENOSYS, errno.EOPNOTSUPP}:
+            _portable_reserved_directory_rename(source, target)
+        else:
+            raise OSError(error, os.strerror(error), target)
+    _wait_for_stable_freeze_visibility(
+        target=target,
+        expected_identity=source_identity,
+        expected_snapshot=expected_snapshot,
+    )
+
+
+def _tree_integrity_snapshot(root: Path) -> tuple[dict[str, Any], ...]:
+    root_info = os.lstat(root)
+    protocol.require(
+        stat.S_ISDIR(root_info.st_mode) and not stat.S_ISLNK(root_info.st_mode),
+        "freeze visibility root must be a real directory",
+    )
+    records: list[dict[str, Any]] = []
+    for entry in sorted(
+        root.rglob("*"), key=lambda value: value.relative_to(root).as_posix()
+    ):
+        info = os.lstat(entry)
+        protocol.require(
+            not stat.S_ISLNK(info.st_mode),
+            "freeze visibility snapshot contains a symlink",
+        )
+        relative = entry.relative_to(root).as_posix()
+        if stat.S_ISDIR(info.st_mode):
+            records.append(
+                {
+                    "path": relative,
+                    "kind": "directory",
+                    "mode": stat.S_IMODE(info.st_mode),
+                }
+            )
+        elif stat.S_ISREG(info.st_mode):
+            protocol.require(
+                info.st_nlink == 1,
+                "freeze visibility snapshot contains a hardlink",
+            )
+            records.append(
+                {
+                    "path": relative,
+                    "kind": "file",
+                    "mode": stat.S_IMODE(info.st_mode),
+                    "size_bytes": info.st_size,
+                    "sha256": protocol.sha256_file(entry),
+                }
+            )
+        else:
+            raise ValueError("freeze visibility snapshot contains a non-regular entry")
+    return tuple(records)
+
+
+def _wait_for_stable_freeze_visibility(
+    *,
+    target: Path,
+    expected_identity: tuple[int, int],
+    expected_snapshot: Sequence[Mapping[str, Any]],
+) -> None:
+    started = time.monotonic()
+    deadline = started + PUBLICATION_VISIBILITY_TIMEOUT_SECONDS
+    consecutive = 0
+    while time.monotonic() < deadline:
+        try:
+            info = os.lstat(target)
+            matches = (
+                stat.S_ISDIR(info.st_mode)
+                and not stat.S_ISLNK(info.st_mode)
+                and stat.S_IMODE(info.st_mode) == 0o700
+                and (info.st_dev, info.st_ino) == expected_identity
+                and _tree_integrity_snapshot(target)
+                == tuple(dict(record) for record in expected_snapshot)
+            )
+        except (FileNotFoundError, OSError, ValueError):
+            matches = False
+        consecutive = consecutive + 1 if matches else 0
+        if (
+            consecutive >= 3
+            and time.monotonic() - started >= PUBLICATION_MIN_SETTLE_SECONDS
+        ):
+            return
+        time.sleep(0.25)
+    raise OSError("published freeze did not reach stable filesystem visibility")
+
+
+def _portable_reserved_directory_rename(source: Path, target: Path) -> None:
+    """Publish a directory on filesystems lacking no-replace rename.
+
+    The shared private-root mutex serializes cooperating publishers.  Reserving
+    the exact target as an owned empty directory prevents an unguarded
+    check-then-rename fallback from overwriting a pre-existing target.
+    """
+
+    protocol.require(
+        source.parent == target.parent
+        and source.name not in {"", ".", ".."}
+        and target.name not in {"", ".", ".."},
+        "portable freeze rename requires sibling simple paths",
+    )
+    directory_flags = (
+        os.O_RDONLY
+        | getattr(os, "O_DIRECTORY", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+    )
+    parent_fd = os.open(source.parent, directory_flags)
+    source_fd = -1
+    marker_fd = -1
+    marker_created = False
+    rename_completed = False
+    marker_identity: tuple[int, int] | None = None
+    try:
+        source_fd = os.open(source.name, directory_flags, dir_fd=parent_fd)
+        source_info = os.fstat(source_fd)
+        protocol.require(
+            stat.S_ISDIR(source_info.st_mode),
+            "freeze staging source must be a real directory",
+        )
+        source_identity = (source_info.st_dev, source_info.st_ino)
+        os.mkdir(target.name, mode=0o700, dir_fd=parent_fd)
+        marker_created = True
+        marker_fd = os.open(target.name, directory_flags, dir_fd=parent_fd)
+        marker_info = os.fstat(marker_fd)
+        marker_identity = (marker_info.st_dev, marker_info.st_ino)
+        protocol.require(
+            stat.S_ISDIR(marker_info.st_mode)
+            and not stat.S_ISLNK(marker_info.st_mode)
+            and stat.S_IMODE(marker_info.st_mode) == 0o700
+            and os.listdir(marker_fd) == [],
+            "freeze target reservation is invalid",
+        )
+        os.fsync(parent_fd)
+        current_source = os.stat(
+            source.name, dir_fd=parent_fd, follow_symlinks=False
+        )
+        current_marker = os.stat(
+            target.name, dir_fd=parent_fd, follow_symlinks=False
+        )
+        protocol.require(
+            (current_source.st_dev, current_source.st_ino) == source_identity
+            and (current_marker.st_dev, current_marker.st_ino) == marker_identity
+            and (os.fstat(source_fd).st_dev, os.fstat(source_fd).st_ino)
+            == source_identity
+            and (os.fstat(marker_fd).st_dev, os.fstat(marker_fd).st_ino)
+            == marker_identity
+            and os.listdir(marker_fd) == [],
+            "freeze source/target reservation changed before rename",
+        )
+        os.rename(
+            source.name,
+            target.name,
+            src_dir_fd=parent_fd,
+            dst_dir_fd=parent_fd,
+        )
+        rename_completed = True
+        pinned_source = os.fstat(source_fd)
+        pinned_marker = os.fstat(marker_fd)
+        protocol.require(
+            (pinned_source.st_dev, pinned_source.st_ino) == source_identity
+            and (pinned_marker.st_dev, pinned_marker.st_ino) == marker_identity,
+            "pinned freeze source/reservation inode changed during rename",
+        )
+    finally:
+        cleanup_error: BaseException | None = None
+        if marker_created and not rename_completed and marker_identity is not None:
+            try:
+                pinned_marker = os.fstat(marker_fd)
+                try:
+                    path_marker = os.stat(
+                        target.name, dir_fd=parent_fd, follow_symlinks=False
+                    )
+                except FileNotFoundError:
+                    path_marker = None
+                if (
+                    path_marker is not None
+                    and (pinned_marker.st_dev, pinned_marker.st_ino)
+                    == marker_identity
+                    and (path_marker.st_dev, path_marker.st_ino)
+                    == marker_identity
+                ):
+                    protocol.require(
+                        os.listdir(marker_fd) == [],
+                        "freeze reservation became nonempty; refusing cleanup",
+                    )
+                    os.rmdir(target.name, dir_fd=parent_fd)
+            except BaseException as exc:
+                cleanup_error = exc
+        if marker_fd >= 0:
+            os.close(marker_fd)
+        if source_fd >= 0:
+            os.close(source_fd)
+        os.close(parent_fd)
+        if cleanup_error is not None:
+            raise cleanup_error
 
 
 def _remove_owned_directory(path: Path, identity: tuple[int, int]) -> None:

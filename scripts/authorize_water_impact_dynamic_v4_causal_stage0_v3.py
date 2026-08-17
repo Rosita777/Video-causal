@@ -11,10 +11,13 @@ from __future__ import annotations
 
 import argparse
 import ast
+import contextlib
+import fcntl
 import json
 import os
 import stat
 import subprocess
+import tempfile
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -1590,38 +1593,62 @@ def _write_public_wrapper_exclusive(path: Path, payload: Mapping[str, Any]) -> N
     protocol.write_json_exclusive_atomic(path, payload, mode=0o644)
 
 
-def _write_private_binding_exclusive(path: Path, payload: Mapping[str, Any]) -> None:
-    expected = protocol.canonical_json_bytes(dict(payload))
+def _write_private_binding_exclusive(
+    path: Path, payload: Mapping[str, Any]
+) -> tuple[int, int]:
+    raw = protocol.canonical_json_bytes(dict(payload))
+    protocol._require_no_symlink_components(path.parent)
+    if os.path.lexists(path):
+        raise FileExistsError(f"refusing to overwrite private binding: {path}")
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", dir=path.parent
+    )
+    temporary = Path(temporary_name)
+    owned_inode: tuple[int, int] | None = None
+
+    def remove_owned_leaf() -> None:
+        if owned_inode is None or not os.path.lexists(path):
+            return
+        info = os.lstat(path)
+        if stat.S_ISLNK(info.st_mode):
+            return
+        if (info.st_dev, info.st_ino) == owned_inode:
+            path.unlink()
+
     try:
-        protocol.write_json_exclusive_atomic(path, payload, mode=0o600)
-    except Exception:
-        if path.is_file() and not path.is_symlink():
-            info = path.stat()
-            if (
-                info.st_nlink == 1
-                and stat.S_IMODE(info.st_mode) == 0o600
-                and protocol.sha256_file(path) == protocol.sha256_bytes(expected)
-            ):
-                path.unlink()
+        os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "wb") as handle:
+            descriptor = -1
+            handle.write(raw)
+            handle.flush()
+            os.fsync(handle.fileno())
+        temporary_info = os.lstat(temporary)
+        owned_inode = (temporary_info.st_dev, temporary_info.st_ino)
+        os.link(temporary, path)
+        temporary.unlink()
+        parent_descriptor = os.open(
+            path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+        )
+        try:
+            os.fsync(parent_descriptor)
+        finally:
+            os.close(parent_descriptor)
+    except BaseException:
+        remove_owned_leaf()
         raise
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        temporary.unlink(missing_ok=True)
+    assert owned_inode is not None
+    return owned_inode
 
 
-def _remove_owned_json_if_present(
-    path: Path, payload: Mapping[str, Any], *, mode: int
-) -> None:
-    """Remove only the exact single-link artifact created by this invocation."""
-
+def _remove_owned_inode_if_present(path: Path, owned_inode: tuple[int, int]) -> None:
     if not os.path.lexists(path):
         return
-    if path.is_symlink() or not path.is_file():
-        raise RuntimeError(f"cannot safely roll back replaced artifact: {path}")
-    info = path.stat()
-    expected_sha = protocol.sha256_bytes(protocol.canonical_json_bytes(dict(payload)))
-    if (
-        info.st_nlink != 1
-        or stat.S_IMODE(info.st_mode) != mode
-        or protocol.sha256_file(path) != expected_sha
-    ):
+    info = os.lstat(path)
+    if stat.S_ISLNK(info.st_mode) or (info.st_dev, info.st_ino) != owned_inode:
         raise RuntimeError(f"cannot safely roll back drifted artifact: {path}")
     path.unlink()
 
@@ -1643,6 +1670,44 @@ def _validate_public_output_path(
 
 class StaticAuthorizationFailure(RuntimeError):
     """A pre-wrapper path/permission/serialization failure that may be repaired."""
+
+
+def _reject_existing_terminal_or_stage1(project_root: Path) -> None:
+    for relative in (protocol.INVALID_OUTCOME, protocol.STAGE1_REGISTRY):
+        target = project_root / relative
+        if os.path.lexists(target):
+            raise FileExistsError(
+                f"v3 authorization is already terminal or Stage-1 exists: {target}"
+            )
+
+
+@contextlib.contextmanager
+def _authorization_mutex(private_root: Path):
+    private_root = protocol._canonical_lexical_absolute(private_root)
+    protocol._require_no_symlink_components(private_root)
+    info = private_root.stat()
+    protocol.require(
+        private_root.is_dir()
+        and not private_root.is_symlink()
+        and stat.S_IMODE(info.st_mode) == 0o700,
+        "authorization mutex requires a real mode-700 PRIVATE_V3_ROOT",
+    )
+    descriptor = os.open(
+        private_root, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    )
+    try:
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            raise FileExistsError(
+                "another Stage-0 authorizer owns PRIVATE_V3_ROOT"
+            ) from exc
+        yield
+    finally:
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_UN)
+        finally:
+            os.close(descriptor)
 
 
 def _is_exact_published_json(
@@ -2007,19 +2072,19 @@ def _authorize_impl(
             project_root / protocol.CODE_ARTIFACT_PATHS["stage0_authorizer"]
         ),
     }
-    binding_created = False
+    binding_owned_inode: tuple[int, int] | None = None
     wrapper: dict[str, Any] | None = None
     try:
         try:
-            _write_private_binding_exclusive(binding_path, binding_payload)
+            binding_owned_inode = _write_private_binding_exclusive(
+                binding_path, binding_payload
+            )
         except BaseException as exc:
             if not os.path.lexists(binding_path):
                 raise StaticAuthorizationFailure(
                     "selection-binding publication failed before creation"
                 ) from exc
             raise
-        binding_created = True
-
         revalidate_deep("after binding publication")
         wrapper = {
             "protocol": protocol.COMMITMENT_PROTOCOL,
@@ -2060,11 +2125,9 @@ def _authorize_impl(
         if state["wrapper_published"]:
             raise
         rollback_error: Exception | None = None
-        if binding_created:
+        if binding_owned_inode is not None:
             try:
-                _remove_owned_json_if_present(
-                    binding_path, binding_payload, mode=0o600
-                )
+                _remove_owned_inode_if_present(binding_path, binding_owned_inode)
             except Exception as exc:
                 rollback_error = rollback_error or exc
         if rollback_error is not None:
@@ -2072,7 +2135,7 @@ def _authorize_impl(
         raise
 
 
-def authorize(
+def _authorize_with_terminal_boundary(
     *,
     project_root: Path,
     private_root: Path,
@@ -2112,6 +2175,28 @@ def authorize(
                 "terminal Stage-0 authorization outcome publication failed"
             ) from publication_error
         raise exc
+
+
+def authorize(
+    *,
+    project_root: Path,
+    private_root: Path,
+    pending_path: Path,
+    binding_path: Path,
+    wrapper_path: Path,
+) -> dict[str, Any]:
+    project_root = protocol.validate_project_root(project_root)
+    _reject_existing_terminal_or_stage1(project_root)
+    private_root = protocol._canonical_lexical_absolute(private_root)
+    with _authorization_mutex(private_root):
+        _reject_existing_terminal_or_stage1(project_root)
+        return _authorize_with_terminal_boundary(
+            project_root=project_root,
+            private_root=private_root,
+            pending_path=pending_path,
+            binding_path=binding_path,
+            wrapper_path=wrapper_path,
+        )
 
 
 def build_parser() -> argparse.ArgumentParser:
