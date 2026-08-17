@@ -11,10 +11,12 @@ salt that the already-preregistered receiver-slot permutation requires. The
 second registers an isolated forbidden-seed source auditor that proves the v3
 forbidden inventory retains every seed committed by v2 Stage 0. The third
 binds the completed nine-file curation evidence through an aggregate-only
-public holdout commitment and preregisters the operating-system-CSPRNG
-sampling and aggregate historical-secret audit before any v3 secret exists.
-None of these amendments changes an ontology size, graph topology, prompt,
-gate, salt or seed derivation rule, candidate identity, or budget.
+public holdout commitment and preregisters operating-system-CSPRNG sampling.
+The fourth freezes the pre-Stage-0 order as exclusive secret sampling,
+isolated comparison of those actual sampled salts with historical secrets,
+then private-input preparation. None of these amendments changes an ontology
+size, graph topology, prompt, gate, salt or seed derivation rule, candidate
+identity, or budget.
 
 Scope: causal Stage 0 through causal Stage 1 only
 
@@ -402,54 +404,157 @@ zero-intersection claims without revealing either set.
 
 ## 5. Secrets, domains, and seed audit
 
-All raw secrets are newly sampled after the v3 ontology and candidate-builder
-code are frozen. The graph-assignment, selector, and evaluation salts are
-three independent 32-byte draws from the operating-system CSPRNG, encoded as
-lower-case hexadecimal strings of exactly 64 characters. The screening seed
-is a fourth independent operating-system-CSPRNG draw of exactly four bytes,
-interpreted as an unsigned big-endian uint32 and encoded as canonical unsigned
-decimal. No entropy file or additional Stage-0 opening is introduced.
+All raw secrets are newly sampled after the v3 ontology and authoritative code
+are frozen but before any v3 graph, candidate, pending commitment, Stage-0
+wrapper, or media exists. Secret handling has three ordered roles. Their order
+is immutable: `sample-secrets`, isolated historical-secret audit, then
+`prepare-private`.
 
-The three salts must be pairwise different. An isolated pre-Stage-0 role must
-compare each salt value against the exact allowlist of historical raw hex
-secrets that the role is authorized to open, covering accessible v1/v2 causal,
-specificity, holdout-assignment, source-mapping, and review-assignment secrets;
-all exact intersections must be zero. For historical hex secrets for which
-only a binding commitment, rather than the raw value, is legitimately
-available, the audit must not claim an exact comparison. Instead let `N` be
-the total number of independent `(new salt, commitment-only historical
-secret)` comparisons. The audit records `N` and the conservative collision
-union bound `N / 2^256`. Thus a count of `H` commitment-only historical hex
-secrets contributes exactly `3H` to `N`. The screening uint32 must be absent
-from the independently frozen forbidden numeric-seed inventory; the
-authorizer recomputes that comparison.
+### 5.1 Exclusive secret-sampling request
 
-The private `causal_stage0_secrets_private_v3.json` retains the existing four
-secret values and namespaces and adds exactly `sampling_provenance` and
-`historical_secret_audit`. `sampling_provenance` has exactly:
+`sample-secrets` requires the future `PRIVATE_V3_ROOT` to be a real mode-700
+root containing exactly the seven already-frozen external inputs: the four r6
+data files, byte-frozen templates and field rules, and the v3 forbidden-seed
+inventory. It also requires a distinct real mode-700 sampling-request root to
+be empty. Pending, standard Stage 0, invalid outcome, Stage 1, selection
+binding, graph, candidate, review, and media outputs must all be absent before
+the first entropy read.
+
+The role independently accepts three 32-byte operating-system-CSPRNG draws for
+the graph-assignment, selector, and evaluation salts, encoding each as lower
+hex64. A duplicate accepted salt is rejected and that salt is drawn again. It
+also independently accepts one four-byte operating-system-CSPRNG draw,
+interpreted as unsigned big-endian uint32 and canonical decimal, for the
+screening seed. A screening draw present in the exact forbidden numeric-seed
+inventory is rejected and drawn again. The role records the actual positive
+attempt count for each salt and for the screening seed; a rejected draw is an
+attempt and may never be hidden. `salt_draw_count=3` and
+`screening_seed_draw_count=1` are accepted-value counts, not attempt counts.
+
+The four accepted raw values are written exclusively to the existing Stage-0
+basenames:
+
+```text
+causal_graph_assignment_salt_v3.txt
+causal_stage0_selector_salt_v3.txt
+causal_evaluation_seed_salt_v3.txt
+causal_screening_seed_v3.txt
+```
+
+The three salts are lower hex64 plus exactly one LF. The screening seed is
+canonical unsigned decimal uint32 plus exactly one LF. No entropy sidecar and
+no new Stage-0 opening is introduced.
+
+The request root receives exactly one mode-600, non-symlink, single-link file,
+`secret_sampling_request_private_v3.json`, under protocol
+`water_impact_dynamic_v4_v3_secret_sampling_request_v1`. It has exactly:
+
+```text
+protocol, status, dataset_version, sampling_provenance,
+raw_secret_values_emitted
+```
+
+Required values are `status="sampled_pending_historical_audit"`,
+`dataset_version="v4_dev72_v3"`, and
+`raw_secret_values_emitted=false`. `sampling_provenance` has exactly:
 
 ```text
 entropy_source, independent_draws, salt_draw_count, salt_bytes_per_draw,
-salt_encoding, screening_seed_draw_count, screening_seed_bytes_per_draw,
-screening_seed_byte_order, screening_seed_encoding
+salt_encoding, salt_draw_attempts, screening_seed_draw_count,
+screening_seed_bytes_per_draw, screening_seed_byte_order,
+screening_seed_encoding, screening_seed_draw_attempts,
+new_secret_commitments, forbidden_seed_inventory_sha256,
+forbidden_numeric_seed_count, screening_seed_forbidden_intersection_count
 ```
 
-Required values are `entropy_source="operating_system_csprng"`,
+Required constants are `entropy_source="operating_system_csprng"`,
 `independent_draws=true`, `salt_draw_count=3`, `salt_bytes_per_draw=32`,
 `salt_encoding="lower_hex64"`, `screening_seed_draw_count=1`,
 `screening_seed_bytes_per_draw=4`, `screening_seed_byte_order="big_endian"`,
 and `screening_seed_encoding="canonical_unsigned_decimal_uint32"`.
+`salt_draw_attempts` has exactly
+`graph_assignment_salt,selector_salt,evaluation_seed_salt`, each a positive
+JSON integer. `screening_seed_draw_attempts` is a positive JSON integer.
+`forbidden_seed_inventory_sha256` is the exact v3 inventory byte hash,
+`forbidden_numeric_seed_count` is its positive seed-list length, and
+`screening_seed_forbidden_intersection_count=0`.
 
-`historical_secret_audit` is an aggregate-only result from the isolated role
-and has exactly:
+`new_secret_commitments` has exactly
+`screening_seed,graph_assignment_salt,selector_salt,evaluation_seed_salt`.
+Each value is lower-hex64 and is computed with the already-registered
+commitment formula
+`sha256(utf8(commitment_name) || NUL || utf8(raw_value))` and the exact
+commitment names below. The request contains commitments and counts only; it
+contains no raw secret.
+
+The request root is supplied explicitly and identically to `sample-secrets`,
+the isolated historical auditor, and `prepare-private`. It is not a fixed
+sibling of the project or final private root. Each entry point requires one
+canonical absolute, mode-700, non-symlink root that is distinct from and
+nonnested with the project root, `PRIVATE_V3_ROOT`, every v1/v2 private root,
+and any sealed/final36/quarantine root. No lexical or resolved alias is
+accepted. The request and audit basenames registered in this section are the
+only allowed files.
+
+The four raw files and the request file form one cross-root transaction. Both
+roots are locked in one canonical order. Every target is absent and reserved
+with no-overwrite semantics; every temporary and target is identified by
+device/inode. Any `Exception`, `KeyboardInterrupt`, `SystemExit`, post-link
+error, rehash mismatch, permission mismatch, or directory-fsync failure before
+the success boundary removes every target owned by that invocation and leaves
+the original seven-input root plus an empty request root. A pre-existing or
+foreign inode is never deleted. After all five files have been independently
+reopened, rehashed, permission-checked, cross-validated, and directory-fsynced,
+sampling is consumed permanently. The raw values, request, or attempt counts
+may not be replaced, edited, deleted, or sampled again within v3, even if the
+later audit fails.
+
+The command's stdout is one canonical aggregate object with exactly
+`protocol,status,dataset_version,sampling_request_sha256,salt_draw_attempts,screening_seed_draw_attempts,salt_draw_count,screening_seed_draw_count,raw_secret_values_emitted`.
+Its protocol is
+`water_impact_dynamic_v4_v3_secret_sampling_public_aggregate_v1`, status is
+`sampled_pending_historical_audit`, counts equal the private request,
+`sampling_request_sha256` is its exact byte hash, and
+`raw_secret_values_emitted=false`. It contains no raw secret, secret-derived
+seed, identity, phrase, prompt, source name, namespace, private path, or free
+text, and it is not a new public file or Stage-0 opening.
+
+### 5.2 Isolated comparison of the actual sampled salts
+
+Only after successful sampling may the isolated historical role run. It reads
+the retained request file, the three actual salt files from
+`PRIVATE_V3_ROOT`, the explicitly authorized historical raw-secret allowlist,
+and the commitment-only historical allowlist. It does not read the screening
+seed raw value. It recomputes the three salt commitments from the actual raw
+files, requires exact equality with the request, and only then performs the
+historical comparisons.
+
+Each actual salt is compared value-for-value against every accessible
+historical raw hex secret covering authorized v1/v2 causal, specificity,
+holdout-assignment, source-mapping, and review-assignment secrets; the exact
+intersection must be zero. For historical hex secrets for which only a binding
+commitment is legitimately available, the audit must not claim an exact raw
+comparison. Let `N` be the total number of independent `(new salt,
+commitment-only historical secret)` comparisons. A count of `H`
+commitment-only historical secrets contributes exactly `3H` to `N`; the audit
+records the conservative collision union bound `N / 2^256`.
+
+The same request root then receives exactly one additional mode-600,
+non-symlink, single-link file,
+`historical_secret_audit_private_v3.json`. The root inventory is thereafter
+exactly those two files and is retained unchanged. The passed audit uses
+protocol
+`water_impact_dynamic_v4_v3_historical_secret_disjointness_audit_v1` and has
+exactly:
 
 ```text
-protocol, status, v3_hex_salt_count,
+protocol, status, v3_hex_salt_count, new_salt_commitments,
 accessible_historical_raw_allowlist_sha256,
 accessible_historical_raw_hex_secret_count,
 accessible_historical_raw_comparison_count,
 accessible_historical_raw_intersection_count,
 commitment_only_historical_allowlist_sha256,
+commitment_only_historical_hex_secret_count,
 commitment_only_comparison_count,
 commitment_only_collision_union_bound_numerator,
 commitment_only_collision_union_bound_denominator_power,
@@ -458,24 +563,65 @@ screening_seed_forbidden_intersection_count,
 raw_historical_secret_values_emitted
 ```
 
-Its protocol is
-`water_impact_dynamic_v4_v3_historical_secret_disjointness_audit_v1`, status
-is `passed`, `v3_hex_salt_count=3`, the two historical counts and the
-commitment-only comparison count are nonnegative integers,
-both allowlist hashes and `forbidden_seed_inventory_sha256` are lower-hex64,
+Required values are `status="passed"`, `v3_hex_salt_count=3`, and
+`new_salt_commitments` has exactly
+`graph_assignment_salt,selector_salt,evaluation_seed_salt`. Those three
+lower-hex64 values equal the corresponding request commitments and the
+commitments independently recomputed from the actual salt files. Both
+allowlist hashes and `forbidden_seed_inventory_sha256` are lower-hex64. The
+historical secret counts are nonnegative JSON integers,
 `accessible_historical_raw_comparison_count` is three times
-`accessible_historical_raw_hex_secret_count`, and both intersection counts are
-zero. If the commitment-only comparison count is `N`, the union-bound
-numerator is exactly `N` and the denominator power is exactly `256`.
-`forbidden_numeric_seed_count` is the positive row count of the exact v3
-forbidden inventory and `raw_historical_secret_values_emitted=false`. No raw
-historical secret, source name, namespace, or per-source count may appear in
-this object or any public artifact. The Stage-0 authorizer validates this
-exact provenance/audit structure, the count arithmetic, the three actual salt
-inequalities, the forbidden-inventory file binding, and the
-screening-seed/forbidden-inventory disjointness. The
-salt, rank, graph-permutation, and evaluation-seed derivation formulas below
-remain unchanged.
+`accessible_historical_raw_hex_secret_count`, and
+`accessible_historical_raw_intersection_count=0`. If
+`commitment_only_historical_hex_secret_count=H`, then
+`commitment_only_comparison_count=3H`, its union-bound numerator equals that
+comparison count, and its denominator power is exactly `256`.
+`forbidden_numeric_seed_count` equals the request's positive count and
+`screening_seed_forbidden_intersection_count=0`.
+`raw_historical_secret_values_emitted=false`. No raw historical secret, raw v3
+secret, source name, namespace, per-source count, identity, phrase, prompt, or
+private path may appear.
+
+The audit file is an exclusive one-shot result. A nonzero accessible raw
+intersection, request/raw commitment mismatch, malformed allowlist, or any
+other audit failure terminally blocks v3 and cannot trigger resampling or
+replacement of either retained file. Any public stdout is aggregate-only and
+obeys the same no-raw/no-content rule.
+
+### 5.3 Private preparation and Stage-0 binding
+
+`prepare-private` runs only after the request root contains both exact files.
+At entry, `PRIVATE_V3_ROOT` contains exactly the original seven inputs plus the
+four retained raw secret files. It reads but never rewrites those eleven files.
+It cross-checks every request commitment and attempt count, the forbidden
+inventory hash/count, the three audit commitments, both allowlist counts and
+hashes, and all audit arithmetic. It then creates the remaining eight private
+inputs transactionally, including
+`causal_stage0_secrets_private_v3.json`.
+
+The Stage-0 secrets file retains the existing four raw secret values and
+namespaces and has exactly
+`protocol,dataset_version,status,screening_seed_namespace,screening_seed,graph_assignment_salt,selector_salt,evaluation_seed_namespace,evaluation_seed_salt,sampling_request_sha256,sampling_provenance,historical_secret_audit`.
+`sampling_request_sha256` is the exact retained request byte hash;
+`sampling_provenance` is exactly equal to the request object of that name, and
+`historical_secret_audit` is exactly equal to the passed retained audit object.
+
+The Stage-0 authorizer reopens the four raw files and the secrets JSON,
+recomputes all four request commitments from the raw values, requires the three
+recomputed salt commitments to equal `historical_secret_audit.new_salt_commitments`,
+validates every actual attempt count and accepted-value count, rechecks the
+forbidden inventory binding and screening-seed disjointness, and validates all
+historical count arithmetic. It also reconstructs the canonical five-key
+sampling-request payload from the embedded `sampling_provenance` and registered
+constants and requires its byte hash to equal `sampling_request_sha256`.
+Accordingly, `prepare-pending`, read-only `preflight`, formal `authorize`, and
+later runtime entry points do not accept or reopen the request root; the
+Stage-0 secrets opening contains the complete aggregate proof while the
+retained two-file root remains independent audit evidence. Neither authorizer
+nor `prepare-private` may
+accept a passed audit bound to a different salt triplet. The existing secret
+commitment, salt, rank, graph-permutation, and evaluation-seed derivation
+formulas below remain unchanged.
 
 The exact v3 domains are:
 
@@ -516,7 +662,7 @@ seed)` inventory through its canonical digest and publish only digest and
 count. Stage 1 may use only the precommitted 72-row subset corresponding to
 the selected 24 cases.
 
-### 5.1 Independent forbidden-seed source coverage
+### 5.4 Independent forbidden-seed source coverage
 
 The v3 forbidden inventory is not trusted merely because its own JSON is
 well-formed. Before the pending Stage-0 commitment is frozen, a third isolated
@@ -860,8 +1006,8 @@ The historical-anchor file has top-level keys
 `anchor_id,receiver_id,receiver_phrase,normalized_phrase,head_lemma,historical_training_binding_sha256`.
 
 The Stage-0 secrets file has exactly
-`protocol,dataset_version,status,screening_seed_namespace,screening_seed,graph_assignment_salt,selector_salt,evaluation_seed_namespace,evaluation_seed_salt,sampling_provenance,historical_secret_audit`.
-The last two objects have the exact aggregate-only schemas and values in
+`protocol,dataset_version,status,screening_seed_namespace,screening_seed,graph_assignment_salt,selector_salt,evaluation_seed_namespace,evaluation_seed_salt,sampling_request_sha256,sampling_provenance,historical_secret_audit`.
+The request hash and last two objects have the exact schemas and values in
 Section 5; no historical raw secret is embedded in this file.
 
 The candidate graph has top-level keys
@@ -1230,7 +1376,7 @@ exact-basename, descriptor-rooted open sandbox as the other isolated roles.
 The auditor executable is exactly
 `scripts/audit_water_impact_dynamic_v4_v3_forbidden_seeds.py`. It writes only
 `data/water_impact_dynamic_v4/v4_causal_forbidden_seed_source_audit_v3.json`
-with the exact aggregate schema in Section 5.1. It is code-registry-bound as
+with the exact aggregate schema in Section 5.4. It is code-registry-bound as
 `forbidden_seed_auditor`, is never imported by a v3 runtime entry point, and
 cannot emit any seed value, source commitment name, namespace, private path,
 or free text. Tests must cover equal and strict-superset success, a missing v2
