@@ -9,9 +9,12 @@ or media existed:
 2026-08-17. The first amendment registers the independent graph-assignment
 salt that the already-preregistered receiver-slot permutation requires. The
 second registers an isolated forbidden-seed source auditor that proves the v3
-forbidden inventory retains every seed committed by v2 Stage 0. Neither
-amendment changes an ontology size, graph topology, prompt, gate, salt or seed
-derivation rule, candidate identity, or budget.
+forbidden inventory retains every seed committed by v2 Stage 0. The third
+binds the completed nine-file curation evidence through an aggregate-only
+public holdout commitment and preregisters the operating-system-CSPRNG
+sampling and aggregate historical-secret audit before any v3 secret exists.
+None of these amendments changes an ontology size, graph topology, prompt,
+gate, salt or seed derivation rule, candidate identity, or budget.
 
 Scope: causal Stage 0 through causal Stage 1 only
 
@@ -400,10 +403,79 @@ zero-intersection claims without revealing either set.
 ## 5. Secrets, domains, and seed audit
 
 All raw secrets are newly sampled after the v3 ontology and candidate-builder
-code are frozen. They are lower-case hexadecimal strings of 64 characters
-except the screening seed, which is a canonical unsigned decimal uint32.
-They must be pairwise different and different from every v1/v2 causal,
-specificity, holdout-assignment, source-mapping, and review-assignment secret.
+code are frozen. The graph-assignment, selector, and evaluation salts are
+three independent 32-byte draws from the operating-system CSPRNG, encoded as
+lower-case hexadecimal strings of exactly 64 characters. The screening seed
+is a fourth independent operating-system-CSPRNG draw of exactly four bytes,
+interpreted as an unsigned big-endian uint32 and encoded as canonical unsigned
+decimal. No entropy file or additional Stage-0 opening is introduced.
+
+The three salts must be pairwise different. An isolated pre-Stage-0 role must
+compare each salt value against the exact allowlist of historical raw hex
+secrets that the role is authorized to open, covering accessible v1/v2 causal,
+specificity, holdout-assignment, source-mapping, and review-assignment secrets;
+all exact intersections must be zero. For historical hex secrets for which
+only a binding commitment, rather than the raw value, is legitimately
+available, the audit must not claim an exact comparison. Instead let `N` be
+the total number of independent `(new salt, commitment-only historical
+secret)` comparisons. The audit records `N` and the conservative collision
+union bound `N / 2^256`. Thus a count of `H` commitment-only historical hex
+secrets contributes exactly `3H` to `N`. The screening uint32 must be absent
+from the independently frozen forbidden numeric-seed inventory; the
+authorizer recomputes that comparison.
+
+The private `causal_stage0_secrets_private_v3.json` retains the existing four
+secret values and namespaces and adds exactly `sampling_provenance` and
+`historical_secret_audit`. `sampling_provenance` has exactly:
+
+```text
+entropy_source, independent_draws, salt_draw_count, salt_bytes_per_draw,
+salt_encoding, screening_seed_draw_count, screening_seed_bytes_per_draw,
+screening_seed_byte_order, screening_seed_encoding
+```
+
+Required values are `entropy_source="operating_system_csprng"`,
+`independent_draws=true`, `salt_draw_count=3`, `salt_bytes_per_draw=32`,
+`salt_encoding="lower_hex64"`, `screening_seed_draw_count=1`,
+`screening_seed_bytes_per_draw=4`, `screening_seed_byte_order="big_endian"`,
+and `screening_seed_encoding="canonical_unsigned_decimal_uint32"`.
+
+`historical_secret_audit` is an aggregate-only result from the isolated role
+and has exactly:
+
+```text
+protocol, status, v3_hex_salt_count,
+accessible_historical_raw_allowlist_sha256,
+accessible_historical_raw_hex_secret_count,
+accessible_historical_raw_comparison_count,
+accessible_historical_raw_intersection_count,
+commitment_only_historical_allowlist_sha256,
+commitment_only_comparison_count,
+commitment_only_collision_union_bound_numerator,
+commitment_only_collision_union_bound_denominator_power,
+forbidden_seed_inventory_sha256, forbidden_numeric_seed_count,
+screening_seed_forbidden_intersection_count,
+raw_historical_secret_values_emitted
+```
+
+Its protocol is
+`water_impact_dynamic_v4_v3_historical_secret_disjointness_audit_v1`, status
+is `passed`, `v3_hex_salt_count=3`, the two historical counts and the
+commitment-only comparison count are nonnegative integers,
+both allowlist hashes and `forbidden_seed_inventory_sha256` are lower-hex64,
+`accessible_historical_raw_comparison_count` is three times
+`accessible_historical_raw_hex_secret_count`, and both intersection counts are
+zero. If the commitment-only comparison count is `N`, the union-bound
+numerator is exactly `N` and the denominator power is exactly `256`.
+`forbidden_numeric_seed_count` is the positive row count of the exact v3
+forbidden inventory and `raw_historical_secret_values_emitted=false`. No raw
+historical secret, source name, namespace, or per-source count may appear in
+this object or any public artifact. The Stage-0 authorizer validates this
+exact provenance/audit structure, the count arithmetic, the three actual salt
+inequalities, the forbidden-inventory file binding, and the
+screening-seed/forbidden-inventory disjointness. The
+salt, rank, graph-permutation, and evaluation-seed derivation formulas below
+remain unchanged.
 
 The exact v3 domains are:
 
@@ -646,6 +718,51 @@ data/water_impact_dynamic_v4/v4_causal_v2_construct_equivalence_v3.json
 data/water_impact_dynamic_v4/v4_causal_forbidden_seed_source_audit_v3.json
 ```
 
+The public holdout commitment at
+`data/water_impact_dynamic_v4/holdout_public_commitment_v3.json` uses protocol
+`water_impact_dynamic_v4_holdout_public_commitment_v3` and has exactly these
+top-level keys:
+
+```text
+protocol, status, dataset_version, counts, artifacts,
+identity_disjointness_report_sha256, independent_language_review_status,
+remaining_blockers
+```
+
+Required values are `status="committed"`,
+`dataset_version="v4_dev72_v3"`,
+`independent_language_review_status="passed"`, and
+`remaining_blockers=[]`. `counts` is exactly
+`{"source_count":48,"receiver_count":56,"historical_anchor_count":8}`.
+`identity_disjointness_report_sha256` is the lower-hex64 byte hash of the
+exact public identity-disjointness report and must equal the `sha256` member of
+that report's pending component commitment.
+
+`artifacts` has exactly the following nine keys and values. Every value is an
+exact `{sha256,size_bytes,row_count}` record; the four data records bind the
+same bytes later opened from `PRIVATE_V3_ROOT`, while the other five bind the
+completed curation evidence without publishing its content.
+
+| Artifact | SHA-256 | Size bytes | Row count |
+|---|---|---:|---:|
+| `eval_holdout_source_ontology_48` | `e9cfceed714c52ea14a834c5bd6070da798885c3f2b7048bd1f1207ea30c46a4` | 80,175 | 48 |
+| `holdout_registry_48` | `423a3ae68d27ecf03cb3a72375fca5e282de4c3b45efe9f3a3bb9b6059bc70a0` | 79,649 | 48 |
+| `receiver_ontology_56` | `7336adfd55aafd2dc5024092a8f0c20bad3083238b4d7af871def6399db9051b` | 38,088 | 56 |
+| `historical_receiver_anchors_8` | `06e28e0eb35d85a5bc1d36de4856e30d477a3efd91ce89f3c242e9fa66cff202` | 3,420 | 8 |
+| `curation_manifest` | `c3da1aaa3784e033e0d106a5123d05e228b21057f297066c8b4f936b3f96b16f` | 3,143 | null |
+| `curation_public_aggregate` | `98d242c13fdc4be93a92cf0d9d97eba90b0170869529731f812abc446bad6e46` | 3,617 | null |
+| `curation_semantic_audit` | `a6f498be9fe6a85f4fa94b350570b503b7e64d5b086d1fad9a9ff012f30ae2dd` | 11,842 | null |
+| `curation_validator` | `eb415329092e39cfbc56c6d33637b098a8b109e28ff26eb6a211dd8109fdfbc3` | 21,641 | null |
+| `curation_tests` | `cf0870aa6870e34da0683b6bdf95e8ae9b1e5a7094f3e7abe25a54fb262e2f13` | 3,925 | null |
+
+The thousands separators above are for presentation only; `size_bytes` is the
+corresponding exact nonnegative JSON integer.
+
+The top-level and nested inventories are exact allowlists. No identity,
+phrase, prompt, curator name, review text, row, seed, salt, path, or other
+content field is permitted. The commitment is built only after the identity
+report exists and before the pending Stage-0 commitment.
+
 The invalid-outcome path and Stage-1 path are mutually exclusive. A successful
 version has a Stage-1 wrapper and no invalid-outcome record. A failed version
 has an invalid-outcome record and no Stage-1 wrapper.
@@ -742,6 +859,11 @@ The historical-anchor file has top-level keys
 `anchor_count=8`. Each anchor row has exactly
 `anchor_id,receiver_id,receiver_phrase,normalized_phrase,head_lemma,historical_training_binding_sha256`.
 
+The Stage-0 secrets file has exactly
+`protocol,dataset_version,status,screening_seed_namespace,screening_seed,graph_assignment_salt,selector_salt,evaluation_seed_namespace,evaluation_seed_salt,sampling_provenance,historical_secret_audit`.
+The last two objects have the exact aggregate-only schemas and values in
+Section 5; no historical raw secret is embedded in this file.
+
 The candidate graph has top-level keys
 `protocol,dataset_version,status,candidate_count,cell_counts,topology,graph_assignment_salt_sha256,r1,r3,anchors,edges,graph_sha256`.
 `graph_assignment_salt_sha256` is the SHA-256 of the exact lower-hex64 salt
@@ -798,6 +920,7 @@ The Stage-0 registry contains exactly these semantic artifacts:
 | `upstream_source_mapping_178_v2` | 178 |
 | `eval_holdout_source_ontology_48` | 48 |
 | `holdout_registry_48` | 48 |
+| `holdout_public_commitment` | null |
 | `receiver_ontology_56` | 56 |
 | `historical_receiver_anchors_8` | 8 |
 | `candidate_graph_576` | 576 |
@@ -831,10 +954,11 @@ The Stage-0 registry contains exactly these semantic artifacts:
 | `preregistration` | null |
 | `v2_public_aggregate_design_input` | 6 |
 
-The table contains exactly 37 Stage-0 artifacts. Before selection-binding
-publication, the pending component commitment contains exactly 30 physical
-openings: the unchanged 19 private inputs and 11 public inputs, including the
-new forbidden-seed source audit. The wrapper adds the selection binding, two
+The table contains exactly 38 Stage-0 artifacts. Before selection-binding
+publication, the pending component commitment contains exactly 31 physical
+openings: the unchanged 19 private inputs and 12 public inputs, including the
+holdout public commitment and the forbidden-seed source audit. The wrapper
+adds the selection binding, two
 immutable v2 upstreams, the preregistration, and the v2 public aggregate; it
 also replaces the one physical selection-rules name with its three registered
 ranking/subset/seed-formula aliases. This is a net increase of seven. No
@@ -851,17 +975,42 @@ design_input, curation_audit, public_metadata, component_commitments,
 remaining_blockers
 ```
 
+Its `curation_audit` object has exactly:
+
+```text
+protocol, source_count, receiver_count, historical_anchor_count,
+strict_source_physical_pass, unique_source_ids, unique_source_heads,
+unique_receiver_ids, unique_receiver_heads, unique_historical_receiver_ids,
+source_ontology_sha256, receiver_ontology_sha256,
+historical_anchors_sha256, holdout_public_commitment_sha256,
+identity_report_sha256, construct_report_sha256,
+forbidden_seed_source_audit_sha256
+```
+
 It must record candidate count 576, the six exact cell counts, both analytic
 risks, both ICC thresholds, and exact references to the search and confirmation
 artifacts in Section 2, plus the byte hashes of this preregistration and the v2
 public termination record. It contains digests/counts only and
-no private identity, prompt, seed, salt, or review value. A separate standard
-Stage-0 authorizer opens and validates every private component, identity-set
+no private identity, prompt, seed, salt, or review value. Its
+`curation_audit` object additionally contains
+`holdout_public_commitment_sha256`, equal to the exact pending component hash
+for `holdout_public_commitment`; no self-reported alternate hash is accepted.
+A separate standard Stage-0 authorizer opens and validates every private
+component, the aggregate-only holdout public commitment, identity-set
 intersection result, cost calibration, model/runtime/code registry, secret
-commitment, forbidden inventory, forbidden-seed source-coverage report, and
-1,728-seed audit before exclusively writing
-`causal_stage0_commitment_v3.json`. The authorizer recomputes all 30 opening
+sampling provenance and historical-secret aggregate audit, forbidden
+inventory, forbidden-seed source-coverage report, and 1,728-seed audit before
+exclusively writing
+`causal_stage0_commitment_v3.json`. The authorizer recomputes all 31 opening
 hashes before and after selection-binding publication.
+
+For `holdout_public_commitment`, the authorizer requires the exact aggregate
+schema and nine frozen records above, requires its four data records to equal
+the corresponding private opening records byte-for-byte, requires its
+identity-report hash to equal the `identity_disjointness_report` opening, and
+requires the pending `curation_audit` binding, review status, counts, and empty
+blocker list to agree exactly. A mix-and-match commitment, an extra field, or
+any content-bearing field is a Stage-0 integrity failure.
 
 The pending commitment and private selection binding both bind the
 graph-assignment salt-file commitment. The authorizer reopens that salt,
