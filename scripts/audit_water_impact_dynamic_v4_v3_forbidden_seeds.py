@@ -4,8 +4,11 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import os
+import stat
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -26,6 +29,8 @@ STANDARD_OUTPUT_RELATIVE = protocol.FORBIDDEN_SEED_SOURCE_AUDIT
 V2_INVENTORY_PROTOCOL = "water_impact_dynamic_v4_forbidden_seed_inventory_v2"
 V3_INVENTORY_PROTOCOL = "water_impact_dynamic_v4_forbidden_seed_inventory_v3"
 SEED_ENCODING = "nonnegative JSON integer below 2^63"
+CALIBRATION_SOURCE_NAME = "v3_screening_cost_calibration_seeds"
+PREPARE_STATUS = "prepared_v3_forbidden_inventory"
 DEFAULT_V2_INVENTORY_SHA256 = (
     "f2f72728a83c7e3ec54735a58f3f2e0a5afd1c132822eeecad7dc2006cb5ecd4"
 )
@@ -74,6 +79,18 @@ def _read_single_private_input(
             "isolated forbidden-seed root inventory is not exact",
         )
         return private_root.read_exact(basename)
+
+
+def _validate_two_private_roots(v2_root: Path, v3_root: Path) -> None:
+    left = secure._require_real_components(v2_root).resolve(strict=True)
+    right = secure._require_real_components(v3_root).resolve(strict=True)
+    _require(left != right, "v2/v3 preparation roots must be distinct")
+    for child, parent in ((left, right), (right, left)):
+        try:
+            child.relative_to(parent)
+        except ValueError:
+            continue
+        raise ValueError("v2/v3 preparation roots may not be nested")
 
 
 def _validate_inventory(
@@ -254,6 +271,245 @@ def build_report(
     return report
 
 
+def _write_prepared_inventory(
+    private_root: secure.SecurePrivateRoot, payload: Mapping[str, Any]
+) -> str:
+    """Exclusively publish one owned mode-600 inventory below an empty root."""
+
+    basename = V3_INVENTORY_BASENAME
+    raw = secure.canonical_json_bytes(dict(payload))
+    temporary = f".{basename}.tmp.{os.getpid()}"
+    descriptor = -1
+    owned_inode: tuple[int, int] | None = None
+
+    def unlink_if_owned(name: str) -> bool:
+        if owned_inode is None:
+            return False
+        try:
+            info = os.stat(name, dir_fd=private_root.fd, follow_symlinks=False)
+        except FileNotFoundError:
+            return False
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or (info.st_dev, info.st_ino) != owned_inode
+        ):
+            return False
+        os.unlink(name, dir_fd=private_root.fd)
+        return True
+
+    try:
+        _require(
+            not os.listdir(private_root.fd),
+            "v3 preparation root must be exactly empty",
+        )
+        descriptor = os.open(
+            temporary,
+            os.O_RDWR
+            | os.O_CREAT
+            | os.O_EXCL
+            | getattr(os, "O_CLOEXEC", 0)
+            | getattr(os, "O_NOFOLLOW", 0),
+            0o600,
+            dir_fd=private_root.fd,
+        )
+        opened = os.fstat(descriptor)
+        owned_inode = (opened.st_dev, opened.st_ino)
+        os.fchmod(descriptor, 0o600)
+        opened = os.fstat(descriptor)
+        _require(
+            stat.S_ISREG(opened.st_mode)
+            and opened.st_nlink == 1
+            and stat.S_IMODE(opened.st_mode) == 0o600,
+            "v3 inventory temporary inode is invalid",
+        )
+        offset = 0
+        while offset < len(raw):
+            written = os.write(descriptor, raw[offset:])
+            _require(written > 0, "v3 inventory write made no progress")
+            offset += written
+        os.fsync(descriptor)
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        observed = bytearray()
+        while True:
+            chunk = os.read(descriptor, 1024 * 1024)
+            if not chunk:
+                break
+            observed.extend(chunk)
+        _require(bytes(observed) == raw, "v3 inventory temporary readback mismatch")
+        os.close(descriptor)
+        descriptor = -1
+
+        os.link(
+            temporary,
+            basename,
+            src_dir_fd=private_root.fd,
+            dst_dir_fd=private_root.fd,
+            follow_symlinks=False,
+        )
+        temporary_info = os.stat(
+            temporary, dir_fd=private_root.fd, follow_symlinks=False
+        )
+        target_info = os.stat(
+            basename, dir_fd=private_root.fd, follow_symlinks=False
+        )
+        _require(
+            stat.S_ISREG(temporary_info.st_mode)
+            and stat.S_ISREG(target_info.st_mode)
+            and (temporary_info.st_dev, temporary_info.st_ino) == owned_inode
+            and (target_info.st_dev, target_info.st_ino) == owned_inode
+            and temporary_info.st_nlink == target_info.st_nlink == 2,
+            "v3 inventory post-link identity mismatch",
+        )
+        _require(unlink_if_owned(temporary), "v3 inventory temporary was replaced")
+        os.fsync(private_root.fd)
+
+        target_descriptor = os.open(
+            basename,
+            os.O_RDONLY
+            | getattr(os, "O_CLOEXEC", 0)
+            | getattr(os, "O_NOFOLLOW", 0),
+            dir_fd=private_root.fd,
+        )
+        try:
+            target_opened = os.fstat(target_descriptor)
+            target_raw = bytearray()
+            while True:
+                chunk = os.read(target_descriptor, 1024 * 1024)
+                if not chunk:
+                    break
+                target_raw.extend(chunk)
+        finally:
+            os.close(target_descriptor)
+        final_info = os.stat(
+            basename, dir_fd=private_root.fd, follow_symlinks=False
+        )
+        _require(
+            bytes(target_raw) == raw
+            and stat.S_ISREG(target_opened.st_mode)
+            and stat.S_ISREG(final_info.st_mode)
+            and (target_opened.st_dev, target_opened.st_ino) == owned_inode
+            and (final_info.st_dev, final_info.st_ino) == owned_inode
+            and target_opened.st_nlink == final_info.st_nlink == 1
+            and stat.S_IMODE(final_info.st_mode) == 0o600
+            and set(os.listdir(private_root.fd)) == {basename},
+            "v3 inventory final readback/inventory mismatch",
+        )
+        os.fsync(private_root.fd)
+        return secure.sha256_bytes(raw)
+    except BaseException:
+        if descriptor >= 0:
+            os.close(descriptor)
+            descriptor = -1
+        changed = False
+        for name in (basename, temporary):
+            try:
+                changed = unlink_if_owned(name) or changed
+            except BaseException:
+                pass
+        if changed:
+            try:
+                os.fsync(private_root.fd)
+            except BaseException:
+                pass
+        raise
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        try:
+            removed = unlink_if_owned(temporary)
+        except BaseException:
+            removed = False
+        if removed:
+            try:
+                os.fsync(private_root.fd)
+            except BaseException:
+                pass
+
+
+def prepare_v3_inventory(
+    *,
+    private_v2_root: Path,
+    private_v3_root: Path,
+    contract: ForbiddenSeedAuditContract = ForbiddenSeedAuditContract(),
+) -> dict[str, Any]:
+    """Build the deterministic v3 forbidden inventory from frozen v2 bytes."""
+
+    _validate_two_private_roots(private_v2_root, private_v3_root)
+    v2_raw = _read_single_private_input(
+        private_v2_root, V2_PRIVATE_ALLOWLIST, V2_INVENTORY_BASENAME
+    )
+    _require(
+        secure.sha256_bytes(v2_raw) == contract.v2_inventory_sha256,
+        "v2 forbidden seed inventory differs from the frozen hash",
+    )
+    v2_payload, v2_seeds = _validate_inventory(
+        v2_raw, protocol_name=V2_INVENTORY_PROTOCOL
+    )
+    calibration_seeds = tuple(protocol.CALIBRATION_SEEDS)
+    _require(
+        len(calibration_seeds) == 5
+        and len(set(calibration_seeds)) == 5
+        and all(type(seed) is int and 0 <= seed < 2**32 for seed in calibration_seeds),
+        "registered calibration seeds are not exact unique uint32 values",
+    )
+    _require(
+        not (set(v2_seeds) & set(calibration_seeds)),
+        "v2 forbidden inventory already contains a calibration seed",
+    )
+    source_names = {source["name"] for source in v2_payload["source_commitments"]}
+    _require(
+        CALIBRATION_SOURCE_NAME not in source_names,
+        "v2 source commitments already contain the v3 calibration source",
+    )
+    calibration_raw = secure.canonical_json_bytes(list(calibration_seeds))
+    sources = [dict(source) for source in v2_payload["source_commitments"]]
+    sources.append(
+        {
+            "name": CALIBRATION_SOURCE_NAME,
+            "sha256": secure.sha256_bytes(calibration_raw),
+            "seed_count": 5,
+        }
+    )
+    sources.sort(key=lambda source: source["name"])
+    seeds = sorted({*v2_seeds, *calibration_seeds})
+    payload = {
+        "protocol": V3_INVENTORY_PROTOCOL,
+        "dataset": protocol.DATASET,
+        "status": "frozen_by_independent_seed_auditor",
+        "seed_encoding": SEED_ENCODING,
+        "source_commitments": sources,
+        "seeds": seeds,
+    }
+    _, validated_seeds = _validate_inventory(
+        secure.canonical_json_bytes(payload), protocol_name=V3_INVENTORY_PROTOCOL
+    )
+    _require(
+        tuple(seeds) == validated_seeds
+        and len(seeds) == len(v2_seeds) + 5,
+        "prepared v3 forbidden inventory arithmetic mismatch",
+    )
+
+    with secure.SecurePrivateRoot(
+        private_v3_root, V3_PRIVATE_ALLOWLIST
+    ) as v3_root:
+        try:
+            fcntl.flock(v3_root.fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            raise FileExistsError("another v3 inventory preparer owns the root") from exc
+        try:
+            digest = _write_prepared_inventory(v3_root, payload)
+        finally:
+            fcntl.flock(v3_root.fd, fcntl.LOCK_UN)
+    return {
+        "status": PREPARE_STATUS,
+        "sha256": digest,
+        "v2_seed_count": len(v2_seeds),
+        "v3_seed_count": len(seeds),
+        "additional_seed_count": 5,
+        "purpose": "public_cost_calibration",
+    }
+
+
 def run_audit(
     *,
     project_root: Path,
@@ -289,14 +545,31 @@ def run_audit(
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
-    parser.add_argument("--project-root", type=Path, required=True)
-    parser.add_argument("--private-v2-root", type=Path, required=True)
-    parser.add_argument("--private-v3-root", type=Path, required=True)
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    audit = subparsers.add_parser("audit", allow_abbrev=False)
+    audit.add_argument("--project-root", type=Path, required=True)
+    audit.add_argument("--private-v2-root", type=Path, required=True)
+    audit.add_argument("--private-v3-root", type=Path, required=True)
+    prepare = subparsers.add_parser("prepare-v3", allow_abbrev=False)
+    prepare.add_argument("--private-v2-root", type=Path, required=True)
+    prepare.add_argument("--private-v3-root", type=Path, required=True)
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    arguments = list(argv if argv is not None else sys.argv[1:])
+    if arguments and arguments[0] not in {"audit", "prepare-v3"}:
+        # Preserve the previously frozen audit invocation while adding the
+        # explicit deterministic preparation subcommand.
+        arguments.insert(0, "audit")
+    args = build_parser().parse_args(arguments)
+    if args.command == "prepare-v3":
+        result = prepare_v3_inventory(
+            private_v2_root=args.private_v2_root,
+            private_v3_root=args.private_v3_root,
+        )
+        print(secure.canonical_json_bytes(result).decode("ascii"), end="")
+        return 0
     report, digest = run_audit(
         project_root=args.project_root,
         private_v2_root=args.private_v2_root,

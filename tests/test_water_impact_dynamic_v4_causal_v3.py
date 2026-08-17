@@ -4306,7 +4306,250 @@ def _make_forbidden_seed_audit_fixture(
     }
 
 
+def _make_forbidden_seed_prepare_fixture(
+    base: Path, *, v2_seeds: list[int]
+) -> dict[str, object]:
+    v2_root = base / "prepare_private_v2"
+    v3_root = base / "prepare_private_v3"
+    v2_root.mkdir(mode=0o700)
+    v3_root.mkdir(mode=0o700)
+    v2_raw = identity_auditor.canonical_json_bytes(
+        _seed_inventory(forbidden_seed_auditor.V2_INVENTORY_PROTOCOL, v2_seeds)
+    )
+    _private_write(
+        v2_root, forbidden_seed_auditor.V2_INVENTORY_BASENAME, v2_raw
+    )
+    return {
+        "v2_root": v2_root,
+        "v3_root": v3_root,
+        "v2_raw": v2_raw,
+        "contract": forbidden_seed_auditor.ForbiddenSeedAuditContract(
+            v2_inventory_sha256=identity_auditor.sha256_bytes(v2_raw)
+        ),
+    }
+
+
 class ForbiddenSeedSourceAuditorTests(unittest.TestCase):
+    def test_prepare_v3_builds_exact_calibration_superset_and_aggregate(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO) as directory:
+            fixture = _make_forbidden_seed_prepare_fixture(
+                Path(directory), v2_seeds=[11, 22]
+            )
+            result = forbidden_seed_auditor.prepare_v3_inventory(
+                private_v2_root=fixture["v2_root"],
+                private_v3_root=fixture["v3_root"],
+                contract=fixture["contract"],
+            )
+            output = (
+                fixture["v3_root"]
+                / forbidden_seed_auditor.V3_INVENTORY_BASENAME
+            )
+            payload = json.loads(output.read_text(encoding="utf-8"))
+            expected_seeds = sorted([11, 22, *v3_protocol.CALIBRATION_SEEDS])
+            self.assertEqual(payload["seeds"], expected_seeds)
+            self.assertEqual(
+                [row["name"] for row in payload["source_commitments"]],
+                sorted(row["name"] for row in payload["source_commitments"]),
+            )
+            calibration = next(
+                row
+                for row in payload["source_commitments"]
+                if row["name"] == forbidden_seed_auditor.CALIBRATION_SOURCE_NAME
+            )
+            self.assertEqual(calibration["seed_count"], 5)
+            self.assertEqual(
+                calibration["sha256"],
+                identity_auditor.sha256_bytes(
+                    identity_auditor.canonical_json_bytes(
+                        list(v3_protocol.CALIBRATION_SEEDS)
+                    )
+                ),
+            )
+            self.assertEqual(output.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(output.stat().st_nlink, 1)
+            self.assertEqual(result["additional_seed_count"], 5)
+            self.assertEqual(result["v2_seed_count"], 2)
+            self.assertEqual(result["v3_seed_count"], 7)
+            self.assertEqual(result["sha256"], v3_protocol.sha256_file(output))
+            encoded = json.dumps(result, sort_keys=True)
+            self.assertNotIn('"seeds"', encoded)
+            self.assertNotIn("synthetic_registered_history", encoded)
+            stdout = io.StringIO()
+            with (
+                mock.patch.object(
+                    forbidden_seed_auditor,
+                    "prepare_v3_inventory",
+                    return_value=result,
+                ),
+                contextlib.redirect_stdout(stdout),
+            ):
+                self.assertEqual(
+                    forbidden_seed_auditor.main(
+                        [
+                            "prepare-v3",
+                            "--private-v2-root",
+                            str(fixture["v2_root"]),
+                            "--private-v3-root",
+                            str(fixture["v3_root"]),
+                        ]
+                    ),
+                    0,
+                )
+            self.assertEqual(json.loads(stdout.getvalue()), result)
+            self.assertNotIn('"seeds"', stdout.getvalue())
+
+    def test_prepare_v3_rejects_tampered_v2_bytes_without_output(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO) as directory:
+            fixture = _make_forbidden_seed_prepare_fixture(
+                Path(directory), v2_seeds=[11, 22]
+            )
+            v2_path = (
+                fixture["v2_root"]
+                / forbidden_seed_auditor.V2_INVENTORY_BASENAME
+            )
+            v2_path.write_bytes(v2_path.read_bytes() + b" ")
+            v2_path.chmod(0o600)
+            with self.assertRaisesRegex(ValueError, "frozen hash"):
+                forbidden_seed_auditor.prepare_v3_inventory(
+                    private_v2_root=fixture["v2_root"],
+                    private_v3_root=fixture["v3_root"],
+                    contract=fixture["contract"],
+                )
+            self.assertEqual(list(fixture["v3_root"].iterdir()), [])
+
+    def test_prepare_v3_rejects_calibration_overlap_without_output(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO) as directory:
+            seeds = sorted([11, v3_protocol.CALIBRATION_SEEDS[0]])
+            fixture = _make_forbidden_seed_prepare_fixture(
+                Path(directory), v2_seeds=seeds
+            )
+            with self.assertRaisesRegex(ValueError, "already contains"):
+                forbidden_seed_auditor.prepare_v3_inventory(
+                    private_v2_root=fixture["v2_root"],
+                    private_v3_root=fixture["v3_root"],
+                    contract=fixture["contract"],
+                )
+            self.assertEqual(list(fixture["v3_root"].iterdir()), [])
+
+    def test_prepare_v3_preserves_preexisting_target(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO) as directory:
+            fixture = _make_forbidden_seed_prepare_fixture(
+                Path(directory), v2_seeds=[11, 22]
+            )
+            output = (
+                fixture["v3_root"]
+                / forbidden_seed_auditor.V3_INVENTORY_BASENAME
+            )
+            output.write_bytes(b"preexisting")
+            output.chmod(0o600)
+            inode = (output.stat().st_dev, output.stat().st_ino)
+            with self.assertRaisesRegex(ValueError, "exactly empty"):
+                forbidden_seed_auditor.prepare_v3_inventory(
+                    private_v2_root=fixture["v2_root"],
+                    private_v3_root=fixture["v3_root"],
+                    contract=fixture["contract"],
+                )
+            self.assertEqual(output.read_bytes(), b"preexisting")
+            self.assertEqual((output.stat().st_dev, output.stat().st_ino), inode)
+
+    def test_prepare_v3_postlink_interrupt_rolls_back_owned_inode(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO) as directory:
+            fixture = _make_forbidden_seed_prepare_fixture(
+                Path(directory), v2_seeds=[11, 22]
+            )
+            real_link = forbidden_seed_auditor.os.link
+
+            def link_then_interrupt(*args, **kwargs):
+                real_link(*args, **kwargs)
+                raise KeyboardInterrupt("synthetic post-link interrupt")
+
+            with (
+                mock.patch.object(
+                    forbidden_seed_auditor.os,
+                    "link",
+                    side_effect=link_then_interrupt,
+                ),
+                self.assertRaises(KeyboardInterrupt),
+            ):
+                forbidden_seed_auditor.prepare_v3_inventory(
+                    private_v2_root=fixture["v2_root"],
+                    private_v3_root=fixture["v3_root"],
+                    contract=fixture["contract"],
+                )
+            self.assertEqual(list(fixture["v3_root"].iterdir()), [])
+
+    def test_prepare_v3_foreign_temporary_inode_is_preserved(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO) as directory:
+            fixture = _make_forbidden_seed_prepare_fixture(
+                Path(directory), v2_seeds=[11, 22]
+            )
+            real_link = forbidden_seed_auditor.os.link
+            replacement: dict[str, object] = {}
+
+            def link_replace_temp_then_interrupt(source, destination, **kwargs):
+                real_link(source, destination, **kwargs)
+                source_path = fixture["v3_root"] / source
+                source_path.unlink()
+                source_path.write_bytes(b"foreign temporary")
+                source_path.chmod(0o600)
+                replacement["path"] = source_path
+                replacement["inode"] = (
+                    source_path.stat().st_dev,
+                    source_path.stat().st_ino,
+                )
+                raise KeyboardInterrupt("synthetic foreign replacement")
+
+            with (
+                mock.patch.object(
+                    forbidden_seed_auditor.os,
+                    "link",
+                    side_effect=link_replace_temp_then_interrupt,
+                ),
+                self.assertRaises(KeyboardInterrupt),
+            ):
+                forbidden_seed_auditor.prepare_v3_inventory(
+                    private_v2_root=fixture["v2_root"],
+                    private_v3_root=fixture["v3_root"],
+                    contract=fixture["contract"],
+                )
+            self.assertFalse(
+                (
+                    fixture["v3_root"]
+                    / forbidden_seed_auditor.V3_INVENTORY_BASENAME
+                ).exists()
+            )
+            foreign = replacement["path"]
+            self.assertIsInstance(foreign, Path)
+            assert isinstance(foreign, Path)
+            self.assertTrue(foreign.exists())
+            self.assertEqual(foreign.read_bytes(), b"foreign temporary")
+            self.assertEqual(
+                (foreign.stat().st_dev, foreign.stat().st_ino),
+                replacement["inode"],
+            )
+
+    def test_prepare_v3_rejects_extra_output_root_inventory(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO) as directory:
+            fixture = _make_forbidden_seed_prepare_fixture(
+                Path(directory), v2_seeds=[11, 22]
+            )
+            extra = fixture["v3_root"] / "unexpected.json"
+            extra.write_bytes(b"{}\n")
+            extra.chmod(0o600)
+            with self.assertRaisesRegex(ValueError, "exactly empty"):
+                forbidden_seed_auditor.prepare_v3_inventory(
+                    private_v2_root=fixture["v2_root"],
+                    private_v3_root=fixture["v3_root"],
+                    contract=fixture["contract"],
+                )
+            self.assertEqual(extra.read_bytes(), b"{}\n")
+            self.assertFalse(
+                (
+                    fixture["v3_root"]
+                    / forbidden_seed_auditor.V3_INVENTORY_BASENAME
+                ).exists()
+            )
+
     def test_equal_and_strict_superset_publish_only_aggregate_scalars(self) -> None:
         for relation, v3_seeds in (
             ("equal", [11, 22]),
