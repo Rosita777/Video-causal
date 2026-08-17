@@ -18,6 +18,7 @@ import importlib.metadata
 import importlib.util
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -66,6 +67,7 @@ PACKAGE_COMMITMENT_PROTOCOL = (
 )
 STATUS_PROTOCOL = "water_impact_dynamic_v4_causal_screening_status_v3"
 LOCK_PROTOCOL = "water_impact_dynamic_v4_causal_screening_cuda_lock_v3"
+COST_STATUS_PROTOCOL = "water_impact_dynamic_v4_screening_cost_calibration_status_v3"
 
 GENERATION_DIRNAME = "causal_original_screening_generation_v3"
 PUBLIC_PACKAGE_DIRNAME = "causal_original_screening_review_public_v3"
@@ -87,6 +89,34 @@ COMPOSITE_INVENTORY_BASENAME = "screening_composite_inventory_576_v3.json"
 PUBLIC_MANIFEST_BASENAME = "screening_public_package_manifest_576_v3.json"
 PRIVATE_MANIFEST_BASENAME = "screening_private_package_manifest_576_v3.json"
 PACKAGE_COMMITMENT_BASENAME = "screening_package_commitment_v3.json"
+COST_CALIBRATION_RUN_DIRNAME = "v4_screening_cost_calibration_run_v3"
+COST_RESERVATION_BASENAME = "calibration_reservation_v3.json"
+COST_STARTED_BASENAME = "execution_started_v3.json"
+COST_FAILED_BASENAME = "execution_failed_v3.json"
+COST_RUN_MANIFEST_BASENAME = "calibration_run_manifest_v3.json"
+COST_RUN_MANIFEST_PROTOCOL = (
+    "water_impact_dynamic_v4_screening_cost_calibration_run_manifest_v3"
+)
+
+CALIBRATION_PROMPTS = (
+    "A red ceramic mug rotates slowly on a plain gray turntable under soft studio lighting.",
+    "A small wooden train travels along a straight tabletop track beside a yellow block.",
+    "A folded blue scarf rests on a shelf while a desk fan gently moves one loose corner.",
+    "A silver desk clock stands upright as its second hand advances across the dial.",
+    "A green toy tractor rolls forward across a dry textured mat in a quiet room.",
+)
+CALIBRATION_TARGETS = (
+    "red ceramic mug",
+    "small wooden train",
+    "folded blue scarf",
+    "silver desk clock",
+    "green toy tractor",
+)
+CALIBRATION_SEEDS = protocol.CALIBRATION_SEEDS
+CALIBRATION_PROMPT_SHA256 = protocol.CALIBRATION_PROMPT_SHA256
+CALIBRATION_EXPECTED_EFFECT = "public pre-Stage-0 cost calibration"
+CALIBRATION_COUNT = 5
+CALIBRATION_MAX_SECONDS = 600
 
 FRAME_INDICES = (0, 8, 16, 24, 32, 40, 48)
 REVIEW_FIELDS = (
@@ -157,6 +187,18 @@ class ConsumedReservationFailure(RuntimeError):
     """Reservation failed only after this invocation acquired the one-shot lock."""
 
 
+class TerminalCostCalibrationFailure(RuntimeError):
+    """A terminal one-shot calibration failure safe to report publicly."""
+
+    def __init__(self, category: str):
+        super().__init__(category)
+        self.category = category
+
+
+class ConsumedCostCalibrationReservation(RuntimeError):
+    """Calibration failed only after reserving its immutable output directory."""
+
+
 @dataclass(frozen=True)
 class Stage0Context:
     project_root: Path
@@ -179,6 +221,24 @@ class Stage0Context:
     generator_sha256: str
     generator_dependency_closure_sha256: str
     media_runtime_packages: Mapping[str, str]
+
+
+@dataclass(frozen=True)
+class CostCalibrationContext:
+    project_root: Path
+    private_root: Path
+    hardware: Mapping[str, Any]
+    model_content_inventory_sha256: str
+    runtime_registry_sha256: str
+    render_configuration_sha256: str
+    code_registry_sha256: str
+    generator_path: Path
+    generator_sha256: str
+    generator_dependency_closure_sha256: str
+    media_runtime_packages: Mapping[str, str]
+    forbidden_seed_inventory_sha256: str
+    forbidden_numeric_seed_count: int
+    screening_seed_sha256: str
 
 
 def _json_bytes(payload: Mapping[str, Any]) -> bytes:
@@ -742,9 +802,14 @@ def validate_stage0_for_screening(
         private_root, authorizer.PRIVATE_INPUTS["forbidden_seed_inventory"]
     )
     forbidden = selector.validate_forbidden_seed_inventory(forbidden_payload)
-    protocol.require(
-        screening_seed not in forbidden,
-        "screening seed collides with forbidden inventory",
+    forbidden_sha256 = protocol.sha256_file(
+        opening_paths["forbidden_seed_inventory"]
+    )
+    _validate_forbidden_seed_relationships(
+        secrets_payload=secrets_payload,
+        forbidden=forbidden,
+        forbidden_seed_inventory_sha256=forbidden_sha256,
+        screening_seed=screening_seed,
     )
     forbidden_audit = _load_public(
         project_root, protocol.FORBIDDEN_SEED_SOURCE_AUDIT
@@ -824,12 +889,29 @@ def validate_stage0_for_screening(
         capacity_model, capacity_search, capacity_confirm, static_graph
     )
     cost_payload = _load_public(project_root, authorizer.COST_CALIBRATION_PATH)
-    authorizer._validate_cost_calibration(
+    generator_record = code_payload["artifacts"]["generator"]
+    cost_context = CostCalibrationContext(
+        project_root=project_root,
+        private_root=private_root,
+        hardware=dict(live_hardware),
+        model_content_inventory_sha256=model_inventory_sha256,
+        runtime_registry_sha256=runtime_registry_sha256,
+        render_configuration_sha256=opening_records[
+            "raw_render_configuration"
+        ]["sha256"],
+        code_registry_sha256=opening_records["eval_code_registry"]["sha256"],
+        generator_path=project_root / generator_record["path"],
+        generator_sha256=generator_record["sha256"],
+        generator_dependency_closure_sha256=generator_closure_sha256,
+        media_runtime_packages=dict(media_runtime_packages),
+        forbidden_seed_inventory_sha256=forbidden_sha256,
+        forbidden_numeric_seed_count=len(forbidden),
+        screening_seed_sha256=opening_records["screening_seed"]["sha256"],
+    )
+    validate_cost_calibration_payload(
         cost_payload,
-        model_sha=model_inventory_sha256,
-        runtime_sha=runtime_registry_sha256,
-        render_sha=opening_records["raw_render_configuration"]["sha256"],
-        live_hardware=live_hardware,
+        context=cost_context,
+        calibration_run_dir=_calibration_paths(project_root)[0],
     )
     bundle_payload = _load_private(
         private_root, authorizer.PRIVATE_INPUTS["raw_root_bundle"]
@@ -1057,9 +1139,17 @@ def generation_command(
 
 def sanitized_worker_environment(
     source: Mapping[str, str] | None = None,
+    *,
+    project_root: Path | None = None,
 ) -> dict[str, str]:
     base = os.environ if source is None else source
-    runtime_bin = os.path.realpath("models/.wan-runtime/bin")
+    runtime_bin = os.path.realpath(
+        os.fspath(
+            (project_root / "models/.wan-runtime/bin")
+            if project_root is not None
+            else Path("models/.wan-runtime/bin")
+        )
+    )
     output = {
         "PATH": os.pathsep.join((runtime_bin, "/usr/bin", "/bin")),
         "PYTHONNOUSERSITE": "1",
@@ -3242,6 +3332,1546 @@ def _run_screening_locked(
         ) from exc
 
 
+def _calibration_generation_configuration() -> dict[str, Any]:
+    return {
+        "worker_count": 1,
+        "steps": 25,
+        "cfg": 5,
+        "frames": 49,
+        "width": 832,
+        "height": 480,
+        "fps": 8,
+        "dtype": "bf16",
+        "adapter": None,
+        "skip_existing": False,
+        "resume": False,
+    }
+
+
+def _require_calibration_constants() -> None:
+    protocol.require(
+        len(CALIBRATION_PROMPTS)
+        == len(CALIBRATION_TARGETS)
+        == len(CALIBRATION_SEEDS)
+        == CALIBRATION_COUNT
+        and len(set(CALIBRATION_PROMPTS)) == CALIBRATION_COUNT
+        and len(set(CALIBRATION_TARGETS)) == CALIBRATION_COUNT
+        and len(set(CALIBRATION_SEEDS)) == CALIBRATION_COUNT,
+        "cost calibration constants are not exact and unique",
+    )
+    forbidden_words = {
+        "water",
+        "splash",
+        "splashing",
+        "drop",
+        "droplet",
+        "impact",
+        "pool",
+        "pond",
+        "basin",
+        "lake",
+        "river",
+    }
+    for prompt, target in zip(CALIBRATION_PROMPTS, CALIBRATION_TARGETS):
+        words = {
+            token.casefold()
+            for token in re.findall(r"[A-Za-z]+", f"{prompt} {target}")
+        }
+        protocol.require(
+            isinstance(prompt, str)
+            and prompt.strip() == prompt
+            and prompt
+            and "\n" not in prompt
+            and "\r" not in prompt
+            and "|" not in prompt
+            and isinstance(target, str)
+            and target.strip() == target
+            and target
+            and "\n" not in target
+            and "\r" not in target
+            and "|" not in target
+            and words.isdisjoint(forbidden_words),
+            "calibration prompt is not a public non-water-impact prompt",
+        )
+    protocol.require(
+        all(type(seed) is int and 0 <= seed < 2**32 for seed in CALIBRATION_SEEDS),
+        "calibration seeds must be unique uint32 values",
+    )
+    protocol.require(
+        CALIBRATION_SEEDS == protocol.CALIBRATION_SEEDS
+        and CALIBRATION_PROMPT_SHA256 == protocol.CALIBRATION_PROMPT_SHA256
+        and len(CALIBRATION_PROMPT_SHA256) == CALIBRATION_COUNT
+        and len(set(CALIBRATION_PROMPT_SHA256)) == CALIBRATION_COUNT
+        and all(protocol.is_hex64(value) for value in CALIBRATION_PROMPT_SHA256)
+        and tuple(_calibration_prompt_hashes()) == CALIBRATION_PROMPT_SHA256,
+        "calibration prompt/seed constants differ from the protocol registry",
+    )
+
+
+def _validate_forbidden_seed_relationships(
+    *,
+    secrets_payload: Mapping[str, Any],
+    forbidden: set[int] | frozenset[int],
+    forbidden_seed_inventory_sha256: str,
+    screening_seed: int,
+) -> None:
+    protocol.require(
+        isinstance(forbidden, (set, frozenset))
+        and all(type(seed) is int for seed in forbidden)
+        and protocol.is_hex64(forbidden_seed_inventory_sha256),
+        "forbidden seed relationship inputs are invalid",
+    )
+    audit = secrets_payload["historical_secret_audit"]
+    authorizer.validate_historical_secret_audit(
+        audit,
+        forbidden_seed_inventory_sha256=forbidden_seed_inventory_sha256,
+        forbidden_numeric_seed_count=len(forbidden),
+    )
+    protocol.require(
+        screening_seed not in forbidden
+        and set(CALIBRATION_SEEDS).issubset(forbidden)
+        and audit["screening_seed_forbidden_intersection_count"] == 0,
+        "screening/calibration seeds violate the forbidden inventory contract",
+    )
+
+
+def _calibration_prompt_hashes() -> list[str]:
+    return [hashlib.sha256(prompt.encode("utf-8")).hexdigest() for prompt in CALIBRATION_PROMPTS]
+
+
+def _calibration_paths(project_root: Path) -> tuple[Path, Path]:
+    return (
+        project_root / protocol.DATA_ROOT / COST_CALIBRATION_RUN_DIRNAME,
+        project_root / authorizer.COST_CALIBRATION_PATH,
+    )
+
+
+@contextlib.contextmanager
+def _cost_calibration_mutex(project_root: Path):
+    data_root = project_root / protocol.DATA_ROOT
+    protocol._require_no_symlink_components(data_root)
+    info = os.lstat(data_root)
+    protocol.require(
+        stat.S_ISDIR(info.st_mode) and not stat.S_ISLNK(info.st_mode),
+        "cost calibration mutex requires the real standard data root",
+    )
+    descriptor = os.open(
+        data_root,
+        os.O_RDONLY
+        | getattr(os, "O_DIRECTORY", 0)
+        | getattr(os, "O_NOFOLLOW", 0),
+    )
+    try:
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            raise FileExistsError(
+                "another v3 cost calibration owns the project GPU mutex"
+            ) from exc
+        yield
+    finally:
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_UN)
+        finally:
+            os.close(descriptor)
+
+
+def _require_pre_stage0_calibration_state(project_root: Path) -> None:
+    for relative, label in (
+        (protocol.STAGE0_PUBLIC, "pending Stage-0 commitment"),
+        (protocol.STAGE0_REGISTRY, "standard Stage-0 wrapper"),
+        (protocol.INVALID_OUTCOME, "invalid outcome"),
+        (protocol.STAGE1_REGISTRY, "Stage-1 wrapper"),
+    ):
+        target = project_root / relative
+        protocol.require(
+            not os.path.lexists(target),
+            f"cost calibration requires pre-Stage-0 state; found {label}",
+        )
+
+
+def _validate_cost_calibration_context(
+    *,
+    project_root: Path,
+    private_root: Path,
+    python_executable: str,
+    worker_count: int,
+) -> CostCalibrationContext:
+    project_root = protocol.validate_project_root(project_root)
+    private_root = _require_private_root(project_root, private_root)
+    _require_pre_stage0_calibration_state(project_root)
+    protocol.require(
+        python_executable == "models/.wan-runtime/bin/python" and worker_count == 1,
+        "cost calibration requires the frozen interpreter and one worker",
+    )
+    model_path = project_root / authorizer.MODEL_INVENTORY_PATH
+    model_payload = _load_public(project_root, authorizer.MODEL_INVENTORY_PATH)
+    model_sha = authorizer._validate_model_inventory(model_payload, project_root)
+    runtime_path = project_root / authorizer.RUNTIME_REGISTRY_PATH
+    runtime_payload = _load_public(project_root, authorizer.RUNTIME_REGISTRY_PATH)
+    hardware = authorizer._validate_runtime_registry(runtime_payload, project_root)
+    code_path = project_root / protocol.CODE_REGISTRY
+    code_payload = _load_public(project_root, protocol.CODE_REGISTRY)
+    authorizer.validate_code_registry_full(code_payload, project_root)
+    _, closure_sha = authorizer.generator_dependency_closure(project_root)
+    media_packages = authorizer.probe_media_runtime_packages(project_root)
+    validate_runner_process_environment(project_root, media_packages)
+    render_name = authorizer.PRIVATE_INPUTS["raw_render_configuration"]
+    render_path = private_root / render_name
+    render_payload = protocol.load_json(render_path, private_root=private_root)
+    authorizer._validate_render(render_payload, model_sha)
+    generator_record = code_payload["artifacts"]["generator"]
+    generator_path = project_root / generator_record["path"]
+    protocol.require(
+        generator_record["path"] == protocol.CODE_ARTIFACT_PATHS["generator"]
+        and protocol.sha256_file(generator_path) == generator_record["sha256"],
+        "calibration generator differs from the frozen code registry",
+    )
+    forbidden_name = authorizer.PRIVATE_INPUTS["forbidden_seed_inventory"]
+    forbidden_path = private_root / forbidden_name
+    forbidden_payload = _load_private(private_root, forbidden_name)
+    forbidden = selector.validate_forbidden_seed_inventory(forbidden_payload)
+    secrets_payload = _load_private(
+        private_root, authorizer.PRIVATE_INPUTS["stage0_secrets"]
+    )
+    screening_seed_path = (
+        private_root / authorizer.PRIVATE_INPUTS["screening_seed"]
+    )
+    screening_seed = authorizer._read_text_secret(
+        screening_seed_path, integer=True
+    )
+    graph_salt = authorizer._read_text_secret(
+        private_root / authorizer.PRIVATE_INPUTS["graph_assignment_salt"]
+    )
+    selector_salt = authorizer._read_text_secret(
+        private_root / authorizer.PRIVATE_INPUTS["selector_salt"]
+    )
+    evaluation_salt = authorizer._read_text_secret(
+        private_root / authorizer.PRIVATE_INPUTS["evaluation_seed_salt"]
+    )
+    assert isinstance(screening_seed, int)
+    assert isinstance(graph_salt, str)
+    assert isinstance(selector_salt, str)
+    assert isinstance(evaluation_salt, str)
+    authorizer._validate_secrets(
+        secrets_payload,
+        graph_salt=graph_salt,
+        selector_salt=selector_salt,
+        evaluation_salt=evaluation_salt,
+        screening_seed=screening_seed,
+    )
+    forbidden_sha256 = protocol.sha256_file(forbidden_path)
+    _validate_forbidden_seed_relationships(
+        secrets_payload=secrets_payload,
+        forbidden=forbidden,
+        forbidden_seed_inventory_sha256=forbidden_sha256,
+        screening_seed=screening_seed,
+    )
+    return CostCalibrationContext(
+        project_root=project_root,
+        private_root=private_root,
+        hardware=dict(hardware),
+        model_content_inventory_sha256=model_sha,
+        runtime_registry_sha256=protocol.sha256_file(runtime_path),
+        render_configuration_sha256=protocol.sha256_file(render_path),
+        code_registry_sha256=protocol.sha256_file(code_path),
+        generator_path=generator_path,
+        generator_sha256=generator_record["sha256"],
+        generator_dependency_closure_sha256=closure_sha,
+        media_runtime_packages=dict(media_packages),
+        forbidden_seed_inventory_sha256=forbidden_sha256,
+        forbidden_numeric_seed_count=len(forbidden),
+        screening_seed_sha256=protocol.sha256_file(screening_seed_path),
+    )
+
+
+def _require_same_cost_context(
+    before: CostCalibrationContext, after: CostCalibrationContext
+) -> None:
+    protocol.require(before == after, "cost calibration model/runtime/code/render bytes changed")
+
+
+def calibration_generation_command(
+    *,
+    python_executable: str,
+    generator_relative: str,
+    prompt_path: Path,
+    render_dir: Path,
+    seed: int,
+) -> list[str]:
+    protocol.require(
+        generator_relative == protocol.CODE_ARTIFACT_PATHS["generator"],
+        "calibration generator bootstrap target differs from code registry",
+    )
+    protocol.require(
+        type(seed) is int and seed in CALIBRATION_SEEDS,
+        "calibration command seed is not registered",
+    )
+    return [
+        python_executable,
+        "-I",
+        "-c",
+        GENERATOR_BOOTSTRAP,
+        "--baseline",
+        "clean",
+        "--prompts",
+        os.fspath(prompt_path),
+        "--output-dir",
+        os.fspath(render_dir),
+        "--model",
+        "models/Wan2.1-T2V-1.3B-Diffusers",
+        "--seeds",
+        str(seed),
+        "--steps",
+        "25",
+        "--guidance-scale",
+        "5",
+        "--num-frames",
+        "49",
+        "--fps",
+        "8",
+        "--height",
+        "480",
+        "--width",
+        "832",
+        "--dtype",
+        "bf16",
+        "--device",
+        "cuda",
+        "--vae-slicing",
+        "--vae-tiling",
+    ]
+
+
+def _expected_calibration_generic_generation(seed: int) -> dict[str, Any]:
+    return {
+        "baseline": "clean",
+        "seed": 42,
+        "seeds": [seed],
+        "num_inference_steps": 25,
+        "guidance_scale": 5.0,
+        "num_frames": 49,
+        "fps": 8,
+        "height": 480,
+        "width": 832,
+        "dtype": "bf16",
+        "device": "cuda",
+        "enable_model_cpu_offload": False,
+        "enable_sequential_cpu_offload": False,
+        "vae_slicing": True,
+        "vae_tiling": True,
+        "prompt_encode_device_policy": "cpu_when_offloaded_else_selected_device",
+        "lora_path": None,
+        "lora_sha256": None,
+        "lora_scale": 1.0,
+        "activation_gate_dir": None,
+        "persistent_activation_gate": False,
+        "lora_target_phrases": [],
+        "attention_gate_dir": None,
+        "attention_suppression_phrases": [],
+        "attention_suppression_strength": 20.0,
+    }
+
+
+def _write_calibration_prompt(output_dir: Path, index: int) -> Path:
+    path = output_dir / f"prompt_{index:03d}.txt"
+    raw = (
+        f"{CALIBRATION_PROMPTS[index]} | {CALIBRATION_TARGETS[index]} | "
+        f"{CALIBRATION_EXPECTED_EFFECT}\n"
+    ).encode("utf-8")
+    _write_bytes_exclusive(path, raw, 0o600)
+    return path
+
+
+def _validate_calibration_generic_manifest(
+    *, render_dir: Path, prompt_path: Path, index: int
+) -> Path:
+    manifest_path = render_dir / GENERIC_MANIFEST_BASENAME
+    protocol.require(
+        manifest_path.is_file()
+        and not manifest_path.is_symlink()
+        and manifest_path.stat().st_nlink == 1,
+        "calibration generic manifest is missing or aliased",
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    protocol.require_exact_keys(
+        manifest,
+        {
+            "created_at_utc",
+            "baseline",
+            "pipeline",
+            "model",
+            "dry_run",
+            "prompts",
+            "generation",
+            "items",
+        },
+        "calibration generic manifest",
+    )
+    created = manifest["created_at_utc"]
+    protocol.require(isinstance(created, str), "calibration timestamp is invalid")
+    try:
+        parsed_created = datetime.fromisoformat(created.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError("calibration timestamp is invalid") from exc
+    protocol.require(
+        parsed_created.tzinfo is not None
+        and manifest["baseline"] == "clean"
+        and manifest["pipeline"] == "WanPipeline"
+        and manifest["model"] == "models/Wan2.1-T2V-1.3B-Diffusers"
+        and manifest["dry_run"] is False
+        and manifest["prompts"] == os.fspath(prompt_path)
+        and manifest["generation"]
+        == _expected_calibration_generic_generation(CALIBRATION_SEEDS[index]),
+        "calibration generic generation contract differs",
+    )
+    items = manifest["items"]
+    protocol.require(isinstance(items, list) and len(items) == 1, "calibration item count differs")
+    item = protocol.require_exact_keys(
+        items[0],
+        {"index", "prompt", "target_concept", "expected_effect", "seed", "video_path"},
+        "calibration generator item",
+    )
+    video = protocol._canonical_lexical_absolute(Path(item["video_path"]))
+    videos_dir = render_dir / "videos"
+    protocol.require(
+        item["index"] == 0
+        and item["prompt"] == CALIBRATION_PROMPTS[index]
+        and item["target_concept"] == CALIBRATION_TARGETS[index]
+        and item["expected_effect"] == CALIBRATION_EXPECTED_EFFECT
+        and item["seed"] == CALIBRATION_SEEDS[index]
+        and video.parent == videos_dir
+        and video.is_file()
+        and not video.is_symlink()
+        and video.stat().st_nlink == 1
+        and video.stat().st_size > 0
+        and {entry.name for entry in render_dir.iterdir()}
+        == {GENERIC_MANIFEST_BASENAME, "videos"}
+        and {entry.name for entry in videos_dir.iterdir()} == {video.name},
+        "calibration generator item/video binding differs",
+    )
+    return video
+
+
+def _calibration_render_record(
+    *,
+    output_dir: Path,
+    index: int,
+    video: Path,
+    video_sha256: str,
+    video_size_bytes: int,
+    wall_time_seconds: float,
+) -> dict[str, Any]:
+    relative_video = video.relative_to(output_dir).as_posix()
+    prompt_path = output_dir / f"prompt_{index:03d}.txt"
+    render_log_path = output_dir / f"render_{index:03d}.log"
+    generic_manifest_path = (
+        output_dir / f"render_{index:03d}" / GENERIC_MANIFEST_BASENAME
+    )
+    protocol.require(
+        protocol.is_hex64(video_sha256)
+        and type(video_size_bytes) is int
+        and video_size_bytes > 0
+        and type(wall_time_seconds) in (int, float)
+        and wall_time_seconds > 0
+        and relative_video
+        == f"render_{index:03d}/videos/{video.name}"
+        and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*\.mp4", video.name)
+        is not None,
+        "cost calibration run-manifest render record is invalid",
+    )
+    return {
+        "index": index,
+        "prompt_sha256": _calibration_prompt_hashes()[index],
+        "seed": CALIBRATION_SEEDS[index],
+        "prompt_path": f"prompt_{index:03d}.txt",
+        "prompt_file_sha256": protocol.sha256_file(prompt_path),
+        "render_log_path": f"render_{index:03d}.log",
+        "render_log_sha256": protocol.sha256_file(render_log_path),
+        "generic_manifest_path": (
+            f"render_{index:03d}/{GENERIC_MANIFEST_BASENAME}"
+        ),
+        "generic_manifest_sha256": protocol.sha256_file(
+            generic_manifest_path
+        ),
+        "video_path": relative_video,
+        "video_sha256": video_sha256,
+        "video_size_bytes": video_size_bytes,
+        "wall_time_seconds": wall_time_seconds,
+        "frames": 49,
+        "width": 832,
+        "height": 480,
+        "fps": 8,
+    }
+
+
+def _build_calibration_run_manifest(
+    *,
+    context: CostCalibrationContext,
+    render_records: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    return {
+        "protocol": COST_RUN_MANIFEST_PROTOCOL,
+        "status": "completed_before_cost_publication",
+        "dataset_version": protocol.DATASET_VERSION,
+        "calibration_count": CALIBRATION_COUNT,
+        "hardware": dict(context.hardware),
+        "model_content_inventory_sha256": (
+            context.model_content_inventory_sha256
+        ),
+        "runtime_registry_sha256": context.runtime_registry_sha256,
+        "render_configuration_sha256": context.render_configuration_sha256,
+        "code_registry_sha256": context.code_registry_sha256,
+        "generator_sha256": context.generator_sha256,
+        "generator_dependency_closure_sha256": (
+            context.generator_dependency_closure_sha256
+        ),
+        "media_runtime_packages": dict(context.media_runtime_packages),
+        "generation_configuration": _calibration_generation_configuration(),
+        "items": [dict(record) for record in render_records],
+    }
+
+
+def _validate_calibration_run_manifest(
+    payload: Mapping[str, Any], *, context: CostCalibrationContext
+) -> None:
+    protocol.require_exact_keys(
+        payload,
+        {
+            "protocol",
+            "status",
+            "dataset_version",
+            "calibration_count",
+            "hardware",
+            "model_content_inventory_sha256",
+            "runtime_registry_sha256",
+            "render_configuration_sha256",
+            "code_registry_sha256",
+            "generator_sha256",
+            "generator_dependency_closure_sha256",
+            "media_runtime_packages",
+            "generation_configuration",
+            "items",
+        },
+        "cost calibration run manifest",
+    )
+    items = payload["items"]
+    protocol.require(
+        payload["protocol"] == COST_RUN_MANIFEST_PROTOCOL
+        and payload["status"] == "completed_before_cost_publication"
+        and payload["dataset_version"] == protocol.DATASET_VERSION
+        and payload["calibration_count"] == CALIBRATION_COUNT
+        and payload["hardware"] == dict(context.hardware)
+        and payload["model_content_inventory_sha256"]
+        == context.model_content_inventory_sha256
+        and payload["runtime_registry_sha256"]
+        == context.runtime_registry_sha256
+        and payload["render_configuration_sha256"]
+        == context.render_configuration_sha256
+        and payload["code_registry_sha256"] == context.code_registry_sha256
+        and payload["generator_sha256"] == context.generator_sha256
+        and payload["generator_dependency_closure_sha256"]
+        == context.generator_dependency_closure_sha256
+        and payload["media_runtime_packages"]
+        == dict(context.media_runtime_packages)
+        and payload["generation_configuration"]
+        == _calibration_generation_configuration()
+        and isinstance(items, list)
+        and len(items) == CALIBRATION_COUNT,
+        "cost calibration run-manifest binding differs",
+    )
+    prompt_hashes = list(CALIBRATION_PROMPT_SHA256)
+    for index, item in enumerate(items):
+        protocol.require_exact_keys(
+            item,
+            {
+                "index",
+                "prompt_sha256",
+                "seed",
+                "prompt_path",
+                "prompt_file_sha256",
+                "render_log_path",
+                "render_log_sha256",
+                "generic_manifest_path",
+                "generic_manifest_sha256",
+                "video_path",
+                "video_sha256",
+                "video_size_bytes",
+                "wall_time_seconds",
+                "frames",
+                "width",
+                "height",
+                "fps",
+            },
+            "cost calibration run-manifest item",
+        )
+        video_path = item["video_path"]
+        protocol.require(
+            item["index"] == index
+            and item["prompt_sha256"] == prompt_hashes[index]
+            and item["seed"] == CALIBRATION_SEEDS[index]
+            and item["prompt_path"] == f"prompt_{index:03d}.txt"
+            and protocol.is_hex64(item["prompt_file_sha256"])
+            and item["render_log_path"] == f"render_{index:03d}.log"
+            and protocol.is_hex64(item["render_log_sha256"])
+            and item["generic_manifest_path"]
+            == f"render_{index:03d}/{GENERIC_MANIFEST_BASENAME}"
+            and protocol.is_hex64(item["generic_manifest_sha256"])
+            and isinstance(video_path, str)
+            and video_path.startswith(f"render_{index:03d}/videos/")
+            and Path(video_path).as_posix() == video_path
+            and not Path(video_path).is_absolute()
+            and ".." not in Path(video_path).parts
+            and protocol.is_hex64(item["video_sha256"])
+            and type(item["video_size_bytes"]) is int
+            and item["video_size_bytes"] > 0
+            and type(item["wall_time_seconds"]) in (int, float)
+            and item["wall_time_seconds"] > 0
+            and item["frames"] == 49
+            and item["width"] == 832
+            and item["height"] == 480
+            and item["fps"] == 8,
+            "cost calibration run-manifest item differs",
+        )
+    protocol.require(
+        len({item["video_path"] for item in items}) == CALIBRATION_COUNT
+        and len({item["video_sha256"] for item in items})
+        == CALIBRATION_COUNT,
+        "cost calibration run-manifest videos are not unique",
+    )
+    encoded = protocol.canonical_json_bytes(dict(payload))
+    protocol.require(
+        os.fsencode(context.project_root) not in encoded
+        and os.fsencode(context.private_root) not in encoded,
+        "cost calibration run manifest leaks an absolute project/private path",
+    )
+
+
+def _calibration_tree_paths(output_dir: Path) -> tuple[list[Path], list[Path]]:
+    root_info = os.lstat(output_dir)
+    protocol.require(
+        stat.S_ISDIR(root_info.st_mode)
+        and not stat.S_ISLNK(root_info.st_mode)
+        and stat.S_IMODE(root_info.st_mode) == 0o700,
+        "cost calibration run directory is invalid",
+    )
+    render_names = {
+        f"render_{index:03d}" for index in range(CALIBRATION_COUNT)
+    }
+    root_file_names = {
+        COST_RESERVATION_BASENAME,
+        COST_STARTED_BASENAME,
+        COST_RUN_MANIFEST_BASENAME,
+        *(f"prompt_{index:03d}.txt" for index in range(CALIBRATION_COUNT)),
+        *(f"render_{index:03d}.log" for index in range(CALIBRATION_COUNT)),
+    }
+    root_entries = {entry.name: entry for entry in output_dir.iterdir()}
+    protocol.require(
+        set(root_entries) == root_file_names | render_names,
+        "cost calibration successful run inventory differs",
+    )
+
+    directories: list[Path] = []
+    files = [root_entries[name] for name in sorted(root_file_names)]
+    for index in range(CALIBRATION_COUNT):
+        render_dir = root_entries[f"render_{index:03d}"]
+        render_info = os.lstat(render_dir)
+        protocol.require(
+            stat.S_ISDIR(render_info.st_mode)
+            and not stat.S_ISLNK(render_info.st_mode)
+            and stat.S_IMODE(render_info.st_mode) == 0o700,
+            "cost calibration evidence directory mode differs",
+        )
+        render_entries = {entry.name: entry for entry in render_dir.iterdir()}
+        protocol.require(
+            set(render_entries) == {GENERIC_MANIFEST_BASENAME, "videos"},
+            "cost calibration render directory inventory differs",
+        )
+        videos_dir = render_entries["videos"]
+        videos_info = os.lstat(videos_dir)
+        protocol.require(
+            stat.S_ISDIR(videos_info.st_mode)
+            and not stat.S_ISLNK(videos_info.st_mode)
+            and stat.S_IMODE(videos_info.st_mode) == 0o700,
+            "cost calibration evidence directory mode differs",
+        )
+        video_entries = list(videos_dir.iterdir())
+        protocol.require(
+            len(video_entries) == 1,
+            "cost calibration videos directory inventory differs",
+        )
+        directories.extend((render_dir, videos_dir))
+        files.extend((render_entries[GENERIC_MANIFEST_BASENAME], video_entries[0]))
+
+    expected_directories = {
+        *(f"render_{index:03d}" for index in range(CALIBRATION_COUNT)),
+        *(
+            f"render_{index:03d}/videos"
+            for index in range(CALIBRATION_COUNT)
+        ),
+    }
+    protocol.require(
+        len(directories) == 2 * CALIBRATION_COUNT
+        and {
+            path.relative_to(output_dir).as_posix() for path in directories
+        }
+        == expected_directories,
+        "cost calibration evidence directory allowlist differs",
+    )
+    for entry in files:
+        info = os.lstat(entry)
+        protocol.require(
+            stat.S_ISREG(info.st_mode)
+            and info.st_nlink == 1
+            and stat.S_IMODE(info.st_mode) == 0o600,
+            "cost calibration evidence file mode/link contract failed",
+        )
+    protocol.require(
+        len(files) == 3 + 4 * CALIBRATION_COUNT,
+        "cost calibration evidence file allowlist differs",
+    )
+    return directories, sorted(
+        files, key=lambda value: value.relative_to(output_dir).as_posix()
+    )
+
+
+def _calibration_tree_records(output_dir: Path) -> list[dict[str, Any]]:
+    _, files = _calibration_tree_paths(output_dir)
+    records: list[dict[str, Any]] = []
+    for entry in files:
+        info = os.lstat(entry)
+        records.append(
+            {
+                "path": entry.relative_to(output_dir).as_posix(),
+                "sha256": protocol.sha256_file(entry),
+                "size_bytes": info.st_size,
+            }
+        )
+    paths = [record["path"] for record in records]
+    protocol.require(
+        paths == sorted(paths)
+        and len(paths) == len(set(paths))
+        and len(paths) == 3 + 4 * CALIBRATION_COUNT
+        and COST_FAILED_BASENAME not in paths,
+        "cost calibration evidence tree is not canonical and successful",
+    )
+    return records
+
+
+def _cost_tree_records(output_dir: Path) -> list[dict[str, Any]]:
+    """Return the shared canonical cost-evidence record sequence."""
+
+    return _calibration_tree_records(output_dir)
+
+
+def _fsync_cost_evidence_tree(output_dir: Path) -> None:
+    nested_directories, files = _calibration_tree_paths(output_dir)
+    directories = [output_dir, *nested_directories]
+    for entry in files:
+        info = os.lstat(entry)
+        protocol.require(
+            stat.S_ISREG(info.st_mode) and info.st_nlink == 1,
+            "cost calibration evidence tree contains a non-regular file",
+        )
+        descriptor = os.open(
+            entry,
+            os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+        )
+        try:
+            opened = os.fstat(descriptor)
+            protocol.require(
+                stat.S_ISREG(opened.st_mode)
+                and (opened.st_dev, opened.st_ino)
+                == (info.st_dev, info.st_ino)
+                and opened.st_nlink == 1,
+                "cost calibration evidence identity changed before fsync",
+            )
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+    for directory in sorted(
+        directories,
+        key=lambda value: len(value.relative_to(output_dir).parts),
+        reverse=True,
+    ):
+        descriptor = os.open(
+            directory,
+            os.O_RDONLY
+            | getattr(os, "O_DIRECTORY", 0)
+            | getattr(os, "O_NOFOLLOW", 0),
+        )
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+
+
+def _calibration_tree_sha256(output_dir: Path) -> str:
+    return protocol.sha256_bytes(
+        protocol.canonical_json_bytes(_cost_tree_records(output_dir))
+    )
+
+
+def _validate_calibration_evidence(
+    *,
+    output_dir: Path,
+    context: CostCalibrationContext,
+    expected_manifest_sha256: str,
+    expected_tree_sha256: str,
+) -> None:
+    expected_top = {COST_RESERVATION_BASENAME, COST_STARTED_BASENAME}
+    expected_top |= {
+        f"prompt_{index:03d}.txt" for index in range(CALIBRATION_COUNT)
+    }
+    expected_top |= {
+        f"render_{index:03d}.log" for index in range(CALIBRATION_COUNT)
+    }
+    expected_top |= {
+        f"render_{index:03d}" for index in range(CALIBRATION_COUNT)
+    }
+    expected_top.add(COST_RUN_MANIFEST_BASENAME)
+    protocol.require(
+        {entry.name for entry in output_dir.iterdir()} == expected_top,
+        "cost calibration successful run inventory differs",
+    )
+    manifest_path = output_dir / COST_RUN_MANIFEST_BASENAME
+    manifest = protocol.load_json(manifest_path, project_root=context.project_root)
+    _validate_calibration_run_manifest(manifest, context=context)
+    items = manifest["items"]
+    for index, item in enumerate(items):
+        prompt_path = output_dir / item["prompt_path"]
+        log_path = output_dir / item["render_log_path"]
+        generic_path = output_dir / item["generic_manifest_path"]
+        video_path = output_dir / item["video_path"]
+        render_dir = output_dir / f"render_{index:03d}"
+        videos_dir = render_dir / "videos"
+        expected_prompt = (
+            f"{CALIBRATION_PROMPTS[index]} | {CALIBRATION_TARGETS[index]} | "
+            f"{CALIBRATION_EXPECTED_EFFECT}\n"
+        ).encode("utf-8")
+        validated_video = _validate_calibration_generic_manifest(
+            render_dir=render_dir,
+            prompt_path=prompt_path,
+            index=index,
+        )
+        protocol.require(
+            prompt_path.is_file()
+            and prompt_path.read_bytes() == expected_prompt
+            and log_path.is_file()
+            and generic_path.is_file()
+            and video_path.is_file()
+            and validated_video == video_path
+            and {entry.name for entry in render_dir.iterdir()}
+            == {GENERIC_MANIFEST_BASENAME, "videos"}
+            and {entry.name for entry in videos_dir.iterdir()}
+            == {video_path.name}
+            and protocol.sha256_file(prompt_path)
+            == item["prompt_file_sha256"]
+            and protocol.sha256_file(log_path) == item["render_log_sha256"]
+            and protocol.sha256_file(generic_path)
+            == item["generic_manifest_sha256"]
+            and protocol.sha256_file(video_path) == item["video_sha256"]
+            and video_path.stat().st_size == item["video_size_bytes"],
+            "cost calibration run-manifest evidence differs",
+        )
+    protocol.require(
+        protocol.sha256_file(manifest_path) == expected_manifest_sha256
+        and _calibration_tree_sha256(output_dir) == expected_tree_sha256,
+        "cost calibration evidence commitment differs",
+    )
+
+
+def validate_cost_calibration_payload(
+    payload: Mapping[str, Any], *, context: CostCalibrationContext | None = None,
+    calibration_run_dir: Path | None = None,
+) -> Mapping[str, Any]:
+    protocol.require_exact_keys(
+        payload,
+        {
+            "protocol",
+            "status",
+            "dataset_version",
+            "hardware",
+            "model_content_inventory_sha256",
+            "runtime_registry_sha256",
+            "render_configuration_sha256",
+            "code_registry_sha256",
+            "generator_sha256",
+            "generator_dependency_closure_sha256",
+            "media_runtime_packages",
+            "generation_configuration",
+            "public_prompt_sha256",
+            "calibration_seeds",
+            "video_sha256",
+            "video_size_bytes",
+            "wall_time_seconds",
+            "calibration_run_manifest_sha256",
+            "calibration_tree_sha256",
+            "maximum_wall_time_seconds",
+            "maximum_allowed_seconds",
+            "candidate_count",
+            "gpu_hour_cap",
+            "passes",
+        },
+        "screening cost calibration",
+    )
+    prompt_hashes = payload["public_prompt_sha256"]
+    seeds = payload["calibration_seeds"]
+    video_hashes = payload["video_sha256"]
+    sizes = payload["video_size_bytes"]
+    times = payload["wall_time_seconds"]
+    protocol.require(
+        calibration_run_dir is None or context is not None,
+        "cost calibration evidence validation requires frozen context",
+    )
+    protocol.require(
+        payload["protocol"] == authorizer.COST_PROTOCOL
+        and payload["status"] == "passed"
+        and payload["dataset_version"] == protocol.DATASET_VERSION
+        and all(
+            protocol.is_hex64(payload[name])
+            for name in (
+                "model_content_inventory_sha256",
+                "runtime_registry_sha256",
+                "render_configuration_sha256",
+                "code_registry_sha256",
+                "generator_sha256",
+                "generator_dependency_closure_sha256",
+                "calibration_run_manifest_sha256",
+                "calibration_tree_sha256",
+            )
+        )
+        and isinstance(payload["hardware"], dict)
+        and isinstance(payload["media_runtime_packages"], dict)
+        and payload["generation_configuration"]
+        == _calibration_generation_configuration()
+        and prompt_hashes == list(CALIBRATION_PROMPT_SHA256)
+        and prompt_hashes == _calibration_prompt_hashes()
+        and isinstance(seeds, list)
+        and seeds == list(CALIBRATION_SEEDS)
+        and len(set(seeds)) == CALIBRATION_COUNT
+        and all(type(seed) is int and 0 <= seed < 2**32 for seed in seeds)
+        and isinstance(video_hashes, list)
+        and len(video_hashes) == CALIBRATION_COUNT
+        and len(set(video_hashes)) == CALIBRATION_COUNT
+        and all(protocol.is_hex64(value) for value in video_hashes)
+        and isinstance(sizes, list)
+        and len(sizes) == CALIBRATION_COUNT
+        and all(type(value) is int and value > 0 for value in sizes)
+        and isinstance(times, list)
+        and len(times) == CALIBRATION_COUNT
+        and all(type(value) in (int, float) and value > 0 for value in times)
+        and payload["maximum_wall_time_seconds"] == max(times)
+        and payload["maximum_allowed_seconds"] == CALIBRATION_MAX_SECONDS
+        and max(times) <= CALIBRATION_MAX_SECONDS
+        and payload["candidate_count"] == protocol.CANDIDATE_COUNT
+        and payload["gpu_hour_cap"] == 100
+        and payload["passes"] is True,
+        "screening cost calibration failed",
+    )
+    if context is not None:
+        protocol.require(
+            payload["hardware"] == dict(context.hardware)
+            and payload["model_content_inventory_sha256"]
+            == context.model_content_inventory_sha256
+            and payload["runtime_registry_sha256"]
+            == context.runtime_registry_sha256
+            and payload["render_configuration_sha256"]
+            == context.render_configuration_sha256
+            and payload["code_registry_sha256"] == context.code_registry_sha256
+            and payload["generator_sha256"] == context.generator_sha256
+            and payload["generator_dependency_closure_sha256"]
+            == context.generator_dependency_closure_sha256
+            and payload["media_runtime_packages"]
+            == dict(context.media_runtime_packages),
+            "screening cost calibration context binding differs",
+        )
+        authorizer._validate_cost_calibration(
+            payload,
+            model_sha=context.model_content_inventory_sha256,
+            runtime_sha=context.runtime_registry_sha256,
+            render_sha=context.render_configuration_sha256,
+            live_hardware=context.hardware,
+            code_registry_sha256=context.code_registry_sha256,
+            generator_sha256=context.generator_sha256,
+            generator_dependency_closure_sha256=(
+                context.generator_dependency_closure_sha256
+            ),
+            media_runtime_packages=context.media_runtime_packages,
+            project_root=(
+                context.project_root
+                if calibration_run_dir is not None
+                else None
+            ),
+            calibration_run_dir=calibration_run_dir,
+        )
+    return payload
+
+
+def _write_cost_failure(
+    *,
+    output_dir: Path,
+    artifact_path: Path,
+    failure_phase: str,
+    reason_code: str,
+    completed_render_count: int,
+) -> None:
+    allowed_failures = {
+        ("preflight", "cost_calibration_preflight_failure"),
+        ("generation", "cost_calibration_generation_failure"),
+        ("generation", "cost_calibration_timeout"),
+        ("validation", "cost_calibration_validation_failure"),
+        ("publication", "cost_calibration_publication_failure"),
+    }
+    protocol.require(
+        type(completed_render_count) is int
+        and 0 <= completed_render_count <= CALIBRATION_COUNT
+        and (failure_phase, reason_code) in allowed_failures
+        and not os.path.lexists(artifact_path)
+        and not os.path.lexists(output_dir / COST_FAILED_BASENAME),
+        "cost calibration terminal status fields are invalid",
+    )
+    payload = {
+        "protocol": COST_STATUS_PROTOCOL,
+        "dataset_version": protocol.DATASET_VERSION,
+        "status": "failed_terminal",
+        "failure_phase": failure_phase,
+        "reason_code": reason_code,
+        "calibration_count": CALIBRATION_COUNT,
+        "completed_render_count": completed_render_count,
+        "artifact_sha256": None,
+    }
+    _write_owned_regular_exclusive(
+        output_dir / COST_FAILED_BASENAME, _json_bytes(payload), mode=0o600
+    )
+
+
+def _remove_owned_regular(path: Path, identity: tuple[int, int]) -> None:
+    try:
+        info = os.lstat(path)
+    except FileNotFoundError:
+        return
+    if stat.S_ISREG(info.st_mode) and (info.st_dev, info.st_ino) == identity:
+        path.unlink()
+
+
+def _write_owned_regular_exclusive(
+    path: Path, raw: bytes, *, mode: int
+) -> tuple[str, tuple[int, int]]:
+    protocol.reject_forbidden_path(path)
+    protocol._require_no_symlink_components(path.parent)
+    if os.path.lexists(path):
+        raise FileExistsError(f"refusing to overwrite owned output: {path}")
+    descriptor = os.open(
+        path,
+        os.O_RDWR
+        | os.O_CREAT
+        | os.O_EXCL
+        | getattr(os, "O_NOFOLLOW", 0),
+        mode,
+    )
+    opened = os.fstat(descriptor)
+    identity = (opened.st_dev, opened.st_ino)
+    try:
+        offset = 0
+        while offset < len(raw):
+            written = os.write(descriptor, raw[offset:])
+            protocol.require(written > 0, "owned output write made no progress")
+            offset += written
+        os.fsync(descriptor)
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        observed = bytearray()
+        while True:
+            chunk = os.read(descriptor, 1024 * 1024)
+            if not chunk:
+                break
+            observed.extend(chunk)
+        protocol.require(bytes(observed) == raw, "owned output writeback mismatch")
+    except BaseException:
+        os.close(descriptor)
+        _remove_owned_regular(path, identity)
+        raise
+    os.close(descriptor)
+    try:
+        info = os.lstat(path)
+        protocol.require(
+            stat.S_ISREG(info.st_mode)
+            and (info.st_dev, info.st_ino) == identity
+            and info.st_nlink == 1
+            and stat.S_IMODE(info.st_mode) == mode,
+            "owned output identity/mode changed after publication",
+        )
+        parent_fd = os.open(
+            path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+        )
+        try:
+            os.fsync(parent_fd)
+        finally:
+            os.close(parent_fd)
+    except BaseException:
+        _remove_owned_regular(path, identity)
+        raise
+    return protocol.sha256_bytes(raw), identity
+
+
+def _publish_cost_artifact_exclusive(
+    path: Path, raw: bytes
+) -> tuple[str, tuple[int, int]]:
+    """Publish the final public cost artifact without exposing partial bytes."""
+
+    mode = 0o644
+    protocol.reject_forbidden_path(path)
+    protocol._require_no_symlink_components(path.parent)
+    if os.path.lexists(path):
+        raise FileExistsError(f"refusing to overwrite cost artifact: {path}")
+
+    temp_descriptor: int | None = None
+    target_descriptor: int | None = None
+    temp_path: Path | None = None
+    identity: tuple[int, int] | None = None
+    try:
+        temp_descriptor, temp_name = tempfile.mkstemp(
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            dir=os.fspath(path.parent),
+        )
+        temp_path = Path(temp_name)
+        opened = os.fstat(temp_descriptor)
+        identity = (opened.st_dev, opened.st_ino)
+        protocol.require(
+            stat.S_ISREG(opened.st_mode) and opened.st_nlink == 1,
+            "cost artifact temporary inode is invalid",
+        )
+        os.fchmod(temp_descriptor, mode)
+        opened = os.fstat(temp_descriptor)
+        protocol.require(
+            stat.S_ISREG(opened.st_mode)
+            and (opened.st_dev, opened.st_ino) == identity
+            and opened.st_nlink == 1
+            and stat.S_IMODE(opened.st_mode) == mode,
+            "cost artifact temporary identity/mode changed",
+        )
+        offset = 0
+        while offset < len(raw):
+            written = os.write(temp_descriptor, raw[offset:])
+            protocol.require(
+                written > 0, "cost artifact temporary write made no progress"
+            )
+            offset += written
+        os.fsync(temp_descriptor)
+        os.lseek(temp_descriptor, 0, os.SEEK_SET)
+        observed = bytearray()
+        while True:
+            chunk = os.read(temp_descriptor, 1024 * 1024)
+            if not chunk:
+                break
+            observed.extend(chunk)
+        opened = os.fstat(temp_descriptor)
+        protocol.require(
+            bytes(observed) == raw
+            and stat.S_ISREG(opened.st_mode)
+            and (opened.st_dev, opened.st_ino) == identity
+            and opened.st_nlink == 1
+            and opened.st_size == len(raw)
+            and stat.S_IMODE(opened.st_mode) == mode,
+            "cost artifact temporary readback failed",
+        )
+        os.close(temp_descriptor)
+        temp_descriptor = None
+
+        # link(2) is an atomic, no-replace publication boundary: an existing
+        # target makes the operation fail without altering that target.
+        os.link(temp_path, path, follow_symlinks=False)
+        linked = os.lstat(path)
+        temp_linked = os.lstat(temp_path)
+        protocol.require(
+            stat.S_ISREG(linked.st_mode)
+            and stat.S_ISREG(temp_linked.st_mode)
+            and (linked.st_dev, linked.st_ino) == identity
+            and (temp_linked.st_dev, temp_linked.st_ino) == identity
+            and linked.st_nlink == temp_linked.st_nlink == 2
+            and stat.S_IMODE(linked.st_mode) == mode
+            and stat.S_IMODE(temp_linked.st_mode) == mode,
+            "cost artifact hardlink publication identity differs",
+        )
+        _remove_owned_regular(temp_path, identity)
+        protocol.require(
+            not os.path.lexists(temp_path),
+            "cost artifact owned temporary link was not removed",
+        )
+
+        target_descriptor = os.open(
+            path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+        )
+        target_opened = os.fstat(target_descriptor)
+        target_bytes = bytearray()
+        while True:
+            chunk = os.read(target_descriptor, 1024 * 1024)
+            if not chunk:
+                break
+            target_bytes.extend(chunk)
+        os.close(target_descriptor)
+        target_descriptor = None
+        target_info = os.lstat(path)
+        protocol.require(
+            bytes(target_bytes) == raw
+            and stat.S_ISREG(target_opened.st_mode)
+            and stat.S_ISREG(target_info.st_mode)
+            and (target_opened.st_dev, target_opened.st_ino) == identity
+            and (target_info.st_dev, target_info.st_ino) == identity
+            and target_opened.st_nlink == target_info.st_nlink == 1
+            and target_opened.st_size == target_info.st_size == len(raw)
+            and stat.S_IMODE(target_opened.st_mode) == mode
+            and stat.S_IMODE(target_info.st_mode) == mode,
+            "cost artifact target readback/identity/mode differs",
+        )
+        parent_descriptor = os.open(
+            path.parent,
+            os.O_RDONLY
+            | getattr(os, "O_DIRECTORY", 0)
+            | getattr(os, "O_NOFOLLOW", 0),
+        )
+        try:
+            os.fsync(parent_descriptor)
+        finally:
+            os.close(parent_descriptor)
+    except BaseException:
+        for descriptor in (target_descriptor, temp_descriptor):
+            if descriptor is not None:
+                try:
+                    os.close(descriptor)
+                except BaseException:
+                    pass
+        if identity is not None:
+            for owned_path in (temp_path, path):
+                if owned_path is not None:
+                    try:
+                        _remove_owned_regular(owned_path, identity)
+                    except BaseException:
+                        pass
+        raise
+    assert identity is not None
+    return protocol.sha256_bytes(raw), identity
+
+
+def _reserve_cost_calibration(project_root: Path) -> tuple[Path, Path]:
+    _require_pre_stage0_calibration_state(project_root)
+    output_dir, artifact_path = _calibration_paths(project_root)
+    for target in (output_dir, artifact_path):
+        protocol.reject_forbidden_path(target)
+        if os.path.lexists(target):
+            raise FileExistsError(f"cost calibration is already consumed: {target}")
+    protocol._require_no_symlink_components(output_dir.parent)
+    output_dir.mkdir(mode=0o700)
+    try:
+        reservation = {
+            "protocol": COST_STATUS_PROTOCOL,
+            "dataset_version": protocol.DATASET_VERSION,
+            "status": "reserved_one_shot",
+            "calibration_count": CALIBRATION_COUNT,
+            "worker_count": 1,
+            "public_prompt_sha256": _calibration_prompt_hashes(),
+            "calibration_seeds": list(CALIBRATION_SEEDS),
+        }
+        _write_bytes_exclusive(
+            output_dir / COST_RESERVATION_BASENAME,
+            _json_bytes(reservation),
+            0o600,
+        )
+        started = dict(reservation)
+        started["status"] = "execution_started"
+        _write_bytes_exclusive(
+            output_dir / COST_STARTED_BASENAME, _json_bytes(started), 0o600
+        )
+    except BaseException as exc:
+        raise ConsumedCostCalibrationReservation(
+            "cost calibration reservation was consumed"
+        ) from exc
+    return output_dir, artifact_path
+
+
+def _run_cost_calibration_locked(
+    *,
+    project_root: Path,
+    private_root: Path,
+    python_executable: str,
+    worker_count: int,
+    run: Callable[..., Any],
+    clock: Callable[[], float],
+    decode: Callable[[Path], Mapping[str, int]],
+) -> dict[str, Any]:
+    _require_calibration_constants()
+    output_dir, artifact_path = _calibration_paths(project_root)
+    try:
+        output_dir, artifact_path = _reserve_cost_calibration(project_root)
+    except ConsumedCostCalibrationReservation as exc:
+        status_error: BaseException | None = None
+        try:
+            _write_cost_failure(
+                output_dir=output_dir,
+                artifact_path=artifact_path,
+                failure_phase="preflight",
+                reason_code="cost_calibration_preflight_failure",
+                completed_render_count=0,
+            )
+        except BaseException as failure_status_error:
+            status_error = failure_status_error
+        if status_error is not None:
+            raise TerminalCostCalibrationFailure(
+                "cost_calibration_terminal_status_failure"
+            ) from status_error
+        raise TerminalCostCalibrationFailure(
+            "cost_calibration_preflight_failure"
+        ) from exc
+    completed_render_count = 0
+    failure_phase = "preflight"
+    reason_code = "cost_calibration_preflight_failure"
+    try:
+        context = _validate_cost_calibration_context(
+            project_root=project_root,
+            private_root=private_root,
+            python_executable=python_executable,
+            worker_count=worker_count,
+        )
+        times: list[float] = []
+        video_hashes: list[str] = []
+        video_sizes: list[int] = []
+        render_records: list[dict[str, Any]] = []
+        video_inodes: set[tuple[int, int]] = set()
+        for index in range(CALIBRATION_COUNT):
+            _require_pre_stage0_calibration_state(project_root)
+            failure_phase = "generation"
+            reason_code = "cost_calibration_generation_failure"
+            prompt_path = _write_calibration_prompt(output_dir, index)
+            render_dir = output_dir / f"render_{index:03d}"
+            render_dir.mkdir(mode=0o700)
+            log_path = output_dir / f"render_{index:03d}.log"
+            log_descriptor = os.open(
+                log_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600
+            )
+            command = calibration_generation_command(
+                python_executable=python_executable,
+                generator_relative=protocol.CODE_ARTIFACT_PATHS["generator"],
+                prompt_path=prompt_path,
+                render_dir=render_dir,
+                seed=CALIBRATION_SEEDS[index],
+            )
+            started = clock()
+            try:
+                with os.fdopen(log_descriptor, "wb") as log_handle:
+                    completed = run(
+                        command,
+                        cwd=project_root,
+                        stdin=subprocess.DEVNULL,
+                        stdout=log_handle,
+                        stderr=subprocess.STDOUT,
+                        shell=False,
+                        check=False,
+                        timeout=CALIBRATION_MAX_SECONDS,
+                        env=sanitized_worker_environment(project_root=project_root),
+                    )
+            except subprocess.TimeoutExpired:
+                failure_phase = "generation"
+                reason_code = "cost_calibration_timeout"
+                raise
+            elapsed = float(f"{clock() - started:.9f}")
+            protocol.require(
+                getattr(completed, "returncode", None) == 0,
+                "cost calibration generator process failed",
+            )
+            if not (0 < elapsed <= CALIBRATION_MAX_SECONDS):
+                reason_code = "cost_calibration_timeout"
+                raise TimeoutError("cost calibration render exceeded 600 seconds")
+            failure_phase = "validation"
+            reason_code = "cost_calibration_validation_failure"
+            video = _validate_calibration_generic_manifest(
+                render_dir=render_dir, prompt_path=prompt_path, index=index
+            )
+            (render_dir / GENERIC_MANIFEST_BASENAME).chmod(0o600)
+            (render_dir / "videos").chmod(0o700)
+            video.chmod(0o600)
+            before_decode = video.read_bytes()
+            decode_result = dict(decode(video))
+            protocol.require(
+                decode_result
+                == {
+                    "frame_count": 49,
+                    "width": 832,
+                    "height": 480,
+                    "fps_numerator": 8,
+                    "fps_denominator": 1,
+                }
+                and video.read_bytes() == before_decode,
+                "cost calibration video decode contract failed",
+            )
+            info = video.stat()
+            inode = (info.st_dev, info.st_ino)
+            protocol.require(inode not in video_inodes, "calibration video inode reused")
+            video_inodes.add(inode)
+            times.append(elapsed)
+            video_sha256 = hashlib.sha256(before_decode).hexdigest()
+            video_size_bytes = len(before_decode)
+            video_hashes.append(video_sha256)
+            video_sizes.append(video_size_bytes)
+            render_records.append(
+                _calibration_render_record(
+                    output_dir=output_dir,
+                    index=index,
+                    video=video,
+                    video_sha256=video_sha256,
+                    video_size_bytes=video_size_bytes,
+                    wall_time_seconds=elapsed,
+                )
+            )
+            completed_render_count += 1
+
+        expected_names = {COST_RESERVATION_BASENAME, COST_STARTED_BASENAME}
+        expected_names |= {f"prompt_{index:03d}.txt" for index in range(CALIBRATION_COUNT)}
+        expected_names |= {f"render_{index:03d}.log" for index in range(CALIBRATION_COUNT)}
+        expected_names |= {f"render_{index:03d}" for index in range(CALIBRATION_COUNT)}
+        protocol.require(
+            {entry.name for entry in output_dir.iterdir()} == expected_names,
+            "cost calibration output inventory differs",
+        )
+        frozen_snapshot = _tree_snapshot(output_dir)
+        observed = _validate_cost_calibration_context(
+            project_root=project_root,
+            private_root=private_root,
+            python_executable=python_executable,
+            worker_count=worker_count,
+        )
+        _require_same_cost_context(context, observed)
+        protocol.require(
+            _tree_snapshot(output_dir) == frozen_snapshot,
+            "cost calibration outputs changed before publication",
+        )
+        run_manifest = _build_calibration_run_manifest(
+            context=context, render_records=render_records
+        )
+        _validate_calibration_run_manifest(run_manifest, context=context)
+        run_manifest_raw = _json_bytes(run_manifest)
+        run_manifest_sha256 = protocol.sha256_bytes(run_manifest_raw)
+        failure_phase = "publication"
+        reason_code = "cost_calibration_publication_failure"
+        written_manifest_sha256, _ = _write_owned_regular_exclusive(
+            output_dir / COST_RUN_MANIFEST_BASENAME,
+            run_manifest_raw,
+            mode=0o600,
+        )
+        protocol.require(
+            written_manifest_sha256 == run_manifest_sha256,
+            "cost calibration run-manifest publication hash differs",
+        )
+        _fsync_cost_evidence_tree(output_dir)
+        failure_phase = "validation"
+        reason_code = "cost_calibration_validation_failure"
+        calibration_tree_sha256 = _calibration_tree_sha256(output_dir)
+        _validate_calibration_evidence(
+            output_dir=output_dir,
+            context=context,
+            expected_manifest_sha256=run_manifest_sha256,
+            expected_tree_sha256=calibration_tree_sha256,
+        )
+        payload = {
+            "protocol": authorizer.COST_PROTOCOL,
+            "status": "passed",
+            "dataset_version": protocol.DATASET_VERSION,
+            "hardware": dict(context.hardware),
+            "model_content_inventory_sha256": context.model_content_inventory_sha256,
+            "runtime_registry_sha256": context.runtime_registry_sha256,
+            "render_configuration_sha256": context.render_configuration_sha256,
+            "code_registry_sha256": context.code_registry_sha256,
+            "generator_sha256": context.generator_sha256,
+            "generator_dependency_closure_sha256": context.generator_dependency_closure_sha256,
+            "media_runtime_packages": dict(context.media_runtime_packages),
+            "generation_configuration": _calibration_generation_configuration(),
+            "public_prompt_sha256": _calibration_prompt_hashes(),
+            "calibration_seeds": list(CALIBRATION_SEEDS),
+            "video_sha256": video_hashes,
+            "video_size_bytes": video_sizes,
+            "wall_time_seconds": times,
+            "calibration_run_manifest_sha256": run_manifest_sha256,
+            "calibration_tree_sha256": calibration_tree_sha256,
+            "maximum_wall_time_seconds": max(times),
+            "maximum_allowed_seconds": CALIBRATION_MAX_SECONDS,
+            "candidate_count": protocol.CANDIDATE_COUNT,
+            "gpu_hour_cap": 100,
+            "passes": True,
+        }
+        validate_cost_calibration_payload(
+            payload,
+            context=context,
+        )
+        failure_phase = "publication"
+        reason_code = "cost_calibration_publication_failure"
+        raw = _json_bytes(payload)
+        artifact_sha = protocol.sha256_bytes(raw)
+        result = {
+            "status": "passed",
+            "calibration_count": CALIBRATION_COUNT,
+            "maximum_wall_time_seconds": max(times),
+            "artifact": {
+                "sha256": artifact_sha,
+                "size_bytes": len(raw),
+                "row_count": CALIBRATION_COUNT,
+            },
+        }
+        protocol.require(
+            not os.path.lexists(output_dir / COST_FAILED_BASENAME)
+            and not os.path.lexists(artifact_path),
+            "cost calibration success/failure boundary is already occupied",
+        )
+        _publish_cost_artifact_exclusive(artifact_path, raw)
+        return result
+    except BaseException as exc:
+        status_error: BaseException | None = None
+        try:
+            _write_cost_failure(
+                output_dir=output_dir,
+                artifact_path=artifact_path,
+                failure_phase=failure_phase,
+                reason_code=reason_code,
+                completed_render_count=completed_render_count,
+            )
+        except BaseException as failure_status_error:
+            status_error = failure_status_error
+        if status_error is not None:
+            raise TerminalCostCalibrationFailure(
+                "cost_calibration_terminal_status_failure"
+            ) from status_error
+        raise TerminalCostCalibrationFailure(reason_code) from exc
+
+
+def run_cost_calibration(
+    *,
+    project_root: Path,
+    private_root: Path,
+    python_executable: str,
+    worker_count: int,
+    run: Callable[..., Any] = subprocess.run,
+    clock: Callable[[], float] = time.monotonic,
+    decode: Callable[[Path], Mapping[str, int]] | None = None,
+) -> dict[str, Any]:
+    validated_project = protocol.validate_project_root(project_root)
+    validated_private = _require_private_root(validated_project, private_root)
+    decoder = (
+        decode
+        if decode is not None
+        else lambda path: _decode_video(path, collect_composite_frames=False)[0]
+    )
+    with _cost_calibration_mutex(validated_project):
+        with _screening_mutex(validated_private):
+            return _run_cost_calibration_locked(
+                project_root=validated_project,
+                private_root=validated_private,
+                python_executable=python_executable,
+                worker_count=worker_count,
+                run=run,
+                clock=clock,
+                decode=decoder,
+            )
+
+
 def run_screening(
     *,
     project_root: Path,
@@ -3252,14 +4882,15 @@ def run_screening(
 ) -> dict[str, Any]:
     validated_project = protocol.validate_project_root(project_root)
     validated_private = _require_private_root(validated_project, private_root)
-    with _screening_mutex(validated_private):
-        return _run_screening_locked(
-            project_root=validated_project,
-            private_root=validated_private,
-            python_executable=python_executable,
-            worker_count=worker_count,
-            run=run,
-        )
+    with _cost_calibration_mutex(validated_project):
+        with _screening_mutex(validated_private):
+            return _run_screening_locked(
+                project_root=validated_project,
+                private_root=validated_private,
+                python_executable=python_executable,
+                worker_count=worker_count,
+                run=run,
+            )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -3275,8 +4906,48 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def build_cost_calibration_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Run the one-shot pre-Stage-0 v3 cost calibration",
+        allow_abbrev=False,
+    )
+    parser.add_argument("--project-root", required=True, type=Path)
+    parser.add_argument("--private-root", required=True, type=Path)
+    parser.add_argument(
+        "--python",
+        required=True,
+        help="Must be exactly models/.wan-runtime/bin/python",
+    )
+    parser.add_argument("--worker-count", required=True, type=int)
+    return parser
+
+
 def main(argv: Sequence[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    calibration = bool(arguments and arguments[0] == "calibrate-cost")
+    if calibration:
+        args = build_cost_calibration_parser().parse_args(arguments[1:])
+        try:
+            result = run_cost_calibration(
+                project_root=args.project_root,
+                private_root=args.private_root,
+                python_executable=args.python,
+                worker_count=args.worker_count,
+            )
+        except TerminalCostCalibrationFailure as exc:
+            print(f"terminal cost calibration failure: {exc.category}", file=sys.stderr)
+            return 2
+        except Exception as exc:
+            print(
+                f"cost calibration preflight failed closed: {type(exc).__name__}",
+                file=sys.stderr,
+            )
+            return 2
+        print(protocol.canonical_json_bytes(result).decode("ascii"), end="")
+        return 0
+    if arguments and arguments[0] == "screen":
+        arguments = arguments[1:]
+    args = build_parser().parse_args(arguments)
     try:
         result = run_screening(
             project_root=args.project_root,

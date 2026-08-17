@@ -30,7 +30,7 @@ import sys
 import tempfile
 from collections import Counter
 from pathlib import Path
-from typing import Any, Iterable, Iterator, Mapping, Sequence
+from typing import Any, Callable, Iterable, Iterator, Mapping, Sequence
 
 import numpy as np
 
@@ -991,7 +991,12 @@ def standard_formal_output(project_root: Path, profile: str) -> Path:
     return output
 
 
-def write_json_exclusive_atomic(path: Path, payload: Mapping[str, Any]) -> str:
+def write_json_exclusive_atomic(
+    path: Path,
+    payload: Mapping[str, Any],
+    *,
+    post_link_action: Callable[[str], None] | None = None,
+) -> str:
     absolute = Path(os.path.abspath(path))
     if not absolute.name:
         raise ValueError("output filename is empty")
@@ -1006,27 +1011,171 @@ def write_json_exclusive_atomic(path: Path, payload: Mapping[str, Any]) -> str:
     data = json.dumps(
         dict(payload), indent=2, sort_keys=True, ensure_ascii=True
     ).encode("ascii") + b"\n"
-    descriptor = os.open(
-        temporary,
-        os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0),
-        0o600,
-    )
-    try:
-        with os.fdopen(descriptor, "wb", closefd=False) as handle:
-            handle.write(data)
-            handle.flush()
-            os.fsync(descriptor)
-        os.link(temporary, absolute, follow_symlinks=False)
-        directory_descriptor = os.open(parent, os.O_RDONLY)
+    temporary_ownership: list[tuple[Path, tuple[int, int]]] = []
+    namespace_changed = False
+
+    def unlink_if_owned(
+        candidate: Path, expected_inode: tuple[int, int]
+    ) -> bool:
+        try:
+            info = os.lstat(candidate)
+        except FileNotFoundError:
+            return False
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or (info.st_dev, info.st_ino) != expected_inode
+        ):
+            return False
+        candidate.unlink()
+        return True
+
+    def fsync_parent() -> None:
+        directory_descriptor = os.open(
+            parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+        )
         try:
             os.fsync(directory_descriptor)
         finally:
             os.close(directory_descriptor)
+
+    def create_tracked_temporary() -> None:
+        """Create/write the temp after exporting its descriptor identity."""
+
+        nonlocal namespace_changed
+        descriptor = -1
+        try:
+            descriptor = os.open(
+                temporary,
+                os.O_WRONLY
+                | os.O_CREAT
+                | os.O_EXCL
+                | getattr(os, "O_NOFOLLOW", 0),
+                0o600,
+            )
+            namespace_changed = True
+            try:
+                opened = os.fstat(descriptor)
+            except BaseException:
+                # Recover only from the still-open descriptor; trusting the
+                # pathname here could delete a foreign replacement.
+                try:
+                    opened = os.stat(descriptor)
+                    temporary_ownership.append(
+                        (temporary, (opened.st_dev, opened.st_ino))
+                    )
+                except BaseException:
+                    pass
+                raise
+            temporary_ownership.append(
+                (temporary, (opened.st_dev, opened.st_ino))
+            )
+            handle = os.fdopen(descriptor, "wb")
+            descriptor = -1
+            with handle:
+                handle.write(data)
+                handle.flush()
+                os.fsync(handle.fileno())
+        finally:
+            if descriptor >= 0:
+                try:
+                    os.close(descriptor)
+                except BaseException:
+                    pass
+
+    try:
+        create_tracked_temporary()
+        if len(temporary_ownership) != 1:
+            raise RuntimeError("capacity temporary ownership was not recorded")
+        _, temporary_inode = temporary_ownership[0]
+        temporary_info = os.lstat(temporary)
+        if (
+            not stat.S_ISREG(temporary_info.st_mode)
+            or (temporary_info.st_dev, temporary_info.st_ino)
+            != temporary_inode
+            or temporary_info.st_nlink != 1
+        ):
+            raise RuntimeError(
+                "capacity temporary inode changed before publication"
+            )
+        os.link(temporary, absolute, follow_symlinks=False)
+        namespace_changed = True
+        target_info = os.lstat(absolute)
+        if (
+            not stat.S_ISREG(target_info.st_mode)
+            or (target_info.st_dev, target_info.st_ino) != temporary_inode
+        ):
+            raise RuntimeError("capacity output inode changed during publication")
+        if not unlink_if_owned(temporary, temporary_inode):
+            raise RuntimeError("capacity temporary inode changed during publication")
+        fsync_parent()
+
+        read_descriptor = os.open(
+            absolute, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+        )
+        try:
+            read_info = os.fstat(read_descriptor)
+            if (
+                not stat.S_ISREG(read_info.st_mode)
+                or (read_info.st_dev, read_info.st_ino) != temporary_inode
+                or read_info.st_nlink != 1
+            ):
+                raise RuntimeError("capacity output inode changed before readback")
+            with os.fdopen(read_descriptor, "rb") as handle:
+                read_descriptor = -1
+                observed = handle.read()
+        finally:
+            if read_descriptor >= 0:
+                os.close(read_descriptor)
+        if observed != data:
+            raise RuntimeError("capacity output readback mismatch")
+        current_info = os.lstat(absolute)
+        if (
+            not stat.S_ISREG(current_info.st_mode)
+            or (current_info.st_dev, current_info.st_ino) != temporary_inode
+            or current_info.st_nlink != 1
+        ):
+            raise RuntimeError("capacity output inode changed after readback")
+        digest = sha256_bytes(observed)
+        if post_link_action is not None:
+            post_link_action(digest)
+    except BaseException:
+        for owned_temporary, temporary_inode in temporary_ownership:
+            try:
+                namespace_changed = (
+                    unlink_if_owned(absolute, temporary_inode)
+                    or namespace_changed
+                )
+            except BaseException:
+                pass
+            try:
+                namespace_changed = (
+                    unlink_if_owned(owned_temporary, temporary_inode)
+                    or namespace_changed
+                )
+            except BaseException:
+                pass
+        if namespace_changed:
+            try:
+                fsync_parent()
+            except BaseException:
+                pass
+        raise
     finally:
-        os.close(descriptor)
-        if temporary.exists() and not temporary.is_symlink():
-            temporary.unlink()
-    return sha256_bytes(data)
+        removed = False
+        for owned_temporary, temporary_inode in temporary_ownership:
+            try:
+                removed = (
+                    unlink_if_owned(owned_temporary, temporary_inode)
+                    or removed
+                )
+            except BaseException:
+                pass
+        if removed:
+            try:
+                fsync_parent()
+            except BaseException:
+                pass
+    return digest
 
 
 def _require_exact_environment() -> None:
@@ -1267,27 +1416,33 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "search":
         output = standard_formal_output(args.project_root, "search")
         payload = build_exact_search_artifact()
-        digest = write_json_exclusive_atomic(output, payload)
-        _print_json(
-            {
-                "output": str(output),
-                "sha256": digest,
-                "profile": "search",
-                "reference_match": True,
-            }
+        write_json_exclusive_atomic(
+            output,
+            payload,
+            post_link_action=lambda digest: _print_json(
+                {
+                    "output": str(output),
+                    "sha256": digest,
+                    "profile": "search",
+                    "reference_match": True,
+                }
+            ),
         )
         return 0
     if args.command == "confirm":
         output = standard_formal_output(args.project_root, "confirm")
         payload = build_combined_confirmation_artifact()
-        digest = write_json_exclusive_atomic(output, payload)
-        _print_json(
-            {
-                "output": str(output),
-                "sha256": digest,
-                "profile": "combined_confirmation",
-                "reference_match": True,
-            }
+        write_json_exclusive_atomic(
+            output,
+            payload,
+            post_link_action=lambda digest: _print_json(
+                {
+                    "output": str(output),
+                    "sha256": digest,
+                    "profile": "combined_confirmation",
+                    "reference_match": True,
+                }
+            ),
         )
         return 0
     parser.error("a capacity command is required")

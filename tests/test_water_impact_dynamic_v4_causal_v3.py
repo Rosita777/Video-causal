@@ -1023,11 +1023,13 @@ class V3CoreProtocolTests(unittest.TestCase):
                 "build_candidate_graph",
                 return_value=(self.graph, self.manifest),
             ), mock.patch.object(
-                v3_builder.protocol, "write_json_exclusive_atomic"
+                v3_builder,
+                "_write_graph_manifest_transaction",
+                side_effect=lambda graph_path, graph, manifest_path, manifest, post_link_check: post_link_check(),
             ) as writer:
                 with self.assertRaisesRegex(ValueError, "changed during"):
                     v3_builder.main(arguments)
-                self.assertEqual(writer.call_count, 2)
+                self.assertEqual(writer.call_count, 1)
             with mock.patch.object(
                 v3_builder.protocol,
                 "validate_v2_public_inputs",
@@ -1051,7 +1053,7 @@ class V3CoreProtocolTests(unittest.TestCase):
                 "build_candidate_graph",
                 return_value=(self.graph, self.manifest),
             ), mock.patch.object(
-                v3_builder.protocol, "write_json_exclusive_atomic"
+                v3_builder, "_write_graph_manifest_transaction"
             ) as writer:
                 with self.assertRaisesRegex(ValueError, "changed during"):
                     v3_builder.main(arguments)
@@ -1271,7 +1273,7 @@ class Stage0AuthorizerTests(unittest.TestCase):
             ):
                 stage0_authorizer.validate_code_registry_full(payload, root)
 
-    def test_pending_commitment_has_exact_30_openings(self) -> None:
+    def test_pending_commitment_has_exact_31_openings(self) -> None:
         with tempfile.TemporaryDirectory(dir=REPO) as directory:
             root = Path(directory)
             root.chmod(0o700)
@@ -1292,7 +1294,7 @@ class Stage0AuthorizerTests(unittest.TestCase):
                     "size_bytes": index,
                     "row_count": rows,
                 }
-            self.assertEqual(len(components), 30)
+            self.assertEqual(len(components), 31)
             payload = {
                 "protocol": stage0_authorizer.PENDING_PROTOCOL,
                 "schema": stage0_authorizer.PENDING_SCHEMA,
@@ -1335,7 +1337,7 @@ class Stage0AuthorizerTests(unittest.TestCase):
                 payload, project_root=root, pending_path=pending
             )
             payload["component_commitments"].pop(next(iter(components)))
-            with self.assertRaisesRegex(ValueError, "exact 30 openings"):
+            with self.assertRaisesRegex(ValueError, "exact 31 openings"):
                 stage0_authorizer.validate_pending(
                     payload, project_root=root, pending_path=pending
                 )
@@ -1356,6 +1358,40 @@ class Stage0AuthorizerTests(unittest.TestCase):
                 stage0_authorizer._validate_private_inventory(root)
 
     def test_secret_and_1728_seed_audit_are_fully_recomputed(self) -> None:
+        sampled = stage0_authorizer._secret_commitments(
+            screening_seed=42,
+            graph_salt="1" * 64,
+            selector_salt="2" * 64,
+            evaluation_salt="3" * 64,
+        )
+        provenance = {
+            "entropy_source": "operating_system_csprng",
+            "independent_draws": True,
+            "salt_draw_count": 3,
+            "salt_bytes_per_draw": 32,
+            "salt_encoding": "lower_hex64",
+            "salt_draw_attempts": {
+                "graph_assignment_salt": 1,
+                "selector_salt": 1,
+                "evaluation_seed_salt": 1,
+            },
+            "screening_seed_draw_count": 1,
+            "screening_seed_bytes_per_draw": 4,
+            "screening_seed_byte_order": "big_endian",
+            "screening_seed_encoding": "canonical_unsigned_decimal_uint32",
+            "screening_seed_draw_attempts": 1,
+            "new_secret_commitments": sampled,
+            "forbidden_seed_inventory_sha256": "7" * 64,
+            "forbidden_numeric_seed_count": 1,
+            "screening_seed_forbidden_intersection_count": 0,
+        }
+        request = {
+            "protocol": stage0_authorizer.SECRET_SAMPLING_REQUEST_PROTOCOL,
+            "status": "sampled_pending_historical_audit",
+            "dataset_version": v3_protocol.DATASET_VERSION,
+            "sampling_provenance": provenance,
+            "raw_secret_values_emitted": False,
+        }
         secrets = {
             "protocol": stage0_authorizer.SECRETS_PROTOCOL,
             "dataset_version": v3_protocol.DATASET_VERSION,
@@ -1366,6 +1402,40 @@ class Stage0AuthorizerTests(unittest.TestCase):
             "selector_salt": "2" * 64,
             "evaluation_seed_namespace": v3_protocol.EVALUATION_NAMESPACE,
             "evaluation_seed_salt": "3" * 64,
+            "sampling_request_sha256": v3_protocol.sha256_bytes(
+                v3_protocol.canonical_json_bytes(request)
+            ),
+            "sampling_provenance": provenance,
+            "historical_secret_audit": {
+                "protocol": stage0_authorizer.HISTORICAL_SECRET_AUDIT_PROTOCOL,
+                "status": "passed",
+                "v3_hex_salt_count": 3,
+                "new_salt_commitments": {
+                    key: sampled[key]
+                    for key in (
+                        "graph_assignment_salt",
+                        "selector_salt",
+                        "evaluation_seed_salt",
+                    )
+                },
+                "accessible_historical_raw_allowlist_sha256": (
+                    stage0_authorizer.HISTORICAL_ACCESSIBLE_RAW_ALLOWLIST_SHA256
+                ),
+                "accessible_historical_raw_hex_secret_count": 6,
+                "accessible_historical_raw_comparison_count": 18,
+                "accessible_historical_raw_intersection_count": 0,
+                "commitment_only_historical_allowlist_sha256": (
+                    stage0_authorizer.HISTORICAL_COMMITMENT_ALLOWLIST_SHA256
+                ),
+                "commitment_only_historical_hex_secret_count": 4,
+                "commitment_only_comparison_count": 12,
+                "commitment_only_collision_union_bound_numerator": 12,
+                "commitment_only_collision_union_bound_denominator_power": 256,
+                "forbidden_seed_inventory_sha256": "7" * 64,
+                "forbidden_numeric_seed_count": 1,
+                "screening_seed_forbidden_intersection_count": 0,
+                "raw_historical_secret_values_emitted": False,
+            },
         }
         commitments = stage0_authorizer._validate_secrets(
             secrets,
@@ -1612,13 +1682,37 @@ class Stage0AuthorizerTests(unittest.TestCase):
             "model_content_inventory_sha256": "1" * 64,
             "runtime_registry_sha256": "2" * 64,
             "render_configuration_sha256": "3" * 64,
-            "public_prompt_sha256": [f"{index:x}" * 64 for index in range(5)],
+            "code_registry_sha256": "4" * 64,
+            "generator_sha256": "5" * 64,
+            "generator_dependency_closure_sha256": "6" * 64,
+            "media_runtime_packages": {"av": "1", "Pillow": "2"},
+            "generation_configuration": {
+                "steps": 25,
+                "cfg": 5,
+                "frames": 49,
+                "width": 832,
+                "height": 480,
+                "fps": 8,
+                "dtype": "bf16",
+                "adapter": None,
+                "skip_existing": False,
+                "resume": False,
+                "worker_count": 1,
+            },
+            "public_prompt_sha256": list(
+                v3_protocol.CALIBRATION_PROMPT_SHA256
+            ),
+            "calibration_seeds": list(stage0_authorizer.CALIBRATION_SEEDS),
+            "video_sha256": [f"{index + 10:x}" * 64 for index in range(5)],
+            "video_size_bytes": [1, 2, 3, 4, 5],
             "wall_time_seconds": [100, 110, 120, 130, 140],
             "maximum_wall_time_seconds": 140,
             "maximum_allowed_seconds": 600,
             "candidate_count": 576,
             "gpu_hour_cap": 100,
             "passes": True,
+            "calibration_run_manifest_sha256": "7" * 64,
+            "calibration_tree_sha256": "8" * 64,
         }
         stage0_authorizer._validate_cost_calibration(
             calibration,
@@ -1626,6 +1720,10 @@ class Stage0AuthorizerTests(unittest.TestCase):
             runtime_sha="2" * 64,
             render_sha="3" * 64,
             live_hardware={"accelerator": "A100"},
+            code_registry_sha256="4" * 64,
+            generator_sha256="5" * 64,
+            generator_dependency_closure_sha256="6" * 64,
+            media_runtime_packages={"av": "1", "Pillow": "2"},
         )
         calibration["maximum_wall_time_seconds"] = 141
         with self.assertRaisesRegex(ValueError, "calibration failed"):
@@ -1635,6 +1733,10 @@ class Stage0AuthorizerTests(unittest.TestCase):
                 runtime_sha="2" * 64,
                 render_sha="3" * 64,
                 live_hardware={"accelerator": "A100"},
+                code_registry_sha256="4" * 64,
+                generator_sha256="5" * 64,
+                generator_dependency_closure_sha256="6" * 64,
+                media_runtime_packages={"av": "1", "Pillow": "2"},
             )
 
 
@@ -2724,6 +2826,65 @@ def _make_stage0_authorize_fixture(base: Path) -> dict[str, object]:
         "adapter": None,
         "screening_scope": "all 49 frames for every candidate",
     }
+    forbidden = {
+        "protocol": v3_selector.FORBIDDEN_PROTOCOL,
+        "dataset": v3_protocol.DATASET,
+        "status": "frozen_by_independent_seed_auditor",
+        "seed_encoding": "nonnegative JSON integer below 2^63",
+        "source_commitments": [
+            {
+                "name": "historical_registered_seed_union",
+                "sha256": "4" * 64,
+                "seed_count": 1,
+            },
+            {
+                "name": "v3_screening_cost_calibration_seeds",
+                "sha256": code_registry["artifacts"]["screening_runner"]["sha256"],
+                "seed_count": 5,
+            },
+        ],
+        "seeds": sorted([*stage0_authorizer.CALIBRATION_SEEDS, 2**62]),
+    }
+    forbidden_sha = v3_protocol.sha256_bytes(
+        v3_protocol.canonical_json_bytes(forbidden)
+    )
+    sampled_commitments = stage0_authorizer._secret_commitments(
+        screening_seed=4_000_000_000,
+        graph_salt=graph_salt,
+        selector_salt=selector_salt,
+        evaluation_salt=evaluation_salt,
+    )
+    sampling_provenance = {
+        "entropy_source": "operating_system_csprng",
+        "independent_draws": True,
+        "salt_draw_count": 3,
+        "salt_bytes_per_draw": 32,
+        "salt_encoding": "lower_hex64",
+        "salt_draw_attempts": {
+            "graph_assignment_salt": 1,
+            "selector_salt": 1,
+            "evaluation_seed_salt": 1,
+        },
+        "screening_seed_draw_count": 1,
+        "screening_seed_bytes_per_draw": 4,
+        "screening_seed_byte_order": "big_endian",
+        "screening_seed_encoding": "canonical_unsigned_decimal_uint32",
+        "screening_seed_draw_attempts": 1,
+        "new_secret_commitments": sampled_commitments,
+        "forbidden_seed_inventory_sha256": forbidden_sha,
+        "forbidden_numeric_seed_count": 6,
+        "screening_seed_forbidden_intersection_count": 0,
+    }
+    sampling_request = {
+        "protocol": stage0_authorizer.SECRET_SAMPLING_REQUEST_PROTOCOL,
+        "status": "sampled_pending_historical_audit",
+        "dataset_version": v3_protocol.DATASET_VERSION,
+        "sampling_provenance": sampling_provenance,
+        "raw_secret_values_emitted": False,
+    }
+    sampling_request_sha = v3_protocol.sha256_bytes(
+        v3_protocol.canonical_json_bytes(sampling_request)
+    )
 
     private_json = {
         "candidate_manifest_576": candidate,
@@ -2754,6 +2915,38 @@ def _make_stage0_authorize_fixture(base: Path) -> dict[str, object]:
             "selector_salt": selector_salt,
             "evaluation_seed_namespace": v3_protocol.EVALUATION_NAMESPACE,
             "evaluation_seed_salt": evaluation_salt,
+            "sampling_request_sha256": sampling_request_sha,
+            "sampling_provenance": sampling_provenance,
+            "historical_secret_audit": {
+                "protocol": stage0_authorizer.HISTORICAL_SECRET_AUDIT_PROTOCOL,
+                "status": "passed",
+                "v3_hex_salt_count": 3,
+                "new_salt_commitments": {
+                    key: sampled_commitments[key]
+                    for key in (
+                        "graph_assignment_salt",
+                        "selector_salt",
+                        "evaluation_seed_salt",
+                    )
+                },
+                "accessible_historical_raw_allowlist_sha256": (
+                    stage0_authorizer.HISTORICAL_ACCESSIBLE_RAW_ALLOWLIST_SHA256
+                ),
+                "accessible_historical_raw_hex_secret_count": 6,
+                "accessible_historical_raw_comparison_count": 18,
+                "accessible_historical_raw_intersection_count": 0,
+                "commitment_only_historical_allowlist_sha256": (
+                    stage0_authorizer.HISTORICAL_COMMITMENT_ALLOWLIST_SHA256
+                ),
+                "commitment_only_historical_hex_secret_count": 4,
+                "commitment_only_comparison_count": 12,
+                "commitment_only_collision_union_bound_numerator": 12,
+                "commitment_only_collision_union_bound_denominator_power": 256,
+                "forbidden_seed_inventory_sha256": forbidden_sha,
+                "forbidden_numeric_seed_count": 6,
+                "screening_seed_forbidden_intersection_count": 0,
+                "raw_historical_secret_values_emitted": False,
+            },
         },
         "selection_rules": rules,
     }
@@ -2771,20 +2964,6 @@ def _make_stage0_authorize_fixture(base: Path) -> dict[str, object]:
         path.write_text(value, encoding="ascii")
         path.chmod(0o600)
 
-    forbidden = {
-        "protocol": v3_selector.FORBIDDEN_PROTOCOL,
-        "dataset": v3_protocol.DATASET,
-        "status": "frozen_by_independent_seed_auditor",
-        "seed_encoding": "nonnegative JSON integer below 2^63",
-        "source_commitments": [
-            {
-                "name": "historical_registered_seed_union",
-                "sha256": "4" * 64,
-                "seed_count": 1,
-            }
-        ],
-        "seeds": [2**62],
-    }
     forbidden_path = private / stage0_authorizer.PRIVATE_INPUTS[
         "forbidden_seed_inventory"
     ]
@@ -2801,11 +2980,11 @@ def _make_stage0_authorize_fixture(base: Path) -> dict[str, object]:
             forbidden_path
         ),
         "v2_seed_count": 1,
-        "v3_seed_count": 1,
+        "v3_seed_count": 6,
         "intersection_seed_count": 1,
         "v2_missing_from_v3_count": 0,
-        "v3_additional_seed_count": 0,
-        "set_relation": "equal",
+        "v3_additional_seed_count": 5,
+        "set_relation": "strict_superset",
     }
     _write_canonical_json(
         project / v3_protocol.FORBIDDEN_SEED_SOURCE_AUDIT,
@@ -2982,6 +3161,40 @@ def _make_stage0_authorize_fixture(base: Path) -> dict[str, object]:
         },
     }
     _write_canonical_json(project / v3_protocol.IDENTITY_REPORT, identity, 0o644)
+    synthetic_holdout_records = json.loads(
+        json.dumps(stage0_authorizer.HOLDOUT_FROZEN_RECORDS)
+    )
+    for name in (
+        "eval_holdout_source_ontology_48",
+        "holdout_registry_48",
+        "receiver_ontology_56",
+        "historical_receiver_anchors_8",
+    ):
+        synthetic_holdout_records[name] = stage0_authorizer._physical_record(
+            private / stage0_authorizer.PRIVATE_INPUTS[name],
+            stage0_authorizer.PHYSICAL_ROW_COUNTS[name],
+        )
+    holdout_public = {
+        "protocol": stage0_authorizer.HOLDOUT_PUBLIC_PROTOCOL,
+        "status": "committed",
+        "dataset_version": v3_protocol.DATASET_VERSION,
+        "counts": {
+            "source_count": 48,
+            "receiver_count": 56,
+            "historical_anchor_count": 8,
+        },
+        "artifacts": synthetic_holdout_records,
+        "identity_disjointness_report_sha256": v3_protocol.sha256_file(
+            project / v3_protocol.IDENTITY_REPORT
+        ),
+        "independent_language_review_status": "passed",
+        "remaining_blockers": [],
+    }
+    _write_canonical_json(
+        project / v3_protocol.HOLDOUT_PUBLIC_COMMITMENT,
+        holdout_public,
+        0o644,
+    )
 
     template_sha = v3_protocol.sha256_file(
         private / stage0_authorizer.PRIVATE_INPUTS["canonical_templates"]
@@ -3034,6 +3247,127 @@ def _make_stage0_authorize_fixture(base: Path) -> dict[str, object]:
         stage0_authorizer.STATIC_GRAPH_PATH,
     ):
         _write_canonical_json(project / path, {"fixture": path.name}, 0o644)
+    cost_run = (
+        project
+        / v3_protocol.DATA_ROOT
+        / stage0_authorizer.COST_CALIBRATION_RUN_DIRNAME
+    )
+    cost_run.mkdir(mode=0o700)
+    for basename, payload in (
+        ("calibration_reservation_v3.json", {"status": "reserved"}),
+        ("execution_started_v3.json", {"status": "started"}),
+    ):
+        _write_canonical_json(cost_run / basename, payload, 0o600)
+    calibration_items = []
+    calibration_video_hashes = []
+    calibration_video_sizes = []
+    calibration_times = [100, 110, 120, 130, 140]
+    for index in range(5):
+        prompt_path = cost_run / f"prompt_{index:03d}.txt"
+        prompt_path.write_text(
+            f"{screening_runner.CALIBRATION_PROMPTS[index]} | "
+            f"{screening_runner.CALIBRATION_TARGETS[index]} | "
+            f"{screening_runner.CALIBRATION_EXPECTED_EFFECT}\n",
+            encoding="utf-8",
+        )
+        prompt_path.chmod(0o600)
+        log_path = cost_run / f"render_{index:03d}.log"
+        log_path.write_text(f"synthetic log {index}\n", encoding="utf-8")
+        log_path.chmod(0o600)
+        render_dir = cost_run / f"render_{index:03d}"
+        render_dir.mkdir(mode=0o700)
+        videos_dir = render_dir / "videos"
+        videos_dir.mkdir(mode=0o700)
+        video_path = videos_dir / f"calibration_{index:03d}.mp4"
+        video_path.write_bytes(f"synthetic video {index}".encode("ascii"))
+        video_path.chmod(0o600)
+        generic_path = render_dir / "generation_manifest.json"
+        _write_canonical_json(
+            generic_path,
+            {
+                "created_at_utc": "2026-08-17T00:00:00+00:00",
+                "baseline": "clean",
+                "pipeline": "WanPipeline",
+                "model": "models/Wan2.1-T2V-1.3B-Diffusers",
+                "dry_run": False,
+                "prompts": os.fspath(prompt_path),
+                "generation": stage0_authorizer._expected_calibration_generic_generation(
+                    v3_protocol.CALIBRATION_SEEDS[index]
+                ),
+                "items": [
+                    {
+                        "index": 0,
+                        "prompt": screening_runner.CALIBRATION_PROMPTS[index],
+                        "target_concept": screening_runner.CALIBRATION_TARGETS[index],
+                        "expected_effect": screening_runner.CALIBRATION_EXPECTED_EFFECT,
+                        "seed": v3_protocol.CALIBRATION_SEEDS[index],
+                        "video_path": os.fspath(video_path),
+                    }
+                ],
+            },
+            0o600,
+        )
+        video_hash = v3_protocol.sha256_file(video_path)
+        video_size = video_path.stat().st_size
+        calibration_video_hashes.append(video_hash)
+        calibration_video_sizes.append(video_size)
+        calibration_items.append(
+            {
+                "index": index,
+                "prompt_sha256": v3_protocol.CALIBRATION_PROMPT_SHA256[index],
+                "seed": v3_protocol.CALIBRATION_SEEDS[index],
+                "prompt_path": prompt_path.relative_to(cost_run).as_posix(),
+                "prompt_file_sha256": v3_protocol.sha256_file(prompt_path),
+                "render_log_path": log_path.relative_to(cost_run).as_posix(),
+                "render_log_sha256": v3_protocol.sha256_file(log_path),
+                "generic_manifest_path": generic_path.relative_to(cost_run).as_posix(),
+                "generic_manifest_sha256": v3_protocol.sha256_file(generic_path),
+                "video_path": video_path.relative_to(cost_run).as_posix(),
+                "video_sha256": video_hash,
+                "video_size_bytes": video_size,
+                "wall_time_seconds": calibration_times[index],
+                "frames": 49,
+                "width": 832,
+                "height": 480,
+                "fps": 8,
+            }
+        )
+    calibration_generation = {
+        "steps": 25,
+        "cfg": 5,
+        "frames": 49,
+        "width": 832,
+        "height": 480,
+        "fps": 8,
+        "dtype": "bf16",
+        "adapter": None,
+        "skip_existing": False,
+        "resume": False,
+        "worker_count": 1,
+    }
+    calibration_manifest = {
+        "protocol": stage0_authorizer.COST_RUN_MANIFEST_PROTOCOL,
+        "status": "completed_before_cost_publication",
+        "dataset_version": v3_protocol.DATASET_VERSION,
+        "model_content_inventory_sha256": model_sha,
+        "runtime_registry_sha256": runtime_sha,
+        "render_configuration_sha256": v3_protocol.sha256_file(render_path),
+        "code_registry_sha256": v3_protocol.sha256_file(
+            project / v3_protocol.CODE_REGISTRY
+        ),
+        "generator_sha256": code_registry["artifacts"]["generator"]["sha256"],
+        "generator_dependency_closure_sha256": (
+            generator_dependency_closure_sha256
+        ),
+        "media_runtime_packages": media_runtime_packages,
+        "hardware": hardware,
+        "generation_configuration": calibration_generation,
+        "calibration_count": 5,
+        "items": calibration_items,
+    }
+    calibration_manifest_path = cost_run / stage0_authorizer.COST_RUN_MANIFEST_BASENAME
+    _write_canonical_json(calibration_manifest_path, calibration_manifest, 0o600)
+    calibration_tree_records = stage0_authorizer._cost_tree_records(cost_run)
     cost = {
         "protocol": stage0_authorizer.COST_PROTOCOL,
         "status": "passed",
@@ -3042,13 +3376,31 @@ def _make_stage0_authorize_fixture(base: Path) -> dict[str, object]:
         "model_content_inventory_sha256": model_sha,
         "runtime_registry_sha256": runtime_sha,
         "render_configuration_sha256": v3_protocol.sha256_file(render_path),
-        "public_prompt_sha256": [f"{index + 6:x}" * 64 for index in range(5)],
-        "wall_time_seconds": [100, 110, 120, 130, 140],
+        "code_registry_sha256": v3_protocol.sha256_file(
+            project / v3_protocol.CODE_REGISTRY
+        ),
+        "generator_sha256": code_registry["artifacts"]["generator"]["sha256"],
+        "generator_dependency_closure_sha256": (
+            generator_dependency_closure_sha256
+        ),
+        "media_runtime_packages": media_runtime_packages,
+        "generation_configuration": calibration_generation,
+        "public_prompt_sha256": list(v3_protocol.CALIBRATION_PROMPT_SHA256),
+        "calibration_seeds": list(stage0_authorizer.CALIBRATION_SEEDS),
+        "video_sha256": calibration_video_hashes,
+        "video_size_bytes": calibration_video_sizes,
+        "wall_time_seconds": calibration_times,
         "maximum_wall_time_seconds": 140,
         "maximum_allowed_seconds": 600,
         "candidate_count": 576,
         "gpu_hour_cap": 100,
         "passes": True,
+        "calibration_run_manifest_sha256": v3_protocol.sha256_file(
+            calibration_manifest_path
+        ),
+        "calibration_tree_sha256": v3_protocol.sha256_bytes(
+            v3_protocol.canonical_json_bytes(calibration_tree_records)
+        ),
     }
     _write_canonical_json(
         project / stage0_authorizer.COST_CALIBRATION_PATH, cost, 0o644
@@ -3112,10 +3464,197 @@ def _make_stage0_authorize_fixture(base: Path) -> dict[str, object]:
         "template_sha": template_sha,
         "field_sha": field_sha,
         "rules_sha": rules_sha,
+        "holdout_frozen_records": synthetic_holdout_records,
         "generator_dependency_closure_sha256": (
             generator_dependency_closure_sha256
         ),
         "media_runtime_packages": media_runtime_packages,
+        "cost_run": cost_run,
+    }
+
+
+def _make_r6_evidence_fixture(
+    fixture: dict[str, object], evidence_root: Path
+) -> Path:
+    evidence_root.mkdir(mode=0o700)
+    private = fixture["private"]
+    assert isinstance(private, Path)
+    frozen = fixture["holdout_frozen_records"]
+    assert isinstance(frozen, dict)
+    for name in (
+        "eval_holdout_source_ontology_48",
+        "holdout_registry_48",
+        "receiver_ontology_56",
+        "historical_receiver_anchors_8",
+    ):
+        target = evidence_root / stage0_authorizer.HOLDOUT_EVIDENCE_BASENAMES[name]
+        shutil.copyfile(
+            private / stage0_authorizer.PRIVATE_INPUTS[name], target
+        )
+        target.chmod(0o600)
+        frozen[name] = stage0_authorizer._physical_record(
+            target, stage0_authorizer.PHYSICAL_ROW_COUNTS[name]
+        )
+    evidence_payloads = {
+        "curation_manifest": {"fixture": "curation_manifest"},
+        "curation_semantic_audit": {"fixture": "semantic_audit"},
+    }
+    for name, payload in evidence_payloads.items():
+        target = evidence_root / stage0_authorizer.HOLDOUT_EVIDENCE_BASENAMES[name]
+        _write_canonical_json(target, payload, 0o600)
+        frozen[name] = stage0_authorizer._physical_record(target, None)
+    for name in ("curation_validator", "curation_tests"):
+        target = evidence_root / stage0_authorizer.HOLDOUT_EVIDENCE_BASENAMES[name]
+        target.write_text(f"# synthetic {name}\n", encoding="utf-8")
+        target.chmod(0o600)
+        frozen[name] = stage0_authorizer._physical_record(target, None)
+    aggregate = {
+        "artifact_commitments": {
+            stage0_authorizer.HOLDOUT_EVIDENCE_BASENAMES[name]: frozen[name]
+            for name in (
+                "eval_holdout_source_ontology_48",
+                "holdout_registry_48",
+                "receiver_ontology_56",
+                "historical_receiver_anchors_8",
+                "curation_semantic_audit",
+            )
+        },
+        "blockers": [
+            "isolated_v2_private_identity_pair_triple_intersection_audit"
+        ],
+        "counts": {"sources": 48, "new_receivers": 56, "historical_anchors": 8},
+        "dataset_version": v3_protocol.DATASET_VERSION,
+        "preservation_aggregate": {
+            "historical_phrase_mutations": 0,
+            "quantitative_source_physical_changes": 0,
+            "receiver_record_ids_preserved": 56,
+            "receiver_surface_mutations": 46,
+            "source_record_ids_preserved": 48,
+            "source_state_semantic_repairs": 1,
+            "source_surface_mutations": 19,
+        },
+        "protocol": stage0_authorizer.CURATION_PUBLIC_AGGREGATE_PROTOCOL,
+        "quality_aggregate": {
+            "historical_phrase_mutations": 0,
+            "material_core_token_failures": 0,
+            "protocol_lineage_mismatch_count": 0,
+            "receiver_at_most_25_tokens": 56,
+            "receiver_head_whole_span_once": 56,
+            "receiver_natural_grammar_pass": 56,
+            "receiver_note_pairs_ge_0p85": 0,
+            "receiver_note_similarity_max_x10000": 7232,
+            "receiver_semantic_suitability_concerns": 0,
+            "receiver_static_open_bounded_water": 56,
+            "receiver_surface_pairs_ge_0p85": 0,
+            "receiver_surface_similarity_max_x10000": 8496,
+            "source_material_redundancy_failures": 0,
+            "source_natural_grammar_pass": 48,
+            "source_note_pairs_ge_0p85": 0,
+            "source_note_similarity_max_x10000": 6347,
+            "source_state_semantic_concerns": 0,
+            "source_surface_pairs_ge_0p85": 0,
+            "source_surface_similarity_max_x10000": 8046,
+            "strict_source_physical_pass": 48,
+        },
+        "rejected_intermediate": {"status": "REJECTED_NO_FALLBACK"},
+        "rejected_predecessor": {"status": "REJECTED_NO_FALLBACK"},
+        "rejected_r5": {"status": "REJECTED_NO_FALLBACK"},
+        "rejected_validator_intermediate": {
+            "status": "REJECTED_NO_FALLBACK"
+        },
+        "status": "r6_public_allowlist_pass_pending_isolated_v2_private_audit",
+    }
+    aggregate_path = (
+        evidence_root
+        / stage0_authorizer.HOLDOUT_EVIDENCE_BASENAMES[
+            "curation_public_aggregate"
+        ]
+    )
+    _write_canonical_json(aggregate_path, aggregate, 0o600)
+    frozen["curation_public_aggregate"] = stage0_authorizer._physical_record(
+        aggregate_path, None
+    )
+    return evidence_root
+
+
+def _make_historical_projection_fixture(
+    project: Path, base: Path
+) -> dict[str, object]:
+    clean = base / "historical_clean_projection"
+    authorizer = base / "historical_authorizer_projection"
+    clean.mkdir(mode=0o700)
+    authorizer.mkdir(mode=0o700)
+    values = {name: f"{index:x}" * 64 for index, name in enumerate(
+        (
+            "source_ontology_salt",
+            "source_split_salt",
+            "receiver_ontology_salt",
+            "causal_stage0_selector_salt",
+            "causal_evaluation_seed_salt",
+            "causal_screening_seed_token",
+        ),
+        start=1,
+    )}
+    salts = {
+        "schema": "water_impact_dynamic_v4_source_slot_registry_v2",
+        "protocol": "water_impact_dynamic_v4_source_slot_registry_v2",
+        "dataset_version": "v4_dev72_v2",
+        **values,
+    }
+    secrets = {
+        "schema": "water_impact_dynamic_v4_source_slot_registry_v2",
+        "protocol": "water_impact_dynamic_v4_source_slot_registry_v2",
+        "dataset_version": "v4_dev72_v2",
+        "screening_seed_namespace": "v4-causal-stage0-screening-v2",
+        "screening_seed": 3_100_000_000,
+        "evaluation_seed_namespace": "v4-causal-evaluation-v2",
+        "evaluation_seed_salt": values["causal_evaluation_seed_salt"],
+        "selector_salt": values["causal_stage0_selector_salt"],
+    }
+    _write_canonical_json(clean / "salts_private_v2.json", salts, 0o600)
+    _write_canonical_json(
+        clean / "causal_stage0_secrets_private_v2.json", secrets, 0o600
+    )
+    _write_canonical_json(
+        authorizer / "causal_stage0_secrets_private_v2.json", secrets, 0o600
+    )
+    for basename, value in (
+        ("causal_stage0_selector_salt_v2.txt", secrets["selector_salt"]),
+        ("causal_evaluation_seed_salt_v2.txt", secrets["evaluation_seed_salt"]),
+    ):
+        path = authorizer / basename
+        path.write_text(value + "\n", encoding="ascii")
+        path.chmod(0o600)
+    source_records = {}
+    for kind, root in (("clean", clean), ("authorizer", authorizer)):
+        source_records[kind] = {}
+        for path in sorted(root.iterdir()):
+            if path.name == "salts_private_v2.json":
+                count = 6
+            elif path.suffix == ".json":
+                count = 2
+            else:
+                count = 1
+            source_records[kind][path.name] = {
+                "sha256": v3_protocol.sha256_file(path),
+                "size_bytes": path.stat().st_size,
+                "raw_hex64_count": count,
+            }
+    unique = sorted(set(values.values()))
+    for relative in stage0_authorizer.HISTORICAL_COMMITMENT_PUBLIC_SOURCES:
+        target = project / relative
+        if not target.exists():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO / relative, target)
+            target.chmod(0o644)
+    return {
+        "clean": clean,
+        "authorizer": authorizer,
+        "source_records": source_records,
+        "raw_count": len(unique),
+        "raw_sha256": v3_protocol.sha256_bytes(
+            v3_protocol.canonical_json_bytes(unique)
+        ),
     }
 
 
@@ -3127,11 +3666,20 @@ class Stage0AuthorizerA2Tests(unittest.TestCase):
                 "_validate_runtime_registry",
                 return_value=fixture["hardware"],
             ),
-            mock.patch.object(stage0_authorizer, "_validate_capacity_artifacts"),
+            mock.patch.multiple(
+                stage0_authorizer,
+                _validate_capacity_artifacts=mock.Mock(),
+                _validate_calibration_video_decode=mock.Mock(),
+            ),
             mock.patch.object(
                 stage0_authorizer,
                 "probe_media_runtime_packages",
                 return_value=fixture["media_runtime_packages"],
+            ),
+            mock.patch.object(
+                stage0_authorizer,
+                "HOLDOUT_FROZEN_RECORDS",
+                fixture["holdout_frozen_records"],
             ),
             mock.patch.multiple(
                 v3_protocol,
@@ -3162,6 +3710,7 @@ class Stage0AuthorizerA2Tests(unittest.TestCase):
             patches[3],
             patches[4],
             patches[5],
+            patches[6],
         ):
             wrapper = stage0_authorizer.authorize(
                 project_root=fixture["project"],
@@ -3177,7 +3726,7 @@ class Stage0AuthorizerA2Tests(unittest.TestCase):
             fixture = _make_stage0_authorize_fixture(Path(directory))
             wrapper, runtime_mock = self._authorize(fixture)
             self.assertEqual(runtime_mock.call_count, 4)
-            self.assertEqual(len(wrapper["artifacts"]), 37)
+            self.assertEqual(len(wrapper["artifacts"]), 38)
             v3_protocol.validate_commitment_registry(wrapper, stage=0)
             self.assertEqual(
                 json.loads(fixture["wrapper"].read_text(encoding="utf-8")),
@@ -3208,6 +3757,7 @@ class Stage0AuthorizerA2Tests(unittest.TestCase):
                 patches[3],
                 patches[4],
                 patches[5],
+                patches[6],
                 mock.patch.object(
                     stage0_authorizer,
                     "_write_private_binding_exclusive",
@@ -3251,6 +3801,7 @@ class Stage0AuthorizerA2Tests(unittest.TestCase):
                 patches[3],
                 patches[4],
                 patches[5],
+                patches[6],
                 mock.patch.object(
                     stage0_authorizer.protocol,
                     "write_json_exclusive_atomic",
@@ -3289,6 +3840,7 @@ class Stage0AuthorizerA2Tests(unittest.TestCase):
                 patches[3],
                 patches[4],
                 patches[5],
+                patches[6],
                 mock.patch.object(
                     stage0_authorizer,
                     "_write_public_wrapper_exclusive",
@@ -3340,6 +3892,7 @@ class Stage0AuthorizerA2Tests(unittest.TestCase):
                     patches[3],
                     patches[4],
                     patches[5],
+                    patches[6],
                     mock.patch.object(
                         stage0_authorizer,
                         "_write_private_binding_exclusive",
@@ -3424,19 +3977,19 @@ class Stage0AuthorizerA2Tests(unittest.TestCase):
             ),
             "v3_forbidden_seed_inventory_sha256": "1" * 64,
             "v2_seed_count": 2,
-            "v3_seed_count": 3,
+            "v3_seed_count": 7,
             "intersection_seed_count": 2,
             "v2_missing_from_v3_count": 0,
-            "v3_additional_seed_count": 1,
+            "v3_additional_seed_count": 5,
             "set_relation": "strict_superset",
         }
         stage0_authorizer._validate_forbidden_seed_source_audit(
-            report, v3_inventory_sha256="1" * 64, v3_seed_count=3
+            report, v3_inventory_sha256="1" * 64, v3_seed_count=7
         )
         report["v2_missing_from_v3_count"] = 1
         with self.assertRaisesRegex(ValueError, "does not prove v2 coverage"):
             stage0_authorizer._validate_forbidden_seed_source_audit(
-                report, v3_inventory_sha256="1" * 64, v3_seed_count=3
+                report, v3_inventory_sha256="1" * 64, v3_seed_count=7
             )
 
         candidates = [{"case_id": f"v4v3c{index:03d}"} for index in range(576)]
@@ -3489,6 +4042,12 @@ class Stage0AuthorizerA2Tests(unittest.TestCase):
             executable.parent.mkdir(parents=True)
             executable.write_bytes(b"synthetic executable")
             executable.chmod(0o755)
+            origin_paths = {}
+            for index, name in enumerate(stage0_authorizer.RUNTIME_ORIGIN_MODULES):
+                origin = runtime_root / "site" / name / "__init__.py"
+                origin.parent.mkdir(parents=True, exist_ok=True)
+                origin.write_bytes(f"origin {index}".encode("ascii"))
+                origin_paths[name] = os.fspath(origin)
             packages = dict(stage0_authorizer.EXPECTED_RUNTIME_PACKAGE_VERSIONS)
             cuda = {
                 "available_required": True,
@@ -3511,6 +4070,15 @@ class Stage0AuthorizerA2Tests(unittest.TestCase):
                 },
                 "cuda": cuda,
                 "packages": packages,
+                **stage0_authorizer._runtime_content_inventory(
+                    root, runtime_root
+                ),
+                "module_origins": {
+                    name: stage0_authorizer._module_origin_record(
+                        root, runtime_root, path
+                    )
+                    for name, path in origin_paths.items()
+                },
             }
             observed = {
                 "executable_realpath": os.path.realpath(executable),
@@ -3519,6 +4087,7 @@ class Stage0AuthorizerA2Tests(unittest.TestCase):
                 "torch": payload["torch"],
                 "cuda": cuda,
                 "packages": packages,
+                "module_origins": origin_paths,
             }
             completed = mock.Mock(
                 returncode=0,
@@ -3571,6 +4140,102 @@ class Stage0AuthorizerA2Tests(unittest.TestCase):
         duplicate["receivers"][0]["normalized_phrase"] += f" {head}"
         with self.assertRaisesRegex(ValueError, "exactly once"):
             v3_builder.validate_receiver_ontology(duplicate)
+
+    def test_cost_evidence_tree_failed_marker_and_byte_tamper_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO.parent) as directory:
+            fixture = _make_stage0_authorize_fixture(Path(directory))
+            project = fixture["project"]
+            run_dir = fixture["cost_run"]
+            assert isinstance(project, Path) and isinstance(run_dir, Path)
+            payload = json.loads(
+                (
+                    project / stage0_authorizer.COST_CALIBRATION_PATH
+                ).read_text(encoding="utf-8")
+            )
+            render_sha = payload["render_configuration_sha256"]
+            kwargs = {
+                "model_sha": payload["model_content_inventory_sha256"],
+                "runtime_sha": payload["runtime_registry_sha256"],
+                "render_sha": render_sha,
+                "live_hardware": fixture["hardware"],
+                "code_registry_sha256": payload["code_registry_sha256"],
+                "generator_sha256": payload["generator_sha256"],
+                "generator_dependency_closure_sha256": payload[
+                    "generator_dependency_closure_sha256"
+                ],
+                "media_runtime_packages": fixture["media_runtime_packages"],
+                "project_root": project,
+                "calibration_run_dir": run_dir,
+            }
+            with mock.patch.object(
+                stage0_authorizer, "_validate_calibration_video_decode"
+            ):
+                stage0_authorizer._validate_cost_calibration(payload, **kwargs)
+                failed = run_dir / stage0_authorizer.COST_FAILED_BASENAME
+                _write_canonical_json(failed, {"status": "failed_terminal"}, 0o600)
+                with self.assertRaisesRegex(ValueError, "failed cost"):
+                    stage0_authorizer._validate_cost_calibration(payload, **kwargs)
+                failed.unlink()
+                prompt = run_dir / "prompt_000.txt"
+                original_prompt = prompt.read_bytes()
+                prompt.write_bytes(prompt.read_bytes() + b"drift")
+                with self.assertRaisesRegex(ValueError, "hash mismatch"):
+                    stage0_authorizer._validate_cost_calibration(payload, **kwargs)
+                prompt.write_bytes(original_prompt)
+                generic_path = run_dir / "render_000/generation_manifest.json"
+                generic = json.loads(generic_path.read_text(encoding="utf-8"))
+                generic["generation"]["seeds"] = [123]
+                _write_canonical_json(generic_path, generic, 0o600)
+                manifest_path = (
+                    run_dir / stage0_authorizer.COST_RUN_MANIFEST_BASENAME
+                )
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                manifest["items"][0]["generic_manifest_sha256"] = (
+                    v3_protocol.sha256_file(generic_path)
+                )
+                _write_canonical_json(manifest_path, manifest, 0o600)
+                payload["calibration_run_manifest_sha256"] = (
+                    v3_protocol.sha256_file(manifest_path)
+                )
+                payload["calibration_tree_sha256"] = v3_protocol.sha256_bytes(
+                    v3_protocol.canonical_json_bytes(
+                        stage0_authorizer._cost_tree_records(run_dir)
+                    )
+                )
+                with self.assertRaisesRegex(ValueError, "generic generation"):
+                    stage0_authorizer._validate_cost_calibration(payload, **kwargs)
+
+    def test_full_preflight_rejects_extra_and_missing_cost_directories(self) -> None:
+        for case in ("extra_root", "extra_nested", "missing_videos"):
+            with self.subTest(case=case), tempfile.TemporaryDirectory(
+                dir=REPO.parent
+            ) as directory:
+                fixture = _make_stage0_authorize_fixture(Path(directory))
+                run_dir = fixture["cost_run"]
+                assert isinstance(run_dir, Path)
+                if case == "extra_root":
+                    (run_dir / "unexpected").mkdir(mode=0o700)
+                elif case == "extra_nested":
+                    (run_dir / "render_000/unexpected").mkdir(mode=0o700)
+                else:
+                    videos = run_dir / "render_004/videos"
+                    videos.rename(Path(directory) / "detached_videos")
+                patches = self._patches(fixture)
+                with (
+                    patches[0],
+                    patches[1],
+                    patches[2],
+                    patches[3],
+                    patches[4],
+                    patches[5],
+                    patches[6],
+                    self.assertRaises((ValueError, FileNotFoundError)),
+                ):
+                    stage0_authorizer.preflight(
+                        fixture["project"], fixture["private"]
+                    )
+                self.assertFalse(fixture["binding"].exists())
+                self.assertFalse(fixture["wrapper"].exists())
 
 
 def _seed_inventory(protocol_name: str, seeds: list[int]) -> dict[str, object]:
@@ -3922,11 +4587,20 @@ def _authorize_freezer_stage0(base: Path) -> tuple[dict[str, object], dict[str, 
             "_validate_runtime_registry",
             return_value=fixture["hardware"],
         ),
-        mock.patch.object(stage0_authorizer, "_validate_capacity_artifacts"),
+        mock.patch.multiple(
+            stage0_authorizer,
+            _validate_capacity_artifacts=mock.Mock(),
+            _validate_calibration_video_decode=mock.Mock(),
+        ),
         mock.patch.object(
             stage0_authorizer,
             "probe_media_runtime_packages",
             return_value=fixture["media_runtime_packages"],
+        ),
+        mock.patch.object(
+            stage0_authorizer,
+            "HOLDOUT_FROZEN_RECORDS",
+            fixture["holdout_frozen_records"],
         ),
         mock.patch.multiple(
             v3_protocol,
@@ -5142,6 +5816,862 @@ class Stage0AuthorizerA3Tests(unittest.TestCase):
             self.assertEqual((binding.stat().st_dev, binding.stat().st_ino), inode)
 
 
+class Stage0PreparerTests(unittest.TestCase):
+    def test_builder_pair_transaction_is_owned_exclusive_and_all_or_nothing(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO.parent) as directory:
+            root = Path(directory)
+            graph = root / "graph.json"
+            manifest = root / "manifest.json"
+            payload_a = {"value": "graph"}
+            payload_b = {"value": "manifest"}
+            real_link = v3_builder.os.link
+            calls = 0
+
+            def fail_second_link(source, target):
+                nonlocal calls
+                calls += 1
+                if calls == 2:
+                    raise KeyboardInterrupt()
+                return real_link(source, target)
+
+            with (
+                mock.patch.object(v3_builder.os, "link", side_effect=fail_second_link),
+                self.assertRaises(KeyboardInterrupt),
+            ):
+                v3_builder._write_graph_manifest_transaction(
+                    graph,
+                    payload_a,
+                    manifest,
+                    payload_b,
+                    post_link_check=lambda: None,
+                )
+            self.assertEqual(list(root.iterdir()), [])
+
+            graph.write_bytes(v3_protocol.canonical_json_bytes(payload_a))
+            graph.chmod(0o600)
+            inode = (graph.stat().st_dev, graph.stat().st_ino)
+            with self.assertRaises(FileExistsError):
+                v3_builder._write_graph_manifest_transaction(
+                    graph,
+                    payload_a,
+                    manifest,
+                    payload_b,
+                    post_link_check=lambda: None,
+                )
+            self.assertEqual((graph.stat().st_dev, graph.stat().st_ino), inode)
+            self.assertFalse(manifest.exists())
+
+            handoff = root / "handoff"
+            handoff.mkdir()
+            handoff_graph = handoff / "graph.json"
+            handoff_manifest = handoff / "manifest.json"
+            owned: list[tuple[Path, tuple[int, int]]] = []
+            try:
+                v3_builder._write_graph_manifest_transaction(
+                    handoff_graph,
+                    payload_a,
+                    handoff_manifest,
+                    payload_b,
+                    post_link_check=lambda: None,
+                    ownership_sink=owned,
+                )
+                raise KeyboardInterrupt()
+            except KeyboardInterrupt:
+                stage0_authorizer._rollback_owned_outputs(owned)
+            self.assertEqual(list(handoff.iterdir()), [])
+
+            foreign = root / "foreign"
+            foreign.mkdir()
+            foreign_graph = foreign / "graph.json"
+            foreign_manifest = foreign / "manifest.json"
+            foreign_owned: list[tuple[Path, tuple[int, int]]] = []
+            v3_builder._write_graph_manifest_transaction(
+                foreign_graph,
+                payload_a,
+                foreign_manifest,
+                payload_b,
+                post_link_check=lambda: None,
+                ownership_sink=foreign_owned,
+            )
+            foreign_graph.unlink()
+            foreign_graph.write_bytes(b"foreign")
+            foreign_graph.chmod(0o600)
+            foreign_inode = (
+                foreign_graph.stat().st_dev,
+                foreign_graph.stat().st_ino,
+            )
+            with self.assertRaisesRegex(RuntimeError, "rollback"):
+                stage0_authorizer._rollback_owned_outputs(foreign_owned)
+            self.assertEqual(
+                (foreign_graph.stat().st_dev, foreign_graph.stat().st_ino),
+                foreign_inode,
+            )
+            self.assertEqual(foreign_graph.read_bytes(), b"foreign")
+            self.assertFalse(foreign_manifest.exists())
+
+    def test_prepare_static_is_exclusive_and_cleans_partial_publication(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO.parent) as directory:
+            project = Path(directory)
+            (project / v3_protocol.DATA_ROOT).mkdir(parents=True)
+            payloads = {
+                "model": {"kind": "model"},
+                "runtime": {"kind": "runtime"},
+                "code": {"kind": "code"},
+                "capacity": {"kind": "capacity"},
+            }
+            with (
+                mock.patch.object(
+                    stage0_authorizer,
+                    "build_model_inventory_payload",
+                    return_value=payloads["model"],
+                ),
+                mock.patch.object(
+                    stage0_authorizer,
+                    "build_runtime_registry_payload",
+                    return_value=payloads["runtime"],
+                ),
+                mock.patch.object(
+                    stage0_authorizer,
+                    "build_code_registry_payload",
+                    return_value=payloads["code"],
+                ),
+                mock.patch.object(
+                    stage0_authorizer,
+                    "build_capacity_model_payload",
+                    return_value=payloads["capacity"],
+                ),
+                mock.patch.object(stage0_authorizer, "_validate_model_inventory"),
+                mock.patch.object(stage0_authorizer, "_validate_runtime_registry"),
+                mock.patch.object(stage0_authorizer, "validate_code_registry_full"),
+                mock.patch.object(stage0_authorizer, "_validate_capacity_common"),
+            ):
+                result = stage0_authorizer.prepare_static(project)
+                self.assertEqual(len(result["artifacts"]), 5)
+                with self.assertRaises(FileExistsError):
+                    stage0_authorizer.prepare_static(project)
+
+        with tempfile.TemporaryDirectory(dir=REPO.parent) as directory:
+            project = Path(directory)
+            (project / v3_protocol.DATA_ROOT).mkdir(parents=True)
+            real_write = stage0_authorizer._write_json_owned_exclusive
+            calls = 0
+
+            def fail_second(path, payload, *, mode, ownership=None):
+                nonlocal calls
+                calls += 1
+                if calls == 2:
+                    raise OSError("synthetic partial static failure")
+                return real_write(
+                    path, payload, mode=mode, ownership=ownership
+                )
+
+            with (
+                mock.patch.object(
+                    stage0_authorizer, "build_model_inventory_payload", return_value={"a": 1}
+                ),
+                mock.patch.object(
+                    stage0_authorizer, "build_runtime_registry_payload", return_value={"b": 2}
+                ),
+                mock.patch.object(
+                    stage0_authorizer, "build_code_registry_payload", return_value={"c": 3}
+                ),
+                mock.patch.object(
+                    stage0_authorizer, "build_capacity_model_payload", return_value={"d": 4}
+                ),
+                mock.patch.object(
+                    stage0_authorizer,
+                    "_write_json_owned_exclusive",
+                    side_effect=fail_second,
+                ),
+                self.assertRaisesRegex(OSError, "partial static"),
+            ):
+                stage0_authorizer.prepare_static(project)
+            self.assertEqual(list((project / v3_protocol.DATA_ROOT).iterdir()), [])
+
+    def test_runtime_and_model_inventories_cover_all_bytes_and_reject_specials(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO.parent) as directory:
+            project = Path(directory)
+            runtime_root = project / "models/.wan-runtime"
+            executable = runtime_root / "bin/python"
+            executable.parent.mkdir(parents=True)
+            executable.write_bytes(b"synthetic python")
+            executable.chmod(0o755)
+            origin_paths = {}
+            for index, name in enumerate(stage0_authorizer.RUNTIME_ORIGIN_MODULES):
+                origin = runtime_root / "site" / name / "__init__.py"
+                origin.parent.mkdir(parents=True, exist_ok=True)
+                origin.write_bytes(f"module {index}".encode("ascii"))
+                origin_paths[name] = os.fspath(origin)
+            content = stage0_authorizer._runtime_content_inventory(
+                project, runtime_root
+            )
+            module_origins = {
+                name: stage0_authorizer._module_origin_record(
+                    project, runtime_root, path
+                )
+                for name, path in origin_paths.items()
+            }
+            cuda = {
+                "available_required": True,
+                "torch_cuda_version": "12.4",
+                "cudnn_version": 90100,
+                "device_count": 1,
+                "device_models": ["Synthetic A100"],
+            }
+            payload = {
+                "protocol": stage0_authorizer.RUNTIME_REGISTRY_PROTOCOL,
+                "status": "frozen",
+                "dataset_version": v3_protocol.DATASET_VERSION,
+                "runtime_root": "models/.wan-runtime",
+                "python_executable": "models/.wan-runtime/bin/python",
+                "sys_prefix_policy": "realpath(sys.prefix)==realpath(runtime_root)",
+                "python": stage0_authorizer.EXPECTED_RUNTIME_PYTHON,
+                "torch": stage0_authorizer.EXPECTED_RUNTIME_TORCH,
+                "cuda": cuda,
+                "packages": stage0_authorizer.EXPECTED_RUNTIME_PACKAGE_VERSIONS,
+                **content,
+                "module_origins": module_origins,
+            }
+            child = {
+                "executable_realpath": os.path.realpath(executable),
+                "prefix_realpath": os.path.realpath(runtime_root),
+                "python": payload["python"],
+                "torch": payload["torch"],
+                "cuda": cuda,
+                "packages": payload["packages"],
+                "module_origins": origin_paths,
+            }
+            completed = mock.Mock(
+                returncode=0,
+                stdout=json.dumps(child, sort_keys=True, separators=(",", ":")),
+                stderr="",
+            )
+            with mock.patch.object(
+                stage0_authorizer.subprocess, "run", return_value=completed
+            ) as run:
+                hardware = stage0_authorizer._validate_runtime_registry(
+                    payload, project
+                )
+            self.assertEqual(hardware["device_count"], 1)
+            self.assertEqual(
+                run.call_args.kwargs["env"]["PYTHONDONTWRITEBYTECODE"], "1"
+            )
+            (runtime_root / "site/torch/__init__.py").write_bytes(b"drift")
+            with self.assertRaisesRegex(ValueError, "content inventory"):
+                stage0_authorizer._validate_runtime_registry(payload, project)
+            (runtime_root / "site/torch/__init__.py").write_bytes(b"module 0")
+            special = runtime_root / "special.pipe"
+            os.mkfifo(special)
+            with self.assertRaisesRegex(ValueError, "special"):
+                stage0_authorizer._runtime_content_inventory(project, runtime_root)
+            special.unlink()
+
+            model_root = project / "models/Wan2.1-T2V-1.3B-Diffusers"
+            model_root.mkdir()
+            (model_root / "part.bin").write_bytes(b"model")
+            os.mkfifo(model_root / "bad.pipe")
+            with self.assertRaisesRegex(ValueError, "non-regular"):
+                stage0_authorizer.build_model_inventory_payload(project)
+
+    def test_full_prepare_private_holdout_pending_and_readonly_preflight(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO.parent) as directory:
+            fixture = _make_stage0_authorize_fixture(Path(directory))
+            project = fixture["project"]
+            private = fixture["private"]
+            audit_root = Path(directory) / "secret_audit"
+            audit_root.mkdir(mode=0o700)
+            initial_names = {
+                stage0_authorizer.PRIVATE_INPUTS[name]
+                for name in (
+                    "eval_holdout_source_ontology_48",
+                    "holdout_registry_48",
+                    "receiver_ontology_56",
+                    "historical_receiver_anchors_8",
+                    "canonical_templates",
+                    "field_normalization",
+                    "forbidden_seed_inventory",
+                )
+            }
+            for entry in list(private.iterdir()):
+                if entry.name not in initial_names:
+                    entry.unlink()
+            for path in (
+                fixture["pending"],
+                project / v3_protocol.HOLDOUT_PUBLIC_COMMITMENT,
+            ):
+                path.unlink(missing_ok=True)
+
+            random_values = iter(
+                [
+                    b"\xaa" * 32,
+                    b"\xbb" * 32,
+                    b"\xcc" * 32,
+                    (123456789).to_bytes(4, "big"),
+                ]
+            )
+            projections = _make_historical_projection_fixture(
+                project, Path(directory)
+            )
+            patches = Stage0AuthorizerA2Tests()._patches(fixture)
+            with (
+                patches[0],
+                patches[1],
+                patches[2],
+                patches[3],
+                patches[4],
+                patches[5],
+                patches[6],
+                mock.patch.object(
+                    stage0_authorizer.pysecrets,
+                    "token_bytes",
+                    side_effect=lambda size: next(random_values),
+                ),
+                mock.patch.multiple(
+                    stage0_authorizer,
+                    HISTORICAL_RAW_SOURCE_FILES=projections["source_records"],
+                    HISTORICAL_ACCESSIBLE_RAW_COUNT=projections["raw_count"],
+                    HISTORICAL_ACCESSIBLE_RAW_ALLOWLIST_SHA256=projections[
+                        "raw_sha256"
+                    ],
+                ),
+            ):
+                sampled = stage0_authorizer.sample_secrets(
+                    project, private, audit_root
+                )
+                self.assertEqual(sampled["salt_draw_count"], 3)
+                historical_audit = stage0_authorizer.audit_historical_secrets(
+                    project,
+                    private,
+                    audit_root,
+                    projections["clean"],
+                    projections["authorizer"],
+                )
+                self.assertGreater(
+                    historical_audit[
+                        "accessible_historical_raw_hex_secret_count"
+                    ],
+                    0,
+                )
+                self.assertGreater(
+                    historical_audit[
+                        "commitment_only_historical_hex_secret_count"
+                    ],
+                    0,
+                )
+                prepared = stage0_authorizer.prepare_private(
+                    project, private, audit_root
+                )
+                self.assertEqual(prepared["created_artifact_count"], 8)
+                self.assertEqual(len(list(private.iterdir())), 19)
+
+                identity_path = project / v3_protocol.IDENTITY_REPORT
+                identity = json.loads(identity_path.read_text(encoding="utf-8"))
+                identity["v3_candidate_graph_sha256"] = v3_protocol.sha256_file(
+                    private
+                    / stage0_authorizer.PRIVATE_INPUTS["candidate_graph_576"]
+                )
+                _write_canonical_json(identity_path, identity, 0o644)
+                (project / v3_protocol.HOLDOUT_PUBLIC_COMMITMENT).unlink(
+                    missing_ok=True
+                )
+                evidence_root = _make_r6_evidence_fixture(
+                    fixture, Path(directory) / "r6_evidence"
+                )
+                holdout_result = stage0_authorizer.prepare_holdout(
+                    project, evidence_root
+                )
+                self.assertTrue(holdout_result["sha256"])
+
+                pending_result = stage0_authorizer.prepare_pending(project, private)
+                self.assertEqual(pending_result["opening_count"], 31)
+                before = sorted(
+                    entry.relative_to(project).as_posix()
+                    for entry in project.rglob("*")
+                )
+                preflight_result = stage0_authorizer.preflight(project, private)
+                self.assertEqual(
+                    preflight_result["status"], "preflight_valid_not_authorized"
+                )
+                self.assertEqual(
+                    before,
+                    sorted(
+                        entry.relative_to(project).as_posix()
+                        for entry in project.rglob("*")
+                    ),
+                )
+                self.assertFalse(fixture["binding"].exists())
+                self.assertFalse(fixture["wrapper"].exists())
+
+            generation_spec = private / stage0_authorizer.PRIVATE_INPUTS[
+                "screening_generation_spec"
+            ]
+            generation_spec.write_bytes(generation_spec.read_bytes() + b" ")
+            with self.assertRaises(ValueError):
+                stage0_authorizer.preflight(project, private)
+
+    def test_prepare_private_secret_collisions_leave_only_external_inputs(self) -> None:
+        for case in ("screening_forbidden", "duplicate_salt", "audit_rebind"):
+            with self.subTest(case=case), tempfile.TemporaryDirectory(
+                dir=REPO.parent
+            ) as directory:
+                fixture = _make_stage0_authorize_fixture(Path(directory))
+                project = fixture["project"]
+                private = fixture["private"]
+                secret_payload = json.loads(
+                    (
+                        private
+                        / stage0_authorizer.PRIVATE_INPUTS["stage0_secrets"]
+                    ).read_text(encoding="utf-8")
+                )
+                initial_names = {
+                    stage0_authorizer.PRIVATE_INPUTS[name]
+                    for name in (
+                        "eval_holdout_source_ontology_48",
+                        "holdout_registry_48",
+                        "receiver_ontology_56",
+                        "historical_receiver_anchors_8",
+                        "canonical_templates",
+                        "field_normalization",
+                        "forbidden_seed_inventory",
+                    )
+                }
+                for entry in list(private.iterdir()):
+                    if entry.name not in initial_names:
+                        entry.unlink()
+                fixture["pending"].unlink(missing_ok=True)
+                audit = json.loads(
+                    json.dumps(secret_payload["historical_secret_audit"])
+                )
+                forbidden_path = (
+                    private
+                    / stage0_authorizer.PRIVATE_INPUTS[
+                        "forbidden_seed_inventory"
+                    ]
+                )
+                if case == "screening_forbidden":
+                    forbidden = json.loads(
+                        forbidden_path.read_text(encoding="utf-8")
+                    )
+                    forbidden["seeds"] = sorted(
+                        [42, *stage0_authorizer.CALIBRATION_SEEDS, 2**62]
+                    )
+                    forbidden["source_commitments"][0]["seed_count"] = 2
+                    _write_canonical_json(forbidden_path, forbidden, 0o600)
+                    audit["forbidden_seed_inventory_sha256"] = (
+                        v3_protocol.sha256_file(forbidden_path)
+                    )
+                    audit["forbidden_numeric_seed_count"] = 7
+                    draws = [
+                        b"\x11" * 32,
+                        b"\x22" * 32,
+                        b"\x33" * 32,
+                        (42).to_bytes(4, "big"),
+                        (123).to_bytes(4, "big"),
+                    ]
+                elif case == "duplicate_salt":
+                    draws = [
+                        b"\x11" * 32,
+                        b"\x11" * 32,
+                        b"\x22" * 32,
+                        b"\x33" * 32,
+                        (123).to_bytes(4, "big"),
+                    ]
+                else:
+                    draws = [
+                        b"\x11" * 32,
+                        b"\x22" * 32,
+                        b"\x33" * 32,
+                        (123).to_bytes(4, "big"),
+                    ]
+                audit_root = Path(directory) / "audit"
+                audit_root.mkdir(mode=0o700)
+                values = iter(draws)
+                patches = Stage0AuthorizerA2Tests()._patches(fixture)
+                with (
+                    patches[0],
+                    patches[1],
+                    patches[2],
+                    patches[3],
+                    patches[4],
+                    patches[5],
+                    patches[6],
+                    mock.patch.object(
+                        stage0_authorizer.pysecrets,
+                        "token_bytes",
+                        side_effect=lambda size: next(values),
+                    ),
+                ):
+                    sampled = stage0_authorizer.sample_secrets(
+                        project, private, audit_root
+                    )
+                    request = json.loads(
+                        (
+                            audit_root
+                            / stage0_authorizer.SECRET_SAMPLING_REQUEST_BASENAME
+                        ).read_text(encoding="utf-8")
+                    )
+                    if case == "screening_forbidden":
+                        self.assertEqual(
+                            sampled["screening_seed_draw_attempts"], 2
+                        )
+                    if case == "duplicate_salt":
+                        self.assertEqual(
+                            sampled["salt_draw_attempts"][
+                                "selector_salt"
+                            ],
+                            2,
+                        )
+                    audit["new_salt_commitments"] = {
+                        key: request["sampling_provenance"][
+                            "new_secret_commitments"
+                        ][key]
+                        for key in (
+                            "graph_assignment_salt",
+                            "selector_salt",
+                            "evaluation_seed_salt",
+                        )
+                    }
+                    if case == "audit_rebind":
+                        audit["new_salt_commitments"][
+                            "selector_salt"
+                        ] = "f" * 64
+                    _write_canonical_json(
+                        audit_root
+                        / stage0_authorizer.HISTORICAL_SECRET_AUDIT_BASENAME,
+                        audit,
+                        0o600,
+                    )
+                    if case == "audit_rebind":
+                        with self.assertRaises(ValueError):
+                            stage0_authorizer.prepare_private(
+                                project, private, audit_root
+                            )
+                    else:
+                        result = stage0_authorizer.prepare_private(
+                            project, private, audit_root
+                        )
+                        self.assertEqual(result["created_artifact_count"], 8)
+                if case != "audit_rebind":
+                    self.assertEqual(len(list(private.iterdir())), 19)
+                else:
+                    self.assertEqual(
+                        {entry.name for entry in private.iterdir()},
+                        initial_names
+                        | {
+                            stage0_authorizer.PRIVATE_INPUTS["screening_seed"],
+                            stage0_authorizer.PRIVATE_INPUTS[
+                                "graph_assignment_salt"
+                            ],
+                            stage0_authorizer.PRIVATE_INPUTS["selector_salt"],
+                            stage0_authorizer.PRIVATE_INPUTS[
+                                "evaluation_seed_salt"
+                            ],
+                        },
+                    )
+
+    def test_sample_secrets_is_cross_root_owned_and_boundaries_precede_entropy(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO.parent) as directory:
+            fixture = _make_stage0_authorize_fixture(Path(directory))
+            project = fixture["project"]
+            private = fixture["private"]
+            assert isinstance(project, Path) and isinstance(private, Path)
+            for entry in list(private.iterdir()):
+                if entry.name not in stage0_authorizer.PRIVATE_EXTERNAL_INPUT_NAMES:
+                    entry.unlink()
+            fixture["pending"].unlink(missing_ok=True)
+            audit_root = Path(directory) / "sampling_audit"
+            audit_root.mkdir(mode=0o700)
+            draws = iter(
+                [
+                    b"\x11" * 32,
+                    b"\x22" * 32,
+                    b"\x33" * 32,
+                    (123).to_bytes(4, "big"),
+                ]
+            )
+            real_write = stage0_authorizer._write_bytes_owned_exclusive
+            calls = 0
+
+            def write_then_interrupt(path, raw, *, mode, ownership=None):
+                nonlocal calls
+                calls += 1
+                result = real_write(
+                    path,
+                    raw,
+                    mode=mode,
+                    ownership=ownership,
+                )
+                if calls == 3:
+                    raise KeyboardInterrupt()
+                return result
+
+            with (
+                mock.patch.object(
+                    stage0_authorizer.pysecrets,
+                    "token_bytes",
+                    side_effect=lambda size: next(draws),
+                ),
+                mock.patch.object(
+                    stage0_authorizer,
+                    "_write_bytes_owned_exclusive",
+                    side_effect=write_then_interrupt,
+                ),
+                self.assertRaises(KeyboardInterrupt),
+            ):
+                stage0_authorizer.sample_secrets(
+                    project, private, audit_root
+                )
+            self.assertEqual(
+                {entry.name for entry in private.iterdir()},
+                stage0_authorizer.PRIVATE_EXTERNAL_INPUT_NAMES,
+            )
+            self.assertEqual(list(audit_root.iterdir()), [])
+
+            fixture["pending"].write_text("boundary\n", encoding="utf-8")
+            fixture["pending"].chmod(0o644)
+            with (
+                mock.patch.object(stage0_authorizer.pysecrets, "token_bytes") as entropy,
+                self.assertRaises(FileExistsError),
+            ):
+                stage0_authorizer.sample_secrets(
+                    project, private, audit_root
+                )
+            entropy.assert_not_called()
+            fixture["pending"].unlink()
+
+            foreign = audit_root / stage0_authorizer.SECRET_SAMPLING_REQUEST_BASENAME
+            foreign.write_bytes(b"foreign")
+            foreign.chmod(0o600)
+            with self.assertRaises(ValueError):
+                stage0_authorizer.sample_secrets(
+                    project, private, audit_root
+                )
+            self.assertEqual(foreign.read_bytes(), b"foreign")
+
+            nested = project / "nested_private"
+            nested.mkdir(mode=0o700)
+            with self.assertRaisesRegex(ValueError, "disjoint"):
+                stage0_authorizer.sample_secrets(
+                    project, nested, Path(directory) / "unused"
+                )
+
+    def test_authorizer_temp_replacement_survives_interrupt_and_system_exit(self) -> None:
+        for exception, publish_first in (
+            (KeyboardInterrupt(), True),
+            (SystemExit(17), False),
+        ):
+            with self.subTest(exception=type(exception).__name__), tempfile.TemporaryDirectory(
+                dir=REPO.parent
+            ) as directory:
+                root = Path(directory)
+                target = root / "target.json"
+                real_link = stage0_authorizer.os.link
+                replacement: dict[str, object] = {}
+
+                def replace_temp_then_fail(source, destination):
+                    source_path = Path(source)
+                    if publish_first:
+                        real_link(source, destination)
+                    source_path.unlink()
+                    source_path.write_bytes(b"foreign temporary replacement")
+                    source_path.chmod(0o600)
+                    replacement["path"] = source_path
+                    replacement["inode"] = (
+                        source_path.stat().st_dev,
+                        source_path.stat().st_ino,
+                    )
+                    raise exception
+
+                with (
+                    mock.patch.object(
+                        stage0_authorizer.os,
+                        "link",
+                        side_effect=replace_temp_then_fail,
+                    ),
+                    self.assertRaises(type(exception)),
+                ):
+                    stage0_authorizer._write_bytes_owned_exclusive(
+                        target, b"owned bytes", mode=0o600
+                    )
+                self.assertFalse(target.exists())
+                foreign = replacement["path"]
+                self.assertIsInstance(foreign, Path)
+                assert isinstance(foreign, Path)
+                self.assertTrue(foreign.exists())
+                self.assertEqual(
+                    (foreign.stat().st_dev, foreign.stat().st_ino),
+                    replacement["inode"],
+                )
+                self.assertEqual(
+                    foreign.read_bytes(), b"foreign temporary replacement"
+                )
+
+    def test_holdout_rehashes_real_nine_file_evidence_and_quality(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO.parent) as directory:
+            fixture = _make_stage0_authorize_fixture(Path(directory))
+            project = fixture["project"]
+            assert isinstance(project, Path)
+            fixture["pending"].unlink(missing_ok=True)
+            (project / v3_protocol.HOLDOUT_PUBLIC_COMMITMENT).unlink(
+                missing_ok=True
+            )
+            evidence = _make_r6_evidence_fixture(
+                fixture, Path(directory) / "r6_evidence_tamper"
+            )
+            aggregate_path = (
+                evidence
+                / stage0_authorizer.HOLDOUT_EVIDENCE_BASENAMES[
+                    "curation_public_aggregate"
+                ]
+            )
+            aggregate = json.loads(aggregate_path.read_text(encoding="utf-8"))
+            aggregate["quality_aggregate"]["source_natural_grammar_pass"] = 47
+            _write_canonical_json(aggregate_path, aggregate, 0o600)
+            frozen = fixture["holdout_frozen_records"]
+            assert isinstance(frozen, dict)
+            frozen["curation_public_aggregate"] = (
+                stage0_authorizer._physical_record(aggregate_path, None)
+            )
+            with (
+                mock.patch.object(
+                    stage0_authorizer,
+                    "HOLDOUT_FROZEN_RECORDS",
+                    frozen,
+                ),
+                self.assertRaisesRegex(ValueError, "quality/preservation"),
+            ):
+                stage0_authorizer.prepare_holdout(project, evidence)
+            self.assertFalse(
+                (project / v3_protocol.HOLDOUT_PUBLIC_COMMITMENT).exists()
+            )
+
+    def test_historical_secret_auditor_binds_sources_and_rejects_zero(self) -> None:
+        for case in ("success", "source_tamper"):
+            with self.subTest(case=case), tempfile.TemporaryDirectory(
+                dir=REPO.parent
+            ) as directory:
+                fixture = _make_stage0_authorize_fixture(Path(directory))
+                project = fixture["project"]
+                private = fixture["private"]
+                assert isinstance(project, Path) and isinstance(private, Path)
+                for entry in list(private.iterdir()):
+                    if entry.name not in stage0_authorizer.PRIVATE_EXTERNAL_INPUT_NAMES:
+                        entry.unlink()
+                fixture["pending"].unlink(missing_ok=True)
+                audit_root = Path(directory) / "historical_audit_root"
+                audit_root.mkdir(mode=0o700)
+                projections = _make_historical_projection_fixture(
+                    project, Path(directory)
+                )
+                draws = iter(
+                    [
+                        b"\xaa" * 32,
+                        b"\xbb" * 32,
+                        b"\xcc" * 32,
+                        (123).to_bytes(4, "big"),
+                    ]
+                )
+                with (
+                    mock.patch.object(
+                        stage0_authorizer.pysecrets,
+                        "token_bytes",
+                        side_effect=lambda size: next(draws),
+                    ),
+                    mock.patch.multiple(
+                        stage0_authorizer,
+                        HISTORICAL_RAW_SOURCE_FILES=projections[
+                            "source_records"
+                        ],
+                        HISTORICAL_ACCESSIBLE_RAW_COUNT=projections[
+                            "raw_count"
+                        ],
+                        HISTORICAL_ACCESSIBLE_RAW_ALLOWLIST_SHA256=projections[
+                            "raw_sha256"
+                        ],
+                    ),
+                ):
+                    stage0_authorizer.sample_secrets(
+                        project, private, audit_root
+                    )
+                    if case == "source_tamper":
+                        source = (
+                            projections["clean"] / "salts_private_v2.json"
+                        )
+                        source.write_bytes(source.read_bytes() + b" ")
+                        with self.assertRaisesRegex(ValueError, "source bytes"):
+                            stage0_authorizer.audit_historical_secrets(
+                                project,
+                                private,
+                                audit_root,
+                                projections["clean"],
+                                projections["authorizer"],
+                            )
+                        self.assertFalse(
+                            (
+                                audit_root
+                                / stage0_authorizer.HISTORICAL_SECRET_AUDIT_BASENAME
+                            ).exists()
+                        )
+                        continue
+                    audit = stage0_authorizer.audit_historical_secrets(
+                        project,
+                        private,
+                        audit_root,
+                        projections["clean"],
+                        projections["authorizer"],
+                    )
+                    self.assertEqual(
+                        audit["accessible_historical_raw_comparison_count"],
+                        18,
+                    )
+                    self.assertEqual(
+                        audit["commitment_only_comparison_count"], 12
+                    )
+                    serialized_audit = v3_protocol.canonical_json_bytes(audit)
+                    for name in (
+                        "graph_assignment_salt",
+                        "selector_salt",
+                        "evaluation_seed_salt",
+                    ):
+                        raw_secret = (
+                            private / stage0_authorizer.PRIVATE_INPUTS[name]
+                        ).read_text(encoding="ascii").strip().encode("ascii")
+                        self.assertNotIn(raw_secret, serialized_audit)
+                    zero = json.loads(json.dumps(audit))
+                    zero["accessible_historical_raw_hex_secret_count"] = 0
+                    zero["accessible_historical_raw_comparison_count"] = 0
+                    zero["accessible_historical_raw_allowlist_sha256"] = (
+                        v3_protocol.sha256_bytes(
+                            v3_protocol.canonical_json_bytes([])
+                        )
+                    )
+                    zero["commitment_only_historical_hex_secret_count"] = 0
+                    zero["commitment_only_comparison_count"] = 0
+                    zero[
+                        "commitment_only_collision_union_bound_numerator"
+                    ] = 0
+                    zero["commitment_only_historical_allowlist_sha256"] = (
+                        v3_protocol.sha256_bytes(
+                            v3_protocol.canonical_json_bytes([])
+                        )
+                    )
+                    with (
+                        mock.patch.multiple(
+                            stage0_authorizer,
+                            HISTORICAL_ACCESSIBLE_RAW_COUNT=0,
+                            HISTORICAL_ACCESSIBLE_RAW_ALLOWLIST_SHA256=zero[
+                                "accessible_historical_raw_allowlist_sha256"
+                            ],
+                            HISTORICAL_COMMITMENT_ONLY_COUNT=0,
+                            HISTORICAL_COMMITMENT_ALLOWLIST_SHA256=zero[
+                                "commitment_only_historical_allowlist_sha256"
+                            ],
+                        ),
+                        self.assertRaisesRegex(ValueError, "audit contract"),
+                    ):
+                        stage0_authorizer.validate_historical_secret_audit(zero)
+
+
 class ScreeningRunnerV3Tests(unittest.TestCase):
     def _runner_validation_patches(self, fixture: dict[str, object]):
         return (
@@ -5150,8 +6680,10 @@ class ScreeningRunnerV3Tests(unittest.TestCase):
                 "_validate_runtime_registry",
                 return_value=fixture["hardware"],
             ),
-            mock.patch.object(
-                screening_runner.authorizer, "_validate_capacity_artifacts"
+            mock.patch.multiple(
+                screening_runner.authorizer,
+                _validate_capacity_artifacts=mock.Mock(),
+                _validate_calibration_video_decode=mock.Mock(),
             ),
             mock.patch.multiple(
                 v3_protocol,
@@ -5178,6 +6710,11 @@ class ScreeningRunnerV3Tests(unittest.TestCase):
             ),
             mock.patch.object(
                 screening_runner, "validate_runner_process_environment"
+            ),
+            mock.patch.object(
+                screening_runner.authorizer,
+                "HOLDOUT_FROZEN_RECORDS",
+                fixture["holdout_frozen_records"],
             ),
         )
 
@@ -5492,6 +7029,7 @@ class ScreeningRunnerV3Tests(unittest.TestCase):
                 patches[4],
                 patches[5],
                 patches[6],
+                patches[7],
                 mock.patch.object(
                     screening_runner,
                     "_validate_generic_manifest",
@@ -5578,6 +7116,7 @@ class ScreeningRunnerV3Tests(unittest.TestCase):
                 patches[4],
                 patches[5],
                 patches[6],
+                patches[7],
                 self.assertRaisesRegex(
                     screening_runner.TerminalScreeningFailure,
                     "original_generation_failure",
@@ -5669,6 +7208,7 @@ class ScreeningRunnerV3Tests(unittest.TestCase):
                 patches[4],
                 patches[5],
                 patches[6],
+                patches[7],
                 mock.patch.object(
                     screening_runner,
                     "_validate_generic_manifest",
@@ -5736,6 +7276,7 @@ class ScreeningRunnerV3Tests(unittest.TestCase):
                 patches[4],
                 patches[5],
                 patches[6],
+                patches[7],
                 self.assertRaisesRegex(
                     screening_runner.TerminalScreeningFailure,
                     "original_generation_failure",
@@ -5793,6 +7334,7 @@ class ScreeningRunnerV3Tests(unittest.TestCase):
                 patches[4],
                 patches[5],
                 patches[6],
+                patches[7],
                 mock.patch.object(
                     screening_runner,
                     "_reserve_execution",
@@ -5834,6 +7376,455 @@ class ScreeningRunnerV3Tests(unittest.TestCase):
                     "selector_stderr": None,
                 },
             )
+
+
+class CostCalibrationRunnerV3Tests(unittest.TestCase):
+    def _fixture(
+        self, base: Path
+    ) -> tuple[Path, Path, object]:
+        project = base / "project"
+        private = base / "private_v3"
+        project.mkdir(mode=0o700)
+        private.mkdir(mode=0o700)
+        (project / v3_protocol.DATA_ROOT).mkdir(parents=True)
+        generator = project / v3_protocol.CODE_ARTIFACT_PATHS["generator"]
+        generator.parent.mkdir(parents=True, exist_ok=True)
+        generator.write_bytes(b"synthetic calibration generator")
+        generator.chmod(0o644)
+        context = screening_runner.CostCalibrationContext(
+            project_root=project,
+            private_root=private,
+            hardware={
+                "accelerator_type": "CUDA",
+                "device_count": 1,
+                "device_models": ["Synthetic NVIDIA A100"],
+            },
+            model_content_inventory_sha256="1" * 64,
+            runtime_registry_sha256="2" * 64,
+            render_configuration_sha256="3" * 64,
+            code_registry_sha256="4" * 64,
+            generator_path=generator,
+            generator_sha256="5" * 64,
+            generator_dependency_closure_sha256="6" * 64,
+            media_runtime_packages={"av": "synthetic-av", "Pillow": "synthetic-pillow"},
+            forbidden_seed_inventory_sha256="7" * 64,
+            forbidden_numeric_seed_count=5,
+            screening_seed_sha256="8" * 64,
+        )
+        return project, private, context
+
+    def _successful_generator(
+        self,
+        commands: list[tuple[list[str], dict[str, object]]],
+        *,
+        corrupt_index: int | None = None,
+    ):
+        def run(command, **kwargs):
+            commands.append((list(command), dict(kwargs)))
+            prompt_path = Path(command[command.index("--prompts") + 1])
+            render_dir = Path(command[command.index("--output-dir") + 1])
+            seed = int(command[command.index("--seeds") + 1])
+            index = screening_runner.CALIBRATION_SEEDS.index(seed)
+            prompt, target, expected = (
+                prompt_path.read_text(encoding="utf-8").strip().split(" | ")
+            )
+            videos = render_dir / "videos"
+            videos.mkdir(mode=0o700)
+            video = videos / f"calibration_{index:03d}.mp4"
+            video.write_bytes(
+                b"synthetic calibration video" + seed.to_bytes(4, "big")
+            )
+            video.chmod(0o600)
+            payload = {
+                "created_at_utc": "2026-08-17T00:00:00+00:00",
+                "baseline": "clean",
+                "pipeline": "WanPipeline",
+                "model": "models/Wan2.1-T2V-1.3B-Diffusers",
+                "dry_run": False,
+                "prompts": os.fspath(prompt_path),
+                "generation": (
+                    screening_runner._expected_calibration_generic_generation(seed)
+                ),
+                "items": [
+                    {
+                        "index": 0,
+                        "prompt": prompt,
+                        "target_concept": target,
+                        "expected_effect": expected,
+                        "seed": seed,
+                        "video_path": os.fspath(video),
+                    }
+                ],
+            }
+            if corrupt_index == index:
+                payload["items"][0]["seed"] = seed + 1
+            manifest = render_dir / screening_runner.GENERIC_MANIFEST_BASENAME
+            manifest.write_bytes(v3_protocol.canonical_json_bytes(payload))
+            manifest.chmod(0o600)
+            return mock.Mock(returncode=0)
+
+        return run
+
+    @staticmethod
+    def _decode_contract(_: Path) -> dict[str, int]:
+        return {
+            "frame_count": 49,
+            "width": 832,
+            "height": 480,
+            "fps_numerator": 8,
+            "fps_denominator": 1,
+        }
+
+    def test_cost_success_exact_schema_environment_decode_and_cli(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO.parent) as directory:
+            project, private, context = self._fixture(Path(directory))
+            commands: list[tuple[list[str], dict[str, object]]] = []
+            clock = iter([0, 1, 10, 12, 20, 23, 30, 34, 40, 45])
+            with mock.patch.object(
+                screening_runner,
+                "_validate_cost_calibration_context",
+                return_value=context,
+            ) as validate:
+                result = screening_runner.run_cost_calibration(
+                    project_root=project,
+                    private_root=private,
+                    python_executable="models/.wan-runtime/bin/python",
+                    worker_count=1,
+                    run=self._successful_generator(commands),
+                    clock=lambda: next(clock),
+                    decode=self._decode_contract,
+                )
+            self.assertEqual(validate.call_count, 2)
+            self.assertEqual(result["calibration_count"], 5)
+            artifact = project / stage0_authorizer.COST_CALIBRATION_PATH
+            payload = json.loads(artifact.read_text(encoding="utf-8"))
+            screening_runner.validate_cost_calibration_payload(
+                payload, context=context
+            )
+            self.assertEqual(payload["wall_time_seconds"], [1.0, 2.0, 3.0, 4.0, 5.0])
+            self.assertEqual(stat.S_IMODE(artifact.stat().st_mode), 0o644)
+            self.assertEqual(len(commands), 5)
+            for index, (command, kwargs) in enumerate(commands):
+                self.assertEqual(
+                    command[1:4], ["-I", "-c", screening_runner.GENERATOR_BOOTSTRAP]
+                )
+                self.assertEqual(
+                    command[command.index("--seeds") + 1],
+                    str(screening_runner.CALIBRATION_SEEDS[index]),
+                )
+                self.assertNotIn("--skip-existing", command)
+                self.assertNotIn("--dry-run", command)
+                self.assertFalse(kwargs["shell"])
+                self.assertEqual(kwargs["timeout"], 600)
+                self.assertNotIn("PYTHONPATH", kwargs["env"])
+                self.assertNotIn("PYTHONHOME", kwargs["env"])
+                self.assertTrue(
+                    kwargs["env"]["PATH"].startswith(
+                        os.fspath(project / "models/.wan-runtime/bin")
+                    )
+                )
+            output, _ = screening_runner._calibration_paths(project)
+            self.assertEqual(stat.S_IMODE(output.stat().st_mode), 0o700)
+            self.assertEqual(
+                stat.S_IMODE(
+                    (
+                        output
+                        / screening_runner.COST_RUN_MANIFEST_BASENAME
+                    ).stat().st_mode
+                ),
+                0o600,
+            )
+            self.assertFalse(
+                (output / screening_runner.COST_FAILED_BASENAME).exists()
+            )
+            self.assertEqual(
+                len(screening_runner._cost_tree_records(output)), 23
+            )
+            extra_dir = output / "unexpected_directory"
+            extra_dir.mkdir(mode=0o700)
+            with self.assertRaisesRegex(ValueError, "successful run inventory"):
+                screening_runner._cost_tree_records(output)
+            extra_dir.rmdir()
+            nested_extra = output / "render_000/unexpected"
+            nested_extra.mkdir(mode=0o700)
+            with self.assertRaisesRegex(ValueError, "render directory inventory"):
+                screening_runner._cost_tree_records(output)
+            nested_extra.rmdir()
+            parser = screening_runner.build_cost_calibration_parser()
+            parsed = parser.parse_args(
+                [
+                    "--project-root",
+                    "/tmp/project-v3",
+                    "--private-root",
+                    "/tmp/private-v3",
+                    "--python",
+                    "models/.wan-runtime/bin/python",
+                    "--worker-count",
+                    "1",
+                ]
+            )
+            self.assertEqual(parsed.worker_count, 1)
+            with (
+                mock.patch.object(
+                    screening_runner,
+                    "run_cost_calibration",
+                    return_value={"status": "passed"},
+                ) as invoke,
+                contextlib.redirect_stdout(io.StringIO()) as stdout,
+            ):
+                self.assertEqual(
+                    screening_runner.main(
+                        [
+                            "calibrate-cost",
+                            "--project-root",
+                            "/tmp/project-v3",
+                            "--private-root",
+                            "/tmp/private-v3",
+                            "--python",
+                            "models/.wan-runtime/bin/python",
+                            "--worker-count",
+                            "1",
+                        ]
+                    ),
+                    0,
+                )
+            self.assertEqual(invoke.call_count, 1)
+            self.assertIn('"status":"passed"', stdout.getvalue())
+
+    def test_cost_timeout_is_terminal_and_retry_is_zero_write(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO.parent) as directory:
+            project, private, context = self._fixture(Path(directory))
+
+            def timeout(command, **kwargs):
+                raise screening_runner.subprocess.TimeoutExpired(
+                    command, kwargs["timeout"]
+                )
+
+            with (
+                mock.patch.object(
+                    screening_runner,
+                    "_validate_cost_calibration_context",
+                    return_value=context,
+                ),
+                self.assertRaisesRegex(
+                    screening_runner.TerminalCostCalibrationFailure,
+                    "cost_calibration_timeout",
+                ),
+            ):
+                screening_runner.run_cost_calibration(
+                    project_root=project,
+                    private_root=private,
+                    python_executable="models/.wan-runtime/bin/python",
+                    worker_count=1,
+                    run=timeout,
+                    clock=iter([0]).__next__,
+                    decode=lambda _: {},
+                )
+            output, artifact = screening_runner._calibration_paths(project)
+            self.assertFalse(artifact.exists())
+            self.assertTrue((output / screening_runner.COST_FAILED_BASENAME).exists())
+            before = sorted(
+                path.relative_to(output).as_posix() for path in output.rglob("*")
+            )
+            with self.assertRaisesRegex(FileExistsError, "already consumed"):
+                screening_runner.run_cost_calibration(
+                    project_root=project,
+                    private_root=private,
+                    python_executable="models/.wan-runtime/bin/python",
+                    worker_count=1,
+                    run=timeout,
+                    decode=lambda _: {},
+                )
+            self.assertEqual(
+                before,
+                sorted(
+                    path.relative_to(output).as_posix()
+                    for path in output.rglob("*")
+                ),
+            )
+
+    def test_cost_nonzero_and_manifest_tamper_are_terminal(self) -> None:
+        for mode in ("nonzero", "manifest"):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory(
+                dir=REPO.parent
+            ) as directory:
+                project, private, context = self._fixture(Path(directory))
+                clock = iter([0, 1])
+                run = (
+                    (lambda *args, **kwargs: mock.Mock(returncode=9))
+                    if mode == "nonzero"
+                    else self._successful_generator([], corrupt_index=0)
+                )
+                expected = (
+                    "cost_calibration_generation_failure"
+                    if mode == "nonzero"
+                    else "cost_calibration_validation_failure"
+                )
+                with (
+                    mock.patch.object(
+                        screening_runner,
+                        "_validate_cost_calibration_context",
+                        return_value=context,
+                    ),
+                    self.assertRaisesRegex(
+                        screening_runner.TerminalCostCalibrationFailure,
+                        expected,
+                    ),
+                ):
+                    screening_runner.run_cost_calibration(
+                        project_root=project,
+                        private_root=private,
+                        python_executable="models/.wan-runtime/bin/python",
+                        worker_count=1,
+                        run=run,
+                        clock=lambda: next(clock),
+                        decode=lambda _: {},
+                    )
+                output, artifact = screening_runner._calibration_paths(project)
+                self.assertFalse(artifact.exists())
+                self.assertTrue(
+                    (output / screening_runner.COST_FAILED_BASENAME).exists()
+                )
+
+    def test_cost_preexisting_artifact_and_gpu_mutex_write_nothing(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO.parent) as directory:
+            project, private, _ = self._fixture(Path(directory))
+            output, artifact = screening_runner._calibration_paths(project)
+            artifact.write_text("{}\n", encoding="utf-8")
+            before = artifact.read_bytes()
+            with self.assertRaisesRegex(FileExistsError, "already consumed"):
+                screening_runner.run_cost_calibration(
+                    project_root=project,
+                    private_root=private,
+                    python_executable="models/.wan-runtime/bin/python",
+                    worker_count=1,
+                )
+            self.assertEqual(artifact.read_bytes(), before)
+            self.assertFalse(output.exists())
+
+        with tempfile.TemporaryDirectory(dir=REPO.parent) as directory:
+            project, private, _ = self._fixture(Path(directory))
+            output, artifact = screening_runner._calibration_paths(project)
+            with screening_runner._screening_mutex(private):
+                with self.assertRaisesRegex(FileExistsError, "mutex"):
+                    screening_runner.run_cost_calibration(
+                        project_root=project,
+                        private_root=private,
+                        python_executable="models/.wan-runtime/bin/python",
+                        worker_count=1,
+                    )
+            self.assertFalse(output.exists())
+            self.assertFalse(artifact.exists())
+
+            second_private = Path(directory) / "second_private_v3"
+            second_private.mkdir(mode=0o700)
+            with screening_runner._cost_calibration_mutex(project):
+                with self.assertRaisesRegex(FileExistsError, "GPU mutex"):
+                    screening_runner.run_cost_calibration(
+                        project_root=project,
+                        private_root=second_private,
+                        python_executable="models/.wan-runtime/bin/python",
+                        worker_count=1,
+                    )
+            self.assertFalse(output.exists())
+            self.assertFalse(artifact.exists())
+
+    def test_cost_post_mkdir_reservation_failure_is_terminal(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO.parent) as directory:
+            project, private, _ = self._fixture(Path(directory))
+            with (
+                mock.patch.object(
+                    screening_runner,
+                    "_write_bytes_exclusive",
+                    side_effect=OSError("synthetic reservation write failure"),
+                ),
+                self.assertRaisesRegex(
+                    screening_runner.TerminalCostCalibrationFailure,
+                    "cost_calibration_preflight_failure",
+                ),
+            ):
+                screening_runner.run_cost_calibration(
+                    project_root=project,
+                    private_root=private,
+                    python_executable="models/.wan-runtime/bin/python",
+                    worker_count=1,
+                )
+            output, artifact = screening_runner._calibration_paths(project)
+            self.assertTrue(output.exists())
+            self.assertFalse(artifact.exists())
+            self.assertTrue((output / screening_runner.COST_FAILED_BASENAME).exists())
+
+    def test_forbidden_seed_relationships_bind_hash_count_and_membership(self) -> None:
+        forbidden = frozenset(screening_runner.CALIBRATION_SEEDS)
+        secrets = {
+            "historical_secret_audit": {
+                "screening_seed_forbidden_intersection_count": 0
+            }
+        }
+        with mock.patch.object(
+            screening_runner.authorizer, "validate_historical_secret_audit"
+        ) as validate:
+            screening_runner._validate_forbidden_seed_relationships(
+                secrets_payload=secrets,
+                forbidden=forbidden,
+                forbidden_seed_inventory_sha256="a" * 64,
+                screening_seed=17,
+            )
+            with self.assertRaisesRegex(ValueError, "forbidden inventory contract"):
+                screening_runner._validate_forbidden_seed_relationships(
+                    secrets_payload=secrets,
+                    forbidden=frozenset(screening_runner.CALIBRATION_SEEDS[:-1]),
+                    forbidden_seed_inventory_sha256="a" * 64,
+                    screening_seed=17,
+                )
+            with self.assertRaisesRegex(ValueError, "forbidden inventory contract"):
+                screening_runner._validate_forbidden_seed_relationships(
+                    secrets_payload=secrets,
+                    forbidden=frozenset((*screening_runner.CALIBRATION_SEEDS, 17)),
+                    forbidden_seed_inventory_sha256="a" * 64,
+                    screening_seed=17,
+                )
+        self.assertEqual(validate.call_count, 3)
+        self.assertEqual(
+            validate.call_args_list[0],
+            mock.call(
+                secrets["historical_secret_audit"],
+                forbidden_seed_inventory_sha256="a" * 64,
+                forbidden_numeric_seed_count=5,
+            ),
+        )
+
+    def test_cost_artifact_postlink_interrupt_and_preexisting_are_owned(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO.parent) as directory:
+            root = Path(directory)
+            target = root / "cost.json"
+            raw = b'{"status":"passed"}\n'
+            real_link = screening_runner.os.link
+
+            def link_then_interrupt(source, destination, **kwargs):
+                real_link(source, destination, **kwargs)
+                raise KeyboardInterrupt()
+
+            with (
+                mock.patch.object(
+                    screening_runner.os,
+                    "link",
+                    side_effect=link_then_interrupt,
+                ),
+                self.assertRaises(KeyboardInterrupt),
+            ):
+                screening_runner._publish_cost_artifact_exclusive(target, raw)
+            self.assertEqual(list(root.iterdir()), [])
+
+            target.write_bytes(b"foreign")
+            target.chmod(0o644)
+            inode = (target.stat().st_dev, target.stat().st_ino)
+            with self.assertRaises(FileExistsError):
+                screening_runner._publish_cost_artifact_exclusive(target, raw)
+            self.assertEqual(
+                (target.stat().st_dev, target.stat().st_ino), inode
+            )
+            self.assertEqual(target.read_bytes(), b"foreign")
 
 
 if __name__ == "__main__":

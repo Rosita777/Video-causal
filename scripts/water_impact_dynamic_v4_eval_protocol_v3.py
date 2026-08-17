@@ -39,6 +39,15 @@ FORBIDDEN_SEED_SOURCE_AUDIT_PROTOCOL = (
     "water_impact_dynamic_v4_v3_forbidden_seed_source_audit_v1"
 )
 CODE_REGISTRY_PROTOCOL = "water_impact_dynamic_v4_eval_code_registry_v3"
+HOLDOUT_PUBLIC_COMMITMENT_PROTOCOL = (
+    "water_impact_dynamic_v4_holdout_public_commitment_v3"
+)
+R6_PUBLIC_AGGREGATE_STATUS = (
+    "r6_public_allowlist_pass_pending_isolated_v2_private_audit"
+)
+R6_IDENTITY_AUDIT_BLOCKER = (
+    "isolated_v2_private_identity_pair_triple_intersection_audit"
+)
 
 STAGE0_PUBLIC = DATA_ROOT / "causal_stage0_public_commitment_v3.json"
 STAGE0_REGISTRY = DATA_ROOT / "causal_stage0_commitment_v3.json"
@@ -47,6 +56,7 @@ INVALID_OUTCOME = DATA_ROOT / "causal_preflight_dataset_invalid_v3.json"
 CODE_REGISTRY = DATA_ROOT / "v4_eval_code_registry_v3.json"
 IDENTITY_REPORT = DATA_ROOT / "v4_causal_identity_disjointness_v3.json"
 CONSTRUCT_REPORT = DATA_ROOT / "v4_causal_v2_construct_equivalence_v3.json"
+HOLDOUT_PUBLIC_COMMITMENT = DATA_ROOT / "holdout_public_commitment_v3.json"
 FORBIDDEN_SEED_SOURCE_AUDIT = (
     DATA_ROOT / "v4_causal_forbidden_seed_source_audit_v3.json"
 )
@@ -100,6 +110,20 @@ CANDIDATE_COUNT = 576
 SELECTED_COUNT = 24
 UNIT_COUNT = 72
 REPLICATES = (0, 1, 2)
+CALIBRATION_SEEDS = (
+    120483719,
+    908172635,
+    1736409281,
+    2847193057,
+    3981264709,
+)
+CALIBRATION_PROMPT_SHA256 = (
+    "a7f655525daccdd958bfbcb5e5ec34c593ac1fde9ca6c67cd3c9e6b6980436ab",
+    "30e29ac32010cfebe630a0fcc4661e3a567b874f262da64f3731572086be855d",
+    "d5fd5a6973f7755fb0af730c10c919778828f20905fd30e5764de7ee0fc0297a",
+    "5b1c12e0c0b098e8066da455bae844df625b98f98964a50aebfd77d16bea497f",
+    "1b9a3980498d388bad13c41c1f32b5f1ba819f7b261c70c307ddeb4698e9d7ba",
+)
 
 R1_DIRECT_OFFSETS = (0, 11)
 R1_NATURAL_OFFSETS = (0, 3, 7, 11, 15, 19, 22)
@@ -134,6 +158,7 @@ STAGE0_ARTIFACT_ROWS: dict[str, int | None | str] = {
     "upstream_source_mapping_178_v2": 178,
     "eval_holdout_source_ontology_48": 48,
     "holdout_registry_48": 48,
+    "holdout_public_commitment": None,
     "receiver_ontology_56": 56,
     "historical_receiver_anchors_8": 8,
     "candidate_graph_576": 576,
@@ -476,26 +501,172 @@ def write_json_exclusive_atomic(path: Path, payload: Mapping[str, Any], *, mode:
     if os.path.lexists(absolute):
         raise FileExistsError(f"refusing to overwrite: {path}")
     raw = canonical_json_bytes(dict(payload))
-    descriptor, temporary_name = tempfile.mkstemp(prefix=f".{absolute.name}.", dir=absolute.parent)
-    temporary = Path(temporary_name)
+    temporary_ownership: list[tuple[Path, tuple[int, int]]] = []
+    namespace_changed = False
+
+    def unlink_if_owned(
+        candidate: Path, expected_inode: tuple[int, int]
+    ) -> bool:
+        try:
+            info = os.lstat(candidate)
+        except FileNotFoundError:
+            return False
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or (info.st_dev, info.st_ino) != expected_inode
+        ):
+            return False
+        candidate.unlink()
+        return True
+
+    def fsync_parent() -> None:
+        parent_descriptor = os.open(
+            absolute.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+        )
+        try:
+            os.fsync(parent_descriptor)
+        finally:
+            os.close(parent_descriptor)
+
+    def create_tracked_temporary() -> None:
+        """Create/write the temp after exporting its descriptor identity."""
+
+        nonlocal namespace_changed
+        descriptor = -1
+        temporary: Path | None = None
+        try:
+            descriptor, temporary_name = tempfile.mkstemp(
+                prefix=f".{absolute.name}.", dir=absolute.parent
+            )
+            temporary = Path(temporary_name)
+            namespace_changed = True
+            try:
+                opened = os.fstat(descriptor)
+            except BaseException:
+                # Never infer ownership from the pathname.  A second,
+                # descriptor-based syscall can safely recover identity after
+                # a one-shot injected BaseException; otherwise the foreign-
+                # preservation rule deliberately wins over broad cleanup.
+                try:
+                    opened = os.stat(descriptor)
+                    temporary_ownership.append(
+                        (temporary, (opened.st_dev, opened.st_ino))
+                    )
+                except BaseException:
+                    pass
+                raise
+            temporary_ownership.append(
+                (temporary, (opened.st_dev, opened.st_ino))
+            )
+            os.fchmod(descriptor, mode)
+            handle = os.fdopen(descriptor, "wb")
+            descriptor = -1
+            with handle:
+                handle.write(raw)
+                handle.flush()
+                os.fsync(handle.fileno())
+        finally:
+            if descriptor >= 0:
+                try:
+                    os.close(descriptor)
+                except BaseException:
+                    pass
+
     try:
-        os.fchmod(descriptor, mode)
-        with os.fdopen(descriptor, "wb") as handle:
-            handle.write(raw)
-            handle.flush()
-            os.fsync(handle.fileno())
+        create_tracked_temporary()
+        require(
+            len(temporary_ownership) == 1,
+            "exclusive temporary ownership was not recorded",
+        )
+        temporary, temporary_inode = temporary_ownership[0]
+        temporary_info = os.lstat(temporary)
+        require(
+            stat.S_ISREG(temporary_info.st_mode)
+            and (temporary_info.st_dev, temporary_info.st_ino)
+            == temporary_inode
+            and temporary_info.st_nlink == 1,
+            "exclusive temporary inode changed before publication",
+        )
         if os.path.lexists(absolute):
             raise FileExistsError(f"refusing to overwrite: {path}")
         os.link(temporary, absolute)
-        temporary.unlink()
-    except Exception:
+        namespace_changed = True
+        target_info = os.lstat(absolute)
+        require(
+            stat.S_ISREG(target_info.st_mode)
+            and (target_info.st_dev, target_info.st_ino) == temporary_inode,
+            "exclusive output inode changed during publication",
+        )
+        require(
+            unlink_if_owned(temporary, temporary_inode),
+            "exclusive temporary inode changed",
+        )
+        namespace_changed = True
+        fsync_parent()
+
+        read_descriptor = os.open(
+            absolute, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+        )
         try:
-            os.close(descriptor)
-        except OSError:
-            pass
-        temporary.unlink(missing_ok=True)
+            read_info = os.fstat(read_descriptor)
+            require(
+                stat.S_ISREG(read_info.st_mode)
+                and (read_info.st_dev, read_info.st_ino) == temporary_inode
+                and read_info.st_nlink == 1,
+                "exclusive output inode changed before readback",
+            )
+            with os.fdopen(read_descriptor, "rb") as handle:
+                read_descriptor = -1
+                observed = handle.read()
+        finally:
+            if read_descriptor >= 0:
+                os.close(read_descriptor)
+        require(observed == raw, "exclusive output readback mismatch")
+        current_info = os.lstat(absolute)
+        require(
+            stat.S_ISREG(current_info.st_mode)
+            and (current_info.st_dev, current_info.st_ino) == temporary_inode
+            and current_info.st_nlink == 1,
+            "exclusive output inode changed after readback",
+        )
+        digest = sha256_bytes(observed)
+    except BaseException:
+        for temporary, temporary_inode in temporary_ownership:
+            try:
+                namespace_changed = (
+                    unlink_if_owned(absolute, temporary_inode)
+                    or namespace_changed
+                )
+            except BaseException:
+                pass
+            try:
+                namespace_changed = (
+                    unlink_if_owned(temporary, temporary_inode)
+                    or namespace_changed
+                )
+            except BaseException:
+                pass
+        if namespace_changed:
+            try:
+                fsync_parent()
+            except BaseException:
+                pass
         raise
-    return sha256_bytes(raw)
+    finally:
+        removed = False
+        for temporary, temporary_inode in temporary_ownership:
+            try:
+                removed = (
+                    unlink_if_owned(temporary, temporary_inode) or removed
+                )
+            except BaseException:
+                pass
+        if removed:
+            try:
+                fsync_parent()
+            except BaseException:
+                pass
+    return digest
 
 
 def validate_v2_public_inputs(project_root: Path) -> dict[str, str]:
@@ -941,6 +1112,16 @@ def validate_no_v2_imports(paths: Sequence[Path], project_root: Path) -> None:
         IDENTITY_REPORT_PROTOCOL,
         CONSTRUCT_REPORT_PROTOCOL,
         CONSTRUCT_REPORT.name,
+        R6_PUBLIC_AGGREGATE_STATUS,
+        R6_IDENTITY_AUDIT_BLOCKER,
+        "data/water_impact_dynamic_v4/causal_stage0_public_commitment_v2.json",
+        "data/water_impact_dynamic_v4/holdout_public_commitment_v2.json",
+        "salts_private_v2.json",
+        "causal_stage0_secrets_private_v2.json",
+        "causal_stage0_selector_salt_v2.txt",
+        "causal_evaluation_seed_salt_v2.txt",
+        "water_impact_dynamic_v4_source_slot_registry_v2",
+        "v4_dev72_v2",
     }
     allowed_literals.update(Path(value).name for value in V2_RUNTIME_READ_ALLOWLIST)
     allowed_literals.update(name for name in STAGE0_ARTIFACT_ROWS if "_v2" in name)

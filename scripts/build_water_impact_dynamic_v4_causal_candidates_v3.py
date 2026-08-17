@@ -11,10 +11,13 @@ from __future__ import annotations
 import argparse
 import hashlib
 import math
+import os
 import re
+import stat
+import tempfile
 from collections import Counter
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 try:
     import water_impact_dynamic_v4_eval_protocol_v3 as protocol
@@ -870,6 +873,196 @@ def _require_v2_hashes_unchanged(
     return observed
 
 
+def _write_graph_manifest_transaction(
+    graph_path: Path,
+    graph: Mapping[str, Any],
+    manifest_path: Path,
+    manifest: Mapping[str, Any],
+    *,
+    post_link_check: Callable[[], None],
+    ownership_sink: list[tuple[Path, tuple[int, int]]] | None = None,
+) -> None:
+    payload_targets = ((graph_path, graph), (manifest_path, manifest))
+    protocol.require(
+        graph_path.parent == manifest_path.parent,
+        "graph/manifest outputs must share one private parent",
+    )
+    for path, _ in payload_targets:
+        if os.path.lexists(path):
+            raise FileExistsError(f"refusing to overwrite builder output: {path}")
+    targets = tuple(
+        (path, protocol.canonical_json_bytes(dict(payload)))
+        for path, payload in payload_targets
+    )
+    temporaries: list[tuple[Path, tuple[int, int], Path, bytes]] = []
+    owned_targets: list[tuple[Path, tuple[int, int]]] = []
+    namespace_changed = False
+
+    def unlink_if_owned(path: Path, inode: tuple[int, int]) -> bool:
+        try:
+            info = os.lstat(path)
+        except FileNotFoundError:
+            return False
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or (info.st_dev, info.st_ino) != inode
+        ):
+            return False
+        path.unlink()
+        return True
+
+    def fsync_parent() -> None:
+        parent_descriptor = os.open(
+            graph_path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+        )
+        try:
+            os.fsync(parent_descriptor)
+        finally:
+            os.close(parent_descriptor)
+
+    def require_owned_readback(
+        path: Path, inode: tuple[int, int], expected: bytes
+    ) -> None:
+        descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        try:
+            info = os.fstat(descriptor)
+            protocol.require(
+                stat.S_ISREG(info.st_mode)
+                and (info.st_dev, info.st_ino) == inode
+                and info.st_nlink == 1,
+                f"builder output inode changed before readback: {path}",
+            )
+            with os.fdopen(descriptor, "rb") as handle:
+                descriptor = -1
+                observed = handle.read()
+        finally:
+            if descriptor >= 0:
+                os.close(descriptor)
+        protocol.require(
+            observed == expected, f"builder output readback mismatch: {path}"
+        )
+        current = os.lstat(path)
+        protocol.require(
+            stat.S_ISREG(current.st_mode)
+            and (current.st_dev, current.st_ino) == inode
+            and current.st_nlink == 1,
+            f"builder output inode changed after readback: {path}",
+        )
+
+    def create_tracked_temporary(target: Path, raw: bytes) -> None:
+        """Create/write one temp after publishing its inode to the outer scope."""
+
+        nonlocal namespace_changed
+        descriptor = -1
+        temporary: Path | None = None
+        try:
+            descriptor, temporary_name = tempfile.mkstemp(
+                prefix=f".{target.name}.", dir=target.parent
+            )
+            temporary = Path(temporary_name)
+            namespace_changed = True
+            try:
+                opened = os.fstat(descriptor)
+            except BaseException:
+                # Recover the authoritative descriptor identity through a
+                # separate syscall wrapper.  This keeps one-shot injected
+                # BaseExceptions between creation and tracking inside the
+                # transaction without ever trusting the pathname inode.
+                try:
+                    opened = os.stat(descriptor)
+                    inode = (opened.st_dev, opened.st_ino)
+                    temporaries.append((temporary, inode, target, raw))
+                except BaseException:
+                    pass
+                raise
+            inode = (opened.st_dev, opened.st_ino)
+            temporaries.append((temporary, inode, target, raw))
+            os.fchmod(descriptor, 0o600)
+            handle = os.fdopen(descriptor, "wb")
+            descriptor = -1
+            with handle:
+                handle.write(raw)
+                handle.flush()
+                os.fsync(handle.fileno())
+        finally:
+            if descriptor >= 0:
+                try:
+                    os.close(descriptor)
+                except BaseException:
+                    pass
+            # No pathname-only cleanup is permitted: until the descriptor
+            # identity is tracked, that name could already denote a foreign
+            # replacement.  A tracked temp is cleaned by the outer rollback.
+
+    try:
+        for target, raw in targets:
+            create_tracked_temporary(target, raw)
+        for temporary, inode, target, _ in temporaries:
+            # Register the temporary's identity against the eventual target in
+            # both rollback scopes *before* link(2).  In particular, the outer
+            # preparer must own a successfully linked target before this
+            # function can return, so a KeyboardInterrupt cannot land in a
+            # function-return -> caller-registration gap.
+            ownership = (target, inode)
+            owned_targets.append(ownership)
+            if ownership_sink is not None:
+                ownership_sink.append(ownership)
+            os.link(temporary, target)
+            namespace_changed = True
+        for temporary, inode, target, _ in temporaries:
+            target_info = os.lstat(target)
+            protocol.require(
+                stat.S_ISREG(target_info.st_mode)
+                and (target_info.st_dev, target_info.st_ino) == inode,
+                f"builder output inode changed during publication: {target}",
+            )
+            protocol.require(
+                unlink_if_owned(temporary, inode),
+                f"builder temporary inode changed: {temporary}",
+            )
+        fsync_parent()
+        for _, inode, target, raw in temporaries:
+            require_owned_readback(target, inode, raw)
+
+        # Producer validation, target hashing/readback, and its success record
+        # remain inside the rollback boundary.  This is deliberately the last
+        # failure-capable producer operation.
+        post_link_check()
+    except BaseException:
+        for target, inode in reversed(owned_targets):
+            try:
+                namespace_changed = (
+                    unlink_if_owned(target, inode) or namespace_changed
+                )
+            except BaseException:
+                pass
+        for temporary, inode, _, _ in reversed(temporaries):
+            try:
+                namespace_changed = (
+                    unlink_if_owned(temporary, inode) or namespace_changed
+                )
+            except BaseException:
+                pass
+        if namespace_changed:
+            try:
+                fsync_parent()
+            except BaseException:
+                pass
+        raise
+    finally:
+        removed = False
+        for temporary, inode, _, _ in temporaries:
+            try:
+                removed = unlink_if_owned(temporary, inode) or removed
+            except BaseException:
+                pass
+        if removed:
+            try:
+                fsync_parent()
+            except BaseException:
+                pass
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project-root", type=Path, required=True)
@@ -930,18 +1123,39 @@ def main(argv: Sequence[str] | None = None) -> int:
         graph_assignment_salt=salt,
     )
     _require_v2_hashes_unchanged(project_root, v2_before)
-    try:
-        protocol.write_json_exclusive_atomic(args.graph_output, graph)
-        protocol.write_json_exclusive_atomic(args.candidate_output, manifest)
-    finally:
+
+    def validate_and_publish_producer_record() -> None:
         _require_v2_hashes_unchanged(project_root, v2_before)
-    print(protocol.canonical_json_bytes({
-        "status": "built_not_authorized",
-        "candidate_count": protocol.CANDIDATE_COUNT,
-        "graph_sha256": graph["graph_sha256"],
-        "graph_file_sha256": protocol.sha256_file(args.graph_output),
-        "candidate_file_sha256": protocol.sha256_file(args.candidate_output),
-    }).decode("ascii"), end="")
+        graph_file_sha256 = protocol.sha256_file(args.graph_output)
+        candidate_file_sha256 = protocol.sha256_file(args.candidate_output)
+        protocol.require(
+            graph_file_sha256
+            == protocol.sha256_bytes(protocol.canonical_json_bytes(dict(graph))),
+            "candidate graph producer readback mismatch",
+        )
+        protocol.require(
+            candidate_file_sha256
+            == protocol.sha256_bytes(protocol.canonical_json_bytes(dict(manifest))),
+            "candidate manifest producer readback mismatch",
+        )
+        producer_record = {
+            "status": "built_not_authorized",
+            "candidate_count": protocol.CANDIDATE_COUNT,
+            "graph_sha256": graph["graph_sha256"],
+            "graph_file_sha256": graph_file_sha256,
+            "candidate_file_sha256": candidate_file_sha256,
+        }
+        print(
+            protocol.canonical_json_bytes(producer_record).decode("ascii"), end=""
+        )
+
+    _write_graph_manifest_transaction(
+        args.graph_output,
+        graph,
+        args.candidate_output,
+        manifest,
+        post_link_check=validate_and_publish_producer_record,
+    )
     return 0
 
 
