@@ -4,6 +4,11 @@ Version: `v4_dev72_v3`
 
 Preregistered: 2026-08-17
 
+Amended before any v3 graph, secret, Stage-0 wrapper, or media existed:
+2026-08-17. The amendment registers the independent graph-assignment salt
+that the already-preregistered receiver-slot permutation requires. It does not
+change an ontology size, graph topology, prompt, gate, seed rule, or budget.
+
 Scope: causal Stage 0 through causal Stage 1 only
 
 ## 1. Status and authority
@@ -321,7 +326,23 @@ phrase, head lemma, and semantic-equivalence review from every training,
 historical, v1, v2, source, and mechanism identity. Partition them into
 mutually disjoint R1 and R3 pools of 24 and 32 identities. Actual receiver
 identities are assigned to the public index graphs below by independent salted
-permutations; the graph topology itself is not searched against outcomes.
+permutations. The sole salt for both pool permutations is the independently
+sampled `causal_graph_assignment_salt_v3`; R1 and R3 remain domain-separated
+by their exact pool labels. The graph topology itself is not searched against
+outcomes.
+
+For a receiver in pool `P`, compute
+
+```text
+sha256(utf8("causal-graph-receiver-permutation-v3") || NUL ||
+       utf8(graph_assignment_salt) || NUL || utf8(P) || NUL ||
+       utf8(receiver_id)).
+```
+
+Sort each pool by this digest and map that order to its numbered receiver
+slots. A digest tie invalidates the data version; receiver ID is not a
+tie-breaker. The graph binds the salt-file SHA-256 and the canonical digest of
+each ordered pool without revealing the salt.
 
 For R1, number heads and receiver slots `0..23`. Head `t` has natural
 neighbors `(t+o) mod 24` for offsets `o={0,3,7,11,15,19,22}` and direct
@@ -384,11 +405,13 @@ The exact v3 domains are:
 
 | Purpose | Exact domain/namespace |
 |---|---|
+| graph receiver permutation | `causal-graph-receiver-permutation-v3` |
 | rank | `causal-selector-v3` |
 | evaluation seed | `causal-eval-seed-v3` |
 | screening namespace | `v4-causal-stage0-screening-v3` |
 | evaluation namespace | `v4-causal-evaluation-v3` |
 | screening commitment name | `causal_screening_seed_v3` |
+| graph-assignment commitment name | `causal_graph_assignment_salt_v3` |
 | selector commitment name | `causal_stage0_selector_salt_v3` |
 | evaluation-salt commitment name | `causal_evaluation_seed_salt_v3` |
 
@@ -636,6 +659,7 @@ causal_stage0_selection_rules_private_v3.json
 causal_stage0_secrets_private_v3.json
 causal_stage0_bundle_private_v3.json
 causal_screening_seed_v3.txt
+causal_graph_assignment_salt_v3.txt
 causal_stage0_selector_salt_v3.txt
 causal_evaluation_seed_salt_v3.txt
 causal_forbidden_seed_inventory_v3.json
@@ -661,7 +685,14 @@ The historical-anchor file has top-level keys
 `anchor_id,receiver_id,receiver_phrase,normalized_phrase,head_lemma,historical_training_binding_sha256`.
 
 The candidate graph has top-level keys
-`protocol,dataset_version,status,candidate_count,cell_counts,topology,r1,r3,anchors,edges,graph_sha256`.
+`protocol,dataset_version,status,candidate_count,cell_counts,topology,graph_assignment_salt_sha256,r1,r3,anchors,edges,graph_sha256`.
+`graph_assignment_salt_sha256` is the SHA-256 of the exact lower-hex64 salt
+file including its single trailing LF. The `r1` and `r3` objects each have
+exactly `pool,receiver_count,receiver_ids,permutation_sha256`, where
+`permutation_sha256` hashes the ordered `receiver_ids` JSON array encoded with
+`json.dumps(ids, ensure_ascii=True, separators=(",", ":"))`, followed by one
+LF byte, then encoded as ASCII. Array order is preserved; there is no sorting,
+indentation, additional whitespace, alternate escaping, or platform newline.
 Its 576 edge rows have exactly
 `case_id,group,prompt_variant,physical_anchor_id,edge_ordinal,source_membership,source_id,source_phrase,source_head_lemma,receiver_membership,receiver_id,receiver_phrase,canonical_prompt,canonical_record_sha256`.
 The separate candidate manifest is an exact order-preserving projection of
@@ -718,6 +749,7 @@ The Stage-0 registry contains exactly these semantic artifacts:
 | `raw_render_configuration` | null |
 | `stage0_secrets` | null |
 | `screening_seed` | null |
+| `graph_assignment_salt` | null |
 | `screening_generation_spec` | null |
 | `selector_salt` | null |
 | `ranking_formula` | null |
@@ -760,6 +792,13 @@ Stage-0 authorizer opens and validates every private component, identity-set
 intersection result, cost calibration, model/runtime/code registry, secret
 commitment, forbidden inventory, and 1,728-seed audit before exclusively
 writing `causal_stage0_commitment_v3.json`.
+
+The pending commitment and private selection binding both bind the
+graph-assignment salt-file commitment. The authorizer reopens that salt,
+recomputes both receiver permutations and their digests, reconstructs every
+candidate edge, and requires exact equality with the committed graph. The
+graph-assignment, selector, evaluation-seed, and screening secrets are all
+pairwise distinct; substituting one for another is fatal.
 
 The Stage-1 registry contains exactly these semantic artifacts:
 
