@@ -192,7 +192,9 @@ def _validate_nonempty_object(value: Any, label: str) -> Mapping[str, Any]:
     return value
 
 
-def _validate_identity_fields(row: Mapping[str, Any], *, prefix: str) -> None:
+def _validate_identity_fields(
+    row: Mapping[str, Any], *, prefix: str, require_final_head: bool
+) -> None:
     identifier = row[f"{prefix}_id"]
     phrase = row[f"{prefix}_phrase"]
     normalized = row["normalized_phrase"]
@@ -201,7 +203,14 @@ def _validate_identity_fields(row: Mapping[str, Any], *, prefix: str) -> None:
     protocol.require(isinstance(phrase, str) and phrase and phrase.strip() == phrase, f"{prefix} phrase invalid")
     protocol.require(normalized == normalize_phrase(phrase) and PHRASE_PATTERN.fullmatch(normalized) is not None, f"{prefix} normalization mismatch")
     protocol.require(isinstance(head, str) and normalize_phrase(head) == head and " " not in head, f"{prefix} head invalid")
-    protocol.require(normalized.split()[-1] == head, f"{prefix} head is not final normalized token")
+    tokens = normalized.split()
+    if require_final_head:
+        protocol.require(tokens[-1] == head, f"{prefix} head is not final normalized token")
+    else:
+        protocol.require(
+            tokens.count(head) == 1,
+            f"{prefix} head must occur exactly once as a normalized token",
+        )
 
 
 def _validate_impact(value: Any) -> None:
@@ -250,7 +259,7 @@ def validate_holdout_ontology(payload: Mapping[str, Any]) -> tuple[Mapping[str, 
     output: list[Mapping[str, Any]] = []
     for row in rows:
         protocol.require_exact_keys(row, HOLDOUT_ROW_KEYS, "holdout source row")
-        _validate_identity_fields(row, prefix="source")
+        _validate_identity_fields(row, prefix="source", require_final_head=True)
         protocol.require(row["source_id"] not in ids and row["head_lemma"] not in heads, "holdout IDs/heads are not unique")
         ids.add(row["source_id"])
         heads.add(row["head_lemma"])
@@ -305,7 +314,7 @@ def validate_receiver_ontology(payload: Mapping[str, Any]) -> tuple[Mapping[str,
     output: list[Mapping[str, Any]] = []
     for row in rows:
         protocol.require_exact_keys(row, RECEIVER_ROW_KEYS, "receiver row")
-        _validate_identity_fields(row, prefix="receiver")
+        _validate_identity_fields(row, prefix="receiver", require_final_head=False)
         protocol.require(
             row["receiver_id"] not in ids
             and row["normalized_phrase"] not in phrases
@@ -361,7 +370,7 @@ def validate_historical_anchors(payload: Mapping[str, Any]) -> tuple[Mapping[str
     output: list[Mapping[str, Any]] = []
     for index, row in enumerate(rows):
         protocol.require_exact_keys(row, HISTORICAL_ROW_KEYS, "historical anchor row")
-        _validate_identity_fields(row, prefix="receiver")
+        _validate_identity_fields(row, prefix="receiver", require_final_head=False)
         protocol.require(row["anchor_id"] == f"g2a{index}", "historical anchors are not in canonical order")
         protocol.require(
             row["anchor_id"] not in anchor_ids

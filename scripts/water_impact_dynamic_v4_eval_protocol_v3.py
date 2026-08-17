@@ -35,6 +35,9 @@ IDENTITY_REPORT_PROTOCOL = (
 CONSTRUCT_REPORT_PROTOCOL = (
     "water_impact_dynamic_v4_v3_v2_construct_equivalence_audit_v1"
 )
+FORBIDDEN_SEED_SOURCE_AUDIT_PROTOCOL = (
+    "water_impact_dynamic_v4_v3_forbidden_seed_source_audit_v1"
+)
 CODE_REGISTRY_PROTOCOL = "water_impact_dynamic_v4_eval_code_registry_v3"
 
 STAGE0_PUBLIC = DATA_ROOT / "causal_stage0_public_commitment_v3.json"
@@ -44,6 +47,9 @@ INVALID_OUTCOME = DATA_ROOT / "causal_preflight_dataset_invalid_v3.json"
 CODE_REGISTRY = DATA_ROOT / "v4_eval_code_registry_v3.json"
 IDENTITY_REPORT = DATA_ROOT / "v4_causal_identity_disjointness_v3.json"
 CONSTRUCT_REPORT = DATA_ROOT / "v4_causal_v2_construct_equivalence_v3.json"
+FORBIDDEN_SEED_SOURCE_AUDIT = (
+    DATA_ROOT / "v4_causal_forbidden_seed_source_audit_v3.json"
+)
 V3_PUBLIC_PATHS_WITH_V2_LITERAL = {CONSTRUCT_REPORT.as_posix()}
 
 V2_TERMINATION = Path("results/water_impact_dynamic_v4_causal_screening_termination_v2.md")
@@ -145,6 +151,7 @@ STAGE0_ARTIFACT_ROWS: dict[str, int | None | str] = {
     "evaluation_seed_salt": None,
     "seed_derivation_formula": None,
     "forbidden_seed_inventory": "positive",
+    "forbidden_seed_source_audit": None,
     "preselection_seed_audit_1728": 1728,
     "selection_binding": None,
     "model_content_inventory": None,
@@ -227,6 +234,9 @@ CODE_ARTIFACT_PATHS = {
     ),
     "construct_equivalence_auditor": (
         "scripts/audit_water_impact_dynamic_v4_v3_v2_construct_equivalence.py"
+    ),
+    "forbidden_seed_auditor": (
+        "scripts/audit_water_impact_dynamic_v4_v3_forbidden_seeds.py"
     ),
     "tests": "tests/test_water_impact_dynamic_v4_causal_v3.py",
     "generator": "scripts/generate_wan_clean.py",
@@ -658,8 +668,30 @@ def validate_identity_disjointness_report(payload: Mapping[str, Any]) -> Mapping
     ):
         require(is_hex64(payload[key]), f"identity report {key} invalid")
     require(payload["v2_stage0_registry_sha256"] == V2_STAGE0_SHA256, "identity report v2 root mismatch")
-    counts = payload["compared_counts"]
-    require(isinstance(counts, dict) and counts and all(isinstance(value, int) and not isinstance(value, bool) and value >= 0 for value in counts.values()), "identity compared counts invalid")
+    counts = require_exact_keys(
+        payload["compared_counts"],
+        {
+            "v2_candidates",
+            "v3_graph_edges",
+            "v3_fresh_sources",
+            "v3_fresh_receivers",
+            "v3_historical_receivers",
+            "v3_original_source_nodes",
+        },
+        "identity compared counts",
+    )
+    require(
+        counts
+        == {
+            "v2_candidates": 48,
+            "v3_graph_edges": 576,
+            "v3_fresh_sources": 48,
+            "v3_fresh_receivers": 56,
+            "v3_historical_receivers": 8,
+            "v3_original_source_nodes": 8,
+        },
+        "identity compared counts invalid",
+    )
     exceptions = require_exact_keys(payload["allowed_identity_exceptions"], {"original_source_nodes", "historical_receiver_nodes"}, "identity exceptions")
     require(exceptions == {"original_source_nodes": 8, "historical_receiver_nodes": 8}, "identity exceptions mismatch")
     intersections = require_exact_keys(
