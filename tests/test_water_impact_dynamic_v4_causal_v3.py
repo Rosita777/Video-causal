@@ -2124,6 +2124,10 @@ class V3CoreContinuationTests(unittest.TestCase):
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text("FROZEN_V3_TEST_STUB = True\n", encoding="utf-8")
             v3_validator.validate_static_code_boundary(root)
+        # The complete checked-in implementation must also pass.  In
+        # particular, all three isolated auditors are non-runtime entrypoints
+        # even though their own code is still hash-bound by the registry.
+        v3_validator.validate_static_code_boundary(REPO)
 
     def test_receiver_head_type_and_eligibility_booleans_are_strict(self) -> None:
         duplicate_head = _receiver_fixture()

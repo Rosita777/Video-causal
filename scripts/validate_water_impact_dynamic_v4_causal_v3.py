@@ -177,6 +177,7 @@ def validate_static_code_boundary(project_root: Path) -> None:
         "tests",
         "identity_disjointness_auditor",
         "construct_equivalence_auditor",
+        "forbidden_seed_auditor",
     }
     all_paths = {
         key: project_root / value
