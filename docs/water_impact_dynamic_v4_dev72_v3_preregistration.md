@@ -4,10 +4,14 @@ Version: `v4_dev72_v3`
 
 Preregistered: 2026-08-17
 
-Amended before any v3 graph, secret, Stage-0 wrapper, or media existed:
-2026-08-17. The amendment registers the independent graph-assignment salt
-that the already-preregistered receiver-slot permutation requires. It does not
-change an ontology size, graph topology, prompt, gate, seed rule, or budget.
+Amended before any v3 graph, secret, pending or standard Stage-0 commitment,
+or media existed:
+2026-08-17. The first amendment registers the independent graph-assignment
+salt that the already-preregistered receiver-slot permutation requires. The
+second registers an isolated forbidden-seed source auditor that proves the v3
+forbidden inventory retains every seed committed by v2 Stage 0. Neither
+amendment changes an ontology size, graph topology, prompt, gate, salt or seed
+derivation rule, candidate identity, or budget.
 
 Scope: causal Stage 0 through causal Stage 1 only
 
@@ -440,6 +444,59 @@ seed)` inventory through its canonical digest and publish only digest and
 count. Stage 1 may use only the precommitted 72-row subset corresponding to
 the selected 24 cases.
 
+### 5.1 Independent forbidden-seed source coverage
+
+The v3 forbidden inventory is not trusted merely because its own JSON is
+well-formed. Before the pending Stage-0 commitment is frozen, a third isolated
+auditor must prove that its sorted, unique numeric seed set is a superset of,
+or byte-for-byte set-equal to, the forbidden inventory committed by causal v2
+Stage 0. The v2 Stage-0 inventory is the transitive historical root: it already
+binds the training, historical evaluation, v1/v2, specificity, and registered
+screening namespaces audited for v2. No v2 sources-audit file is needed or
+allowed by this v3 role.
+
+The auditor reads only the exact v2 public Stage-0 wrapper and its committed
+private `causal_forbidden_seed_inventory_v2.json`, plus the single v3 private
+`causal_forbidden_seed_inventory_v3.json`. It verifies each wrapper/file hash
+and byte size, requires the v2 wrapper's registered row count to remain null,
+then independently requires a positive seed-list length, exact inventory
+schema, sorted unique source commitments, and sorted unique seed list. It requires
+`v2_seeds <= v3_seeds`; any missing v2 seed is terminal. It emits no seed,
+source name, namespace, path, or per-source count.
+
+The public report is
+`data/water_impact_dynamic_v4/v4_causal_forbidden_seed_source_audit_v3.json`
+under protocol
+`water_impact_dynamic_v4_v3_forbidden_seed_source_audit_v1`. Its exact
+top-level keys are:
+
+```text
+protocol, status, dataset_version, v2_stage0_registry_sha256,
+v2_forbidden_seed_inventory_sha256, v3_forbidden_seed_inventory_sha256,
+v2_seed_count, v3_seed_count, intersection_seed_count,
+v2_missing_from_v3_count, v3_additional_seed_count, set_relation
+```
+
+Required values are `status="passed"`,
+`dataset_version="v4_dev72_v3"`,
+`v2_missing_from_v3_count=0`,
+`intersection_seed_count=v2_seed_count`, and `set_relation` exactly one of
+`equal` or `strict_superset`. `equal` requires equal counts;
+`strict_superset` requires `v3_seed_count>v2_seed_count` and a positive
+`v3_additional_seed_count`. In every report,
+`intersection_seed_count+v2_missing_from_v3_count=v2_seed_count` and
+`intersection_seed_count+v3_additional_seed_count=v3_seed_count`. All counts
+are nonnegative JSON integers. Every other content field is forbidden.
+
+The Stage-0 authorizer trusts only this code-registry-bound aggregate report
+and independently reopens and validates the v3 private inventory against its
+reported hash and count. It never opens the v2 wrapper or private v2 inventory.
+The screening seed and all 1,728 derived v3 evaluation seeds remain governed
+by the separate v3 secrets and preselection audit; both must be disjoint from
+the audited v3 forbidden set. This coverage relation neither reads, reuses,
+nor constrains the v3 screening, graph-assignment, selector, or evaluation
+salt values.
+
 ## 6. Original-only screening and qualification
 
 The prompt and qualification constructs are byte-frozen from v2. The v3
@@ -586,6 +643,7 @@ data/water_impact_dynamic_v4/v4_causal_capacity_confirm_v3.json
 data/water_impact_dynamic_v4/v4_causal_static_graph_audit_v3.json
 data/water_impact_dynamic_v4/v4_causal_identity_disjointness_v3.json
 data/water_impact_dynamic_v4/v4_causal_v2_construct_equivalence_v3.json
+data/water_impact_dynamic_v4/v4_causal_forbidden_seed_source_audit_v3.json
 ```
 
 The invalid-outcome path and Stage-1 path are mutually exclusive. A successful
@@ -757,6 +815,7 @@ The Stage-0 registry contains exactly these semantic artifacts:
 | `evaluation_seed_salt` | null |
 | `seed_derivation_formula` | null |
 | `forbidden_seed_inventory` | variable, positive |
+| `forbidden_seed_source_audit` | null |
 | `preselection_seed_audit_1728` | 1,728 |
 | `selection_binding` | null |
 | `model_content_inventory` | null |
@@ -771,6 +830,15 @@ The Stage-0 registry contains exactly these semantic artifacts:
 | `v2_construct_equivalence_report` | null |
 | `preregistration` | null |
 | `v2_public_aggregate_design_input` | 6 |
+
+The table contains exactly 37 Stage-0 artifacts. Before selection-binding
+publication, the pending component commitment contains exactly 30 physical
+openings: the unchanged 19 private inputs and 11 public inputs, including the
+new forbidden-seed source audit. The wrapper adds the selection binding, two
+immutable v2 upstreams, the preregistration, and the v2 public aggregate; it
+also replaces the one physical selection-rules name with its three registered
+ranking/subset/seed-formula aliases. This is a net increase of seven. No
+private seed value is public.
 
 The pending public Stage-0 commitment uses protocol
 `water_impact_dynamic_v4_causal_stage0_public_commitment_v3` and exactly these
@@ -790,8 +858,10 @@ public termination record. It contains digests/counts only and
 no private identity, prompt, seed, salt, or review value. A separate standard
 Stage-0 authorizer opens and validates every private component, identity-set
 intersection result, cost calibration, model/runtime/code registry, secret
-commitment, forbidden inventory, and 1,728-seed audit before exclusively
-writing `causal_stage0_commitment_v3.json`.
+commitment, forbidden inventory, forbidden-seed source-coverage report, and
+1,728-seed audit before exclusively writing
+`causal_stage0_commitment_v3.json`. The authorizer recomputes all 30 opening
+hashes before and after selection-binding publication.
 
 The pending commitment and private selection binding both bind the
 graph-assignment salt-file commitment. The authorizer reopens that salt,
@@ -865,6 +935,7 @@ scripts/validate_water_impact_dynamic_v4_causal_v3.py
 scripts/validate_water_impact_dynamic_v4_causal_capacity_v3.py
 scripts/audit_water_impact_dynamic_v4_v3_v2_disjointness.py
 scripts/audit_water_impact_dynamic_v4_v3_v2_construct_equivalence.py
+scripts/audit_water_impact_dynamic_v4_v3_forbidden_seeds.py
 tests/test_water_impact_dynamic_v4_causal_v3.py
 ```
 
@@ -873,10 +944,11 @@ The v3 code registry at
 `water_impact_dynamic_v4_eval_code_registry_v3` and has exactly
 `protocol,status,dataset_version,v2_read_allowlist,artifacts`. Status is
 `frozen`; dataset version is `v4_dev72_v3`. `artifacts` has exactly
-`protocol,candidate_builder,stage0_authorizer,screening_runner,screening_freezer,selector,validator,capacity_validator,identity_disjointness_auditor,construct_equivalence_auditor,tests,generator`.
-The first eleven records bind the paths above; `generator` binds only the generic
+`protocol,candidate_builder,stage0_authorizer,screening_runner,screening_freezer,selector,validator,capacity_validator,identity_disjointness_auditor,construct_equivalence_auditor,forbidden_seed_auditor,tests,generator`.
+The first twelve records bind the paths above; `generator` binds only the generic
 `scripts/generate_wan_clean.py`. Every record is exactly `{path,sha256}` and is
-rehash-validated before output reservation and again before publication.
+rehash-validated before output reservation and again before publication. The
+code registry therefore contains exactly 13 artifacts.
 
 The complete v2 read allowlist is exactly:
 
@@ -986,6 +1058,42 @@ construct files. The construct auditor is code-registry-bound but never
 imported by a v3 runtime entry point. Its tests must reject every extra v2
 file, tampered commitment, alias, noncanonical subobject encoding, contentful
 output field, or false/missing equality flag.
+
+Forbidden-seed source coverage uses a third isolated auditor role. Its v2
+allowlist is exactly:
+
+```text
+data/water_impact_dynamic_v4/causal_stage0_commitment_v2.json
+PRIVATE_V2_ROOT/causal_forbidden_seed_inventory_v2.json
+```
+
+It verifies the public wrapper hash from Section 1, then requires the private
+inventory byte hash and size to equal the wrapper's
+`forbidden_seed_inventory` commitment and requires that commitment's row count
+to be null exactly. It independently requires a positive seed-list length in
+the opened inventory. No v2 sources-audit file is opened: the
+committed v2 inventory itself is the frozen historical source-of-truth. Its v3
+private allowlist is exactly
+`PRIVATE_V3_ROOT/causal_forbidden_seed_inventory_v3.json`. Both roots and files
+use the same explicit-root, mode-700/mode-600, non-symlink, single-link,
+exact-basename, descriptor-rooted open sandbox as the other isolated roles.
+
+The auditor executable is exactly
+`scripts/audit_water_impact_dynamic_v4_v3_forbidden_seeds.py`. It writes only
+`data/water_impact_dynamic_v4/v4_causal_forbidden_seed_source_audit_v3.json`
+with the exact aggregate schema in Section 5.1. It is code-registry-bound as
+`forbidden_seed_auditor`, is never imported by a v3 runtime entry point, and
+cannot emit any seed value, source commitment name, namespace, private path,
+or free text. Tests must cover equal and strict-superset success, a missing v2
+seed, duplicate or unsorted input, wrapper/file mix-and-match, wrong row count,
+extra or aliased private input, symlink/hardlink roots or files, output-field
+leakage, final36/quarantine paths, and exclusive no-overwrite publication.
+
+The v3 Stage-0 authorizer reads only the public aggregate report, verifies its
+code-registry hash and pending component commitment, reopens the v3 private
+inventory, recomputes its sorted unique set/hash/count, and requires exact
+agreement with the report. It never receives a v2 private root and never opens
+v2 Stage-0 or the v2 private inventory.
 
 ## 9. Success and one-shot failure boundary
 
