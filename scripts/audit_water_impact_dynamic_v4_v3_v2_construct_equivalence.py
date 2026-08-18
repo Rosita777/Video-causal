@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -215,9 +216,19 @@ def run_construct_audit(
         project_root,
         secure.IdentityAuditContract(v2_stage0_sha256=contract.v2_stage0_sha256),
     )
-    with secure.SecurePrivateRoot(private_v2_root, V2_PRIVATE_ALLOWLIST) as v2_root:
+    with (
+        secure.SecurePrivateRoot(private_v2_root, V2_PRIVATE_ALLOWLIST) as v2_root,
+        secure.SecurePrivateRoot(private_v3_root, V3_PRIVATE_ALLOWLIST) as v3_root,
+    ):
+        _require(
+            set(os.listdir(v2_root.fd)) == set(V2_PRIVATE_ALLOWLIST),
+            "isolated construct v2 root inventory is not exact",
+        )
+        _require(
+            set(os.listdir(v3_root.fd)) == set(V3_PRIVATE_ALLOWLIST),
+            "isolated construct v3 root inventory is not exact",
+        )
         v2_files = {name: v2_root.read_exact(name) for name in sorted(V2_PRIVATE_ALLOWLIST)}
-    with secure.SecurePrivateRoot(private_v3_root, V3_PRIVATE_ALLOWLIST) as v3_root:
         v3_files = {name: v3_root.read_exact(name) for name in sorted(V3_PRIVATE_ALLOWLIST)}
     report = build_construct_report(
         wrapper=wrapper,

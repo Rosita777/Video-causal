@@ -974,9 +974,19 @@ def run_identity_audit(
 ) -> tuple[dict[str, Any], str | None]:
     validate_distinct_roots(project_root, private_v2_root, private_v3_root)
     wrapper, _ = load_v2_wrapper(project_root, contract)
-    with SecurePrivateRoot(private_v2_root, V2_PRIVATE_ALLOWLIST) as v2_root:
+    with (
+        SecurePrivateRoot(private_v2_root, V2_PRIVATE_ALLOWLIST) as v2_root,
+        SecurePrivateRoot(private_v3_root, V3_PRIVATE_ALLOWLIST) as v3_root,
+    ):
+        _require(
+            set(os.listdir(v2_root.fd)) == set(V2_PRIVATE_ALLOWLIST),
+            "isolated identity v2 root inventory is not exact",
+        )
+        _require(
+            set(os.listdir(v3_root.fd)) == set(V3_PRIVATE_ALLOWLIST),
+            "isolated identity v3 root inventory is not exact",
+        )
         v2_candidates = v2_root.read_exact(V2_CANDIDATE_BASENAME)
-    with SecurePrivateRoot(private_v3_root, V3_PRIVATE_ALLOWLIST) as v3_root:
         v3_files = {name: v3_root.read_exact(name) for name in sorted(V3_PRIVATE_ALLOWLIST)}
     report = build_identity_report(
         wrapper=wrapper,

@@ -1816,9 +1816,13 @@ def _make_isolated_audit_fixture(base: Path) -> dict[str, object]:
     project = base / "project"
     v2_root = base / "private_v2"
     v3_root = base / "private_v3"
+    construct_v2_root = base / "construct_private_v2"
+    construct_v3_root = base / "construct_private_v3"
     project.mkdir(mode=0o700)
     v2_root.mkdir(mode=0o700)
     v3_root.mkdir(mode=0o700)
+    construct_v2_root.mkdir(mode=0o700)
+    construct_v3_root.mkdir(mode=0o700)
     output_parent = project / "data/water_impact_dynamic_v4"
     output_parent.mkdir(parents=True)
 
@@ -1876,9 +1880,9 @@ def _make_isolated_audit_fixture(base: Path) -> dict[str, object]:
         construct_auditor.V3_SELECTION_BASENAME: identity_auditor.canonical_json_bytes(v3_rules),
     }
     for name in construct_auditor.V2_PRIVATE_ALLOWLIST:
-        _private_write(v2_root, name, construct_raw[name])
+        _private_write(construct_v2_root, name, construct_raw[name])
     for name in construct_auditor.V3_PRIVATE_ALLOWLIST:
-        _private_write(v3_root, name, construct_raw[name])
+        _private_write(construct_v3_root, name, construct_raw[name])
 
     selection_record = _record(
         construct_raw[construct_auditor.V2_SELECTION_BASENAME], None
@@ -1927,6 +1931,8 @@ def _make_isolated_audit_fixture(base: Path) -> dict[str, object]:
         "project": project,
         "v2_root": v2_root,
         "v3_root": v3_root,
+        "construct_v2_root": construct_v2_root,
+        "construct_v3_root": construct_v3_root,
         "wrapper": wrapper,
         "wrapper_path": wrapper_path,
         "identity_contract": identity_contract,
@@ -1946,8 +1952,8 @@ class IsolatedAuditorTests(unittest.TestCase):
             )
             construct, construct_sha = construct_auditor.run_construct_audit(
                 project_root=fixture["project"],
-                private_v2_root=fixture["v2_root"],
-                private_v3_root=fixture["v3_root"],
+                private_v2_root=fixture["construct_v2_root"],
+                private_v3_root=fixture["construct_v3_root"],
                 contract=fixture["construct_contract"],
             )
             self.assertTrue(identity_sha and construct_sha)
@@ -1990,6 +1996,70 @@ class IsolatedAuditorTests(unittest.TestCase):
             ) as root:
                 with self.assertRaisesRegex(PermissionError, "nonallowlisted"):
                     root.read_exact("causal_stage0_secrets_private_v3.json")
+
+    def test_identity_exact_projection_roots_reject_extra_files_without_output(self) -> None:
+        for root_key in ("v2_root", "v3_root"):
+            with self.subTest(root=root_key), tempfile.TemporaryDirectory(
+                dir=REPO
+            ) as directory:
+                fixture = _make_isolated_audit_fixture(Path(directory))
+                _private_write(fixture[root_key], "unexpected.json", b"{}\n")
+                output = fixture["project"] / identity_auditor.STANDARD_OUTPUT_RELATIVE
+                reads: list[str] = []
+                original_read = identity_auditor.SecurePrivateRoot.read_exact
+
+                def record_read(root, basename):
+                    reads.append(basename)
+                    return original_read(root, basename)
+
+                with (
+                    mock.patch.object(
+                        identity_auditor.SecurePrivateRoot,
+                        "read_exact",
+                        new=record_read,
+                    ),
+                    self.assertRaisesRegex(ValueError, "inventory is not exact"),
+                ):
+                    identity_auditor.run_identity_audit(
+                        project_root=fixture["project"],
+                        private_v2_root=fixture["v2_root"],
+                        private_v3_root=fixture["v3_root"],
+                        contract=fixture["identity_contract"],
+                    )
+                self.assertEqual(reads, [])
+                self.assertFalse(output.exists())
+
+    def test_construct_exact_projection_roots_reject_extra_files_without_output(self) -> None:
+        for root_key in ("construct_v2_root", "construct_v3_root"):
+            with self.subTest(root=root_key), tempfile.TemporaryDirectory(
+                dir=REPO
+            ) as directory:
+                fixture = _make_isolated_audit_fixture(Path(directory))
+                _private_write(fixture[root_key], "unexpected.json", b"{}\n")
+                output = fixture["project"] / construct_auditor.STANDARD_OUTPUT_RELATIVE
+                reads: list[str] = []
+                original_read = identity_auditor.SecurePrivateRoot.read_exact
+
+                def record_read(root, basename):
+                    reads.append(basename)
+                    return original_read(root, basename)
+
+                with (
+                    mock.patch.object(
+                        identity_auditor.SecurePrivateRoot,
+                        "read_exact",
+                        new=record_read,
+                    ),
+                    self.assertRaisesRegex(ValueError, "inventory is not exact"),
+                ):
+                    construct_auditor.run_construct_audit(
+                        project_root=fixture["project"],
+                        private_v2_root=fixture["construct_v2_root"],
+                        private_v3_root=fixture["construct_v3_root"],
+                        contract=fixture["construct_contract"],
+                    )
+                self.assertEqual(reads, [])
+                self.assertFalse(output.exists())
 
     def test_wrapper_hash_commitment_row_mix_and_rebind_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory(dir=REPO) as directory:
@@ -2074,7 +2144,7 @@ class IsolatedAuditorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=REPO) as directory:
             fixture = _make_isolated_audit_fixture(Path(directory))
             source = fixture["v3_root"] / identity_auditor.V3_SOURCE_BASENAME
-            target = fixture["v3_root"] / "source_target.json"
+            target = Path(directory) / "source_target.json"
             source.rename(target)
             source.symlink_to(target)
             with self.assertRaisesRegex((ValueError, PermissionError), "symlink|regular"):
@@ -2089,7 +2159,7 @@ class IsolatedAuditorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=REPO) as directory:
             fixture = _make_isolated_audit_fixture(Path(directory))
             candidate = fixture["v2_root"] / identity_auditor.V2_CANDIDATE_BASENAME
-            os.link(candidate, fixture["v2_root"] / "candidate_hardlink.json")
+            os.link(candidate, Path(directory) / "candidate_hardlink.json")
             with self.assertRaisesRegex(PermissionError, "nlink-1"):
                 identity_auditor.run_identity_audit(
                     project_root=fixture["project"],
@@ -2127,7 +2197,10 @@ class IsolatedAuditorTests(unittest.TestCase):
     def test_construct_mismatch_placeholder_and_output_overwrite_fail(self) -> None:
         with tempfile.TemporaryDirectory(dir=REPO) as directory:
             fixture = _make_isolated_audit_fixture(Path(directory))
-            v3_rules = fixture["v3_root"] / construct_auditor.V3_SELECTION_BASENAME
+            v3_rules = (
+                fixture["construct_v3_root"]
+                / construct_auditor.V3_SELECTION_BASENAME
+            )
             payload = json.loads(v3_rules.read_text(encoding="utf-8"))
             payload["qualification"]["quality_min"] = 2
             v3_rules.write_bytes(identity_auditor.canonical_json_bytes(payload))
@@ -2135,8 +2208,8 @@ class IsolatedAuditorTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "qualification"):
                 construct_auditor.run_construct_audit(
                     project_root=fixture["project"],
-                    private_v2_root=fixture["v2_root"],
-                    private_v3_root=fixture["v3_root"],
+                    private_v2_root=fixture["construct_v2_root"],
+                    private_v3_root=fixture["construct_v3_root"],
                     contract=fixture["construct_contract"],
                     publish=False,
                 )
@@ -2145,22 +2218,28 @@ class IsolatedAuditorTests(unittest.TestCase):
             fixture = _make_isolated_audit_fixture(Path(directory))
             construct_auditor.run_construct_audit(
                 project_root=fixture["project"],
-                private_v2_root=fixture["v2_root"],
-                private_v3_root=fixture["v3_root"],
+                private_v2_root=fixture["construct_v2_root"],
+                private_v3_root=fixture["construct_v3_root"],
                 contract=fixture["construct_contract"],
             )
             with self.assertRaisesRegex(FileExistsError, "overwrite"):
                 construct_auditor.run_construct_audit(
                     project_root=fixture["project"],
-                    private_v2_root=fixture["v2_root"],
-                    private_v3_root=fixture["v3_root"],
+                    private_v2_root=fixture["construct_v2_root"],
+                    private_v3_root=fixture["construct_v3_root"],
                     contract=fixture["construct_contract"],
                 )
 
         with tempfile.TemporaryDirectory(dir=REPO) as directory:
             fixture = _make_isolated_audit_fixture(Path(directory))
-            v2_rules = fixture["v2_root"] / construct_auditor.V2_SELECTION_BASENAME
-            v3_rules = fixture["v3_root"] / construct_auditor.V3_SELECTION_BASENAME
+            v2_rules = (
+                fixture["construct_v2_root"]
+                / construct_auditor.V2_SELECTION_BASENAME
+            )
+            v3_rules = (
+                fixture["construct_v3_root"]
+                / construct_auditor.V3_SELECTION_BASENAME
+            )
             payload = json.loads(v2_rules.read_text(encoding="utf-8"))
             payload["qualification"]["label"] = "TODO"
             raw = identity_auditor.canonical_json_bytes(payload)
@@ -2187,8 +2266,8 @@ class IsolatedAuditorTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "placeholder"):
                 construct_auditor.run_construct_audit(
                     project_root=fixture["project"],
-                    private_v2_root=fixture["v2_root"],
-                    private_v3_root=fixture["v3_root"],
+                    private_v2_root=fixture["construct_v2_root"],
+                    private_v3_root=fixture["construct_v3_root"],
                     contract=contract,
                     publish=False,
                 )

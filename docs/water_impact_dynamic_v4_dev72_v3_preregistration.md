@@ -23,9 +23,13 @@ JSON-normalization repair specified in Section 1.1. The sixth amendment,
 recorded in the same pre-pending state after that static retry succeeded,
 aligns an implementation-only literal token check with the already-frozen
 structured source validator and archives the superseded static outputs as
-specified in Section 1.2. None of these amendments changes an ontology size,
-graph topology, prompt, scientific gate, secret value, salt or seed derivation
-rule, candidate identity, model/runtime byte requirement, or budget.
+specified in Section 1.2. The seventh amendment records a subsequent
+pre-private static publication whose code registry lacked the preregistered
+exact-inventory gate in two isolated auditors; Section 1.3 rejects those
+outputs before any private preparation and freezes the minimal auditor repair.
+None of these amendments changes an ontology size, graph topology, prompt,
+scientific gate, secret value, salt or seed derivation rule, candidate
+identity, model/runtime byte requirement, or budget.
 
 Scope: causal Stage 0 through causal Stage 1 only
 
@@ -171,6 +175,91 @@ This repair does not authorize any secret action or curation change.
 `sample-secrets` and the historical auditor remain permanently consumed; the
 request, audit, four raw secret files, forbidden inventory, and all r6 bytes
 must remain unchanged. The retry remains pre-graph and pre-pending.
+
+### 1.3 Pre-private isolated-projection inventory repair
+
+The next `prepare-static` invocation completed with exit status `0` from HEAD
+`701975e6eba6804ab9de102d3c089b6ec7046a07` while this preregistration had
+SHA-256
+`98b5c7e8e21b6af8d55f1130596560c70252558ad3d26668f5a5aa4da094142c`.
+It published these five exact standard files:
+
+| Static opening | Published SHA-256 |
+|---|---|
+| `model_content_inventory` | `51e7199b99ee206934924ee043bd01b40ba413dfb60ef1e72682d36a10b46290` |
+| `runtime_registry` | `9043adf7f823022b20711267ab9e28b9dfb72452273d26e27c131b92e65eff01` |
+| `eval_code_registry` | `d7656501e7f671640df46b009663d58630961cd7904fe7208057fa977cda4e46` |
+| `capacity_model_spec` | `223392b9884e23e839000d9d95ffde8fc318f084187a61de71f02a166141fc33` |
+| `static_graph_robustness_report` | `1db1e06264adb868c43aab12356413b091cca0431875cc60067698efd48a001a` |
+
+Before `prepare-private` or any isolated identity/construct audit ran, an
+execution-readiness review found that the identity-disjointness and
+construct-equivalence auditors used descriptor-rooted read allowlists but did
+not require the projection-root directory inventory itself to equal that
+allowlist. An extra basename could therefore remain unopened yet escape the
+preregistered exact-root gate. The forbidden-seed auditor already enforced its
+exact singleton inventories and is unchanged.
+
+This is a code-integrity defect in two isolated pre-pending auditors. Because
+the published code registry binds the deficient auditor bytes, all five static
+outputs above are rejected even though the model, runtime, capacity-model, and
+static-graph bytes remain scientifically unchanged. No graph, candidate
+manifest, derived seed audit, generation specification, private bundle,
+identity report, construct report, forbidden-seed report, holdout public
+commitment, cost calibration, pending commitment, standard Stage-0 wrapper,
+invalid outcome, or media was created. `PRIVATE_V3_ROOT` remains exactly the
+same eleven files recorded in Section 1.2.
+
+The sole auditor repair is to compare descriptor-rooted `os.listdir(root_fd)`
+with the exact registered allowlist immediately after opening each v2 and v3
+projection root and before the first `read_exact`. Identity projections are
+exactly one v2 candidate file and four v3 source/receiver/historical/graph
+files. Construct projections are exactly the three registered construct files
+on each side. Any extra or missing basename is fatal and creates no public
+report. No schema, compared field, exception count, equality rule, v2 hash,
+or report content changes. The repaired code hashes are identity auditor
+`6c68410c37b596e7dc250943ef2669f1dab17a03020ec070c51139c2f70e30f6`,
+construct auditor
+`e4bb3109a5a978aecfe68abb57f6f8c693197fb3b3ea5a60b8e7618e677cde02`,
+and shared tests
+`8c281614f8e38ad4c5357dc521ba06d99c2f2b681a33297bc8b3a98084be266b`.
+
+Before any further command, the five static files in the table above must be
+moved together into a new distinct, nonnested, real mode-700 rejected backup
+root. Each file is retained byte-for-byte as a mode-600, non-symlink,
+single-link file under its original basename. The root inventory is exactly
+those five files plus one mode-600 `rejected_static_manifest_v3.json`. That
+manifest has exactly
+`protocol,status,dataset_version,reason_code,source_commit,source_preregistration_sha256,source_code_registry_sha256,artifacts,no_fallback`.
+Required values are protocol
+`water_impact_dynamic_v4_v3_rejected_static_backup_v1`,
+`status="REJECTED_NO_FALLBACK"`, `dataset_version="v4_dev72_v3"`,
+`reason_code="pre_private_isolated_projection_inventory_gate_missing"`,
+`source_commit="701975e6eba6804ab9de102d3c089b6ec7046a07"`,
+`source_preregistration_sha256="98b5c7e8e21b6af8d55f1130596560c70252558ad3d26668f5a5aa4da094142c"`,
+`source_code_registry_sha256="d7656501e7f671640df46b009663d58630961cd7904fe7208057fa977cda4e46"`,
+and `no_fallback=true`. `artifacts` has exactly the five logical names and
+maps each directly to the SHA-256 in the table above. It contains no
+replacement path, fallback selector, identity, phrase, prompt, seed, salt,
+raw value, or free text.
+
+The archival operation is no-replace and inode-owned. It verifies all five
+source hashes first, fsyncs the retained files and manifest, and proves all
+five standard paths absent. A partial move, extra backup entry, mode/link/hash
+mismatch, or attempted restoration blocks v3. Archived bytes may never be
+copied back or accepted as an opening.
+
+After the exact-inventory patch, preregistration-hash literal alignment, and
+independent review are committed, `prepare-static` must regenerate all five
+standard outputs. The new code registry must bind that later reviewed commit,
+the two repaired auditors, the repaired tests, and the final preregistration
+hash; it may not reuse the rejected code registry or any archived artifact.
+The secret request
+`98e7fa09ee0cd81e6c3283a4f97d12ba509d0f54bb26d6a42e099879db215323`,
+historical audit
+`19fa8af3d43e15940b5adcd189c034bf132b675eda2384e78e5d3e211a678381`,
+four raw secret files, forbidden inventory, and all r6 bytes remain immutable.
+No secret sampling or historical audit may run again.
 
 The formal terminal outcome for `v4_dev72_v2` is
 `preflight_dataset_invalid`, reason

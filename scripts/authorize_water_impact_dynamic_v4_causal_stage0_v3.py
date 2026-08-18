@@ -254,7 +254,7 @@ CALIBRATION_SEEDS = protocol.CALIBRATION_SEEDS
 CALIBRATION_PROMPT_SHA256 = protocol.CALIBRATION_PROMPT_SHA256
 
 EXPECTED_PREREG_SHA256 = (
-    "cf2623af06ed218e9086b85e2fbd6c570228d99216dde992113d9fcae0a07e51"
+    "da5bb650de4b708a91284237f730bfb96666f51255e7f297e85bfc3ae2bfba29"
 )
 PREREG_PATH = Path("docs/water_impact_dynamic_v4_dev72_v3_preregistration.md")
 MODEL_INVENTORY_PATH = protocol.DATA_ROOT / "v4_model_content_inventory_v3.json"
