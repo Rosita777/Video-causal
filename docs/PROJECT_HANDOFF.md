@@ -286,6 +286,22 @@ therefore failed closed before producing selected24 or U72. The formal outcome
 is `preflight_dataset_invalid`, recorded in
 `results/water_impact_dynamic_v4_causal_screening_termination_v2.md`.
 
+A fresh follow-on dataset, `v4_dev72_v3`, was subsequently preregistered and
+prepared without opening sealed-final36. Static preparation and private
+candidate construction completed (576 candidates and 1,728 unique evaluation
+seeds), but the mandatory isolated v2/v3 identity audit found two fresh-source
+normalized-head intersections. Fresh-source intersections are required to be
+zero and are not covered by the historical exceptions. The construct auditor
+also stopped on a non-exact cell-quota representation; the forbidden-seed
+audit passed.
+
+V3 stopped before the public holdout commitment, cost calibration, pending
+Stage-0 freeze, authorizing wrapper, GPU generation, or review. Because the
+pending boundary was never crossed, no machine-readable invalid-outcome JSON
+was emitted. The scientific version is nevertheless exhausted and must not be
+recurated or repaired. The aggregate-only record is
+`results/water_impact_dynamic_v4_causal_screening_termination_v3.md`.
+
 There is no causal Stage-1 commitment, specificity dataset, prompt sidecar,
 training authorization, v4 training run, checkpoint, treatment generation, or
 v4 evaluation. `v4_dev72_v2` must not be retried or repaired by replacing
