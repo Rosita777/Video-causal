@@ -2431,11 +2431,18 @@ class V3CoreContinuationTests(unittest.TestCase):
         holdout["sources"][0]["source_phrase"] = "object headg100"
         holdout["sources"][0]["normalized_phrase"] = "object headg100"
         holdout["sources"][0]["head_lemma"] = "headg100"
-        with self.assertRaisesRegex(ValueError, "palm-sized dense"):
-            v3_builder.validate_holdout_ontology(holdout)
+        self.assertEqual(len(v3_builder.validate_holdout_ontology(holdout)), 48)
         holdout = _holdout_fixture()
         holdout["sources"][0]["impact_plausibility"]["dimensions_cm"] = [4.0, 4.0, 4.0]
         with self.assertRaisesRegex(ValueError, "palm-sized extent"):
+            v3_builder.validate_holdout_ontology(holdout)
+        holdout = _holdout_fixture()
+        holdout["sources"][0]["impact_plausibility"]["density_g_cm3"] = 2.9
+        with self.assertRaisesRegex(ValueError, "density"):
+            v3_builder.validate_holdout_ontology(holdout)
+        holdout = _holdout_fixture()
+        holdout["sources"][0]["impact_plausibility"]["material"] = ""
+        with self.assertRaisesRegex(ValueError, "material"):
             v3_builder.validate_holdout_ontology(holdout)
 
         receivers = _receiver_fixture()

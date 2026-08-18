@@ -19,10 +19,13 @@ Amended again on 2026-08-18 after the one-shot secret request and historical
 audit were frozen, but while no v3 graph, candidate manifest, pending or
 standard Stage-0 commitment, or media existed. This fifth amendment records a
 fully rolled-back static packaging failure and permits only the canonical
-JSON-normalization repair specified in Section 1.1. None of these amendments
-changes an ontology size, graph topology, prompt, gate, secret value, salt or
-seed derivation rule, candidate identity, model/runtime byte requirement, or
-budget.
+JSON-normalization repair specified in Section 1.1. The sixth amendment,
+recorded in the same pre-pending state after that static retry succeeded,
+aligns an implementation-only literal token check with the already-frozen
+structured source validator and archives the superseded static outputs as
+specified in Section 1.2. None of these amendments changes an ontology size,
+graph topology, prompt, scientific gate, secret value, salt or seed derivation
+rule, candidate identity, model/runtime byte requirement, or budget.
 
 Scope: causal Stage 0 through causal Stage 1 only
 
@@ -80,6 +83,94 @@ and tests receive independent review. The final code registry and pending
 commitment must bind that later reviewed commit and its exact deployed code
 hashes; neither commit `d4745f69b0f021693702cf2cd0bfb8c8d17202d1` nor an
 unreviewed working tree may be registered.
+
+### 1.2 Pre-pending validator-alignment repair
+
+The repaired static preparation subsequently completed with exit status `0`
+from commit `c62ad86072afe076eb0f291fb0b99979b1ce9026`. It published the
+following five exact public files:
+
+| Static opening | Published SHA-256 |
+|---|---|
+| `model_content_inventory` | `51e7199b99ee206934924ee043bd01b40ba413dfb60ef1e72682d36a10b46290` |
+| `runtime_registry` | `9043adf7f823022b20711267ab9e28b9dfb72452273d26e27c131b92e65eff01` |
+| `eval_code_registry` | `c98e9bac154cb3a986767cab7610dfad6b9414e894c7c8edfc2e0728e6e8a2d0` |
+| `capacity_model_spec` | `223392b9884e23e839000d9d95ffde8fc318f084187a61de71f02a166141fc33` |
+| `static_graph_robustness_report` | `1db1e06264adb868c43aab12356413b091cca0431875cc60067698efd48a001a` |
+
+The retained secret sampling request remains
+`98e7fa09ee0cd81e6c3283a4f97d12ba509d0f54bb26d6a42e099879db215323`
+and the retained historical-secret audit remains
+`19fa8af3d43e15940b5adcd189c034bf132b675eda2384e78e5d3e211a678381`.
+All four draw-attempt counts remain `1`, and the eleven-file private-root
+inventory present after secret sampling remains byte-for-byte unchanged.
+
+The following `prepare-private` invocation failed during validation before its
+first output reservation or link. The implementation required the literal
+tokens `palm`, `sized`, and `dense` to occur in every normalized source phrase,
+although this literal-language rule was never preregistered. The complete
+structured physical validator had already accepted the same records and
+remained authoritative: exact impact-plausibility fields, density, mass,
+dimensions, `palm_sized_explicit` size class, material and identity-specific
+notes, event/mechanism exclusions, prohibited-category exclusions, food
+status, pool membership, ordinals, and all uniqueness constraints. No graph,
+candidate manifest, derived seed audit, generation specification, private
+bundle, pending commitment, standard Stage-0 wrapper, invalid outcome, or
+media was created. `PRIVATE_V3_ROOT` therefore still contains exactly the
+seven external inputs plus the four retained raw secret files.
+
+The literal phrase-token conjunction is an unregistered implementation
+restriction, not a scientific qualification gate. The only permitted
+validator repair is to delete that conjunction. Every structured physical,
+material, semantic-event, identity, uniqueness, count, hash, and graph
+validation remains byte-for-byte and numerically unchanged. The superseded
+code hashes are builder
+`89364ae1bc0f0de3dc4e817217c386ae2c3d9b7274c66931f493a84e00d0146c`,
+authorizer
+`6cf7fa22510129dd3ff64b5cd93350f608ace282bcb907f818688b88a9067fce`,
+and shared tests
+`1a4a19b6f970e62e4f8dd885d8d961388ba17551dbbcebf09693b714dbb3222c`.
+The validator-alignment candidates are builder
+`5255bf0b71389d1f28cf0f2b012f54f7cc59b5c95488f6e72a7d22a8a0d43e52`,
+authorizer
+`01d5e172c69caf75df59c0e6803ba3f490709160052a7b851294f810513806c3`,
+and shared tests
+`a04da271de8d88996afd30e8fae579665187aabe7e8fd929487ebe7af4dba77e`.
+After this document receives its new byte hash, the only additional
+authorizer edit permitted is replacement of `EXPECTED_PREREG_SHA256` with
+that exact value.
+
+Before any retry, the five static files listed above must be removed together
+from their standard paths into a distinct, nonnested, real mode-700 rejected
+backup root. The files are retained byte-for-byte as mode-600, non-symlink,
+single-link evidence under their original basenames. That root also contains
+one mode-600 `rejected_static_manifest_v3.json` with exactly
+`protocol,status,dataset_version,reason_code,source_commit,source_code_hashes,artifacts,no_fallback`.
+Its complete inventory is exactly those six files.
+Required values are protocol
+`water_impact_dynamic_v4_v3_rejected_static_backup_v1`,
+`status="REJECTED_NO_FALLBACK"`, `dataset_version="v4_dev72_v3"`,
+`reason_code="pre_pending_validator_alignment"`,
+`source_commit="c62ad86072afe076eb0f291fb0b99979b1ce9026"`, and
+`no_fallback=true`. `source_code_hashes` has exactly
+`candidate_builder,stage0_authorizer,tests` and maps them to the three
+superseded hashes above. `artifacts` has exactly the five logical names and
+maps each directly to its SHA-256 value in the table above; it contains no replacement path,
+fallback selector, identity, phrase, prompt, seed, salt, or free text.
+
+Archival is a no-replace, inode-owned transaction: all five source hashes are
+verified first, the backup manifest and files are fsynced, and the five
+standard paths must all be absent before retry. Any partial move or hash/mode
+mismatch blocks v3; no archived file may be copied back or accepted as an
+opening. `prepare-static` must then regenerate all five standard outputs under
+the final reviewed code, including a new code registry. The final registry and
+pending commitment bind only that later reviewed commit and the preregistration
+hash produced by this amendment.
+
+This repair does not authorize any secret action or curation change.
+`sample-secrets` and the historical auditor remain permanently consumed; the
+request, audit, four raw secret files, forbidden inventory, and all r6 bytes
+must remain unchanged. The retry remains pre-graph and pre-pending.
 
 The formal terminal outcome for `v4_dev72_v2` is
 `preflight_dataset_invalid`, reason

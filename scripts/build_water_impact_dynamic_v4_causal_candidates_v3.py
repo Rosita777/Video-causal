@@ -269,10 +269,6 @@ def validate_holdout_ontology(payload: Mapping[str, Any]) -> tuple[Mapping[str, 
         protocol.require(row["physical_audit_status"] == "strict_physical_pass_v3", "holdout physical status invalid")
         _validate_impact(row["impact_plausibility"])
         tokens = set(row["normalized_phrase"].split())
-        protocol.require(
-            {"palm", "sized", "dense"} <= tokens,
-            "holdout phrase lacks explicit palm-sized dense language",
-        )
         identity = f"{row['source_id']} {row['normalized_phrase']} {row['head_lemma']}"
         protocol.require(
             not any(root in identity for root in SOURCE_EVENT_ROOTS),
