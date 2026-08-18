@@ -4,19 +4,25 @@ Version: `v4_dev72_v3`
 
 Preregistered: 2026-08-17
 
-Amended before any v3 graph, secret, pending or standard Stage-0 commitment,
-or media existed:
-2026-08-17. The first amendment registers the independent graph-assignment
-salt that the already-preregistered receiver-slot permutation requires. The
-second registers an isolated forbidden-seed source auditor that proves the v3
-forbidden inventory retains every seed committed by v2 Stage 0. The third
-binds the completed nine-file curation evidence through an aggregate-only
-public holdout commitment and preregisters operating-system-CSPRNG sampling.
-The fourth freezes the pre-Stage-0 order as exclusive secret sampling,
-isolated comparison of those actual sampled salts with historical secrets,
-then private-input preparation. None of these amendments changes an ontology
-size, graph topology, prompt, gate, salt or seed derivation rule, candidate
-identity, or budget.
+Amended on 2026-08-17 before any v3 graph, secret, pending or standard Stage-0
+commitment, or media existed. The first amendment registers the independent
+graph-assignment salt that the already-preregistered receiver-slot permutation
+requires. The second registers an isolated forbidden-seed source auditor that
+proves the v3 forbidden inventory retains every seed committed by v2 Stage 0.
+The third binds the completed nine-file curation evidence through an
+aggregate-only public holdout commitment and preregisters
+operating-system-CSPRNG sampling. The fourth freezes the pre-Stage-0 order as
+exclusive secret sampling, isolated comparison of those actual sampled salts
+with historical secrets, then private-input preparation.
+
+Amended again on 2026-08-18 after the one-shot secret request and historical
+audit were frozen, but while no v3 graph, candidate manifest, pending or
+standard Stage-0 commitment, or media existed. This fifth amendment records a
+fully rolled-back static packaging failure and permits only the canonical
+JSON-normalization repair specified in Section 1.1. None of these amendments
+changes an ontology size, graph topology, prompt, gate, secret value, salt or
+seed derivation rule, candidate identity, model/runtime byte requirement, or
+budget.
 
 Scope: causal Stage 0 through causal Stage 1 only
 
@@ -24,6 +30,56 @@ Scope: causal Stage 0 through causal Stage 1 only
 
 This amendment starts a new, immutable causal-screening data version. It does
 not reopen, extend, retry, or repair `v4_dev72_v2`.
+
+### 1.1 Pre-pending static packaging repair
+
+The v3 one-shot secret sampling and isolated historical-secret audit have now
+completed. Their retained exact byte hashes are:
+
+| Frozen private evidence | SHA-256 |
+|---|---|
+| `secret_sampling_request_private_v3.json` | `98e7fa09ee0cd81e6c3283a4f97d12ba509d0f54bb26d6a42e099879db215323` |
+| `historical_secret_audit_private_v3.json` | `19fa8af3d43e15940b5adcd189c034bf132b675eda2384e78e5d3e211a678381` |
+
+All three per-salt draw-attempt counts and the screening-seed draw-attempt
+count are exactly `1`; the accepted-value counts remain exactly three salts
+and one screening uint32. These retained request, audit, attempts,
+commitments, and four raw secret openings are immutable. They must not be
+deleted, replaced, edited, or sampled again.
+
+The first `prepare-static` attempt ran from commit
+`d4745f69b0f021693702cf2cd0bfb8c8d17202d1`, with authorizer SHA-256
+`7821ac045e072c74acd54cf3d8100aa9eff95a59406d3bc1d8181a4f25abef70`
+and shared-test SHA-256
+`1c56664d4f95a09b94c22630fad8fcc9285830c5d52bb021ad8f0b95f13afd88`.
+It failed before publication because the in-memory capacity-model payload
+contained tuples while its JSON readback necessarily contained lists. The
+post-write exact-equality check rejected that representational mismatch. The
+owned-output transaction then removed all five targets: model-content
+inventory, runtime registry, code registry, capacity-model specification, and
+static-graph report. All five standard paths were verified absent after
+rollback. No graph, candidate manifest, pending commitment, standard Stage-0
+wrapper, invalid-outcome artifact, or media was created.
+
+This is a static serialization/packaging defect within the repairable boundary
+of Section 9, not a scientific-input failure. The only permitted repair is for
+`build_capacity_model_payload` to canonical-JSON-normalize the already
+computed payload before publication, so its in-memory object uses the same
+list representation as its JSON readback. No numeric value, graph topology,
+analytic model, formula, oracle result, status, key, ordering rule, or emitted
+canonical JSON byte may change. The repaired authorizer SHA-256 is
+`6cf7fa22510129dd3ff64b5cd93350f608ace282bcb907f818688b88a9067fce`
+and the repaired shared-test SHA-256 is
+`1a4a19b6f970e62e4f8dd885d8d961388ba17551dbbcebf09693b714dbb3222c`.
+
+No secret operation is part of this repair: `sample-secrets` and the
+historical auditor must not run again, `prepare-private` must consume the
+retained evidence above, and the four raw secret files must remain unchanged.
+The five static outputs may be attempted again only after the repaired code
+and tests receive independent review. The final code registry and pending
+commitment must bind that later reviewed commit and its exact deployed code
+hashes; neither commit `d4745f69b0f021693702cf2cd0bfb8c8d17202d1` nor an
+unreviewed working tree may be registered.
 
 The formal terminal outcome for `v4_dev72_v2` is
 `preflight_dataset_invalid`, reason

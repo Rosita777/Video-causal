@@ -3947,11 +3947,13 @@ def build_capacity_model_payload() -> dict[str, Any]:
     with capacity.compiled_oracle() as oracle:
         self_test = capacity.compiled_oracle_self_test(oracle)
     protocol.require(self_test is True, "capacity compiled oracle self-test failed")
-    return capacity._exact_artifact_base(
-        status="frozen_capacity_model_spec",
-        self_test=self_test,
-        graph_robustness=capacity.graph_robustness_report(),
-        analytic_models=capacity.analytic_capacity_report(),
+    return _json_normalized(
+        capacity._exact_artifact_base(
+            status="frozen_capacity_model_spec",
+            self_test=self_test,
+            graph_robustness=capacity.graph_robustness_report(),
+            analytic_models=capacity.analytic_capacity_report(),
+        )
     )
 
 

@@ -6231,6 +6231,124 @@ class Stage0PreparerTests(unittest.TestCase):
                 stage0_authorizer.prepare_static(project)
             self.assertEqual(list((project / v3_protocol.DATA_ROOT).iterdir()), [])
 
+    def test_real_capacity_payload_roundtrip_and_static_retry(self) -> None:
+        with mock.patch.object(
+            capacity.np,
+            "__version__",
+            capacity.REQUIRED_NUMPY_VERSION,
+        ):
+            payload = stage0_authorizer.build_capacity_model_payload()
+        self.assertEqual(
+            payload,
+            json.loads(
+                v3_protocol.canonical_json_bytes(payload).decode("ascii")
+            ),
+        )
+        with tempfile.TemporaryDirectory(dir=REPO.parent) as directory:
+            root = Path(directory)
+            direct = root / "capacity.json"
+            stage0_authorizer._write_json_owned_exclusive(
+                direct, payload, mode=0o644
+            )
+            observed = json.loads(direct.read_text(encoding="utf-8"))
+            self.assertEqual(observed, payload)
+            self.assertEqual(
+                v3_protocol.sha256_file(direct),
+                v3_protocol.sha256_bytes(
+                    v3_protocol.canonical_json_bytes(payload)
+                ),
+            )
+
+        with tempfile.TemporaryDirectory(dir=REPO.parent) as directory:
+            project = Path(directory)
+            data_root = project / v3_protocol.DATA_ROOT
+            data_root.mkdir(parents=True)
+            real_write = stage0_authorizer._write_json_owned_exclusive
+            calls = 0
+
+            def fail_after_capacity(path, value, *, mode, ownership=None):
+                nonlocal calls
+                calls += 1
+                if calls == 5:
+                    raise OSError("synthetic post-capacity publication failure")
+                return real_write(
+                    path, value, mode=mode, ownership=ownership
+                )
+
+            common_patches = (
+                mock.patch.object(
+                    stage0_authorizer,
+                    "build_model_inventory_payload",
+                    return_value={"kind": "model"},
+                ),
+                mock.patch.object(
+                    stage0_authorizer,
+                    "build_runtime_registry_payload",
+                    return_value={"kind": "runtime"},
+                ),
+                mock.patch.object(
+                    stage0_authorizer,
+                    "build_code_registry_payload",
+                    return_value={"kind": "code"},
+                ),
+                mock.patch.object(
+                    stage0_authorizer,
+                    "build_capacity_model_payload",
+                    return_value=payload,
+                ),
+                mock.patch.object(stage0_authorizer, "_validate_model_inventory"),
+                mock.patch.object(stage0_authorizer, "_validate_runtime_registry"),
+                mock.patch.object(stage0_authorizer, "validate_code_registry_full"),
+            )
+            with contextlib.ExitStack() as stack:
+                for patch in common_patches:
+                    stack.enter_context(patch)
+                stack.enter_context(
+                    mock.patch.object(
+                    stage0_authorizer,
+                    "_write_json_owned_exclusive",
+                    side_effect=fail_after_capacity,
+                    )
+                )
+                with self.assertRaisesRegex(OSError, "post-capacity"):
+                    stage0_authorizer.prepare_static(project)
+            self.assertEqual(list(data_root.iterdir()), [])
+
+            retry_patches = (
+                mock.patch.object(
+                    stage0_authorizer,
+                    "build_model_inventory_payload",
+                    return_value={"kind": "model"},
+                ),
+                mock.patch.object(
+                    stage0_authorizer,
+                    "build_runtime_registry_payload",
+                    return_value={"kind": "runtime"},
+                ),
+                mock.patch.object(
+                    stage0_authorizer,
+                    "build_code_registry_payload",
+                    return_value={"kind": "code"},
+                ),
+                mock.patch.object(
+                    stage0_authorizer,
+                    "build_capacity_model_payload",
+                    return_value=payload,
+                ),
+                mock.patch.object(stage0_authorizer, "_validate_model_inventory"),
+                mock.patch.object(stage0_authorizer, "_validate_runtime_registry"),
+                mock.patch.object(stage0_authorizer, "validate_code_registry_full"),
+            )
+            with contextlib.ExitStack() as stack:
+                for patch in retry_patches:
+                    stack.enter_context(patch)
+                result = stage0_authorizer.prepare_static(project)
+            self.assertEqual(result["status"], "prepared_static_not_authorized")
+            capacity_path = project / stage0_authorizer.CAPACITY_MODEL_PATH
+            self.assertEqual(
+                json.loads(capacity_path.read_text(encoding="utf-8")), payload
+            )
+
     def test_runtime_and_model_inventories_cover_all_bytes_and_reject_specials(self) -> None:
         with tempfile.TemporaryDirectory(dir=REPO.parent) as directory:
             project = Path(directory)
