@@ -195,9 +195,32 @@ def _validate_nonempty_object(value: Any, label: str) -> Mapping[str, Any]:
     return value
 
 
+def _normalized_head(value: Any, label: str) -> str:
+    protocol.require(
+        isinstance(value, str) and bool(value.strip()),
+        f"{label} head invalid",
+    )
+    normalized = normalize_phrase(value)
+    protocol.require(
+        bool(normalized) and PHRASE_PATTERN.fullmatch(normalized) is not None,
+        f"{label} normalized head invalid",
+    )
+    return normalized
+
+
+def _head_span_count(normalized_text: str, normalized_head: str) -> int:
+    text_tokens = normalized_text.split()
+    head_tokens = normalized_head.split()
+    width = len(head_tokens)
+    return sum(
+        text_tokens[index : index + width] == head_tokens
+        for index in range(len(text_tokens) - width + 1)
+    )
+
+
 def _validate_identity_fields(
-    row: Mapping[str, Any], *, prefix: str, require_final_head: bool
-) -> None:
+    row: Mapping[str, Any], *, prefix: str
+) -> str:
     identifier = row[f"{prefix}_id"]
     phrase = row[f"{prefix}_phrase"]
     normalized = row["normalized_phrase"]
@@ -205,15 +228,12 @@ def _validate_identity_fields(
     protocol.require(isinstance(identifier, str) and identifier and identifier.strip() == identifier, f"{prefix} id invalid")
     protocol.require(isinstance(phrase, str) and phrase and phrase.strip() == phrase, f"{prefix} phrase invalid")
     protocol.require(normalized == normalize_phrase(phrase) and PHRASE_PATTERN.fullmatch(normalized) is not None, f"{prefix} normalization mismatch")
-    protocol.require(isinstance(head, str) and normalize_phrase(head) == head and " " not in head, f"{prefix} head invalid")
-    tokens = normalized.split()
-    if require_final_head:
-        protocol.require(tokens[-1] == head, f"{prefix} head is not final normalized token")
-    else:
-        protocol.require(
-            tokens.count(head) == 1,
-            f"{prefix} head must occur exactly once as a normalized token",
-        )
+    normalized_head = _normalized_head(head, prefix)
+    protocol.require(
+        _head_span_count(normalized, normalized_head) == 1,
+        f"{prefix} normalized head must occur exactly once as a contiguous whole-token span",
+    )
+    return normalized_head
 
 
 def _validate_impact(value: Any) -> None:
@@ -262,10 +282,10 @@ def validate_holdout_ontology(payload: Mapping[str, Any]) -> tuple[Mapping[str, 
     output: list[Mapping[str, Any]] = []
     for row in rows:
         protocol.require_exact_keys(row, HOLDOUT_ROW_KEYS, "holdout source row")
-        _validate_identity_fields(row, prefix="source", require_final_head=True)
-        protocol.require(row["source_id"] not in ids and row["head_lemma"] not in heads, "holdout IDs/heads are not unique")
+        normalized_head = _validate_identity_fields(row, prefix="source")
+        protocol.require(row["source_id"] not in ids and normalized_head not in heads, "holdout IDs/heads are not unique")
         ids.add(row["source_id"])
-        heads.add(row["head_lemma"])
+        heads.add(normalized_head)
         protocol.require(row["physical_audit_status"] == "strict_physical_pass_v3", "holdout physical status invalid")
         _validate_impact(row["impact_plausibility"])
         tokens = set(row["normalized_phrase"].split())
@@ -280,9 +300,11 @@ def validate_holdout_ontology(payload: Mapping[str, Any]) -> tuple[Mapping[str, 
         )
         protocol.require(row["food_status"] == "non_food", "holdout source food status invalid")
         protocol.require(
-            row["head_lemma"] in normalize_phrase(
-                row["impact_plausibility"]["curator_note"]
-            ).split(),
+            _head_span_count(
+                normalize_phrase(row["impact_plausibility"]["curator_note"]),
+                normalized_head,
+            )
+            == 1,
             "holdout physical note is not identity-specific",
         )
         protocol.require(row["group_pool"] in pool_ordinals, "holdout group pool invalid")
@@ -313,17 +335,17 @@ def validate_receiver_ontology(payload: Mapping[str, Any]) -> tuple[Mapping[str,
     output: list[Mapping[str, Any]] = []
     for row in rows:
         protocol.require_exact_keys(row, RECEIVER_ROW_KEYS, "receiver row")
-        _validate_identity_fields(row, prefix="receiver", require_final_head=False)
+        normalized_head = _validate_identity_fields(row, prefix="receiver")
         protocol.require(
             row["receiver_id"] not in ids
             and row["normalized_phrase"] not in phrases
-            and row["head_lemma"] not in heads
+            and normalized_head not in heads
             and row["receiver_type"] not in receiver_types,
             "receiver identity/head/type is not unique",
         )
         ids.add(row["receiver_id"])
         phrases.add(row["normalized_phrase"])
-        heads.add(row["head_lemma"])
+        heads.add(normalized_head)
         receiver_types.add(row["receiver_type"])
         pool = row["pool"]
         protocol.require(pool in ordinals, "receiver pool invalid")
@@ -347,7 +369,8 @@ def validate_receiver_ontology(payload: Mapping[str, Any]) -> tuple[Mapping[str,
             "receiver contains flow/vegetation/adjacent-water risk",
         )
         protocol.require(
-            row["head_lemma"] in normalize_phrase(row["curator_note"]).split(),
+            _head_span_count(normalize_phrase(row["curator_note"]), normalized_head)
+            == 1,
             "receiver note is not identity-specific",
         )
         output.append(row)
@@ -369,19 +392,19 @@ def validate_historical_anchors(payload: Mapping[str, Any]) -> tuple[Mapping[str
     output: list[Mapping[str, Any]] = []
     for index, row in enumerate(rows):
         protocol.require_exact_keys(row, HISTORICAL_ROW_KEYS, "historical anchor row")
-        _validate_identity_fields(row, prefix="receiver", require_final_head=False)
+        normalized_head = _validate_identity_fields(row, prefix="receiver")
         protocol.require(row["anchor_id"] == f"g2a{index}", "historical anchors are not in canonical order")
         protocol.require(
             row["anchor_id"] not in anchor_ids
             and row["receiver_id"] not in ids
             and row["normalized_phrase"] not in phrases
-            and row["head_lemma"] not in heads,
+            and normalized_head not in heads,
             "historical anchor/receiver identity repeated",
         )
         anchor_ids.add(row["anchor_id"])
         ids.add(row["receiver_id"])
         phrases.add(row["normalized_phrase"])
-        heads.add(row["head_lemma"])
+        heads.add(normalized_head)
         protocol.require(protocol.is_hex64(row["historical_training_binding_sha256"]), "historical training binding invalid")
         output.append(row)
     protocol.require(not protocol.contains_placeholder(payload), "historical anchors contain placeholder")
@@ -710,7 +733,7 @@ def validate_graph_payload(payload: Mapping[str, Any]) -> Mapping[str, Any]:
                     "G1 graph incidence mismatch",
                 )
                 source_ids.add(str(row["source_id"]))
-                g1_heads.add(str(row["source_head_lemma"]))
+                g1_heads.add(normalize_phrase(str(row["source_head_lemma"])))
                 ordinal += 1
         protocol.require(len(source_ids) == 1, "G1 anchor contains multiple sources")
 
@@ -737,7 +760,7 @@ def validate_graph_payload(payload: Mapping[str, Any]) -> Mapping[str, Any]:
                     "G2 graph incidence mismatch",
                 )
                 anchor_receiver.add(str(row["receiver_id"]))
-                anchor_heads.add(str(row["source_head_lemma"]))
+                anchor_heads.add(normalize_phrase(str(row["source_head_lemma"])))
                 head_source.add(str(row["source_id"]))
                 ordinal += 1
             protocol.require(len(head_source) == 1, "G2 head variants do not bind one source")

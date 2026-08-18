@@ -192,6 +192,23 @@ def normalize_phrase(value: str) -> str:
     return " ".join(re.sub(r"[^a-z0-9]+", " ", value.casefold()).split())
 
 
+def _normalized_head(value: Any, label: str) -> str:
+    _require(isinstance(value, str) and bool(value.strip()), f"{label} head invalid")
+    normalized = normalize_phrase(value)
+    _require(bool(normalized), f"{label} normalized head is empty")
+    return normalized
+
+
+def _head_span_count(normalized_text: str, normalized_head: str) -> int:
+    text_tokens = normalized_text.split()
+    head_tokens = normalized_head.split()
+    width = len(head_tokens)
+    return sum(
+        text_tokens[index : index + width] == head_tokens
+        for index in range(len(text_tokens) - width + 1)
+    )
+
+
 def _absolute(path: Path) -> Path:
     return Path(os.path.abspath(os.fspath(path)))
 
@@ -472,14 +489,16 @@ def _validate_v3_sources(payload: Mapping[str, Any]) -> tuple[Mapping[str, Any],
         "v3 source row fields are not exact",
     )
     _require(len({row["source_id"] for row in rows}) == 48, "v3 source IDs repeat")
-    _require(
-        all(
+    normalized_heads: set[str] = set()
+    for row in rows:
+        normalized_head = _normalized_head(row["head_lemma"], "v3 source")
+        _require(
             row["normalized_phrase"] == normalize_phrase(row["source_phrase"])
-            and row["normalized_phrase"].split()[-1] == row["head_lemma"]
-            for row in rows
-        ),
-        "v3 source normalization/head mismatch",
-    )
+            and _head_span_count(row["normalized_phrase"], normalized_head) == 1,
+            "v3 source normalization/head-span mismatch",
+        )
+        _require(normalized_head not in normalized_heads, "v3 source heads repeat")
+        normalized_heads.add(normalized_head)
     return tuple(rows)
 
 
@@ -502,14 +521,16 @@ def _validate_v3_receivers(payload: Mapping[str, Any]) -> tuple[Mapping[str, Any
         "v3 receiver row fields are not exact",
     )
     _require(len({row["receiver_id"] for row in rows}) == 56, "v3 receiver IDs repeat")
-    _require(
-        all(
+    normalized_heads: set[str] = set()
+    for row in rows:
+        normalized_head = _normalized_head(row["head_lemma"], "v3 receiver")
+        _require(
             row["normalized_phrase"] == normalize_phrase(row["receiver_phrase"])
-            and row["normalized_phrase"].split()[-1] == row["head_lemma"]
-            for row in rows
-        ),
-        "v3 receiver normalization/head mismatch",
-    )
+            and _head_span_count(row["normalized_phrase"], normalized_head) == 1,
+            "v3 receiver normalization/head-span mismatch",
+        )
+        _require(normalized_head not in normalized_heads, "v3 receiver heads repeat")
+        normalized_heads.add(normalized_head)
     return tuple(rows)
 
 
@@ -534,14 +555,16 @@ def _validate_v3_historical(payload: Mapping[str, Any]) -> tuple[Mapping[str, An
         "v3 historical row fields are not exact",
     )
     _require(len({row["receiver_id"] for row in rows}) == 8, "v3 historical receivers repeat")
-    _require(
-        all(
+    normalized_heads: set[str] = set()
+    for row in rows:
+        normalized_head = _normalized_head(row["head_lemma"], "v3 historical")
+        _require(
             row["normalized_phrase"] == normalize_phrase(row["receiver_phrase"])
-            and row["normalized_phrase"].split()[-1] == row["head_lemma"]
-            for row in rows
-        ),
-        "v3 historical normalization/head mismatch",
-    )
+            and _head_span_count(row["normalized_phrase"], normalized_head) == 1,
+            "v3 historical normalization/head-span mismatch",
+        )
+        _require(normalized_head not in normalized_heads, "v3 historical heads repeat")
+        normalized_heads.add(normalized_head)
     return tuple(rows)
 
 
@@ -716,7 +739,9 @@ def build_identity_report(
         if row["source_membership"] == "original_source"
     }
     v2_source_phrases = {normalize_phrase(str(row["source_phrase"])) for row in v2_rows}
-    v2_source_heads = {str(row["source_head_lemma"]) for row in v2_rows}
+    v2_source_heads = {
+        normalize_phrase(str(row["source_head_lemma"])) for row in v2_rows
+    }
     v2_receivers = {str(row["receiver_id"]) for row in v2_rows}
     v2_receiver_phrases = {
         normalize_phrase(str(row["receiver_phrase"])) for row in v2_rows
@@ -817,14 +842,14 @@ def build_identity_report(
             for row in sources
             if row["source_id"] in v2_sources
             or row["normalized_phrase"] in v2_source_phrases
-            or row["head_lemma"] in v2_source_heads
+            or normalize_phrase(str(row["head_lemma"])) in v2_source_heads
         ),
         "fresh_receiver_id": sum(
             1
             for row in receivers
             if row["receiver_id"] in v2_receivers
             or row["normalized_phrase"] in v2_receiver_phrases
-            or row["head_lemma"] in v2_receiver_heads
+            or normalize_phrase(str(row["head_lemma"])) in v2_receiver_heads
         ),
         "source_receiver_pair": len(v2_pairs & graph_pairs),
         "source_receiver_variant_triple": len(v2_triples & graph_triples),

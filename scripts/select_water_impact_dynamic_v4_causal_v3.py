@@ -311,7 +311,13 @@ def exact_completion(
     selected = [by_id[item] for item in pieces]
     if len(selected) != protocol.SELECTED_COUNT or len({row["receiver_id"] for row in selected}) != protocol.SELECTED_COUNT:
         return None
-    if len({row["source_head_lemma"] for row in selected if row["group"] in protocol.GROUPS[:2]}) != 16:
+    if len(
+        {
+            builder.normalize_phrase(str(row["source_head_lemma"]))
+            for row in selected
+            if row["group"] in protocol.GROUPS[:2]
+        }
+    ) != 16:
         return None
     return tuple(pieces)
 
@@ -385,7 +391,11 @@ def validate_selected_rows(rows: Sequence[Mapping[str, Any]]) -> None:
     for group in protocol.GROUPS[1:]:
         subset = [row for row in rows if row["group"] == group]
         protocol.require(len({row["physical_anchor_id"] for row in subset}) == 8, f"{group} anchor coverage invalid")
-    holdout_heads = {row["source_head_lemma"] for row in rows if row["group"] in protocol.GROUPS[:2]}
+    holdout_heads = {
+        builder.normalize_phrase(str(row["source_head_lemma"]))
+        for row in rows
+        if row["group"] in protocol.GROUPS[:2]
+    }
     protocol.require(len(holdout_heads) == 16, "selected holdout heads not unique")
 
 

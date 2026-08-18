@@ -27,6 +27,11 @@ specified in Section 1.2. The seventh amendment records a subsequent
 pre-private static publication whose code registry lacked the preregistered
 exact-inventory gate in two isolated auditors; Section 1.3 rejects those
 outputs before any private preparation and freezes the minimal auditor repair.
+The eighth amendment records the next pre-private rejection, in which
+implementation-only single-token and final-position assumptions conflicted
+with the already-frozen normalized whole-span head contract; Section 1.4
+rejects that static publication and freezes the only permitted representation
+repair.
 None of these amendments changes an ontology size, graph topology, prompt,
 scientific gate, secret value, salt or seed derivation rule, candidate
 identity, model/runtime byte requirement, or budget.
@@ -260,6 +265,154 @@ historical audit
 `19fa8af3d43e15940b5adcd189c034bf132b675eda2384e78e5d3e211a678381`,
 four raw secret files, forbidden inventory, and all r6 bytes remain immutable.
 No secret sampling or historical audit may run again.
+
+### 1.4 Pre-private normalized-head representation repair
+
+After the exact projection-inventory repair, `prepare-static` completed with
+exit status `0` from HEAD
+`0526f68e9a26e18886730260a04397446b2ccb00` while this preregistration had
+SHA-256
+`da5bb650de4b708a91284237f730bfb96666f51255e7f297e85bfc3ae2bfba29`.
+It published the following five exact standard files:
+
+| Static opening | Published SHA-256 | Size bytes |
+|---|---|---:|
+| `model_content_inventory` | `51e7199b99ee206934924ee043bd01b40ba413dfb60ef1e72682d36a10b46290` | 18,346 |
+| `runtime_registry` | `9043adf7f823022b20711267ab9e28b9dfb72452273d26e27c131b92e65eff01` | 2,582 |
+| `eval_code_registry` | `84226da5ade1e0f1e189df0cd93ac8020aec7725827386f8ac1b14940cfeae43` | 2,647 |
+| `capacity_model_spec` | `223392b9884e23e839000d9d95ffde8fc318f084187a61de71f02a166141fc33` | 4,875 |
+| `static_graph_robustness_report` | `1db1e06264adb868c43aab12356413b091cca0431875cc60067698efd48a001a` | 970 |
+
+The following `prepare-private` invocation failed inside the source-ontology
+validator before its first output reservation or link. The implementation
+required a raw head lemma to be one canonical token and required a source head
+to equal the final normalized token. The isolated identity auditor separately
+required source, receiver, and historical heads to equal their final
+normalized tokens. Those representation and position restrictions are absent
+from this preregistration and from the independently approved r6 validator,
+whose operative identity rule is one contiguous normalized whole-token span.
+
+The failure created no graph, candidate manifest, 1,728-row derived-seed
+audit, generation specification, private bundle, identity report, construct
+report, forbidden-seed report, holdout public commitment, cost calibration,
+pending commitment, standard Stage-0 wrapper, invalid outcome, or media.
+`PRIVATE_V3_ROOT` remains exactly the same eleven mode-600, single-link files:
+the seven frozen external inputs plus the four retained one-shot raw secret
+openings. No output path had been reserved when validation stopped.
+
+An aggregate-only representation audit of the already-frozen inputs recorded
+only the following counts. It emitted no head value, identity, phrase, prompt,
+note text, curator value, path, seed, or salt:
+
+| Frozen inventory | Rows | Normalized one-token heads | Normalized two-token heads | Raw canonical heads | Normalized phrase whole-span-once | Final spans | Final single-token heads | Note whole-span-once |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| fresh sources | 48 | 41 | 7 | 48 | 48 | 37 | 33 | 48 |
+| new receivers | 56 | 26 | 30 | 55 | 56 | 0 | 0 | 56 |
+| historical receivers | 8 | 8 | 0 | 8 | 8 | 0 | 0 | not applicable |
+
+Normalized-head uniqueness counts are exactly `48`, `56`, and `8` for those
+three inventories, respectively, and their three pairwise within-v3
+normalized-head cross-intersection counts are zero. The isolated v2-private
+identity audit remains pending and no result from that future audit is claimed
+here. These aggregates prove that the frozen data satisfy the registered
+within-v3 identity rule while the implementation-only gates would reject valid
+rows. In particular, the single noncanonical raw receiver head is retained
+exactly as reviewed and committed. It is not edited, replaced, canonicalized
+in storage, or treated as a new identity; only its transient comparison key is
+normalized.
+
+This is a pre-private representation-layer validator defect, not an ontology,
+semantic-review, or disjointness failure. The complete permitted repair is:
+
+1. For every source, receiver, and historical raw `head_lemma`, require a
+   nonempty string, compute the nonempty canonical comparison key with the
+   already-frozen `normalize_phrase`, and require that key to occur exactly
+   once as a contiguous whole-token span in the row's normalized phrase. Do
+   not require the raw value to equal the comparison key, do not require a
+   single token, and do not require any position.
+2. Use only the normalized comparison key for within-inventory head
+   uniqueness, registered head intersections, G1/G2 head-set validation, and
+   the selector's 16-head constraint. Identity-specific source and receiver
+   notes must contain that normalized head as exactly one contiguous
+   whole-token span.
+3. Preserve every raw ontology value byte-for-byte. Candidate construction
+   copies the raw source head unchanged, graph/input and identity-auditor
+   bindings compare that raw value exactly, and canonical candidate records,
+   prompts, graph topology, IDs, ordinals, salts, seeds, and ranking bytes are
+   otherwise unchanged. Normalization never rewrites an ontology, graph, or
+   selected row.
+4. The isolated identity auditor implements the same normalization and span
+   calculation independently; it does not import the candidate builder. Its
+   v2/v3 head-intersection comparisons normalize both sides and its report
+   remains aggregate-only with the exact existing schema.
+
+The only permitted production candidates for this repair have these exact
+SHA-256 values:
+
+| Registered code role | Repaired SHA-256 |
+|---|---|
+| `candidate_builder` | `8f782c0de8a8e699a3778c4fc3eb3358934aa863bc3770e963e32e2c736b494a` |
+| `identity_disjointness_auditor` | `1560667fe863d18edc89f1f54f7ab268c603c1a19ca65351a9bbea1fda3b08e7` |
+| `selector` | `39f038006a072d50fa0ecdec8e9beb3446c9eb925942f73671b57b253198ca16` |
+| `tests` | `6429dfff3017b8e3bae54f7e389d2064aa0abb50ecbb49573dee5c429054f768` |
+
+No other production file may change for this repair. After this document is
+frozen under its new byte hash, the sole additional authorizer change is
+replacement of `EXPECTED_PREREG_SHA256` with that exact hash. The repaired
+tests must exercise multi-token and nonfinal heads in all three inventories,
+raw-noncanonical receiver preservation, normalized collisions and
+intersections, absent/duplicate/noncontiguous spans, raw graph rebinding,
+selector head uniqueness, and aggregate-only isolated-auditor publication.
+
+Before any further static or private preparation, the five standard files in
+the table above must be moved together into a new distinct, nonnested, real
+mode-700 rejected backup root. Each retained opening is mode-600, a regular
+non-symlink single-link file, byte-equal to the published source, and stored
+under its original basename. The root inventory is exactly those five files
+plus one mode-600 `rejected_static_manifest_v3.json`; no seventh entry is
+permitted.
+
+That manifest has exactly
+`protocol,status,dataset_version,reason_code,source_commit,source_preregistration_sha256,source_code_registry_sha256,artifacts,no_fallback`.
+Required values are protocol
+`water_impact_dynamic_v4_v3_rejected_static_backup_v1`,
+`status="REJECTED_NO_FALLBACK"`, `dataset_version="v4_dev72_v3"`,
+`reason_code="pre_private_head_representation_gate_mismatch"`,
+`source_commit="0526f68e9a26e18886730260a04397446b2ccb00"`,
+`source_preregistration_sha256="da5bb650de4b708a91284237f730bfb96666f51255e7f297e85bfc3ae2bfba29"`,
+`source_code_registry_sha256="84226da5ade1e0f1e189df0cd93ac8020aec7725827386f8ac1b14940cfeae43"`,
+and `no_fallback=true`. `artifacts` has exactly these direct SHA-256
+mappings and no nested metadata:
+
+```text
+model_content_inventory=51e7199b99ee206934924ee043bd01b40ba413dfb60ef1e72682d36a10b46290
+runtime_registry=9043adf7f823022b20711267ab9e28b9dfb72452273d26e27c131b92e65eff01
+eval_code_registry=84226da5ade1e0f1e189df0cd93ac8020aec7725827386f8ac1b14940cfeae43
+capacity_model_spec=223392b9884e23e839000d9d95ffde8fc318f084187a61de71f02a166141fc33
+static_graph_robustness_report=1db1e06264adb868c43aab12356413b091cca0431875cc60067698efd48a001a
+```
+
+The backup transaction verifies all five source hashes and sizes before any
+move, is no-replace and inode-owned, fsyncs every retained file and the
+directory, and proves all five standard paths absent afterward. A partial
+move, extra backup entry, or hash/mode/link mismatch blocks v3. No rejected
+opening may be restored, copied back, registered as a fallback, or accepted by
+any later authorizer.
+
+Only after the four repaired code candidates, this amendment, the aligned
+authorizer literal, and an independent review are committed may
+`prepare-static` regenerate all five standard outputs from scratch. All five
+must be revalidated and republished; unchanged scientific content does not
+permit reuse of an archived byte. The new code registry must bind the reviewed
+commit, all four repaired roles, and the final preregistration hash before
+`prepare-private` is retried.
+
+The r6 nine-file evidence, secret-sampling request
+`98e7fa09ee0cd81e6c3283a4f97d12ba509d0f54bb26d6a42e099879db215323`,
+historical-secret audit
+`19fa8af3d43e15940b5adcd189c034bf132b675eda2384e78e5d3e211a678381`,
+four raw secret openings, and forbidden-seed inventory remain immutable.
+Neither secret sampling nor the historical-secret audit may run again.
 
 The formal terminal outcome for `v4_dev72_v2` is
 `preflight_dataset_invalid`, reason

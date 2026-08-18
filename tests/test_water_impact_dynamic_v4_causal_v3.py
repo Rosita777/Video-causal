@@ -2061,6 +2061,123 @@ class IsolatedAuditorTests(unittest.TestCase):
                 self.assertEqual(reads, [])
                 self.assertFalse(output.exists())
 
+    def test_identity_auditor_normalizes_multitoken_heads_but_binds_raw_graph(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO) as directory:
+            fixture = _make_isolated_audit_fixture(Path(directory))
+            v3_root = fixture["v3_root"]
+            source_path = v3_root / identity_auditor.V3_SOURCE_BASENAME
+            receiver_path = v3_root / identity_auditor.V3_RECEIVER_BASENAME
+            historical_path = v3_root / identity_auditor.V3_HISTORICAL_BASENAME
+            graph_path = v3_root / identity_auditor.V3_GRAPH_BASENAME
+            sources = json.loads(source_path.read_text(encoding="utf-8"))
+            receivers = json.loads(receiver_path.read_text(encoding="utf-8"))
+            historical = json.loads(historical_path.read_text(encoding="utf-8"))
+            source = sources["sources"][0]
+            source["source_phrase"] = "dense alloy core object"
+            source["normalized_phrase"] = source["source_phrase"]
+            source["head_lemma"] = "Alloy-Core"
+            source["impact_plausibility"]["curator_note"] = (
+                "the alloy core is compact and recognizable"
+            )
+            receiver = receivers["receivers"][0]
+            receiver["receiver_phrase"] = (
+                "a clearly bounded landing bowl rim with still water and an "
+                "unobstructed landing zone"
+            )
+            receiver["normalized_phrase"] = receiver["receiver_phrase"]
+            receiver["head_lemma"] = "Landing-Bowl"
+            receiver["curator_note"] = "distinct landing bowl identity"
+            anchor = historical["anchors"][0]
+            anchor["receiver_phrase"] = "a historical harbor basin water receiver"
+            anchor["normalized_phrase"] = anchor["receiver_phrase"]
+            anchor["head_lemma"] = "Harbor-Basin"
+
+            def publish_inputs() -> None:
+                graph, _ = v3_builder.build_candidate_graph(
+                    holdout_payload=sources,
+                    receiver_payload=receivers,
+                    historical_payload=historical,
+                    source_bank_payload=_synthetic_source_bank(),
+                    graph_assignment_salt="c" * 64,
+                )
+                _private_write(
+                    v3_root,
+                    identity_auditor.V3_SOURCE_BASENAME,
+                    identity_auditor.canonical_json_bytes(sources),
+                )
+                _private_write(
+                    v3_root,
+                    identity_auditor.V3_RECEIVER_BASENAME,
+                    identity_auditor.canonical_json_bytes(receivers),
+                )
+                _private_write(
+                    v3_root,
+                    identity_auditor.V3_HISTORICAL_BASENAME,
+                    identity_auditor.canonical_json_bytes(historical),
+                )
+                _private_write(
+                    v3_root,
+                    identity_auditor.V3_GRAPH_BASENAME,
+                    identity_auditor.canonical_json_bytes(graph),
+                )
+
+            publish_inputs()
+            report, digest = identity_auditor.run_identity_audit(
+                project_root=fixture["project"],
+                private_v2_root=fixture["v2_root"],
+                private_v3_root=v3_root,
+                contract=fixture["identity_contract"],
+                publish=False,
+            )
+            self.assertEqual(report["status"], "passed")
+            self.assertIsNone(digest)
+            graph = json.loads(graph_path.read_text(encoding="utf-8"))
+            bound = [
+                row
+                for row in graph["edges"]
+                if row["source_id"] == source["source_id"]
+            ]
+            self.assertTrue(bound)
+            self.assertTrue(
+                all(row["source_head_lemma"] == "Alloy-Core" for row in bound)
+            )
+
+            original_second = json.loads(json.dumps(sources["sources"][1]))
+            second = sources["sources"][1]
+            second["source_phrase"] = "another alloy core object"
+            second["normalized_phrase"] = second["source_phrase"]
+            second["head_lemma"] = "ALLOY CORE"
+            _private_write(
+                v3_root,
+                identity_auditor.V3_SOURCE_BASENAME,
+                identity_auditor.canonical_json_bytes(sources),
+            )
+            with self.assertRaisesRegex(ValueError, "source heads repeat"):
+                identity_auditor.run_identity_audit(
+                    project_root=fixture["project"],
+                    private_v2_root=fixture["v2_root"],
+                    private_v3_root=v3_root,
+                    contract=fixture["identity_contract"],
+                    publish=False,
+                )
+
+            sources["sources"][1] = original_second
+            source["source_phrase"] = "dense original0 object"
+            source["normalized_phrase"] = source["source_phrase"]
+            source["head_lemma"] = "ORIGINAL0"
+            source["impact_plausibility"]["curator_note"] = (
+                "the original0 object is compact and recognizable"
+            )
+            publish_inputs()
+            with self.assertRaisesRegex(ValueError, "identity intersection"):
+                identity_auditor.run_identity_audit(
+                    project_root=fixture["project"],
+                    private_v2_root=fixture["v2_root"],
+                    private_v3_root=v3_root,
+                    contract=fixture["identity_contract"],
+                    publish=False,
+                )
+
     def test_wrapper_hash_commitment_row_mix_and_rebind_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory(dir=REPO) as directory:
             fixture = _make_isolated_audit_fixture(Path(directory))
@@ -2507,10 +2624,42 @@ class V3CoreContinuationTests(unittest.TestCase):
 
     def test_source_and_receiver_scientific_fields_fail_closed(self) -> None:
         holdout = _holdout_fixture()
-        holdout["sources"][0]["source_phrase"] = "object headg100"
-        holdout["sources"][0]["normalized_phrase"] = "object headg100"
-        holdout["sources"][0]["head_lemma"] = "headg100"
+        source = holdout["sources"][0]
+        source["source_phrase"] = "dense alloy core object"
+        source["normalized_phrase"] = "dense alloy core object"
+        source["head_lemma"] = "Alloy-Core"
+        source["impact_plausibility"]["curator_note"] = (
+            "the alloy core is compact and recognizable"
+        )
         self.assertEqual(len(v3_builder.validate_holdout_ontology(holdout)), 48)
+        for case in ("empty", "absent", "duplicate", "normalized_duplicate", "note"):
+            with self.subTest(source_head=case):
+                candidate = json.loads(json.dumps(holdout))
+                row = candidate["sources"][0]
+                if case == "empty":
+                    row["head_lemma"] = ""
+                elif case == "absent":
+                    row["head_lemma"] = "absent core"
+                elif case == "duplicate":
+                    row["source_phrase"] = "alloy core object alloy core"
+                    row["normalized_phrase"] = row["source_phrase"]
+                elif case == "normalized_duplicate":
+                    other = candidate["sources"][1]
+                    other["source_phrase"] = "another alloy core object"
+                    other["normalized_phrase"] = other["source_phrase"]
+                    other["head_lemma"] = "ALLOY CORE"
+                    other["impact_plausibility"]["curator_note"] = (
+                        "the alloy core is independently recognizable"
+                    )
+                else:
+                    row["impact_plausibility"]["curator_note"] = (
+                        "a different object is recognizable"
+                    )
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "head invalid|whole-token span|heads are not unique|physical note",
+                ):
+                    v3_builder.validate_holdout_ontology(candidate)
         holdout = _holdout_fixture()
         holdout["sources"][0]["impact_plausibility"]["dimensions_cm"] = [4.0, 4.0, 4.0]
         with self.assertRaisesRegex(ValueError, "palm-sized extent"):
@@ -2525,11 +2674,172 @@ class V3CoreContinuationTests(unittest.TestCase):
             v3_builder.validate_holdout_ontology(holdout)
 
         receivers = _receiver_fixture()
+        receiver = receivers["receivers"][0]
+        receiver["receiver_phrase"] = (
+            "a clearly bounded landing bowl rim with still water and an "
+            "unobstructed landing zone"
+        )
+        receiver["normalized_phrase"] = receiver["receiver_phrase"]
+        receiver["head_lemma"] = "Landing-Bowl"
+        receiver["curator_note"] = "distinct landing bowl identity"
+        self.assertEqual(len(v3_builder.validate_receiver_ontology(receivers)), 56)
+        for case in ("empty", "absent", "duplicate", "normalized_duplicate", "note"):
+            with self.subTest(receiver_head=case):
+                candidate = json.loads(json.dumps(receivers))
+                row = candidate["receivers"][0]
+                if case == "empty":
+                    row["head_lemma"] = ""
+                elif case == "absent":
+                    row["head_lemma"] = "absent bowl"
+                elif case == "duplicate":
+                    row["receiver_phrase"] += " landing bowl"
+                    row["normalized_phrase"] = row["receiver_phrase"]
+                elif case == "normalized_duplicate":
+                    other = candidate["receivers"][1]
+                    other["receiver_phrase"] = (
+                        "a clearly bounded second landing bowl rim with still water "
+                        "and an unobstructed landing zone"
+                    )
+                    other["normalized_phrase"] = other["receiver_phrase"]
+                    other["head_lemma"] = "LANDING BOWL"
+                    other["curator_note"] = "second landing bowl identity"
+                else:
+                    row["curator_note"] = "distinct different receiver identity"
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "head invalid|whole-token span|head/type|receiver note",
+                ):
+                    v3_builder.validate_receiver_ontology(candidate)
+
+        receivers = _receiver_fixture()
         head = receivers["receivers"][0]["head_lemma"]
         receivers["receivers"][0]["receiver_phrase"] = f"object {head}"
         receivers["receivers"][0]["normalized_phrase"] = f"object {head}"
         with self.assertRaisesRegex(ValueError, "still water"):
             v3_builder.validate_receiver_ontology(receivers)
+
+        historical = _historical_fixture()
+        anchor = historical["anchors"][0]
+        anchor["receiver_phrase"] = "a historical harbor basin water receiver"
+        anchor["normalized_phrase"] = anchor["receiver_phrase"]
+        anchor["head_lemma"] = "Harbor-Basin"
+        self.assertEqual(len(v3_builder.validate_historical_anchors(historical)), 8)
+        for case in ("empty", "absent", "duplicate", "normalized_duplicate"):
+            with self.subTest(historical_head=case):
+                candidate = json.loads(json.dumps(historical))
+                row = candidate["anchors"][0]
+                if case == "empty":
+                    row["head_lemma"] = ""
+                elif case == "absent":
+                    row["head_lemma"] = "absent basin"
+                elif case == "duplicate":
+                    row["receiver_phrase"] += " harbor basin"
+                    row["normalized_phrase"] = row["receiver_phrase"]
+                else:
+                    other = candidate["anchors"][1]
+                    other["receiver_phrase"] = "another harbor basin receiver"
+                    other["normalized_phrase"] = other["receiver_phrase"]
+                    other["head_lemma"] = "HARBOR BASIN"
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "head invalid|whole-token span|identity repeated",
+                ):
+                    v3_builder.validate_historical_anchors(candidate)
+
+    def test_multitoken_heads_preserve_raw_graph_bytes_and_selector_normalizes(self) -> None:
+        holdout = _holdout_fixture()
+        source = holdout["sources"][0]
+        source["source_phrase"] = "dense alloy core object"
+        source["normalized_phrase"] = source["source_phrase"]
+        source["head_lemma"] = "Alloy-Core"
+        source["impact_plausibility"]["curator_note"] = (
+            "the alloy core is compact and recognizable"
+        )
+        receivers = _receiver_fixture()
+        receiver = receivers["receivers"][0]
+        receiver["receiver_phrase"] = (
+            "a clearly bounded landing bowl rim with still water and an "
+            "unobstructed landing zone"
+        )
+        receiver["normalized_phrase"] = receiver["receiver_phrase"]
+        receiver["head_lemma"] = "Landing-Bowl"
+        receiver["curator_note"] = "distinct landing bowl identity"
+        historical = _historical_fixture()
+        anchor = historical["anchors"][0]
+        anchor["receiver_phrase"] = "a historical harbor basin water receiver"
+        anchor["normalized_phrase"] = anchor["receiver_phrase"]
+        anchor["head_lemma"] = "Harbor-Basin"
+        graph, manifest = v3_builder.build_candidate_graph(
+            holdout_payload=holdout,
+            receiver_payload=receivers,
+            historical_payload=historical,
+            source_bank_payload=self.bank,
+            graph_assignment_salt="c" * 64,
+        )
+        source_rows = [
+            row
+            for row in graph["edges"]
+            if row["source_id"] == source["source_id"]
+        ]
+        self.assertTrue(source_rows)
+        self.assertTrue(
+            all(row["source_head_lemma"] == "Alloy-Core" for row in source_rows)
+        )
+        self.assertTrue(
+            all(
+                b'"source_head_lemma":"Alloy-Core"'
+                in v3_protocol.candidate_record_bytes(row)
+                for row in source_rows
+            )
+        )
+        self.assertEqual(manifest["candidates"], graph["edges"])
+        eligibility = v3_selector.validate_eligibility_rows(
+            _eligible_rows(manifest["candidates"]), manifest["candidates"]
+        )
+        selected, _ = v3_selector.greedy_select(
+            manifest["candidates"], eligibility, "d" * 64
+        )
+        self.assertEqual(len(selected), 24)
+
+        duplicate_selected = [dict(row) for row in self.selected]
+        holdout_rows = [
+            row
+            for row in duplicate_selected
+            if row["group"] in v3_protocol.GROUPS[:2]
+        ]
+        holdout_rows[0]["source_head_lemma"] = "Shared-Head"
+        holdout_rows[1]["source_head_lemma"] = "shared head"
+        with self.assertRaisesRegex(ValueError, "holdout heads"):
+            v3_selector.validate_selected_rows(duplicate_selected)
+
+        completion_rows = []
+        for row in self.manifest["candidates"]:
+            candidate = dict(row)
+            candidate["eligible"] = True
+            candidate["selection_rank_sha256"] = v3_protocol.selection_rank(
+                row, "d" * 64
+            )
+            completion_rows.append(candidate)
+        forced_rows = []
+        seen_anchors: set[str] = set()
+        for row in completion_rows:
+            if (
+                row["group"] == v3_protocol.GROUPS[1]
+                and row["physical_anchor_id"] not in seen_anchors
+            ):
+                forced_rows.append(row)
+                seen_anchors.add(row["physical_anchor_id"])
+                if len(forced_rows) == 2:
+                    break
+        forced_rows[0]["source_head_lemma"] = "Shared-Head"
+        forced_rows[1]["source_head_lemma"] = "shared head"
+        self.assertIsNone(
+            v3_selector.exact_completion(
+                completion_rows,
+                frozenset(row["case_id"] for row in forced_rows),
+                frozenset(),
+            )
+        )
 
     def test_graph_salt_permutation_hashes_and_tie_are_exact(self) -> None:
         self.assertEqual(
