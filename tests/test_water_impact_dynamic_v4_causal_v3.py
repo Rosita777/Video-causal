@@ -484,7 +484,7 @@ def _receiver_fixture() -> dict[str, object]:
         for ordinal in range(count):
             head = f"receiver{pool.casefold()}{ordinal:02d}"
             phrase = (
-                f"a clearly bounded stone rim with still water and an "
+                f"a clearly bounded open stone rim with still water and an "
                 f"unobstructed landing {head}"
             )
             rows.append(
@@ -2081,7 +2081,7 @@ class IsolatedAuditorTests(unittest.TestCase):
             )
             receiver = receivers["receivers"][0]
             receiver["receiver_phrase"] = (
-                "a clearly bounded landing bowl rim with still water and an "
+                "a clearly bounded open landing bowl rim with still water and an "
                 "unobstructed landing zone"
             )
             receiver["normalized_phrase"] = receiver["receiver_phrase"]
@@ -2431,7 +2431,7 @@ class V3CoreContinuationTests(unittest.TestCase):
         duplicate_head = _receiver_fixture()
         duplicate_head["receivers"][1]["head_lemma"] = duplicate_head["receivers"][0]["head_lemma"]
         duplicate_head["receivers"][1]["receiver_phrase"] = (
-            "a clearly bounded metal rim with still water and an unobstructed "
+            "a clearly bounded open metal rim with still water and an unobstructed "
             f"landing {duplicate_head['receivers'][0]['head_lemma']}"
         )
         duplicate_head["receivers"][1]["normalized_phrase"] = duplicate_head["receivers"][1]["receiver_phrase"]
@@ -2676,7 +2676,7 @@ class V3CoreContinuationTests(unittest.TestCase):
         receivers = _receiver_fixture()
         receiver = receivers["receivers"][0]
         receiver["receiver_phrase"] = (
-            "a clearly bounded landing bowl rim with still water and an "
+            "a clearly bounded open landing bowl rim with still water and an "
             "unobstructed landing zone"
         )
         receiver["normalized_phrase"] = receiver["receiver_phrase"]
@@ -2697,7 +2697,7 @@ class V3CoreContinuationTests(unittest.TestCase):
                 elif case == "normalized_duplicate":
                     other = candidate["receivers"][1]
                     other["receiver_phrase"] = (
-                        "a clearly bounded second landing bowl rim with still water "
+                        "a clearly bounded open second landing bowl rim with still water "
                         "and an unobstructed landing zone"
                     )
                     other["normalized_phrase"] = other["receiver_phrase"]
@@ -2715,7 +2715,7 @@ class V3CoreContinuationTests(unittest.TestCase):
         head = receivers["receivers"][0]["head_lemma"]
         receivers["receivers"][0]["receiver_phrase"] = f"object {head}"
         receivers["receivers"][0]["normalized_phrase"] = f"object {head}"
-        with self.assertRaisesRegex(ValueError, "still water"):
+        with self.assertRaisesRegex(ValueError, "required"):
             v3_builder.validate_receiver_ontology(receivers)
 
         historical = _historical_fixture()
@@ -2758,7 +2758,7 @@ class V3CoreContinuationTests(unittest.TestCase):
         receivers = _receiver_fixture()
         receiver = receivers["receivers"][0]
         receiver["receiver_phrase"] = (
-            "a clearly bounded landing bowl rim with still water and an "
+            "a clearly bounded open landing bowl rim with still water and an "
             "unobstructed landing zone"
         )
         receiver["normalized_phrase"] = receiver["receiver_phrase"]
@@ -2840,6 +2840,116 @@ class V3CoreContinuationTests(unittest.TestCase):
                 frozenset(),
             )
         )
+
+    def test_receiver_suitability_tokens_and_opaque_historical_ids_are_exact(self) -> None:
+        boundary_tokens = (
+            "edge",
+            "edges",
+            "edged",
+            "boundary",
+            "bounded",
+            "rim",
+            "rimmed",
+            "center",
+            "middle",
+            "point",
+            "area",
+            "margins",
+        )
+        for stillness in ("still", "calm", "quiet"):
+            for boundary in boundary_tokens:
+                receivers = _receiver_fixture()
+                row = receivers["receivers"][0]
+                head = row["head_lemma"]
+                row["receiver_phrase"] = (
+                    f"open {boundary} water {stillness} unobstructed landing {head}"
+                )
+                row["normalized_phrase"] = row["receiver_phrase"]
+                v3_builder.validate_receiver_ontology(receivers)
+
+        required_cases = {
+            "water": "open rim still unobstructed landing receiverx",
+            "stillness": "open rim water unobstructed landing receiverx",
+            "open": "rim water still unobstructed landing receiverx",
+            "unobstructed": "open rim water still landing receiverx",
+            "landing": "open rim water still unobstructed receiverx",
+            "boundary": "open water still unobstructed landing receiverx",
+        }
+        for label, phrase in required_cases.items():
+            with self.subTest(missing=label):
+                receivers = _receiver_fixture()
+                row = receivers["receivers"][0]
+                row["receiver_phrase"] = phrase
+                row["normalized_phrase"] = phrase
+                row["head_lemma"] = "receiverx"
+                row["curator_note"] = "distinct receiverx identity"
+                with self.assertRaisesRegex(
+                    ValueError, "required|bounded"
+                ):
+                    v3_builder.validate_receiver_ontology(receivers)
+
+        for event in (
+            "drop",
+            "fall",
+            "falling",
+            "splash",
+            "ripple",
+            "impact",
+            "collision",
+            "contact",
+            "enter",
+            "entry",
+            "wave",
+            "spray",
+        ):
+            with self.subTest(event=event):
+                receivers = _receiver_fixture()
+                row = receivers["receivers"][0]
+                head = row["head_lemma"]
+                row["receiver_phrase"] = (
+                    f"open rim water still unobstructed landing {head} {event}"
+                )
+                row["normalized_phrase"] = row["receiver_phrase"]
+                with self.assertRaisesRegex(ValueError, "event language"):
+                    v3_builder.validate_receiver_ontology(receivers)
+
+        historical = _historical_fixture()
+        raw_ids = []
+        for index, row in enumerate(historical["anchors"]):
+            row["anchor_id"] = f"opaque historical anchor {index}"
+            raw_ids.append(row["anchor_id"])
+        v3_builder.validate_historical_anchors(historical)
+        graph, _ = v3_builder.build_candidate_graph(
+            holdout_payload=_holdout_fixture(),
+            receiver_payload=_receiver_fixture(),
+            historical_payload=historical,
+            source_bank_payload=self.bank,
+            graph_assignment_salt="c" * 64,
+        )
+        self.assertEqual(
+            [row["anchor_id"] for row in historical["anchors"]], raw_ids
+        )
+        g2_anchors = [
+            row["physical_anchor_id"]
+            for row in graph["anchors"]
+            if row["group"] == v3_protocol.GROUPS[1]
+        ]
+        self.assertEqual(g2_anchors, [f"g2a{index}" for index in range(8)])
+        self.assertTrue(
+            all(
+                row["physical_anchor_id"].startswith("g2a")
+                for row in graph["edges"]
+                if row["group"] == v3_protocol.GROUPS[1]
+            )
+        )
+        duplicate = json.loads(json.dumps(historical))
+        duplicate["anchors"][1]["anchor_id"] = duplicate["anchors"][0]["anchor_id"]
+        with self.assertRaisesRegex(ValueError, "identity repeated"):
+            v3_builder.validate_historical_anchors(duplicate)
+        blank = json.loads(json.dumps(historical))
+        blank["anchors"][0]["anchor_id"] = " "
+        with self.assertRaisesRegex(ValueError, "anchor id invalid"):
+            v3_builder.validate_historical_anchors(blank)
 
     def test_graph_salt_permutation_hashes_and_tie_are_exact(self) -> None:
         self.assertEqual(
@@ -3235,7 +3345,7 @@ def _make_stage0_authorize_fixture(base: Path) -> dict[str, object]:
             },
             {
                 "name": "v3_screening_cost_calibration_seeds",
-                "sha256": code_registry["artifacts"]["screening_runner"]["sha256"],
+                "sha256": stage0_authorizer.CALIBRATION_SEED_LIST_SHA256,
                 "seed_count": 5,
             },
         ],
@@ -3286,10 +3396,10 @@ def _make_stage0_authorize_fixture(base: Path) -> dict[str, object]:
         "candidate_manifest_576": candidate,
         "eval_holdout_source_ontology_48": holdout,
         "holdout_registry_48": {
-            "protocol": "water_impact_dynamic_v4_holdout_registry_v3",
+            "protocol": "water_impact_dynamic_v4_eval_holdout_registry_v3",
             "dataset_version": v3_protocol.DATASET_VERSION,
             "holdout_count": 48,
-            "status": "frozen",
+            "status": stage0_authorizer.R6_HOLDOUT_REGISTRY_STATUS,
             "ordered_entries_sha256": v3_protocol.sha256_bytes(
                 v3_protocol.canonical_json_bytes(holdout["sources"])
             ),
@@ -4322,8 +4432,11 @@ class Stage0AuthorizerA2Tests(unittest.TestCase):
 
         wrong_top = json.loads(json.dumps(historical))
         wrong_top["training_receiver_inventory_sha256"] = "0" * 64
-        with self.assertRaisesRegex(ValueError, "inventory hash"):
+        opaque_inventory, opaque_digest = (
             stage0_authorizer._historical_receiver_inventory(mapping, wrong_top)
+        )
+        self.assertEqual(opaque_inventory, inventory)
+        self.assertEqual(opaque_digest, digest)
         wrong_pair = json.loads(json.dumps(historical))
         wrong_pair["anchors"][0]["receiver_phrase"] += " rebound"
         with self.assertRaisesRegex(ValueError, "absent from mapping"):
@@ -4336,6 +4449,69 @@ class Stage0AuthorizerA2Tests(unittest.TestCase):
             stage0_authorizer._historical_receiver_inventory(
                 mapping, wrong_binding
             )
+
+    def test_r6_holdout_registry_and_calibration_commitment_are_exact(self) -> None:
+        self.assertEqual(
+            stage0_authorizer.R6_HOLDOUT_REGISTRY_STATUS,
+            "r6_curated_pending_isolated_v2_private_audit",
+        )
+        sources = _holdout_fixture()["sources"]
+        registry = {
+            "protocol": "water_impact_dynamic_v4_eval_holdout_registry_v3",
+            "dataset_version": v3_protocol.DATASET_VERSION,
+            "holdout_count": 48,
+            "status": stage0_authorizer.R6_HOLDOUT_REGISTRY_STATUS,
+            "ordered_entries_sha256": v3_protocol.sha256_bytes(
+                v3_protocol.canonical_json_bytes(sources)
+            ),
+            "entries": sources,
+        }
+        stage0_authorizer._validate_holdout_registry(registry, sources)
+        for field, value in (
+            ("protocol", "water_impact_dynamic_v4_holdout_registry_v3"),
+            ("status", "frozen"),
+            ("holdout_count", 47),
+            ("ordered_entries_sha256", "0" * 64),
+        ):
+            with self.subTest(field=field):
+                tampered = json.loads(json.dumps(registry))
+                tampered[field] = value
+                with self.assertRaisesRegex(
+                    ValueError, "identity mismatch|entry hash mismatch"
+                ):
+                    stage0_authorizer._validate_holdout_registry(
+                        tampered, sources
+                    )
+        tampered = json.loads(json.dumps(registry))
+        tampered["entries"][0]["source_phrase"] += " rebound"
+        tampered["ordered_entries_sha256"] = v3_protocol.sha256_bytes(
+            v3_protocol.canonical_json_bytes(tampered["entries"])
+        )
+        with self.assertRaisesRegex(ValueError, "ontology drift"):
+            stage0_authorizer._validate_holdout_registry(tampered, sources)
+
+        correct = {
+            "source_commitments": [
+                {
+                    "name": "v3_screening_cost_calibration_seeds",
+                    "sha256": stage0_authorizer.CALIBRATION_SEED_LIST_SHA256,
+                    "seed_count": len(stage0_authorizer.CALIBRATION_SEEDS),
+                }
+            ]
+        }
+        stage0_authorizer._require_calibration_seed_source_commitment(correct)
+        self.assertEqual(
+            stage0_authorizer.CALIBRATION_SEED_LIST_SHA256,
+            v3_protocol.sha256_bytes(
+                v3_protocol.canonical_json_bytes(
+                    list(stage0_authorizer.CALIBRATION_SEEDS)
+                )
+            ),
+        )
+        wrong = json.loads(json.dumps(correct))
+        wrong["source_commitments"][0]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(ValueError, "seed-list commitment"):
+            stage0_authorizer._require_calibration_seed_source_commitment(wrong)
 
     def test_pending_sizing_curation_and_public_metadata_are_exact(self) -> None:
         with tempfile.TemporaryDirectory(dir=REPO) as directory:
@@ -4518,11 +4694,13 @@ class Stage0AuthorizerA2Tests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "package inventory"):
                 stage0_authorizer._validate_runtime_registry(tampered, root)
 
-    def test_receiver_and_historical_head_must_be_one_whole_token(self) -> None:
+    def test_receiver_head_span_is_exact(self) -> None:
         receiver = _receiver_fixture()
         row = receiver["receivers"][0]
         head = row["head_lemma"]
-        row["receiver_phrase"] = f"bounded {head} with still water unobstructed rim"
+        row["receiver_phrase"] = (
+            f"open bounded rim with still water unobstructed landing {head}"
+        )
         row["normalized_phrase"] = row["receiver_phrase"]
         row["curator_note"] = f"distinct receiver {head} identity"
         v3_builder.validate_receiver_ontology(receiver)
@@ -6914,6 +7092,32 @@ class Stage0PreparerTests(unittest.TestCase):
                         "commitment_only_historical_hex_secret_count"
                     ],
                     0,
+                )
+                with (
+                    mock.patch.object(
+                        stage0_authorizer,
+                        "_write_json_owned_exclusive",
+                        side_effect=OSError("synthetic first private write blocked"),
+                    ) as first_write,
+                    self.assertRaisesRegex(OSError, "first private write"),
+                ):
+                    stage0_authorizer.prepare_private(
+                        project, private, audit_root
+                    )
+                self.assertEqual(first_write.call_count, 1)
+                self.assertEqual(
+                    {entry.name for entry in private.iterdir()},
+                    initial_names
+                    | {
+                        stage0_authorizer.PRIVATE_INPUTS["screening_seed"],
+                        stage0_authorizer.PRIVATE_INPUTS[
+                            "graph_assignment_salt"
+                        ],
+                        stage0_authorizer.PRIVATE_INPUTS["selector_salt"],
+                        stage0_authorizer.PRIVATE_INPUTS[
+                            "evaluation_seed_salt"
+                        ],
+                    },
                 )
                 prepared = stage0_authorizer.prepare_private(
                     project, private, audit_root

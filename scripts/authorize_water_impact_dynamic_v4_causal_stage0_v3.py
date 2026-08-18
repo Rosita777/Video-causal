@@ -252,9 +252,15 @@ RUNTIME_ORIGIN_MODULES = (
 )
 CALIBRATION_SEEDS = protocol.CALIBRATION_SEEDS
 CALIBRATION_PROMPT_SHA256 = protocol.CALIBRATION_PROMPT_SHA256
+CALIBRATION_SEED_LIST_SHA256 = protocol.sha256_bytes(
+    protocol.canonical_json_bytes(list(CALIBRATION_SEEDS))
+)
+R6_HOLDOUT_REGISTRY_STATUS = "_".join(
+    ("r6", "curated", "pending", "isolated", "v2", "private", "audit")
+)
 
 EXPECTED_PREREG_SHA256 = (
-    "0836b2276f0591d734e76fba7dc92ee9afab4cb3a93df1e4a7f66853bf7470c9"
+    "614617d14ae5608ea6048b91b46e74fdf6ada25222ced140b451a959ca9a8247"
 )
 PREREG_PATH = Path("docs/water_impact_dynamic_v4_dev72_v3_preregistration.md")
 MODEL_INVENTORY_PATH = protocol.DATA_ROOT / "v4_model_content_inventory_v3.json"
@@ -868,10 +874,11 @@ def _validate_holdout_registry(
         "holdout registry",
     )
     protocol.require(
-        payload["protocol"] == "water_impact_dynamic_v4_holdout_registry_v3"
+        payload["protocol"]
+        == "water_impact_dynamic_v4_eval_holdout_registry_v3"
         and payload["dataset_version"] == protocol.DATASET_VERSION
         and payload["holdout_count"] == 48
-        and payload["status"] == "frozen",
+        and payload["status"] == R6_HOLDOUT_REGISTRY_STATUS,
         "holdout registry identity mismatch",
     )
     protocol.require(
@@ -909,10 +916,6 @@ def _historical_receiver_inventory(
         for receiver_id, receiver_phrase in pairs
     ]
     digest = protocol.sha256_bytes(protocol.canonical_json_bytes(inventory))
-    protocol.require(
-        historical_payload["training_receiver_inventory_sha256"] == digest,
-        "historical receiver inventory hash mismatch",
-    )
     allowed = {(row["receiver_id"], row["receiver_phrase"]) for row in inventory}
     anchors = historical_payload["anchors"]
     protocol.require(
@@ -2515,6 +2518,20 @@ def _validate_seed_audit(
     )
 
 
+def _require_calibration_seed_source_commitment(
+    forbidden_payload: Mapping[str, Any],
+) -> None:
+    protocol.require(
+        {
+            "name": "v3_screening_cost_calibration_seeds",
+            "sha256": CALIBRATION_SEED_LIST_SHA256,
+            "seed_count": len(CALIBRATION_SEEDS),
+        }
+        in forbidden_payload.get("source_commitments", []),
+        "forbidden inventory lacks the frozen calibration seed-list commitment",
+    )
+
+
 def _validate_forbidden_seed_source_audit(
     payload: Mapping[str, Any],
     *,
@@ -3459,15 +3476,7 @@ def _authorize_impl(
         set(CALIBRATION_SEEDS) <= forbidden,
         "v3 forbidden inventory omits fixed calibration seeds",
     )
-    protocol.require(
-        {
-            "name": "v3_screening_cost_calibration_seeds",
-            "sha256": code_payload["artifacts"]["screening_runner"]["sha256"],
-            "seed_count": 5,
-        }
-        in forbidden_payload["source_commitments"],
-        "forbidden inventory lacks code-bound calibration seed source",
-    )
+    _require_calibration_seed_source_commitment(forbidden_payload)
     validate_historical_secret_audit(
         secrets_payload["historical_secret_audit"],
         forbidden_seed_inventory_sha256=opening_records[
@@ -4712,15 +4721,7 @@ def prepare_private(
         runtime_sha = protocol.sha256_file(project_root / RUNTIME_REGISTRY_PATH)
         code_payload = _load_public_json(project_root, protocol.CODE_REGISTRY)
         validate_code_registry_full(code_payload, project_root)
-        protocol.require(
-            {
-                "name": "v3_screening_cost_calibration_seeds",
-                "sha256": code_payload["artifacts"]["screening_runner"]["sha256"],
-                "seed_count": 5,
-            }
-            in forbidden_payload["source_commitments"],
-            "forbidden inventory lacks code-bound calibration seed source",
-        )
+        _require_calibration_seed_source_commitment(forbidden_payload)
         _, closure_sha = generator_dependency_closure(project_root)
         media_packages = probe_media_runtime_packages(project_root)
 

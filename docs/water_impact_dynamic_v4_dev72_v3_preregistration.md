@@ -32,6 +32,10 @@ implementation-only single-token and final-position assumptions conflicted
 with the already-frozen normalized whole-span head contract; Section 1.4
 rejects that static publication and freezes the only permitted representation
 repair.
+The ninth amendment records a further zero-write pre-private integration
+review after the normalized-head repair. Section 1.5 rejects that static
+publication and aligns four implementation contracts with the exact frozen
+r6 and calibration commitments without changing any scientific input.
 None of these amendments changes an ontology size, graph topology, prompt,
 scientific gate, secret value, salt or seed derivation rule, candidate
 identity, model/runtime byte requirement, or budget.
@@ -406,6 +410,166 @@ must be revalidated and republished; unchanged scientific content does not
 permit reuse of an archived byte. The new code registry must bind the reviewed
 commit, all four repaired roles, and the final preregistration hash before
 `prepare-private` is retried.
+
+The r6 nine-file evidence, secret-sampling request
+`98e7fa09ee0cd81e6c3283a4f97d12ba509d0f54bb26d6a42e099879db215323`,
+historical-secret audit
+`19fa8af3d43e15940b5adcd189c034bf132b675eda2384e78e5d3e211a678381`,
+four raw secret openings, and forbidden-seed inventory remain immutable.
+Neither secret sampling nor the historical-secret audit may run again.
+
+### 1.5 Pre-private frozen-integration contract alignment
+
+After the normalized-head repair and its preregistration-hash alignment,
+`prepare-static` completed with exit status `0` from HEAD
+`f7e15462b5cff7bcda30be7b8dcc29a5ba7632e2` while this preregistration had
+SHA-256
+`0836b2276f0591d734e76fba7dc92ee9afab4cb3a93df1e4a7f66853bf7470c9`.
+It published the following five exact standard files:
+
+| Static opening | Published SHA-256 | Size bytes |
+|---|---|---:|
+| `model_content_inventory` | `51e7199b99ee206934924ee043bd01b40ba413dfb60ef1e72682d36a10b46290` | 18,346 |
+| `runtime_registry` | `9043adf7f823022b20711267ab9e28b9dfb72452273d26e27c131b92e65eff01` | 2,582 |
+| `eval_code_registry` | `90b8f86712443971e616ec5d91d42a0e748bded07c2575635c38b9af461d9ba1` | 2,647 |
+| `capacity_model_spec` | `223392b9884e23e839000d9d95ffde8fc318f084187a61de71f02a166141fc33` | 4,875 |
+| `static_graph_robustness_report` | `1db1e06264adb868c43aab12356413b091cca0431875cc60067698efd48a001a` | 970 |
+
+The following `prepare-private` invocation stopped at the holdout-registry
+identity check before its first output reservation, temporary file, or link.
+`PRIVATE_V3_ROOT` therefore remains exactly the same eleven mode-600,
+single-link files: the seven frozen external inputs plus the four retained
+one-shot raw secret openings. It contains no graph, candidate manifest,
+derived-seed audit, generation specification, private bundle, pending
+commitment, standard Stage-0 wrapper, invalid outcome, or media.
+
+An aggregate-only integration audit identified exactly four mismatched
+implementation interpretations. It disclosed no identity, phrase, head,
+receiver text, anchor value, prompt, seed value, salt, curator content, or
+private path:
+
+1. The exact frozen holdout registry has protocol
+   `water_impact_dynamic_v4_eval_holdout_registry_v3`, status
+   `r6_curated_pending_isolated_v2_private_audit`, `48` entries exactly equal
+   to the ordered source inventory, and an `ordered_entries_sha256` exactly
+   equal to the canonical hash of those same 48 entries. The old authorizer
+   instead required a different protocol literal and `status="frozen"`.
+2. All `56` frozen new receivers pass the independently approved r6
+   suitability predicate, while only `9` of `56` pass the old builder's
+   ad-hoc token predicate. The r6 predicate requires the normalized phrase to
+   contain `water`, `open`, `unobstructed`, and `landing`; at least one of
+   `still,calm,quiet`; at least one of
+   `edge,edges,edged,boundary,bounded,rim,rimmed,center,middle,point,area,margins`;
+   and none of
+   `drop,fall,falling,splash,ripple,impact,collision,contact,enter,entry,wave,spray`.
+   These are exact whole-token tests. The normalized-head, note-span, pool,
+   ordinal, uniqueness, and all other receiver gates in Section 1.4 remain
+   unchanged.
+3. The eight frozen historical rows have `8` unique nonempty raw anchor IDs,
+   but zero raw IDs equal the graph's public canonical `g2a0..g2a7` labels.
+   The frozen source mapping has `12` unique receiver pairs; all `8`
+   historical receivers are members of that mapping and all `8` per-row
+   historical training bindings validate. The top-level
+   `training_receiver_inventory_sha256` is an opaque r6 field protected by
+   the exact committed whole-file hash. It is not the canonical digest of the
+   mapping's deduplicated pair projection and must not be reinterpreted as
+   one. Raw anchor IDs remain byte-exact and unique; graph construction assigns
+   the public `g2a0..g2a7` physical-anchor labels solely by frozen row order.
+4. The registered fixed-five calibration seed-list commitment is
+   `5b3df79d0d99dae3b916c5cba18121dc2edda3b2ed89faf40960a2f663c95755`,
+   the SHA-256 of the canonical JSON encoding of the frozen five-element list.
+   The forbidden inventory contains that exact named commitment with count
+   `5`. The old authorizer incorrectly substituted the screening-runner code
+   hash for this data commitment. No seed value is exposed or changed.
+
+These are frozen-file integration mismatches, not failures of curation,
+receiver suitability, historical membership, per-row binding, or calibration
+seed coverage. A zero-write prepublication integration probe applied only
+these four corrections in memory and intercepted the first exclusive private
+JSON write. It reached that first write exactly once with the private
+inventory still equal to the same eleven files, establishing that there is no
+fifth pre-write blocker. This probe is not a production dry-run mode and
+created no artifact.
+
+The complete permitted repair is limited to the following:
+
+1. The authorizer accepts only the exact frozen holdout-registry protocol,
+   r6 status, row count, ordered entries, and canonical ordered-entry hash
+   above. It replaces the screening-runner hash comparison with the exact
+   fixed-five canonical-list commitment and count, in both private preparation
+   and final authorization.
+2. The builder replaces only its receiver suitability token sets with the
+   exact r6 predicate above. All structured receiver schemas, normalized-head
+   rules, note binding, uniqueness, pool sizes, ordinals, graph topology, and
+   prompt construction remain unchanged.
+3. Historical validation treats the raw `anchor_id` as an opaque nonempty
+   unique committed value, preserves it byte-for-byte, and derives canonical
+   G2 graph anchor labels from row order. The authorizer continues to require
+   all eight receiver pairs to occur in the 12-pair frozen mapping and all
+   eight row bindings to validate, but does not reinterpret the top-level r6
+   hash field.
+4. Tests bind all four corrected contracts and prove the zero-write path
+   reaches the first exclusive write without another blocker. No output,
+   ontology, mapping, graph, seed list, secret, or commitment byte is repaired
+   by a fixture or production command.
+
+The only permitted production candidates for this integration repair have
+these exact SHA-256 values:
+
+| Registered code role | Repaired SHA-256 |
+|---|---|
+| `stage0_authorizer` | `36b1949e867d25bc474571b2c01d28397636f7b59c8cfd5aa6b29321ae8fec80` |
+| `candidate_builder` | `341f924cfe4b95e135883dd538edac177e01a4b207466c698cad877ba622c287` |
+| `tests` | `d1e24ae79598543d4c6c359b673eb0952f545829c476b38f87685229d4932de9` |
+
+No other production file may change for this repair. After this document is
+frozen under its new byte hash, the sole additional authorizer edit is
+replacement of `EXPECTED_PREREG_SHA256` with that exact hash. The later final
+authorizer SHA-256 will therefore differ only by that registered literal and
+must be independently reviewed and bound by the regenerated code registry.
+
+Before any further static or private command, the five standard files in the
+table above must be moved together into a new distinct, nonnested, real
+mode-700 rejected backup root that is also distinct from every earlier
+rejected root. Each opening is retained byte-for-byte under its original
+basename as a mode-600 regular non-symlink single-link file. The root inventory
+is exactly those five files plus one mode-600
+`rejected_static_manifest_v3.json`; no seventh entry is permitted.
+
+That manifest has exactly
+`protocol,status,dataset_version,reason_code,source_commit,source_preregistration_sha256,source_code_registry_sha256,artifacts,no_fallback`.
+Required values are protocol
+`water_impact_dynamic_v4_v3_rejected_static_backup_v1`,
+`status="REJECTED_NO_FALLBACK"`, `dataset_version="v4_dev72_v3"`,
+`reason_code="pre_private_frozen_integration_contract_mismatch"`,
+`source_commit="f7e15462b5cff7bcda30be7b8dcc29a5ba7632e2"`,
+`source_preregistration_sha256="0836b2276f0591d734e76fba7dc92ee9afab4cb3a93df1e4a7f66853bf7470c9"`,
+`source_code_registry_sha256="90b8f86712443971e616ec5d91d42a0e748bded07c2575635c38b9af461d9ba1"`,
+and `no_fallback=true`. `artifacts` has exactly these direct SHA-256 mappings
+and no nested metadata:
+
+```text
+model_content_inventory=51e7199b99ee206934924ee043bd01b40ba413dfb60ef1e72682d36a10b46290
+runtime_registry=9043adf7f823022b20711267ab9e28b9dfb72452273d26e27c131b92e65eff01
+eval_code_registry=90b8f86712443971e616ec5d91d42a0e748bded07c2575635c38b9af461d9ba1
+capacity_model_spec=223392b9884e23e839000d9d95ffde8fc318f084187a61de71f02a166141fc33
+static_graph_robustness_report=1db1e06264adb868c43aab12356413b091cca0431875cc60067698efd48a001a
+```
+
+The archival transaction verifies all five source hashes and sizes before any
+move, is no-replace and inode-owned, fsyncs each retained file, the manifest,
+and the backup directory, and proves all five standard paths absent. Any
+partial move, extra entry, hash/size/mode/link mismatch, or restoration attempt
+blocks v3. No rejected byte may be restored, copied back, registered as a
+fallback, or accepted by a later authorizer.
+
+Only after the three repaired code candidates, this amendment, the aligned
+authorizer literal, and an independent review are committed may
+`prepare-static` regenerate all five standard outputs from scratch. All five
+must be revalidated and republished, including scientifically unchanged model,
+runtime, capacity, and graph bytes; none may be recovered from the rejected
+root. The new code registry must bind the reviewed commit, the three repaired
+roles, and the final preregistration hash before `prepare-private` is retried.
 
 The r6 nine-file evidence, secret-sampling request
 `98e7fa09ee0cd81e6c3283a4f97d12ba509d0f54bb26d6a42e099879db215323`,

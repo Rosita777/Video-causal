@@ -153,11 +153,13 @@ PROHIBITED_SOURCE_WORDS = {
     "pellet", "granule",
 }
 RECEIVER_BOUNDARY_WORDS = {
-    "bounded", "rim", "edge", "deck", "collar", "paving", "wall", "walls",
+    "edge", "edges", "edged", "boundary", "bounded", "rim", "rimmed",
+    "center", "middle", "point", "area", "margins",
 }
-RECEIVER_RISK_WORDS = {
-    "flow", "flowing", "stream", "river", "vegetation", "plant", "plants",
-    "adjacent", "nearby", "channel",
+RECEIVER_STILL_WATER_WORDS = {"still", "calm", "quiet"}
+EVENT_TOKENS = {
+    "drop", "fall", "falling", "splash", "ripple", "impact", "collision",
+    "contact", "enter", "entry", "wave", "spray",
 }
 
 
@@ -357,16 +359,17 @@ def validate_receiver_ontology(payload: Mapping[str, Any]) -> tuple[Mapping[str,
             protocol.require(isinstance(row[key], str) and row[key].strip(), f"receiver {key} invalid")
         tokens = set(row["normalized_phrase"].split())
         protocol.require(
-            {"water", "still", "unobstructed"} <= tokens,
-            "receiver lacks still water or visible landing language",
+            {"water", "open", "unobstructed", "landing"} <= tokens
+            and bool(tokens & RECEIVER_STILL_WATER_WORDS),
+            "receiver lacks required water/open/unobstructed/landing/stillness language",
         )
         protocol.require(
             bool(tokens & RECEIVER_BOUNDARY_WORDS),
             "receiver lacks a clearly bounded water surface",
         )
         protocol.require(
-            not tokens & RECEIVER_RISK_WORDS,
-            "receiver contains flow/vegetation/adjacent-water risk",
+            not tokens & EVENT_TOKENS,
+            "receiver contains event language",
         )
         protocol.require(
             _head_span_count(normalize_phrase(row["curator_note"]), normalized_head)
@@ -390,10 +393,15 @@ def validate_historical_anchors(payload: Mapping[str, Any]) -> tuple[Mapping[str
     phrases: set[str] = set()
     heads: set[str] = set()
     output: list[Mapping[str, Any]] = []
-    for index, row in enumerate(rows):
+    for row in rows:
         protocol.require_exact_keys(row, HISTORICAL_ROW_KEYS, "historical anchor row")
         normalized_head = _validate_identity_fields(row, prefix="receiver")
-        protocol.require(row["anchor_id"] == f"g2a{index}", "historical anchors are not in canonical order")
+        protocol.require(
+            isinstance(row["anchor_id"], str)
+            and bool(row["anchor_id"])
+            and row["anchor_id"].strip() == row["anchor_id"],
+            "historical anchor id invalid",
+        )
         protocol.require(
             row["anchor_id"] not in anchor_ids
             and row["receiver_id"] not in ids
@@ -584,7 +592,7 @@ def build_candidate_graph(
                 edge_ordinal += 1
 
     for anchor_index, historical_receiver in enumerate(historical):
-        anchor_id = historical_receiver["anchor_id"]
+        anchor_id = f"g2a{anchor_index}"
         anchor_records.append({"group": protocol.GROUPS[1], "physical_anchor_id": anchor_id, "receiver_id": historical_receiver["receiver_id"]})
         edge_ordinal = 0
         receiver = {
