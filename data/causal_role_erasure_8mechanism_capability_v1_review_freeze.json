@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "review_protocol_version": "causal_role_erasure_8mechanism_capability_review_v1",
+  "status": "frozen_blank_before_generation_and_review",
+  "counts": {
+    "rows": 192,
+    "mechanisms": 8,
+    "rows_per_mechanism": 24
+  },
+  "artifacts": {
+    "canonical_manifest": {
+      "name": "causal_role_erasure_8mechanism_capability_v1_manifest.canonical.json",
+      "sha256": "6d425076a7156aabc9695e6ab4fbe7cf85922261d1282c067fd56d176d05031d"
+    },
+    "review_template": {
+      "name": "causal_role_erasure_8mechanism_capability_v1_review_template.csv",
+      "sha256": "286bb5a1dbe3cceb606ec46e0f69202e93af5afd4de1978e83835292b67230ce"
+    },
+    "review_rubric": {
+      "name": "causal_role_erasure_8mechanism_capability_v1_review_rubric.json",
+      "sha256": "aa88f142891312a404832128ba4688beb1b537d1cfc70f8ccf395a840ef9405f"
+    }
+  },
+  "checks": {
+    "template_exact_192_rows": true,
+    "template_scores_and_notes_blank": true,
+    "metadata_bound_to_canonical_manifest": true,
+    "video_binding_deferred_to_generation_manifest": true,
+    "all_49_frames_required": true,
+    "aggregate_only_gate": true
+  }
+}

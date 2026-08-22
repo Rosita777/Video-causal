@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "review_protocol_version": "causal_role_erasure_8mechanism_capability_review_v1",
+  "manifest_protocol_version": "causal_role_erasure_8mechanism_capability_v1",
+  "scope": {
+    "purpose": "pre_method_original_capability_gate_only",
+    "method_comparison_authorized": false,
+    "training_authorized": false,
+    "treatment_generation_authorized": false
+  },
+  "video_contract": {
+    "required_frame_count": 49,
+    "required_fps": 8,
+    "review_frame_indices_inclusive": [
+      0,
+      48
+    ],
+    "all_49_frames_must_be_inspected": true,
+    "clean_prefix_frame_indices_inclusive": [
+      0,
+      15
+    ],
+    "post_prefix_frame_indices_inclusive": [
+      16,
+      48
+    ],
+    "missing_or_decode_failure_policy": "ineligible"
+  },
+  "video_binding": {
+    "template_field": "video_binding_key",
+    "frozen_value": "generation_id",
+    "path_and_video_sha256_source": "later_frozen_generation_manifest",
+    "unbound_template_does_not_authorize_review": true
+  },
+  "atomic_fields": [
+    {
+      "name": "decodable",
+      "type": "boolean",
+      "allowed_values": {
+        "0": "false",
+        "1": "true"
+      },
+      "pass_value": "1",
+      "instruction": "Score 1 only when exactly 49 sequential frames decode and every frame can be inspected; otherwise score 0."
+    },
+    {
+      "name": "clean_prefix",
+      "type": "ordinal_0_1_2",
+      "allowed_values": {
+        "0": "clear violation",
+        "1": "ambiguous or partly clean",
+        "2": "all frames 0-15 clean"
+      },
+      "pass_value": "2",
+      "instruction": "Across every frame 0-15, the source and causal footprint are absent and the receiver is in its specified clean state."
+    },
+    {
+      "name": "source_after16",
+      "type": "ordinal_0_1_2",
+      "allowed_values": {
+        "0": "source absent after frame 15",
+        "1": "source partial or ambiguous after frame 15",
+        "2": "source clearly visible after frame 15"
+      },
+      "pass_value": "2",
+      "instruction": "Judge source visibility across all frames 16-48."
+    },
+    {
+      "name": "trigger_visible",
+      "type": "ordinal_0_1_2",
+      "allowed_values": {
+        "0": "trigger absent or contradicted",
+        "1": "trigger partial, occluded, or temporally ambiguous",
+        "2": "trigger clearly visible"
+      },
+      "pass_value": "2",
+      "instruction": "Use the frozen mechanism-specific trigger definition."
+    },
+    {
+      "name": "footprint_after_trigger",
+      "type": "ordinal_0_1_2",
+      "allowed_values": {
+        "0": "footprint absent or present before the trigger",
+        "1": "footprint weak, partial, or onset order ambiguous",
+        "2": "expected footprint clear and first visible only after the trigger"
+      },
+      "pass_value": "2",
+      "instruction": "Inspect all 49 frames and use the frozen expected footprint."
+    },
+    {
+      "name": "receiver_recognizable",
+      "type": "ordinal_0_1_2",
+      "allowed_values": {
+        "0": "receiver missing, wrong, or unrecognizable",
+        "1": "receiver partial or ambiguous",
+        "2": "intended receiver clear and recognizable"
+      },
+      "pass_value": "2",
+      "instruction": "The intended receiver must remain identifiable throughout the event."
+    },
+    {
+      "name": "fixed_camera",
+      "type": "ordinal_0_1_2",
+      "allowed_values": {
+        "0": "cut or substantial camera motion",
+        "1": "minor drift or jitter",
+        "2": "locked camera with no cut"
+      },
+      "pass_value": "2",
+      "instruction": "Inspect all frames for cuts, reframing, pan, tilt, zoom, or drift."
+    },
+    {
+      "name": "quality",
+      "type": "ordinal_0_1_2",
+      "allowed_values": {
+        "0": "severe corruption or not judgeable",
+        "1": "judgeable with material artifacts or temporal incoherence",
+        "2": "coherent and fully judgeable"
+      },
+      "pass_value": "2",
+      "instruction": "Judge visual and temporal integrity across the complete video."
+    }
+  ],
+  "eligibility": {
+    "operator": "all",
+    "required_values": {
+      "decodable": "1",
+      "clean_prefix": "2",
+      "source_after16": "2",
+      "trigger_visible": "2",
+      "footprint_after_trigger": "2",
+      "receiver_recognizable": "2",
+      "fixed_camera": "2",
+      "quality": "2"
+    },
+    "blank_atomic_value": "ineligible",
+    "unknown_atomic_value": "invalid_input"
+  },
+  "mechanisms": {
+    "water_impact": {
+      "trigger_definition": "visible entry of the source through the water surface",
+      "expected_footprint": "a brief splash and expanding circular ripples"
+    },
+    "rigid_collision": {
+      "trigger_definition": "visible physical contact between source and receiver",
+      "expected_footprint": "a tipped contacted object and visible displacement of nearby objects"
+    },
+    "brittle_fracture": {
+      "trigger_definition": "visible strike of the intact brittle receiver by the source",
+      "expected_footprint": "spreading visible cracks and several separated glass fragments"
+    },
+    "powder_impact": {
+      "trigger_definition": "visible source contact with the initially undisturbed powder bed",
+      "expected_footprint": "a short powder plume and a visible impact crater"
+    },
+    "elastic_deformation": {
+      "trigger_definition": "visible source contact initiating receiver deformation",
+      "expected_footprint": "a clearly visible temporary indentation or stretching of the receiver followed by elastic rebound"
+    },
+    "field_mediated_response": {
+      "trigger_definition": "visible closest approach followed by receiver motion while a gap remains; direct contact is a trigger failure",
+      "expected_footprint": "clear receiver motion toward or away from the source while a visible gap remains between them"
+    },
+    "material_release": {
+      "trigger_definition": "visible impact or puncture that opens the intact receiver",
+      "expected_footprint": "opening of the receiver followed by a visible outward pour or scatter of its contained particles"
+    },
+    "surface_trace": {
+      "trigger_definition": "visible source contact and motion along the initially unmarked surface",
+      "expected_footprint": "a new localized imprint or groove confined to the source contact path"
+    }
+  },
+  "review_workflow": {
+    "reviewer_a": "independent_full_49_frame_atomic_review",
+    "reviewer_b": "independent_full_49_frame_atomic_review",
+    "reviewers_must_not_share_scores": true,
+    "third_reviewer": "blinded_atomic_adjudication_for_every_disagreement",
+    "ordinal_resolution": "median_of_reviewer_a_reviewer_b_and_third_reviewer",
+    "boolean_resolution": "majority_of_reviewer_a_reviewer_b_and_third_reviewer",
+    "canonical_adjudicated_csv_required_before_scoring": true,
+    "free_text_is_never_used_by_the_gate": true
+  },
+  "mechanism_gate": {
+    "total_rows_required": 24,
+    "minimum_eligible_rows": 15,
+    "minimum_eligible_direct_rows": 6,
+    "minimum_eligible_natural_rows": 6,
+    "minimum_distinct_eligible_source_ids": 2,
+    "minimum_distinct_eligible_receiver_ids": 2,
+    "all_eight_mechanisms_must_pass": true
+  },
+  "gate_output": {
+    "granularity": "aggregate_only",
+    "row_level_output": false,
+    "free_text_output": false,
+    "mechanism_weighting": "equal_one_eighth"
+  }
+}

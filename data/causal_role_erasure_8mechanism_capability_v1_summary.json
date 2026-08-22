@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "protocol_version": "causal_role_erasure_8mechanism_capability_v1",
+  "scope": {
+    "intended_use": "original_capability_screening_only",
+    "method_arm": "original",
+    "treatment_status": "pre_method_original_only",
+    "training_authorized": false,
+    "evaluation_selection_authorized": false,
+    "treatment_generation_authorized": false
+  },
+  "counts": {
+    "mechanisms": 8,
+    "source_receiver_combinations_per_mechanism": 8,
+    "repetitions_per_combination": 3,
+    "rows_per_mechanism": 24,
+    "total_rows": 192,
+    "direct_per_mechanism": 12,
+    "natural_per_mechanism": 12
+  },
+  "video": {
+    "num_frames": 49,
+    "fps": 8,
+    "clean_prefix_frames": 16,
+    "clean_prefix_seconds": 2.0,
+    "reference_interval_half_open": [
+      0,
+      16
+    ]
+  },
+  "seed": {
+    "base_seed": 840000,
+    "formula": "840000 + 1000*mechanism_index + 10*combination_index + repetition_index",
+    "globally_unique": true
+  },
+  "mechanism_order": [
+    "water_impact",
+    "rigid_collision",
+    "brittle_fracture",
+    "powder_impact",
+    "elastic_deformation",
+    "field_mediated_response",
+    "material_release",
+    "surface_trace"
+  ],
+  "ontology_status": {
+    "water_impact": "protocol_v1_reused_for_capability_screen",
+    "rigid_collision": "protocol_v1_reused_for_capability_screen",
+    "brittle_fracture": "protocol_v1_reused_for_capability_screen",
+    "powder_impact": "protocol_v1_reused_for_capability_screen",
+    "elastic_deformation": "draft_capability_only_not_training_ready",
+    "field_mediated_response": "draft_capability_only_not_training_ready",
+    "material_release": "draft_capability_only_not_training_ready",
+    "surface_trace": "draft_capability_only_not_training_ready"
+  },
+  "provenance": {
+    "protocol_v1_registry": "data/protocol_v1/registry.json",
+    "protocol_v1_registry_sha256": "d0e24777e73da74d38875ddb997c6ffc098fdea86f9807d799ed787303f4280a",
+    "protocol_v1_reused_mechanisms": [
+      "water_impact",
+      "rigid_collision",
+      "brittle_fracture",
+      "powder_impact"
+    ],
+    "draft_capability_only_mechanisms": [
+      "elastic_deformation",
+      "field_mediated_response",
+      "material_release",
+      "surface_trace"
+    ]
+  },
+  "checks": {
+    "eight_mechanisms_equal_weight": true,
+    "eight_unique_pairs_per_mechanism": true,
+    "direct_natural_balanced": true,
+    "three_fixed_repetitions_per_case": true,
+    "first_16_frames_prompted_clean": true,
+    "draft_compatibility_family_matched": true,
+    "original_only": true,
+    "unique_generation_ids": true,
+    "unique_generation_seeds": true
+  },
+  "canonical_manifest_sha256": "6d425076a7156aabc9695e6ab4fbe7cf85922261d1282c067fd56d176d05031d",
+  "artifact_sha256": {
+    "manifest_csv": "dbb315e6ab7815798d0ffc3d625550e6937b55b5522e683a189f5bab609ea189",
+    "canonical_manifest_json": "6d425076a7156aabc9695e6ab4fbe7cf85922261d1282c067fd56d176d05031d",
+    "prompts": "7a7902b1ee183c122014f3b9fa2ef1199fabb8f15293fe8d3c6ec468f963046e"
+  }
+}
