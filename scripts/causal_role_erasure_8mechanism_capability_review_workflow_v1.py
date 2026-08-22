@@ -337,12 +337,81 @@ def _rename_directory_noreplace(source: Path, destination: Path) -> None:
         raise OSError(error, os.strerror(error), str(destination))
 
 
+def _transfer_tree_exclusive(source: Path, destination: Path) -> None:
+    """Move an owned tree into an owned reservation without replacing entries."""
+
+    info = os.lstat(source)
+    require(not stat.S_ISLNK(info.st_mode), "partial output contains a symlink")
+    if stat.S_ISDIR(info.st_mode):
+        os.mkdir(destination, stat.S_IMODE(info.st_mode))
+        for child in sorted(source.iterdir(), key=lambda item: item.name):
+            _transfer_tree_exclusive(child, destination / child.name)
+        os.rmdir(source)
+        return
+    require(stat.S_ISREG(info.st_mode), "partial output contains a non-regular entry")
+    try:
+        os.link(source, destination, follow_symlinks=False)
+    except OSError as exc:
+        if exc.errno not in {errno.EPERM, errno.ENOTSUP, errno.EOPNOTSUPP, errno.EXDEV}:
+            raise
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        descriptor = os.open(destination, flags, stat.S_IMODE(info.st_mode))
+        try:
+            with source.open("rb") as source_handle, os.fdopen(descriptor, "wb", closefd=True) as destination_handle:
+                shutil.copyfileobj(source_handle, destination_handle, length=1024 * 1024)
+                destination_handle.flush()
+                os.fsync(destination_handle.fileno())
+        except BaseException:
+            try:
+                destination.unlink()
+            except FileNotFoundError:
+                pass
+            raise
+        require(sha256_file(source) == sha256_file(destination), "exclusive transfer changed file bytes")
+    source.unlink()
+
+
+def _publish_via_reserved_directory(partial: Path, output_root: Path) -> None:
+    """QuarkFS-compatible fail-closed publication when rename flags are unsupported."""
+
+    partial_info = os.lstat(partial)
+    os.mkdir(output_root, stat.S_IMODE(partial_info.st_mode))
+    output_identity: tuple[int, int] | None = None
+    try:
+        output_info = os.lstat(output_root)
+        output_identity = (output_info.st_dev, output_info.st_ino)
+        marker = output_root / ".incomplete"
+        write_bytes_exclusive(marker, b"review package publication incomplete\n", mode=0o600)
+        for child in sorted(partial.iterdir(), key=lambda item: item.name):
+            _transfer_tree_exclusive(child, output_root / child.name)
+        os.rmdir(partial)
+        marker.unlink()
+        directory_fd = os.open(output_root, os.O_RDONLY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+    except BaseException:
+        if output_identity is not None and output_root.exists() and not output_root.is_symlink():
+            current = os.lstat(output_root)
+            if (current.st_dev, current.st_ino) == output_identity:
+                shutil.rmtree(output_root)
+        raise
+
+
 def expose_partial_root(partial: Path, output_root: Path) -> None:
     identity = _ACTIVE_PARTIALS.get(partial)
     require(identity is not None, "partial output is not owned by this process")
     info = os.lstat(partial)
     require((info.st_dev, info.st_ino) == identity, "partial output identity changed")
-    _rename_directory_noreplace(partial, output_root)
+    try:
+        _rename_directory_noreplace(partial, output_root)
+    except OSError as exc:
+        if exc.errno not in {errno.EINVAL, errno.ENOTSUP, errno.EOPNOTSUPP, errno.EXDEV}:
+            raise
+        _publish_via_reserved_directory(partial, output_root)
     _ACTIVE_PARTIALS.pop(partial, None)
 
 
@@ -718,6 +787,7 @@ def _resolve_ref(package_root: Path, record: Mapping[str, Any], label: str) -> P
 
 def verify_package(package_root: Path, expected_manifest_sha256: str | None = None) -> dict[str, Any]:
     reject_sealed_path(package_root)
+    require(not (package_root / ".incomplete").exists(), "review package publication is incomplete")
     manifest_path = package_root / "review_package_manifest.json"
     if expected_manifest_sha256 is not None:
         require_sha256(expected_manifest_sha256, "expected review-package manifest SHA-256")
@@ -951,6 +1021,7 @@ def verify_adjudication_root(
     expected_manifest_sha256: str,
 ) -> dict[str, Any]:
     reject_sealed_path(adjudication_root)
+    require(not (adjudication_root / ".incomplete").exists(), "adjudication publication is incomplete")
     manifest_path = adjudication_root / "adjudication_manifest.json"
     require_sha256(expected_manifest_sha256, "expected adjudication-manifest SHA-256")
     regular_file(manifest_path, "adjudication manifest")
@@ -1151,6 +1222,7 @@ def verify_final_root(
     expected_registry_sha256: str,
 ) -> tuple[dict[str, Any], Path, dict[str, Any]]:
     reject_sealed_path(final_root)
+    require(not (final_root / ".incomplete").exists(), "final review publication is incomplete")
     registry_path = final_root / "review_run_registry.json"
     require_sha256(expected_registry_sha256, "expected review-run registry SHA-256")
     regular_file(registry_path, "review-run registry")

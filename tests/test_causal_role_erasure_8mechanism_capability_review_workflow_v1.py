@@ -319,6 +319,57 @@ def test_atomic_exposure_never_replaces_existing_destination(tmp_path):
     assert not partial.exists()
 
 
+def test_reserved_directory_publication_fallback_is_complete_and_exclusive(
+    tmp_path, monkeypatch
+):
+    destination = tmp_path / "published"
+    partial = workflow.prepare_partial_root(destination)
+    (partial / "nested").mkdir()
+    workflow.write_bytes_exclusive(partial / "nested/value.txt", b"value\n")
+
+    def unsupported(_source, _destination):
+        raise OSError(errno.EINVAL, "filesystem does not support renameat2")
+
+    import errno
+
+    monkeypatch.setattr(workflow, "_rename_directory_noreplace", unsupported)
+    workflow.expose_partial_root(partial, destination)
+    assert not partial.exists()
+    assert not (destination / ".incomplete").exists()
+    assert (destination / "nested/value.txt").read_bytes() == b"value\n"
+
+
+def test_reserved_publication_marker_failure_rolls_back_destination_and_partial(
+    tmp_path, monkeypatch
+):
+    import errno
+
+    destination = tmp_path / "marker-failure"
+    real_write = workflow.write_bytes_exclusive
+
+    def unsupported(_source, _destination):
+        raise OSError(errno.EINVAL, "force reserved-directory fallback")
+
+    def fail_marker(path, raw, mode=0o644):
+        if path.name == ".incomplete":
+            raise OSError(errno.ENOSPC, "injected marker write failure")
+        return real_write(path, raw, mode)
+
+    monkeypatch.setattr(workflow, "_rename_directory_noreplace", unsupported)
+    monkeypatch.setattr(workflow, "write_bytes_exclusive", fail_marker)
+
+    @workflow.rollback_fresh_partials
+    def attempt_publish():
+        partial = workflow.prepare_partial_root(destination)
+        real_write(partial / "value.txt", b"value\n")
+        workflow.expose_partial_root(partial, destination)
+
+    with pytest.raises(OSError, match="injected marker write failure"):
+        attempt_publish()
+    assert not destination.exists()
+    assert not list(tmp_path.glob(".marker-failure.partial-*"))
+
+
 def test_build_failure_rolls_back_owned_partial(tmp_path):
     generation, _ = _fake_generation(tmp_path)
     output = tmp_path / "failed-package"
