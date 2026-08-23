@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "protocol_id": "causal_role_erasure_7m_single_seed_v2",
+  "commitment_id": "causal_role_erasure_7mechanism_eval_seed_commitment_v2",
+  "status": "committed_before_formal_case_construction",
+  "created_date": "2026-08-23",
+  "salt_bytes": 32,
+  "salt_sha256": "6579f2f89b1a9b5437550055f0db4d6e9e4b548d4f4f5b7c4227659b7b236bf8",
+  "derivation_domain": "causal-role-erasure-7m-eval-seed-v2",
+  "derivation": "SHA-256(domain NUL salt NUL case_id NUL nonce), first 31 bits as a positive integer; increment nonce only on collision or a frozen forbidden seed",
+  "same_case_same_seed_across_all_eight_streams": true,
+  "salt_is_not_in_the_public_repository": true,
+  "treatment_output_existed_at_commitment": false
+}
