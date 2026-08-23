@@ -1,0 +1,38 @@
+{
+  "schema_version": 2,
+  "review_protocol_version": "causal_role_erasure_8mechanism_capability_review_v2",
+  "status": "frozen_blank_before_treatment_generation_and_review",
+  "protocol_amendment_status": "post_hoc_pre_treatment_amendment",
+  "counts": {
+    "rows": 192,
+    "mechanisms": 8,
+    "rows_per_mechanism": 24
+  },
+  "artifacts": {
+    "canonical_manifest": {
+      "name": "causal_role_erasure_8mechanism_capability_v2_manifest.canonical.json",
+      "sha256": "8e8cc14a6d327193cb7f270d2386490dc00ee783d9e7d0f76a697837f218dbee"
+    },
+    "review_template": {
+      "name": "causal_role_erasure_8mechanism_capability_v2_review_template.csv",
+      "sha256": "4f8f3853a25931145d86e663d70ded54da0d162ce2d17174e5c9df7957b2820b"
+    },
+    "review_rubric": {
+      "name": "causal_role_erasure_8mechanism_capability_v2_review_rubric.json",
+      "sha256": "052232152cbf97a070f2479cbea2289955923d144fc48cc1420238080b2547ef"
+    }
+  },
+  "checks": {
+    "template_exact_192_rows": true,
+    "template_scores_and_notes_blank": true,
+    "metadata_bound_to_canonical_manifest": true,
+    "canonical_manifest_sha256_bound": true,
+    "video_binding_deferred_to_generation_manifest": true,
+    "all_49_frames_required": true,
+    "eight_atomic_fields_required": true,
+    "clean_prefix_diagnostic_only": true,
+    "partial_effect_accepted": true,
+    "aggregate_only_gate": true,
+    "all_eight_mechanisms_required": true
+  }
+}

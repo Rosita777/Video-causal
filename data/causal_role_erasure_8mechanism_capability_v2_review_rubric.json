@@ -1,0 +1,266 @@
+{
+  "schema_version": 2,
+  "review_protocol_version": "causal_role_erasure_8mechanism_capability_review_v2",
+  "manifest_protocol_version": "causal_role_erasure_8mechanism_capability_v2",
+  "protocol_amendment": {
+    "status": "post_hoc_pre_treatment_amendment",
+    "v1_is_unchanged": true,
+    "treatment_outputs_may_not_be_inspected_before_freeze": true,
+    "reason": "The primary formal result is continuous CES, where clear-to-partial change is valid evidence; capability eligibility therefore accepts partial footprint or trigger evidence without requiring all eight atomic fields to equal 2.",
+    "anti_guarantee_policy": "One uniform row rule and one uniform mechanism rule apply to all eight mechanisms; rows, identities, prompt styles, and seeds may not be deleted or replaced to manufacture a pass.",
+    "field_mediated_subtype": "airflow_non_contact_motion",
+    "elastic_receiver_scope": "black_round_and_blue_square_trampolines"
+  },
+  "scope": {
+    "purpose": "pre_method_original_capability_gate_only",
+    "method_comparison_authorized": false,
+    "training_authorized": false,
+    "treatment_generation_authorized": false
+  },
+  "video_contract": {
+    "required_frame_count": 49,
+    "required_fps": 8,
+    "review_frame_indices_inclusive": [
+      0,
+      48
+    ],
+    "all_49_frames_must_be_inspected": true,
+    "clean_prefix_frame_indices_inclusive": [
+      0,
+      15
+    ],
+    "post_prefix_frame_indices_inclusive": [
+      16,
+      48
+    ],
+    "missing_or_decode_failure_policy": "ineligible"
+  },
+  "video_binding": {
+    "template_field": "video_binding_key",
+    "frozen_value": "generation_id",
+    "path_and_video_sha256_source": "later_frozen_generation_manifest",
+    "unbound_template_does_not_authorize_review": true
+  },
+  "atomic_fields": [
+    {
+      "name": "decodable",
+      "type": "boolean",
+      "allowed_values": {
+        "0": "false",
+        "1": "true"
+      },
+      "eligibility_role": "required_equal_1",
+      "instruction": "Score 1 only when exactly 49 sequential frames decode and every frame can be inspected; otherwise score 0."
+    },
+    {
+      "name": "clean_prefix",
+      "type": "ordinal_0_1_2",
+      "allowed_values": {
+        "0": "clear violation",
+        "1": "ambiguous or partly clean",
+        "2": "all frames 0-15 clean"
+      },
+      "eligibility_role": "diagnostic_only_value_does_not_enter_gate",
+      "instruction": "Across every frame 0-15, score whether the source and causal footprint are absent and the receiver is in its specified clean state. This value is public diagnostic evidence and does not change v2 eligibility."
+    },
+    {
+      "name": "source_after16",
+      "type": "ordinal_0_1_2",
+      "allowed_values": {
+        "0": "source absent after frame 15",
+        "1": "source partial or ambiguous after frame 15",
+        "2": "source clearly visible after frame 15"
+      },
+      "eligibility_role": "required_equal_2",
+      "instruction": "Judge source visibility across all frames 16-48."
+    },
+    {
+      "name": "trigger_visible",
+      "type": "ordinal_0_1_2",
+      "allowed_values": {
+        "0": "trigger absent or contradicted",
+        "1": "trigger partial, occluded, or temporally ambiguous",
+        "2": "trigger clearly visible"
+      },
+      "eligibility_role": "required_at_least_1_and_coupled_with_footprint",
+      "instruction": "Use the frozen mechanism-specific trigger definition."
+    },
+    {
+      "name": "footprint_after_trigger",
+      "type": "ordinal_0_1_2",
+      "allowed_values": {
+        "0": "footprint absent or present before the trigger",
+        "1": "footprint weak, partial, or onset order ambiguous",
+        "2": "expected footprint clear and first visible only after the trigger"
+      },
+      "eligibility_role": "required_at_least_1_and_coupled_with_trigger",
+      "instruction": "Inspect all 49 frames and use the frozen expected footprint. A genuine partial footprint is accepted by v2 when the coupled trigger/footprint evidence sum is at least 3."
+    },
+    {
+      "name": "receiver_recognizable",
+      "type": "ordinal_0_1_2",
+      "allowed_values": {
+        "0": "receiver missing, wrong, or unrecognizable",
+        "1": "receiver partial or ambiguous",
+        "2": "intended receiver clear and recognizable"
+      },
+      "eligibility_role": "required_at_least_1",
+      "instruction": "The intended receiver must remain identifiable throughout the event."
+    },
+    {
+      "name": "fixed_camera",
+      "type": "ordinal_0_1_2",
+      "allowed_values": {
+        "0": "cut or substantial camera motion",
+        "1": "minor drift or jitter",
+        "2": "locked camera with no cut"
+      },
+      "eligibility_role": "required_at_least_1",
+      "instruction": "Inspect all frames for cuts, reframing, pan, tilt, zoom, or drift."
+    },
+    {
+      "name": "quality",
+      "type": "ordinal_0_1_2",
+      "allowed_values": {
+        "0": "severe corruption or not judgeable",
+        "1": "judgeable with material artifacts or temporal incoherence",
+        "2": "coherent and fully judgeable"
+      },
+      "eligibility_role": "required_at_least_1",
+      "instruction": "Judge visual and temporal integrity across the complete video."
+    }
+  ],
+  "eligibility": {
+    "operator": "all_required_thresholds_and_coupled_evidence",
+    "complete_eight_field_record_required": true,
+    "required_thresholds": {
+      "decodable": {
+        "operator": "equal",
+        "value": 1
+      },
+      "source_after16": {
+        "operator": "equal",
+        "value": 2
+      },
+      "trigger_visible": {
+        "operator": "at_least",
+        "value": 1
+      },
+      "footprint_after_trigger": {
+        "operator": "at_least",
+        "value": 1
+      },
+      "receiver_recognizable": {
+        "operator": "at_least",
+        "value": 1
+      },
+      "fixed_camera": {
+        "operator": "at_least",
+        "value": 1
+      },
+      "quality": {
+        "operator": "at_least",
+        "value": 1
+      }
+    },
+    "coupled_requirement": {
+      "fields": [
+        "trigger_visible",
+        "footprint_after_trigger"
+      ],
+      "operator": "sum_at_least",
+      "value": 3,
+      "purpose": "exclude rows where both causal trigger and effect are ambiguous"
+    },
+    "diagnostic_only_fields": [
+      "clean_prefix"
+    ],
+    "partial_effect_accepted": true,
+    "all_fields_equal_2_required": false,
+    "blank_atomic_value": "ineligible_incomplete_record",
+    "unknown_atomic_value": "invalid_input"
+  },
+  "formal_metric_alignment": {
+    "source_after16": "formal Original source_visibility = 2",
+    "footprint_after_trigger": "formal Original footprint_visibility >= 1",
+    "receiver_recognizable": "formal Original receiver_preservation >= 1",
+    "quality": "formal Original video_quality >= 1",
+    "capability_only_structural_guards": [
+      "decodable",
+      "trigger_visible",
+      "fixed_camera"
+    ],
+    "clean_prefix": "reported diagnostic only; not a v2 gate input",
+    "formal_E_b_unchanged": true,
+    "formal_CES_unchanged": true,
+    "formal_cases_recompute_E_b_from_same_backbone_original": true,
+    "capability_rows_never_substitute_for_formal_case_E_b": true,
+    "continuous_primary_endpoint": true,
+    "strict_success_is_secondary_only": true
+  },
+  "mechanisms": {
+    "water_impact": {
+      "trigger_definition": "visible entry of the source through the water surface",
+      "expected_footprint": "one splash and expanding circular ripples appear"
+    },
+    "rigid_collision": {
+      "trigger_definition": "visible horizontal contact between the source and the upright receiver",
+      "expected_footprint": "the receiver tips over and slides a short distance"
+    },
+    "brittle_fracture": {
+      "trigger_definition": "visible downward strike of the intact glass receiver",
+      "expected_footprint": "the glass cracks and breaks into several separate pieces"
+    },
+    "powder_impact": {
+      "trigger_definition": "visible downward contact with the flat powder bed",
+      "expected_footprint": "one short dust puff leaves a clear impact crater"
+    },
+    "elastic_deformation": {
+      "trigger_definition": "visible downward contact that starts receiver deformation",
+      "expected_footprint": "the surface dips deeply and springs back",
+      "receiver_scope": "black_round_and_blue_square_trampolines"
+    },
+    "field_mediated_response": {
+      "trigger_definition": "visible fan blades begin spinning while a clear gap remains",
+      "expected_footprint_by_receiver_id": {
+        "v2_field_red_pinwheel": "the red pinwheel spins rapidly in the airflow while a clear gap remains",
+        "v2_field_yellow_ribbon": "the yellow ribbon flutters strongly in the airflow while a clear gap remains"
+      },
+      "subtype": "airflow_non_contact_motion"
+    },
+    "material_release": {
+      "trigger_definition": "visible single puncture of the sealed paper pouch",
+      "expected_footprint": "the pouch tears and its contents pour downward"
+    },
+    "surface_trace": {
+      "trigger_definition": "visible single vertical press into the unmarked surface",
+      "expected_footprint": "a crisp geometric imprint remains"
+    }
+  },
+  "review_workflow": {
+    "reviewer_a": "independent_full_49_frame_atomic_review",
+    "reviewer_b": "independent_full_49_frame_atomic_review",
+    "reviewers_must_not_share_scores": true,
+    "third_reviewer": "blinded_atomic_adjudication_for_every_disagreement",
+    "ordinal_resolution": "median_of_reviewer_a_reviewer_b_and_third_reviewer",
+    "boolean_resolution": "majority_of_reviewer_a_reviewer_b_and_third_reviewer",
+    "canonical_adjudicated_csv_required_before_scoring": true,
+    "free_text_is_never_used_by_the_gate": true
+  },
+  "mechanism_gate": {
+    "total_rows_required": 24,
+    "minimum_eligible_rows": 12,
+    "minimum_eligible_direct_rows": 6,
+    "minimum_eligible_natural_rows": 6,
+    "minimum_distinct_eligible_source_ids": 2,
+    "minimum_distinct_eligible_receiver_ids": 2,
+    "all_eight_mechanisms_must_pass": true
+  },
+  "gate_output": {
+    "granularity": "aggregate_only",
+    "row_level_output": false,
+    "free_text_output": false,
+    "clean_prefix_distribution_is_diagnostic_only": true,
+    "mechanism_weighting": "equal_one_eighth"
+  }
+}

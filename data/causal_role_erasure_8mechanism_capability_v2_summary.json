@@ -1,0 +1,119 @@
+{
+  "schema_version": 2,
+  "protocol_version": "causal_role_erasure_8mechanism_capability_v2",
+  "protocol_amendment": {
+    "amends": "causal_role_erasure_8mechanism_capability_v1",
+    "applies_to": "causal_role_erasure_8mechanism_capability_v2",
+    "v1_artifacts_modified": false,
+    "fresh_ontology_for_all_eight_mechanisms": true,
+    "protocol_v1_registry_reused": false,
+    "sources_per_mechanism": 2,
+    "receivers_per_mechanism": 2,
+    "physical_crossing": "2_sources_x_2_receivers",
+    "wording_styles": [
+      "direct",
+      "natural"
+    ],
+    "cases_per_mechanism": 8,
+    "repetitions_per_case": 3,
+    "prompt_sentence_count_exact": 2,
+    "prompt_max_english_words": 55,
+    "sentence_one": "simple_receiver_initial_state",
+    "sentence_two": "one_source_action_and_one_visible_result",
+    "exact_initial_timing_required": false,
+    "source_offscreen_clause_required": false,
+    "human_actor_terms_forbidden": true,
+    "negative_prompt_list_forbidden": true,
+    "field_mediated_subtype": "airflow_non_contact_motion",
+    "reference_frames_0_15": "diagnostic_only_not_v2_eligibility"
+  },
+  "scope": {
+    "intended_use": "original_capability_screening_only",
+    "method_arm": "original",
+    "treatment_status": "pre_method_original_only",
+    "training_authorized": false,
+    "evaluation_selection_authorized": false,
+    "treatment_generation_authorized": false
+  },
+  "counts": {
+    "mechanisms": 8,
+    "sources_per_mechanism": 2,
+    "receivers_per_mechanism": 2,
+    "physical_pairs_per_mechanism": 4,
+    "cases_per_mechanism": 8,
+    "repetitions_per_case": 3,
+    "rows_per_mechanism": 24,
+    "total_cases": 64,
+    "total_rows": 192,
+    "direct_rows_per_mechanism": 12,
+    "natural_rows_per_mechanism": 12
+  },
+  "video": {
+    "num_frames": 49,
+    "fps": 8,
+    "diagnostic_reference_interval_half_open": [
+      0,
+      16
+    ],
+    "diagnostic_reference_role": "diagnostic_only_not_v2_eligibility"
+  },
+  "prompt_contract": {
+    "sentences_exact": 2,
+    "max_english_words": 55,
+    "max_observed_english_words": 51,
+    "simple_initial_state": true,
+    "one_action_one_visible_result": true,
+    "human_actor_terms_forbidden": true,
+    "negative_prompt_list_forbidden": true
+  },
+  "ontology": {
+    "status": "fresh_capability_v2",
+    "provenance": "causal_role_erasure_8mechanism_capability_v2:fresh_simplified_ontology",
+    "all_eight_mechanisms_fresh": true,
+    "protocol_v1_registry_reused": false,
+    "field_mediated_subtype": "airflow_non_contact_motion"
+  },
+  "seed": {
+    "base_seed": 940000,
+    "formula": "940000 + 1000*mechanism_index + 10*combination_index + repetition_index",
+    "globally_unique": true
+  },
+  "mechanism_order": [
+    "water_impact",
+    "rigid_collision",
+    "brittle_fracture",
+    "powder_impact",
+    "elastic_deformation",
+    "field_mediated_response",
+    "material_release",
+    "surface_trace"
+  ],
+  "recommended_aggregate_gate": {
+    "rows_per_mechanism": 24,
+    "minimum_eligible_rows": 12,
+    "minimum_eligible_direct_rows": 6,
+    "minimum_eligible_natural_rows": 6,
+    "minimum_distinct_eligible_source_ids": 2,
+    "minimum_distinct_eligible_receiver_ids": 2,
+    "all_eight_mechanisms_must_pass": true,
+    "clean_prefix_is_eligibility_requirement": false
+  },
+  "checks": {
+    "eight_mechanisms_equal_weight": true,
+    "fresh_two_by_two_crossing_per_style": true,
+    "direct_natural_balanced": true,
+    "three_fixed_repetitions_per_case": true,
+    "exactly_two_prompt_sentences": true,
+    "prompt_word_cap_enforced": true,
+    "original_only": true,
+    "unique_generation_ids": true,
+    "unique_generation_seeds": true,
+    "exclusive_no_overwrite_output": true
+  },
+  "canonical_manifest_sha256": "8e8cc14a6d327193cb7f270d2386490dc00ee783d9e7d0f76a697837f218dbee",
+  "artifact_sha256": {
+    "manifest_csv": "e92d68e23687ec72642e3620b4254e0e1e22e0d1483f84718e6dd4b1dd4ea5c3",
+    "canonical_manifest_json": "8e8cc14a6d327193cb7f270d2386490dc00ee783d9e7d0f76a697837f218dbee",
+    "prompts": "472eb889d200d9d26c5863f545281468632c0185b8f148f830dfb1589467e1d4"
+  }
+}

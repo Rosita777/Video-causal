@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "protocol": "causal_role_erasure_8mechanism_capability_v2_development_smoke_decision_v1",
+  "status": "development_only_completed_before_formal_v2_freeze",
+  "scope": {
+    "enters_formal_table": false,
+    "enters_capability_gate": false,
+    "training_authorized": false,
+    "treatment_generation_authorized": false,
+    "sealed_final36_accessed": false
+  },
+  "review_basis": "single internal full-49-frame five-panel visual screen; descriptive development evidence only",
+  "generation_contract": {
+    "model": "Wan2.1-T2V-1.3B-Diffusers",
+    "steps": 25,
+    "guidance_scale": 5.0,
+    "num_frames": 49,
+    "fps": 8,
+    "height": 480,
+    "width": 832,
+    "dtype": "bf16"
+  },
+  "prompt_file_sha256": {
+    "prompts/capability_v2_smoke16/00_water_impact.prompts": "27822ee594d6cc69e78a64d8ed24dfd4735866431843f0cd26b6b8efcb099692",
+    "prompts/capability_v2_smoke16/01_rigid_collision.prompts": "83edafe831339ef2175f04b70d82b3f7d69534381081af19029d0c296de07439",
+    "prompts/capability_v2_smoke16/02_brittle_fracture.prompts": "8b268bcf85fd61bd078cefd095fa50b2c795f3a3cc4202edeaf741351c49ff6c",
+    "prompts/capability_v2_smoke16/03_powder_impact.prompts": "098073f7954e42c14a626c395cefcc16b78360e31a0fb82b86fe006c75c68a00",
+    "prompts/capability_v2_smoke16/04_elastic_deformation.prompts": "0c8b1614d91dc99984abf0f20749a7381bf8b12a427c4b37bd90a1656a51cd59",
+    "prompts/capability_v2_smoke16/05_field_mediated_response.prompts": "de29d0f3bbf38e7ba0c309a6b138ecb06ad9e2b523770fd72c3e2fe50f55d5d6",
+    "prompts/capability_v2_smoke16/06_material_release.prompts": "06a75d71e9534941cfb0a20a061aa7fbbe9a05f90e48bc843ac5340603b425be",
+    "prompts/capability_v2_smoke16/07_surface_trace.prompts": "da1343c6f0d344a06639ee8ef3dc749a320cd5efbeb3112eec885030a935b7fa",
+    "prompts/capability_v2_smoke_patch4/04_elastic_deformation.prompts": "9be05ad3eabb09eb5ec63da035355bec2ccd82246168979302f153b4a1049741",
+    "prompts/capability_v2_smoke_patch4/05_field_mediated_response.prompts": "2bac65750f5928620c1e758873057399fd46120609bf54e09ff19ce2d9cad9ef",
+    "prompts/capability_v2_smoke_airflow2/05_field_mediated_response.prompts": "fce181a4c2664a2054e5ffa08f419d5e19892e70005086be014ad729c99edb24"
+  },
+  "runs": [
+    {
+      "root": "outputs/causal_role_erasure_8mechanism_capability_v2_smoke16",
+      "video_count": 16,
+      "seed_domain": "950000 + 1000*mechanism_index + {0,10}",
+      "generation_manifest_sha256": {
+        "00_water_impact": "872f7466c28649f90cdf238b848a1ae729b715305563d04623ec466df6a18bda",
+        "01_rigid_collision": "49d0b4de7eeb73bece727baa8d0eafa1bea80f53b1e6699b3943a5d17ea49b74",
+        "02_brittle_fracture": "8f664129e1bae546567464bff6c243969260da5db9c84bfe18257061829521cb",
+        "03_powder_impact": "aeacf6dd7d78be4968a769b1a4b645a2d1259719f9bdf9eb2193f71b3983e18f",
+        "04_elastic_deformation": "bbaed59c9243fbb3f1eb9b27adb35c95d0195e4a2f00f70e0ceb942a5859d443",
+        "05_field_mediated_response": "46c4240a94764eb1630692ad6ddf0c965f0ba0d324d31d311f64ae0959af4728",
+        "06_material_release": "036683731ad9f6cb263e540074ee465f893702bc67e0094b94637ddbeaa870a2",
+        "07_surface_trace": "70e33ff845f5fef168c2739409134739b4b2149a8a6ecd6ce58deb02c204ea85"
+      },
+      "descriptive_usable_counts": {
+        "water_impact": "2/2",
+        "rigid_collision": "1/2",
+        "brittle_fracture": "1/2",
+        "powder_impact": "2/2",
+        "elastic_deformation": "1/2",
+        "field_mediated_magnetic": "0/2",
+        "material_release": "2/2",
+        "surface_trace": "2/2"
+      }
+    },
+    {
+      "root": "outputs/causal_role_erasure_8mechanism_capability_v2_smoke_patch4",
+      "video_count": 4,
+      "seed_domains": ["964000 + {0,10}", "965000 + {0,10}"],
+      "generation_manifest_sha256": {
+        "04_elastic_deformation": "dd5bc0d3a4e71768fa23cecd1ee3fe63604bcd222268376ca2ef0883115c084d",
+        "05_field_mediated_response": "cf7935e9694bd65c10da849f093878ea4a28ca8dd1b620d56d60c72a8045846b"
+      },
+      "descriptive_usable_counts": {
+        "elastic_blue_square_trampoline": "2/2",
+        "field_mediated_magnetic_safety_pin": "0/2"
+      }
+    },
+    {
+      "root": "outputs/causal_role_erasure_8mechanism_capability_v2_smoke_airflow2",
+      "video_count": 2,
+      "seed_domain": "975000 + {0,10}",
+      "generation_manifest_sha256": {
+        "05_field_mediated_response": "4a0b61e70d64c6ee66e359d79791ce768b5928e4a654f00efe864788d5972a2d"
+      },
+      "descriptive_usable_counts": {
+        "field_mediated_airflow": "2/2"
+      }
+    }
+  ],
+  "decisions_before_formal_v2_freeze": {
+    "rigid_collision": "replace the failed blue cube source with a second high-contrast rubber ball",
+    "brittle_fracture": "replace the failed wine-glass receiver with a supported thin glass pane",
+    "elastic_deformation": "replace the failed foam receiver with a blue square trampoline",
+    "field_mediated_response": "replace the failed magnetic subtype with airflow-mediated non-contact response using desk fans and a pinwheel or ribbon",
+    "all_other_mechanisms": "retain the simplified two-sentence one-action/one-result design"
+  },
+  "formal_v2_boundary": {
+    "all_eight_mechanisms_are_fresh": true,
+    "formal_base_seed": 940000,
+    "formal_seeds_are_disjoint_from_all_smoke_seeds": true,
+    "formal_rows_may_not_be_deleted": true,
+    "formal_seeds_may_not_be_retried_or_supplemented": true,
+    "mechanism_specific_gate_thresholds_are_forbidden": true,
+    "field_subtype_may_not_be_swapped_again_after_formal_freeze": true,
+    "v1_failure_record_is_retained": true
+  }
+}
