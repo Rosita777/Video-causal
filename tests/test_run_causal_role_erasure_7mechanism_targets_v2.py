@@ -61,7 +61,12 @@ def _build_inputs(tmp_path: Path, monkeypatch) -> tuple[Path, Path, Path]:
                     "prompt_shard": "" if mechanism == "water_impact" else shard_relative,
                     "prompt_shard_index": "" if mechanism == "water_impact" else str(local),
                     "expected_counterfactual_state": f"receiver remains intact {local}",
-                    "target_video_path": "",
+                    "target_video_path": (
+                        f"outputs/water_impact_dynamic_v1/train_targets_v1/videos/"
+                        f"water_{local:03d}.mp4"
+                        if mechanism == "water_impact"
+                        else ""
+                    ),
                 }
             )
             if mechanism == "water_impact":
@@ -72,7 +77,11 @@ def _build_inputs(tmp_path: Path, monkeypatch) -> tuple[Path, Path, Path]:
                         "target_concept": "falling object, water impact, splash, ripple",
                         "expected_effect": f"receiver remains intact {local}",
                         "seed": seed,
-                        "video_path": str(project / f"historical/water_{local:03d}.mp4"),
+                        "video_path": str(
+                            project
+                            / "outputs/water_impact_dynamic_v1/train_targets_v1/videos"
+                            / f"water_{local:03d}.mp4"
+                        ),
                         "negative_prompt": "falling object, water impact, splash, ripple",
                     }
                 )

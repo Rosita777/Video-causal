@@ -290,11 +290,19 @@ def load_target_candidates(
         require(item.get("prompt") == row["target_prompt"], f"Water reuse row {index}: prompt mismatch")
         require(item.get("seed") == row["seed"], f"Water reuse row {index}: seed mismatch")
         if row.get("target_video_path", "").strip():
-            require(
-                Path(str(item.get("video_path", ""))).resolve()
-                == _resolve_lexical(project_root, str(row["target_video_path"])),
-                f"Water reuse row {index}: video path mismatch",
-            )
+            observed_video = Path(str(item.get("video_path", "")))
+            declared_video = Path(str(row["target_video_path"]))
+            if declared_video.is_absolute():
+                matches = observed_video.resolve() == declared_video.resolve()
+            else:
+                # The historical manifest lives in the preserved v1 checkout,
+                # while the frozen screening CSV stores a path relative to that
+                # checkout.  Bind the complete relative suffix instead of
+                # incorrectly resolving it under the new v4 project root.
+                matches = observed_video.as_posix().endswith(
+                    "/" + declared_video.as_posix().lstrip("/")
+                )
+            require(matches, f"Water reuse row {index}: video path mismatch")
 
     shard_items: dict[str, list[dict[str, str]]] = {}
     shard_paths: set[Path] = set()
