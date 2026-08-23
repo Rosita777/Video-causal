@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "protocol_id": "causal_role_erasure_7m_single_seed_v2",
+  "audit_id": "causal_role_erasure_7mechanism_water_target_reuse_audit_v2",
+  "status": "validated_for_exact_historical_reuse",
+  "scope": "pre-treatment Water target media, target selection, base cache, and target-prompt teacher cache",
+  "historical_source_root": "/data/xiaohuang_workspace/ljc/Video-causal",
+  "current_project_root": "/data/xiaohuang_workspace/ljc/Video-causal-v4",
+  "generation": {
+    "baseline": "negative_prompt",
+    "num_inference_steps": 25,
+    "guidance_scale": 5.0,
+    "num_frames": 49,
+    "fps": 8,
+    "height": 480,
+    "width": 832,
+    "dtype": "bf16",
+    "candidate_count": 192,
+    "validated_video_count": 192,
+    "validated_video_bytes": 16847722,
+    "video_inventory_sha256": "48a681a5dc5d78797458ae4834d0e6bb94841174dcfaaa5630cd314bbf6cd207"
+  },
+  "selection": {
+    "accepted": 178,
+    "rejected": 14,
+    "screen_is_reopened_or_modified": false
+  },
+  "sha256": {
+    "target_pair_manifest_192": "672fed568bb514561d882ef1f6c897563540299bfe7bd72e9550df8e259f3936",
+    "target_generation_manifest_192": "406e4b2d06c80e415dca05bda2262924e07c3aea67398b5caca3687fca7c140d",
+    "target_screen_final_192": "f46bcc3d6d13d0cbce006119645786e868c48789131c76f9951f3323dc561ed3",
+    "selected_training_manifest_178": "27e873736ecea1e24730eb48b2dab4f9ed8f7f2c9412d19f7893228d31c1133e",
+    "training_with_preserve_manifest_214": "3d4d8cbf9244b1575357f0ac74380cd7cb6265df4d1a85bf450de4cac120aee4",
+    "base_cache_inventory_214": "4654ee67b8937d248963839b744e59f4f535f8be8b8eee421aef264fb3cd4d65",
+    "target_prompt_teacher_cache_inventory_178": "6cf7ba0112d8df0e0a5253a7a943411fcfd85c56fc6df580446776b49d1ac9a9"
+  },
+  "reuse_policy": {
+    "regenerate_water_targets": false,
+    "rescreen_water_targets": false,
+    "reuse_exact_selected_178": true,
+    "reuse_exact_shared_preserve_36": true,
+    "new_non_water_target_candidates_required": 1152
+  }
+}
