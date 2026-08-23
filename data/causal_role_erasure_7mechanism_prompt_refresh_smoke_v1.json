@@ -4,8 +4,17 @@
   "smoke_id": "causal_role_erasure_7mechanism_prompt_refresh_smoke_v1",
   "status": "frozen_before_generation",
   "purpose": "development-only sanity check for five pre-treatment main-experiment prompt templates",
+  "prompt_file_format": "<prompt> | <target> | <effect>",
   "historical_capability_v2_is_modified": false,
   "treatment_outputs_inspected_before_freeze": false,
+  "pre_generation_repairs": [
+    {
+      "attempt_pid": 1137572,
+      "failure": "prompt parser rejected the missing target/effect transport columns before model loading or output creation",
+      "repair": "append target and effect transport columns without changing prompt text, item order, or seeds",
+      "semantic_change": false
+    }
+  ],
   "generation": {
     "model": "Wan2.1-T2V-1.3B-Diffusers",
     "baseline": "clean",
