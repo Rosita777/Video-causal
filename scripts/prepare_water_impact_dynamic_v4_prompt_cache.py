@@ -125,7 +125,11 @@ def tensor_sha256(tensor: torch.Tensor) -> str:
     digest = hashlib.sha256()
     digest.update(str(tuple(value.shape)).encode("ascii"))
     digest.update(str(value.dtype).encode("ascii"))
-    digest.update(value.view(torch.uint8).numpy().tobytes())
+    # ``Tensor.view(dtype)`` rejects a zero-dimensional tensor even though the
+    # scalar has a well-defined byte representation.  Flattening preserves the
+    # contiguous bytes while allowing scalar losses and ordinary tensors to use
+    # the same hash contract; shape and dtype are already bound above.
+    digest.update(value.reshape(-1).view(torch.uint8).numpy().tobytes())
     return digest.hexdigest()
 
 
