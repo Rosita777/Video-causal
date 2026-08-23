@@ -1350,8 +1350,17 @@ def run_null_preflight(args: argparse.Namespace) -> int:
         sigma=sigma,
     )
     if v3b_reference_signature != v4_null_sidecar_signature:
+        differing = {
+            key: {
+                "v3b_reference": v3b_reference_signature[key],
+                "v4_null_sidecar": v4_null_sidecar_signature[key],
+            }
+            for key in v3b_reference_signature
+            if v3b_reference_signature[key] != v4_null_sidecar_signature[key]
+        }
         raise ValueError(
-            "null-sidecar forward/loss/LoRA-gradient signature differs from v3b base prompt"
+            "null-sidecar forward/loss/LoRA-gradient signature differs from "
+            "v3b base prompt: " + json.dumps(differing, sort_keys=True)
         )
     del transformer, clean, noise, sigma, target_prompt, initial_trainable_state
     clear_memory()
