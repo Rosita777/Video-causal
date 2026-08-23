@@ -1,7 +1,7 @@
 # Seven-mechanism causal-role erasure: single-seed master protocol v2
 
-Status: **pre-treatment scope amendment; prompt-refresh smoke frozen on
-2026-08-23**.
+Status: **pre-treatment scope and prompt-construction amendment semantically
+frozen after the one-time smoke on 2026-08-23; exact main manifests pending**.
 
 Protocol ID: `causal_role_erasure_7m_single_seed_v2`.
 
@@ -39,9 +39,9 @@ artifacts are never renamed or reindexed.
 
 ## 2. Prompt construction amendment
 
-Water-impact and material-release ontology semantics are unchanged. The other
-five mechanisms use one uniform prompt rule derived from their Original-only
-failure modes:
+Water-impact, rigid-collision, and material-release ontology semantics are
+unchanged. Four mechanisms use one uniform prompt rule derived from their
+Original-only failure modes:
 
 - sentence one places a recognizable source and clean receiver together in a
   fixed-camera composition before the action;
@@ -57,7 +57,7 @@ Mechanism-specific persistent footprints are:
 
 | Mechanism | Main prompt correction |
 | --- | --- |
-| Rigid collision | Receiver falls flat and remains there; sliding is not required |
+| Rigid collision | Retain the capability-v2 construction; reject the unhelpful fall-flat refresh |
 | Brittle fracture | Separate fragments remain and the impactor rests visibly among or beside them |
 | Powder impact | A deep crater remains around a half-embedded visible ball; a dust puff is optional |
 | Elastic deformation | The elastic bed remains deeply bowed beneath a resting visible ball |
@@ -74,6 +74,21 @@ new prompts per corrected mechanism are generated with the fixed seeds
 not pooled with capability v2 or reported as a paper result. Seeds are not
 retried, and its decision rule is frozen in
 `data/causal_role_erasure_7mechanism_prompt_refresh_smoke_v1.json`.
+
+Full-49-frame review produced the following frozen sanity result:
+
+| Mechanism | Complete sanity examples | Decision |
+| --- | ---: | --- |
+| Rigid collision | 0/2 | Reject refreshed prompt; retain v2 construction |
+| Brittle fracture | 2/2 | Promote refreshed construction |
+| Powder impact | 2/2 | Promote refreshed construction |
+| Elastic deformation | 1/2 | Promote refreshed construction |
+| Surface trace | 1/2 | Promote refreshed construction |
+
+Rigid collision already had 17/24 task-relevant Original examples under v2.
+Its failed two-video refresh is not retried and does not replace that stronger
+construction. The exact generation and review evidence is recorded in
+`data/causal_role_erasure_7mechanism_prompt_refresh_smoke_v1_decision.json`.
 
 After this bounded check, prompt templates and ontology fields are frozen for
 the main experiment. Formal Original eligibility remains the per-case rule

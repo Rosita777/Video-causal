@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "protocol_id": "causal_role_erasure_7m_single_seed_v2",
+  "smoke_id": "causal_role_erasure_7mechanism_prompt_refresh_smoke_v1",
+  "status": "complete",
+  "review_scope": "all 49 frames rendered as five overlapping indexed panels",
+  "formal_paper_result": false,
+  "seed_retry_performed": false,
+  "generation": {
+    "remote_project_commit": "8c75e806764a15a7c1a9593c3ca11066acb7c27f",
+    "generation_manifest_sha256": "ab322d4f2079a3f7f50cebeea774caa863b19638293819d7e6693456894dd84f",
+    "prompt_file_sha256": "8d2016ffbbe979c34fd9ed3d58ad83d54ee828efbf5fb898d2abe6fff71019ee",
+    "smoke_plan_sha256": "ee7331f75020067289102ea273131bbe6058dc862e5d6d0cc99da756f39facd2",
+    "generator_sha256": "04bc6b8a8f93d885137c6157509b00f46824231560989f7b7f78192b26469b5e",
+    "validated_video_count": 10,
+    "validated_video_bytes": 2001677,
+    "media_contract": {"decoded_frames": 49, "fps": 8, "height": 480, "width": 832}
+  },
+  "atomic_fields": ["source", "receiver", "trigger", "persistent_footprint"],
+  "items": [
+    {"index": 0, "mechanism": "rigid_collision", "seed": 979000, "scores": [1, 1, 1, 0], "video_sha256": "941ca7749b8763a2d7db61f8bcfa38b56ed5f3a36641def26f8649e49a907545", "evidence": "contact at frames 41-44; domino remains upright through frame 48"},
+    {"index": 1, "mechanism": "rigid_collision", "seed": 979001, "scores": [1, 1, 1, 0], "video_sha256": "b59debe9e3975564323bffdda939d232c01a84222aea5c2eea9d18523a9453b8", "evidence": "ball reaches box around frames 22-29; box remains upright through frame 48"},
+    {"index": 2, "mechanism": "brittle_fracture", "seed": 979002, "scores": [1, 1, 1, 1], "video_sha256": "ceda95d22a65cc20ebdea5b5db1c39113049df3a1b68c6dc9ad8466d95795f8e", "evidence": "impact and break at frames 18-23; fragments persist through frame 48"},
+    {"index": 3, "mechanism": "brittle_fracture", "seed": 979003, "scores": [1, 1, 1, 1], "video_sha256": "0aebc898b17d1c01783f4b59e160603832e2a3ee2c6da3dccdc29bca81c9141f", "evidence": "impact and break at frames 17-20; fragments persist through frame 48"},
+    {"index": 4, "mechanism": "powder_impact", "seed": 979004, "scores": [1, 1, 1, 1], "video_sha256": "ac8052653a100a34ca654135d43be1f5f87a82cbcec95e6dc4396e7e6ab257b3", "evidence": "powder entry at frames 16-21; round crater persists through frames 29-48"},
+    {"index": 5, "mechanism": "powder_impact", "seed": 979005, "scores": [1, 1, 1, 1], "video_sha256": "901c2a8275c2ee5569c342ea0932484394359544a55e1a473e6cb065a281251e", "evidence": "contact at frames 14-18; deep crater persists through frames 25-48"},
+    {"index": 6, "mechanism": "elastic_deformation", "seed": 979006, "scores": [1, 1, 1, 1], "video_sha256": "036b1de9132be6dc7607ecb55b404d6c56522c25234c191934dbe833fbb501f0", "evidence": "contact at frames 25-33; deep bed deformation persists through frames 34-48"},
+    {"index": 7, "mechanism": "elastic_deformation", "seed": 979007, "scores": [1, 1, 1, 0], "video_sha256": "a9caaec9e15324c40c5dc7e168608cf8e6e19361854c77c05592427d9ec04228", "evidence": "contact is visible, but the ball shrinks and no clear deep bed deformation appears"},
+    {"index": 8, "mechanism": "surface_trace", "seed": 979008, "scores": [1, 1, 1, 1], "video_sha256": "a68f17edff7102fc89a071319840299e58106c96c7df753f39cfed3d49572837", "evidence": "press through frame 38; circular indentation remains after lift in frames 39-48"},
+    {"index": 9, "mechanism": "surface_trace", "seed": 979009, "scores": [1, 1, 1, 0], "video_sha256": "1192161e21bed6fe676cfa445c58e186fb411c02312b2293c3736f425bcfb620", "evidence": "stamp never clears the clay and no square indentation becomes judgeable"}
+  ],
+  "per_mechanism": {
+    "rigid_collision": {"complete": 0, "total": 2, "sanity_pass": false},
+    "brittle_fracture": {"complete": 2, "total": 2, "sanity_pass": true},
+    "powder_impact": {"complete": 2, "total": 2, "sanity_pass": true},
+    "elastic_deformation": {"complete": 1, "total": 2, "sanity_pass": true},
+    "surface_trace": {"complete": 1, "total": 2, "sanity_pass": true}
+  },
+  "decision": {
+    "promote_refreshed_constructions": ["brittle_fracture", "powder_impact", "elastic_deformation", "surface_trace"],
+    "reject_refreshed_constructions": ["rigid_collision"],
+    "rigid_collision_fallback": "retain capability-v2 construction with 17/24 task-relevant Original examples",
+    "additional_smoke_allowed": false,
+    "main_experiment_mechanisms": ["water_impact", "rigid_collision", "brittle_fracture", "powder_impact", "elastic_deformation", "material_release", "surface_trace"]
+  }
+}
