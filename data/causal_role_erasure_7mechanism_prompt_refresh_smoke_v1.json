@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "protocol_id": "causal_role_erasure_7m_single_seed_v2",
+  "smoke_id": "causal_role_erasure_7mechanism_prompt_refresh_smoke_v1",
+  "status": "frozen_before_generation",
+  "purpose": "development-only sanity check for five pre-treatment main-experiment prompt templates",
+  "historical_capability_v2_is_modified": false,
+  "treatment_outputs_inspected_before_freeze": false,
+  "generation": {
+    "model": "Wan2.1-T2V-1.3B-Diffusers",
+    "baseline": "clean",
+    "num_inference_steps": 25,
+    "guidance_scale": 5.0,
+    "num_frames": 49,
+    "fps": 8,
+    "height": 480,
+    "width": 832,
+    "dtype": "bf16",
+    "seeds": [979000, 979001, 979002, 979003, 979004, 979005, 979006, 979007, 979008, 979009]
+  },
+  "items": [
+    {"index": 0, "mechanism": "rigid_collision", "variant": "direct", "seed": 979000},
+    {"index": 1, "mechanism": "rigid_collision", "variant": "natural", "seed": 979001},
+    {"index": 2, "mechanism": "brittle_fracture", "variant": "direct", "seed": 979002},
+    {"index": 3, "mechanism": "brittle_fracture", "variant": "natural", "seed": 979003},
+    {"index": 4, "mechanism": "powder_impact", "variant": "direct", "seed": 979004},
+    {"index": 5, "mechanism": "powder_impact", "variant": "natural", "seed": 979005},
+    {"index": 6, "mechanism": "elastic_deformation", "variant": "direct", "seed": 979006},
+    {"index": 7, "mechanism": "elastic_deformation", "variant": "natural", "seed": 979007},
+    {"index": 8, "mechanism": "surface_trace", "variant": "direct", "seed": 979008},
+    {"index": 9, "mechanism": "surface_trace", "variant": "natural", "seed": 979009}
+  ],
+  "one_time_decision_rule": {
+    "mechanism_sanity": "at least one of two videos visibly contains the source, receiver, trigger, and registered persistent footprint",
+    "seed_retry_allowed": false,
+    "threshold_tuning_allowed": false,
+    "formal_paper_result": false
+  },
+  "historical_evidence_sha256": {
+    "capability_v2_canonical_manifest": "8e8cc14a6d327193cb7f270d2386490dc00ee783d9e7d0f76a697837f218dbee",
+    "capability_v2_canonical_adjudicated_review": "dc5d32bd0a0d600bf51df0c14cf00b9be3593799fc76ccefd4b6d9cff22addf7",
+    "capability_v2_aggregate_gate": "d57dd11863227e79957515bee8b544d98f265f5d759053ca541b99768e48ae6c"
+  }
+}
