@@ -62,6 +62,7 @@ RUN_REGISTRATION_FIELDS = (
     "model",
     "temperature",
     "max_tokens",
+    "token_parameter_name",
     "timeout",
     "workers",
     "response_schema_sha256",
@@ -283,6 +284,29 @@ def response_schema_sha256() -> str:
     return object_sha256(RESPONSE_SCHEMA)
 
 
+def token_parameter_name_for(model: str) -> str:
+    require(
+        isinstance(model, str) and model.strip() == model and bool(model),
+        "model name must be nonempty and whitespace-normalized",
+    )
+    return (
+        "max_completion_tokens"
+        if model.casefold().startswith("gpt-5.6")
+        else "max_tokens"
+    )
+
+
+def validate_model_request_config(model: str, temperature: float) -> str:
+    parameter_name = token_parameter_name_for(model)
+    require(0.0 <= temperature <= 2.0, "temperature is outside [0,2]")
+    if parameter_name == "max_completion_tokens":
+        require(
+            temperature == 1.0,
+            "GPT-5.6 chat completions require temperature=1.0",
+        )
+    return parameter_name
+
+
 def prompt_for(row: Mapping[str, Any]) -> str:
     assignment = row["assignment"]
     field_rules = screening.reviewer_instructions()["fields"]
@@ -325,7 +349,8 @@ def request_payload_for(
     temperature: float,
     max_tokens: int,
 ) -> dict[str, Any]:
-    return {
+    token_parameter_name = validate_model_request_config(model, temperature)
+    payload = {
         "model": model,
         "messages": [
             {
@@ -340,11 +365,13 @@ def request_payload_for(
             }
         ],
         "temperature": temperature,
-        "max_tokens": max_tokens,
     }
+    payload[token_parameter_name] = max_tokens
+    return payload
 
 
 def dry_payload_for(row: Mapping[str, Any], *, model: str, temperature: float, max_tokens: int) -> dict[str, Any]:
+    token_parameter_name = validate_model_request_config(model, temperature)
     return {
         "anonymous_review_id": row["assignment"]["anonymous_review_id"],
         "composite_path": str(row["composite"]),
@@ -352,7 +379,8 @@ def dry_payload_for(row: Mapping[str, Any], *, model: str, temperature: float, m
         "prompt": prompt_for(row),
         "model": model,
         "temperature": temperature,
-        "max_tokens": max_tokens,
+        "token_parameter_name": token_parameter_name,
+        "token_limit": max_tokens,
         "response_schema": RESPONSE_SCHEMA,
         "actual_request_image_policy": "single full composite as base64 data URL",
     }
@@ -403,6 +431,7 @@ def normalize_model_object(parsed: Mapping[str, Any]) -> dict[str, Any]:
 def _request_descriptor(
     row: Mapping[str, Any], *, model: str, temperature: float, max_tokens: int
 ) -> dict[str, Any]:
+    token_parameter_name = validate_model_request_config(model, temperature)
     return {
         "anonymous_review_id": row["assignment"]["anonymous_review_id"],
         "assignment_row_sha256": row["assignment_row_sha256"],
@@ -412,6 +441,7 @@ def _request_descriptor(
         "model": model,
         "temperature": temperature,
         "max_tokens": max_tokens,
+        "token_parameter_name": token_parameter_name,
     }
 
 
@@ -497,8 +527,8 @@ def run_review(
     transport: Transport = urllib_transport,
 ) -> dict[str, Any]:
     require(workers > 0, "workers must be positive")
-    require(timeout > 0 and max_tokens > 0, "timeout/max_tokens must be positive")
-    require(0.0 <= temperature <= 2.0, "temperature is outside [0,2]")
+    require(timeout > 0 and max_tokens > 0, "timeout/token limit must be positive")
+    token_parameter_name = validate_model_request_config(model, temperature)
     pass_name, all_rows = load_public_pass(assignment_path, template_path)
     selected = _select_rows(all_rows, start, limit)
     _prepare_fresh_run_root(output_root)
@@ -525,6 +555,7 @@ def run_review(
         "model": model,
         "temperature": temperature,
         "max_tokens": max_tokens,
+        "token_parameter_name": token_parameter_name,
         "timeout": timeout,
         "workers": workers,
         "response_schema_sha256": response_schema_sha256(),
@@ -812,6 +843,13 @@ def merge_checkpoints(
             registration["response_schema_sha256"] == response_schema_sha256(),
             "run response schema differs from current fixed schema",
         )
+        require(
+            registration["token_parameter_name"]
+            == validate_model_request_config(
+                str(registration["model"]), float(registration["temperature"])
+            ),
+            "run token-parameter policy differs from model contract",
+        )
         bound_assignment = _resolve_ref(
             run_root, registration["assignment"], "registered public assignment"
         )
@@ -861,6 +899,7 @@ def merge_checkpoints(
                 registration["model"],
                 registration["temperature"],
                 registration["max_tokens"],
+                registration["token_parameter_name"],
                 registration["response_schema_sha256"],
             )
         )

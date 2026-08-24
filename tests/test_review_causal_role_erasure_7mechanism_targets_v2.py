@@ -177,6 +177,79 @@ def test_dry_run_exports_payloads_without_transport_call(tmp_path: Path):
         )
 
 
+def test_gpt56_luna_uses_completion_tokens_and_requires_temperature_one(
+    tmp_path: Path,
+):
+    assignment, template = _public_pass(tmp_path)
+    _, public_rows = review.load_public_pass(assignment, template)
+    row = public_rows[0]
+    payload = review.request_payload_for(
+        row,
+        model="gpt-5.6-luna",
+        temperature=1.0,
+        max_tokens=777,
+    )
+    assert payload["max_completion_tokens"] == 777
+    assert "max_tokens" not in payload
+    assert payload["temperature"] == 1.0
+    descriptor = review._request_descriptor(
+        row,
+        model="gpt-5.6-luna",
+        temperature=1.0,
+        max_tokens=777,
+    )
+    assert descriptor["token_parameter_name"] == "max_completion_tokens"
+
+    dry_root = tmp_path / "luna_dry"
+    review.run_review(
+        assignment_path=assignment,
+        template_path=template,
+        output_root=dry_root,
+        dry_run=True,
+        start=0,
+        limit=1,
+        workers=1,
+        model="gpt-5.6-luna",
+        temperature=1.0,
+        max_tokens=777,
+        timeout=30,
+    )
+    registration = json.loads((dry_root / "run_registration.json").read_text())
+    assert registration["token_parameter_name"] == "max_completion_tokens"
+    dry_payload = json.loads((dry_root / "payloads.jsonl").read_text())
+    assert dry_payload["token_parameter_name"] == "max_completion_tokens"
+    assert dry_payload["token_limit"] == 777
+
+    rejected_root = tmp_path / "luna_temp0_must_not_exist"
+    with pytest.raises(
+        review.ReviewTransportError,
+        match="require temperature=1.0",
+    ):
+        review.run_review(
+            assignment_path=assignment,
+            template_path=template,
+            output_root=rejected_root,
+            dry_run=True,
+            start=0,
+            limit=1,
+            workers=1,
+            model="gpt-5.6-luna",
+            temperature=0.0,
+            max_tokens=777,
+            timeout=30,
+        )
+    assert not rejected_root.exists()
+
+    legacy_payload = review.request_payload_for(
+        row,
+        model="test-vlm",
+        temperature=0.0,
+        max_tokens=333,
+    )
+    assert legacy_payload["max_tokens"] == 333
+    assert "max_completion_tokens" not in legacy_payload
+
+
 def test_infrastructure_error_replay_and_checkpoint_merge(tmp_path: Path):
     assignment, template = _public_pass(tmp_path)
 
