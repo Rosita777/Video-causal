@@ -495,7 +495,21 @@ def load_and_validate_generation_aggregate(
         require(video_path not in seen_paths, f"{expected_row['candidate_id']}: duplicate video path")
         seen_paths.add(video_path)
         if expected_row.get("target_video_path"):
-            require(video_path.resolve() == resolve_project_path(project_root, expected_row["target_video_path"]).resolve(), f"{expected_row['candidate_id']}: video path differs from candidate graph")
+            # ``target_video_path`` is the frozen logical candidate-ID path.
+            # ``generate_wan_clean.py`` canonically emits a slug filename, so
+            # bind the registered mechanism/videos directory while treating
+            # the fully validated generation-manifest path as the canonical
+            # physical filename.  This mirrors the runner's single-use path
+            # recovery policy without weakening any ID/order/prompt/seed/hash
+            # or media check above/below.
+            logical_path = resolve_project_path(
+                project_root, expected_row["target_video_path"]
+            )
+            require(
+                logical_path.suffix.lower() == ".mp4"
+                and logical_path.parent.resolve() == video_path.parent.resolve(),
+                f"{expected_row['candidate_id']}: logical target_video_path escaped registered videos directory",
+            )
         require(item["size_bytes"] == video_path.stat().st_size and item["size_bytes"] > 0, f"{expected_row['candidate_id']}: video size mismatch")
         require(item["video_sha256"] == sha256_file(video_path), f"{expected_row['candidate_id']}: video SHA-256 mismatch")
         by_id[expected_row["candidate_id"]] = dict(item, _resolved_video_path=str(video_path))

@@ -38,11 +38,17 @@ def _fixture(tmp_path: Path):
     items = []
     for row in rows:
         if row["target_origin"] == "new_generation_v2":
-            relative = Path("new_videos") / f"{row['candidate_id']}.mp4"
-            path = project / relative
+            logical_relative = (
+                Path("new_videos") / f"{row['candidate_id']}.mp4"
+            )
+            actual_relative = (
+                Path("new_videos")
+                / f"{int(row['global_index']):04d}_generated-slug_seed{row['seed']}.mp4"
+            )
+            path = project / actual_relative
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes((row["candidate_id"] + "\n").encode())
-            row["target_video_path"] = relative.as_posix()
+            row["target_video_path"] = logical_relative.as_posix()
             items.append(
                 {
                     "global_index": int(row["global_index"]),
@@ -50,7 +56,7 @@ def _fixture(tmp_path: Path):
                     "mechanism": row["mechanism"],
                     "seed": int(row["seed"]),
                     "prompt": row["target_prompt"],
-                    "video_path": relative.as_posix(),
+                    "video_path": actual_relative.as_posix(),
                     "video_sha256": screening.sha256_file(path),
                     "size_bytes": path.stat().st_size,
                     "media": screening.expected_media(),
@@ -140,6 +146,51 @@ def test_generation_binding_rejects_hash_drift(tmp_path: Path):
     payload["items"][0]["video_sha256"] = "0" * 64
     aggregate.write_text(json.dumps(payload) + "\n")
     with pytest.raises(screening.ScreeningError, match="video SHA-256 mismatch"):
+        screening.load_and_validate_generation_aggregate(
+            aggregate,
+            candidates_path=candidates,
+            candidate_rows=screening.load_and_validate_candidates(candidates)[1],
+            project_root=project,
+        )
+
+
+def test_logical_candidate_filename_may_differ_from_canonical_slug_filename(
+    tmp_path: Path,
+):
+    project, candidates, aggregate, _, _ = _fixture(tmp_path)
+    _, rows = screening.load_and_validate_candidates(candidates)
+    payload, normalized = screening.load_and_validate_generation_aggregate(
+        aggregate,
+        candidates_path=candidates,
+        candidate_rows=rows,
+        project_root=project,
+    )
+    first = next(row for row in rows if row["target_origin"] == "new_generation_v2")
+    item = normalized[first["candidate_id"]]
+    assert Path(first["target_video_path"]).name == f"{first['candidate_id']}.mp4"
+    assert Path(item["video_path"]).name != Path(first["target_video_path"]).name
+    assert Path(item["video_path"]).parent == Path(first["target_video_path"]).parent
+    assert payload["validated_videos"] == 1152
+
+
+def test_manifest_video_cannot_escape_registered_logical_videos_directory(
+    tmp_path: Path,
+):
+    project, candidates, aggregate, _, _ = _fixture(tmp_path)
+    payload = json.loads(aggregate.read_text())
+    first = payload["items"][0]
+    escaped_relative = Path("escaped_videos") / Path(first["video_path"]).name
+    escaped = project / escaped_relative
+    escaped.parent.mkdir()
+    escaped.write_bytes((project / first["video_path"]).read_bytes())
+    first["video_path"] = escaped_relative.as_posix()
+    first["video_sha256"] = screening.sha256_file(escaped)
+    first["size_bytes"] = escaped.stat().st_size
+    aggregate.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    with pytest.raises(
+        screening.ScreeningError,
+        match="logical target_video_path escaped registered videos directory",
+    ):
         screening.load_and_validate_generation_aggregate(
             aggregate,
             candidates_path=candidates,
