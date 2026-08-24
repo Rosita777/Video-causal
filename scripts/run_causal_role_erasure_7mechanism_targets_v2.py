@@ -26,6 +26,9 @@ from typing import Any, Callable, Mapping, Sequence
 
 PROTOCOL_ID = "causal_role_erasure_7m_single_seed_v2"
 RUNNER_ID = "causal_role_erasure_7mechanism_targets_runner_v2"
+PATH_BINDING_RECOVERY_PROTOCOL = (
+    "causal_role_erasure_7mechanism_target_path_binding_recovery_v1"
+)
 MECHANISM_ORDER = (
     "water_impact",
     "rigid_collision",
@@ -92,6 +95,10 @@ ORIGIN_ALIASES = {
     "generate_new": NEW_ORIGIN,
 }
 SEALED_TOKENS = ("final36", "sealed-final", "sealed_final")
+FINAL_ITEM_FIELDS = (
+    "global_index", "candidate_id", "mechanism", "prompt_shard_index",
+    "target_prompt", "seed", "video_path", "video_sha256", "size_bytes", "media",
+)
 
 PYAV_PROBE_CODE = r"""
 import av, json, sys
@@ -127,6 +134,13 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def canonical_json_bytes(value: Any) -> bytes:
+    return (
+        json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        + "\n"
+    ).encode("utf-8")
 
 
 def regular_file(path: Path, label: str) -> None:
@@ -642,7 +656,12 @@ def validate_job_outputs(
         require(video.suffix.lower() == ".mp4" and video.stat().st_size > 0, f"{job['mechanism']} item {index}: invalid MP4")
         expected_path = str(job["expected_video_paths"][index]).strip()
         if expected_path:
-            require(video.resolve() == Path(expected_path).resolve(), f"{job['mechanism']} item {index}: target_video_path mismatch")
+            logical = Path(expected_path)
+            require(
+                logical.parent.resolve() == videos_dir.resolve()
+                and logical.suffix.lower() == ".mp4",
+                f"{job['mechanism']} item {index}: logical target_video_path escaped output directory",
+            )
         require(video not in listed, f"{job['mechanism']}: duplicate video path")
         listed.add(video)
         media = media_probe(Path(str(plan["implementation"]["media_probe_python"])), video)
@@ -655,6 +674,7 @@ def validate_job_outputs(
                 "prompt_shard_index": index,
                 "target_prompt": item["prompt"],
                 "seed": item["seed"],
+                "logical_expected_video_path": expected_path or None,
                 "video_path": str(video),
                 "video_sha256": sha256_file(video),
                 "size_bytes": video.stat().st_size,
@@ -711,6 +731,12 @@ def write_aggregate(output_root: Path, plan: Mapping[str, Any], status: str, err
     frozen = output_root / "target_generation_manifest.json"
     if frozen.is_file():
         payload["generation_manifest"] = {"path": str(frozen), "sha256": sha256_file(frozen)}
+    recovery = output_root / "path_binding_recovery_receipt.json"
+    if recovery.is_file():
+        payload["path_binding_recovery_receipt"] = {
+            "path": str(recovery),
+            "sha256": sha256_file(recovery),
+        }
     if error is not None:
         payload["error"] = error
     write_json_atomic(output_root / "target_generation_aggregate.json", payload)
@@ -719,7 +745,11 @@ def write_aggregate(output_root: Path, plan: Mapping[str, Any], status: str, err
 def write_generation_manifest(output_root: Path, plan: Mapping[str, Any]) -> Path:
     statuses = [read_status(job) for job in plan["jobs"]]
     require(all(status["status"] == "completed" for status in statuses), "all six jobs must complete before freeze")
-    items = [item for status in statuses for item in status["outputs"]]
+    items = [
+        {field: item[field] for field in FINAL_ITEM_FIELDS}
+        for status in statuses
+        for item in status["outputs"]
+    ]
     items.sort(key=lambda item: int(item["global_index"]))
     expected_indices = list(range(ROWS_PER_MECHANISM, EXPECTED_ROWS))
     require([item["global_index"] for item in items] == expected_indices, "generated global_index coverage is not exact 192..1343")
@@ -754,6 +784,257 @@ def _terminate(running: Mapping[str, tuple[Mapping[str, Any], Any, Any]]) -> Non
             time.sleep(0.1)
         if process.poll() is None:
             process.kill()
+
+
+def _binding_sha256(outputs: Sequence[Mapping[str, Any]], field: str) -> str:
+    digest = hashlib.sha256()
+    for item in outputs:
+        digest.update(str(item["candidate_id"]).encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(str(item[field]).encode("utf-8"))
+        digest.update(b"\n")
+    return digest.hexdigest()
+
+
+def validate_path_binding_recovery_state(
+    plan: Mapping[str, Any],
+    output_root: Path,
+    *,
+    media_probe: Callable[[Path, Path], dict[str, Any]] = probe_video_media,
+) -> tuple[dict[str, Any], list[tuple[Mapping[str, Any], dict[str, Any], dict[str, Any]]]]:
+    """Accept only the one observed post-generation logical-path failure."""
+
+    require(plan["dry_run"] is False, "recovery requires the original real-run plan")
+    run_manifest = output_root / "target_generation_run_manifest.json"
+    aggregate_path = output_root / "target_generation_aggregate.json"
+    recovery_path = output_root / "path_binding_recovery_receipt.json"
+    final_manifest = output_root / "target_generation_manifest.json"
+    regular_file(run_manifest, "existing target generation run manifest")
+    regular_file(aggregate_path, "failed target generation aggregate")
+    require(not recovery_path.exists() and not recovery_path.is_symlink(), "path-binding recovery is single-use")
+    require(not final_manifest.exists() and not final_manifest.is_symlink(), "final manifest already exists; recovery forbidden")
+    aggregate = json.loads(aggregate_path.read_text(encoding="utf-8"))
+    require(isinstance(aggregate, dict) and aggregate.get("status") == "failed", "recovery requires aggregate status=failed")
+    require(aggregate.get("status_counts") == {"failed": 4, "planned": 2}, "recovery aggregate status counts must be failed=4/planned=2")
+    require(aggregate.get("validated_generated_rows") == 0, "recovery aggregate unexpectedly contains validated rows")
+    run_ref = aggregate.get("run_manifest")
+    require(
+        isinstance(run_ref, dict)
+        and run_ref.get("path") == str(run_manifest)
+        and run_ref.get("sha256") == sha256_file(run_manifest),
+        "recovery aggregate/run-manifest binding mismatch",
+    )
+    error = aggregate.get("error")
+    require(isinstance(error, str) and error, "recovery aggregate has no failure reason")
+    require("target_video_path mismatch" in error, "recovery aggregate is not the registered path-binding failure")
+    scrubbed = error.replace("target_video_path mismatch", "")
+    require("mismatch" not in scrubbed and "exited" not in scrubbed and "interrupted" not in scrubbed, "recovery aggregate contains another failure category")
+
+    validated_wave0: list[tuple[Mapping[str, Any], dict[str, Any], dict[str, Any]]] = []
+    failed_status_fields = {
+        "schema_version", "job_id", "mechanism", "wave_index", "gpu", "status",
+        "expected_videos", "updated_at_utc", "return_code", "error",
+    }
+    planned_status_fields = {
+        "schema_version", "job_id", "mechanism", "wave_index", "gpu", "status",
+        "expected_videos", "updated_at_utc",
+    }
+    for job in plan["jobs"]:
+        status_path = Path(str(job["status_path"]))
+        regular_file(status_path, f"{job['mechanism']} recovery status")
+        status = read_status(job)
+        output_dir = Path(str(job["output_dir"]))
+        if job["wave_index"] == 0:
+            require(set(status) == failed_status_fields, f"{job['mechanism']}: failed status fields are not exact")
+            require(status["status"] == "failed" and status["return_code"] == 0, f"{job['mechanism']}: recovery requires failed/return_code=0")
+            require(
+                status["error"]
+                == f"{job['mechanism']} item 0: target_video_path mismatch",
+                f"{job['mechanism']}: failure is not the exact logical path mismatch",
+            )
+            require(output_dir.is_dir() and not output_dir.is_symlink(), f"{job['mechanism']}: generated output is missing")
+            observed = validate_job_outputs(job, plan, media_probe=media_probe)
+            require(observed["validated_video_count"] == ROWS_PER_MECHANISM, f"{job['mechanism']}: recovery validation did not cover 192 videos")
+            validated_wave0.append((job, status, observed))
+        else:
+            require(set(status) == planned_status_fields, f"{job['mechanism']}: wave1 planned status fields are not exact")
+            require(status["status"] == "planned", f"{job['mechanism']}: wave1 is not untouched/planned")
+            require(not output_dir.exists() and not output_dir.is_symlink(), f"{job['mechanism']}: wave1 output already exists")
+            require(not Path(str(job["log_path"])).exists(), f"{job['mechanism']}: wave1 log exists, so it was already launched")
+    require(len(validated_wave0) == 4, "recovery must validate exactly four wave0 jobs")
+    return aggregate, validated_wave0
+
+
+def execute_path_binding_recovery(
+    plan: Mapping[str, Any],
+    output_root: Path,
+    *,
+    poll_interval: float,
+    popen_factory: Callable[..., Any] = subprocess.Popen,
+    sleep_fn: Callable[[float], None] = time.sleep,
+    media_probe: Callable[[Path, Path], dict[str, Any]] = probe_video_media,
+) -> None:
+    """Recover only validated wave0 media, then launch untouched wave1."""
+
+    validate_bound_inputs(plan, require_runtime=True)
+    aggregate, validated_wave0 = validate_path_binding_recovery_state(
+        plan, output_root, media_probe=media_probe
+    )
+    recovery_path = output_root / "path_binding_recovery_receipt.json"
+    receipt = {
+        "schema_version": 1,
+        "protocol": PATH_BINDING_RECOVERY_PROTOCOL,
+        "protocol_id": PROTOCOL_ID,
+        "status": "authorized_after_exact_wave0_revalidation",
+        "created_at_utc": utc_now(),
+        "reason": "builder registered logical candidate-id filenames while generate_wan_clean emitted prompt-slug filenames",
+        "previous_aggregate_sha256": sha256_file(
+            output_root / "target_generation_aggregate.json"
+        ),
+        "run_manifest_sha256": sha256_file(
+            output_root / "target_generation_run_manifest.json"
+        ),
+        "wave0_regenerated": False,
+        "wave0_validated_video_count": 4 * ROWS_PER_MECHANISM,
+        "wave1_pre_recovery_status": "planned_and_unlaunched",
+        "path_policy": {
+            "logical_expected_video_path": "retained_as_noncanonical_metadata",
+            "actual_generator_video_path": "canonical_media_path_after_full_validation",
+        },
+        "wave0": [
+            {
+                "job_id": job["job_id"],
+                "mechanism": job["mechanism"],
+                "failed_status_sha256": sha256_file(Path(str(job["status_path"]))),
+                "generation_manifest_sha256": observed["generation_manifest_sha256"],
+                "validated_video_count": observed["validated_video_count"],
+                "validated_video_bytes": observed["validated_video_bytes"],
+                "logical_path_binding_sha256": _binding_sha256(
+                    observed["outputs"], "logical_expected_video_path"
+                ),
+                "canonical_actual_path_binding_sha256": _binding_sha256(
+                    observed["outputs"], "video_path"
+                ),
+            }
+            for job, _, observed in validated_wave0
+        ],
+    }
+    write_bytes_exclusive(recovery_path, canonical_json_bytes(receipt))
+    recovery_ref = {"path": str(recovery_path), "sha256": sha256_file(recovery_path)}
+    for job, _, observed in validated_wave0:
+        write_json_atomic(
+            Path(str(job["status_path"])),
+            _status(
+                job,
+                "completed",
+                return_code=0,
+                recovered_without_regeneration=True,
+                recovery_receipt=recovery_ref,
+                **observed,
+            ),
+        )
+
+    validate_bound_inputs(plan, require_runtime=True)
+    wave1 = [job for job in plan["jobs"] if job["wave_index"] == 1]
+    require(len(wave1) == 2, "recovery requires exactly two wave1 jobs")
+    write_aggregate(output_root, plan, "running")
+    running: dict[str, tuple[Mapping[str, Any], Any, Any]] = {}
+    failures: list[str] = []
+    try:
+        for job in wave1:
+            require(not Path(str(job["output_dir"])).exists(), f"{job['mechanism']}: wave1 output already exists")
+            write_json_atomic(
+                Path(str(job["status_path"])),
+                _status(job, "running", started_at_utc=utc_now()),
+            )
+            log = Path(str(job["log_path"])).open("xb")
+            environment = os.environ.copy()
+            for key in job["unset_environment"]:
+                environment.pop(str(key), None)
+            environment.update(
+                {str(key): str(value) for key, value in job["environment"].items()}
+            )
+            try:
+                process = popen_factory(
+                    job["command"],
+                    cwd=plan["project_root"],
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                    env=environment,
+                )
+            except BaseException:
+                log.close()
+                raise
+            running[str(job["job_id"])] = (job, process, log)
+        while running:
+            progressed = False
+            for job_id, (job, process, log) in list(running.items()):
+                return_code = process.poll()
+                if return_code is None:
+                    continue
+                progressed = True
+                log.close()
+                running.pop(job_id)
+                if return_code != 0:
+                    message = f"generator exited {return_code}"
+                    failures.append(f"{job['mechanism']}: {message}")
+                    write_json_atomic(
+                        Path(str(job["status_path"])),
+                        _status(job, "failed", return_code=return_code, error=message),
+                    )
+                    continue
+                try:
+                    validation = validate_job_outputs(
+                        job, plan, media_probe=media_probe
+                    )
+                except BaseException as exc:
+                    message = f"{type(exc).__name__}: {exc}"
+                    failures.append(f"{job['mechanism']}: {message}")
+                    write_json_atomic(
+                        Path(str(job["status_path"])),
+                        _status(
+                            job,
+                            "failed",
+                            return_code=return_code,
+                            error=str(exc),
+                        ),
+                    )
+                    continue
+                write_json_atomic(
+                    Path(str(job["status_path"])),
+                    _status(job, "completed", return_code=0, **validation),
+                )
+            write_aggregate(output_root, plan, "running")
+            if running and not progressed:
+                sleep_fn(poll_interval)
+    except BaseException:
+        _terminate(running)
+        for job, _, log in running.values():
+            log.close()
+            write_json_atomic(
+                Path(str(job["status_path"])),
+                _status(job, "failed", error="recovery launcher interrupted"),
+            )
+        write_aggregate(
+            output_root, plan, "failed", "path-binding recovery interrupted"
+        )
+        raise
+    validate_bound_inputs(plan, require_runtime=True)
+    if failures:
+        message = "; ".join(failures)
+        write_aggregate(output_root, plan, "failed", message)
+        raise RuntimeError(message)
+
+    for job in plan["jobs"]:
+        observed = validate_job_outputs(job, plan, media_probe=media_probe)
+        status = read_status(job)
+        frozen = {key: status[key] for key in observed}
+        require(
+            observed == frozen,
+            f"{job['mechanism']}: output drift after recovery validation",
+        )
+    write_generation_manifest(output_root, plan)
+    write_aggregate(output_root, plan, "completed")
 
 
 def execute_plan(
@@ -838,6 +1119,19 @@ def resolve_path(project_root: Path, value: Path, *, must_exist: bool = True) ->
     return path.resolve(strict=must_exist)
 
 
+def load_existing_plan_for_recovery(
+    output_root: Path, expected_plan: Mapping[str, Any]
+) -> dict[str, Any]:
+    path = output_root / "target_generation_run_manifest.json"
+    regular_file(path, "existing target generation run manifest")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    require(isinstance(payload, dict), "existing run manifest must be an object")
+    comparison = dict(expected_plan)
+    comparison["created_at_utc"] = payload.get("created_at_utc")
+    require(payload == comparison, "existing run manifest differs from current frozen inputs/plan")
+    return payload
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
     parser.add_argument("--project-root", type=Path, default=Path(__file__).resolve().parents[1])
@@ -851,6 +1145,7 @@ def build_parser() -> argparse.ArgumentParser:
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--dry-run", action="store_true")
     mode.add_argument("--run", action="store_true")
+    mode.add_argument("--recover-path-binding", action="store_true")
     return parser
 
 
@@ -867,12 +1162,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         water = resolve_path(project_root, args.water_reuse_manifest)
         output_root = resolve_path(project_root, args.output_root, must_exist=False)
         generator = resolve_path(project_root, DEFAULT_GENERATOR)
-        python = resolve_path(project_root, args.python_executable, must_exist=args.run)
-        model = resolve_path(project_root, args.model, must_exist=args.run)
+        formal_action = args.run or args.recover_path_binding
+        python = resolve_path(project_root, args.python_executable, must_exist=formal_action)
+        model = resolve_path(project_root, args.model, must_exist=formal_action)
         reject_sealed_paths(project_root, candidates, water, output_root, generator, python, model)
         require(generator == (project_root / DEFAULT_GENERATOR).resolve(strict=True), "only scripts/generate_wan_clean.py is allowed")
         rows, _, schema = load_target_candidates(project_root, candidates, water)
-        if args.run:
+        if formal_action:
             require(
                 set(schema["canonical_columns_present"]) == set(CANONICAL_FIELDS),
                 "formal --run requires every canonical target-candidate column; aliases are compatibility-only",
@@ -894,11 +1190,24 @@ def main(argv: Sequence[str] | None = None) -> int:
             gpus=args.gpus,
             dry_run=args.dry_run,
         )
-        validate_bound_inputs(plan, require_runtime=args.run)
-        prepare_output_root(output_root, plan)
+        validate_bound_inputs(plan, require_runtime=formal_action)
+        if args.recover_path_binding:
+            existing_plan = load_existing_plan_for_recovery(output_root, plan)
+            execute_path_binding_recovery(
+                existing_plan,
+                output_root,
+                poll_interval=args.poll_interval,
+            )
+        else:
+            prepare_output_root(output_root, plan)
         if args.run:
             execute_plan(plan, output_root, poll_interval=args.poll_interval)
-        print(f"{'Planned' if args.dry_run else 'Completed'} target generation at {output_root}")
+        action_label = (
+            "Recovered and completed"
+            if args.recover_path_binding
+            else ("Planned" if args.dry_run else "Completed")
+        )
+        print(f"{action_label} target generation at {output_root}")
         return 0
     except (OSError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)

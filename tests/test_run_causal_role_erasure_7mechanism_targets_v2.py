@@ -65,7 +65,11 @@ def _build_inputs(tmp_path: Path, monkeypatch) -> tuple[Path, Path, Path]:
                         f"outputs/water_impact_dynamic_v1/train_targets_v1/videos/"
                         f"water_{local:03d}.mp4"
                         if mechanism == "water_impact"
-                        else ""
+                        else (
+                            "outputs/causal_role_erasure_7mechanism_main_v2/"
+                            f"target_generation/{mechanism}/videos/"
+                            f"target7m_{global_index:04d}.mp4"
+                        )
                     ),
                 }
             )
@@ -316,6 +320,8 @@ def test_exact_1152_validation_binds_ids_seeds_prompts_media_and_hashes(
         assert validation["validated_video_count"] == 192
         assert validation["outputs"][0]["candidate_id"] == job["candidate_ids"][0]
         assert validation["outputs"][0]["seed"] == job["seeds"][0]
+        assert validation["outputs"][0]["logical_expected_video_path"] == job["expected_video_paths"][0]
+        assert validation["outputs"][0]["video_path"] != job["expected_video_paths"][0]
         assert len(validation["outputs"][0]["video_sha256"]) == 64
         runner.write_json_atomic(Path(job["status_path"]), runner._status(job, "completed", **validation))
     manifest = runner.write_generation_manifest(output, plan)
@@ -323,6 +329,8 @@ def test_exact_1152_validation_binds_ids_seeds_prompts_media_and_hashes(
     assert payload["baseline"] == "negative_prompt"
     assert payload["video_count"] == 1152
     assert len(payload["items"]) == 1152
+    assert all(set(item) == set(runner.FINAL_ITEM_FIELDS) for item in payload["items"])
+    assert all("logical_expected_video_path" not in item for item in payload["items"])
     assert [item["global_index"] for item in payload["items"]] == list(range(192, 1344))
     assert len({item["candidate_id"] for item in payload["items"]}) == 1152
     assert all(item["media"] == _media(Path(), Path()) for item in payload["items"])
@@ -339,6 +347,112 @@ def test_output_validation_rejects_prompt_or_seed_drift(tmp_path: Path, monkeypa
     manifest.write_text(json.dumps(payload) + "\n", encoding="utf-8")
     with pytest.raises(ValueError, match="prompt mismatch"):
         runner.validate_job_outputs(job, plan, media_probe=_media)
+
+
+def _prepare_exact_path_binding_failure(output: Path, plan: dict) -> dict[str, str]:
+    runner.prepare_output_root(output, plan)
+    original_hashes = {}
+    failures = []
+    for job in plan["jobs"]:
+        if job["wave_index"] != 0:
+            continue
+        _fake_generation(job, plan)
+        manifest = Path(job["output_dir"]) / "generation_manifest.json"
+        original_hashes[job["mechanism"]] = runner.sha256_file(manifest)
+        error = f"{job['mechanism']} item 0: target_video_path mismatch"
+        runner.write_json_atomic(
+            Path(job["status_path"]),
+            runner._status(job, "failed", return_code=0, error=error),
+        )
+        failures.append(f"{job['mechanism']}: ValueError: {error}")
+    runner.write_aggregate(output, plan, "failed", "; ".join(failures))
+    return original_hashes
+
+
+def test_recover_path_binding_revalidates_wave0_without_regeneration_then_runs_only_wave1(
+    tmp_path: Path, monkeypatch
+):
+    project, _, _, output, _, _, plan = _load_and_plan(
+        tmp_path, monkeypatch, dry_run=False
+    )
+    runtime = project / runner.DEFAULT_PYTHON
+    runtime.parent.mkdir(parents=True)
+    runtime.write_text("#!/bin/sh\n", encoding="utf-8")
+    runtime.chmod(0o755)
+    (project / runner.DEFAULT_MODEL).mkdir(parents=True)
+    original_hashes = _prepare_exact_path_binding_failure(output, plan)
+    launched = []
+
+    class Done:
+        def poll(self):
+            return 0
+
+        def terminate(self):
+            raise AssertionError("completed fake process must not be terminated")
+
+        def kill(self):
+            raise AssertionError("completed fake process must not be killed")
+
+    def fake_popen(command, **_kwargs):
+        job = next(job for job in plan["jobs"] if job["command"] == command)
+        launched.append(job["mechanism"])
+        assert job["wave_index"] == 1
+        _fake_generation(job, plan)
+        return Done()
+
+    runner.execute_path_binding_recovery(
+        plan,
+        output,
+        poll_interval=0.001,
+        popen_factory=fake_popen,
+        sleep_fn=lambda _seconds: None,
+        media_probe=_media,
+    )
+    assert launched == ["material_release", "surface_trace"]
+    assert all(runner.read_status(job)["status"] == "completed" for job in plan["jobs"])
+    for job in plan["jobs"][:4]:
+        assert runner.read_status(job)["recovered_without_regeneration"] is True
+        assert runner.sha256_file(Path(job["output_dir"]) / "generation_manifest.json") == original_hashes[job["mechanism"]]
+    receipt = json.loads((output / "path_binding_recovery_receipt.json").read_text())
+    assert receipt["wave0_regenerated"] is False
+    assert receipt["wave0_validated_video_count"] == 768
+    assert len(receipt["wave0"]) == 4
+    final = json.loads((output / "target_generation_manifest.json").read_text())
+    aggregate = json.loads((output / "target_generation_aggregate.json").read_text())
+    assert final["video_count"] == 1152
+    assert "path_binding_recovery_receipt" not in final
+    assert set(final) == {
+        "schema_version", "protocol_id", "runner_id", "status",
+        "target_candidates_sha256", "water_reuse_manifest_sha256",
+        "water_reuse_rows", "baseline", "generation", "video_count", "items",
+    }
+    assert aggregate["status"] == "completed"
+    assert aggregate["validated_generated_rows"] == 1152
+    assert aggregate["path_binding_recovery_receipt"]["sha256"] == runner.sha256_file(
+        output / "path_binding_recovery_receipt.json"
+    )
+    assert all(set(item) == set(runner.FINAL_ITEM_FIELDS) for item in final["items"])
+    assert all("logical_expected_video_path" not in item for item in final["items"])
+    assert all(
+        runner.read_status(job)["outputs"][0]["logical_expected_video_path"]
+        for job in plan["jobs"]
+    )
+
+
+def test_recovery_rejects_nonzero_wave0_or_touched_wave1_before_launch(
+    tmp_path: Path, monkeypatch
+):
+    project, _, _, output, _, _, plan = _load_and_plan(
+        tmp_path, monkeypatch, dry_run=False
+    )
+    _prepare_exact_path_binding_failure(output, plan)
+    first = plan["jobs"][0]
+    status = runner.read_status(first)
+    status["return_code"] = 1
+    runner.write_json_atomic(Path(first["status_path"]), status)
+    with pytest.raises(ValueError, match="return_code=0"):
+        runner.validate_path_binding_recovery_state(plan, output, media_probe=_media)
+    assert not (output / "path_binding_recovery_receipt.json").exists()
 
 
 def test_sealed_path_is_rejected_before_input_read(tmp_path: Path, monkeypatch):
