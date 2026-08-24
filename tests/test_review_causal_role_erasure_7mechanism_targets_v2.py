@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -248,6 +249,69 @@ def test_gpt56_luna_uses_completion_tokens_and_requires_temperature_one(
     )
     assert legacy_payload["max_tokens"] == 333
     assert "max_completion_tokens" not in legacy_payload
+
+
+def test_isolated_transport_uses_stdin_only_and_enforces_hard_timeout(monkeypatch):
+    captured = {}
+    secret = "secret-must-not-enter-argv"
+
+    def simulated_stuck_child(command, **kwargs):
+        captured["command"] = command
+        captured.update(kwargs)
+        raise subprocess.TimeoutExpired(command, kwargs["timeout"])
+
+    monkeypatch.setattr(review.subprocess, "run", simulated_stuck_child)
+    with pytest.raises(TimeoutError, match="hard wall-clock timeout of 7 seconds"):
+        review.isolated_urllib_transport(
+            "https://unit.test/v1/chat/completions",
+            secret,
+            {"model": "gpt-5.6-luna"},
+            7,
+        )
+
+    assert secret not in " ".join(captured["command"])
+    private_request = json.loads(captured["input"].decode("utf-8"))
+    assert private_request["api_key"] == secret
+    assert captured["timeout"] == 7
+    assert captured["stdout"] is subprocess.PIPE
+    assert captured["stderr"] is subprocess.PIPE
+
+
+def test_serial_review_persists_success_before_later_process_interruption(
+    tmp_path: Path,
+):
+    assignment, template = _public_pass(tmp_path)
+    calls = 0
+
+    def interrupted_transport(*_args, **_kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return _response()
+        raise KeyboardInterrupt("simulated process interruption")
+
+    output = tmp_path / "interrupted"
+    with pytest.raises(KeyboardInterrupt, match="simulated process interruption"):
+        review.run_review(
+            assignment_path=assignment,
+            template_path=template,
+            output_root=output,
+            dry_run=False,
+            start=0,
+            limit=2,
+            workers=1,
+            model="test-vlm",
+            temperature=0.0,
+            max_tokens=500,
+            timeout=30,
+            base_url="https://unit.test/v1",
+            api_key="secret-not-persisted",
+            transport=interrupted_transport,
+        )
+    assert (output / "checkpoints/a0000.json").is_file()
+    assert (output / "raw_responses/a0000.json").is_file()
+    assert (output / ".incomplete").is_file()
+    assert not (output / "run_summary.json").exists()
 
 
 def test_infrastructure_error_replay_and_checkpoint_merge(tmp_path: Path):

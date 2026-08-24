@@ -15,6 +15,7 @@ import base64
 import hashlib
 import json
 import os
+import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -126,6 +127,7 @@ RESPONSE_SCHEMA: dict[str, Any] = {
 }
 
 Transport = Callable[[str, str, dict[str, Any], int], dict[str, Any]]
+ISOLATED_URLLIB_CHILD_ARG = "--isolated-urllib-transport-child"
 
 
 class ReviewTransportError(RuntimeError):
@@ -202,6 +204,106 @@ def write_json_exclusive(path: Path, payload: Mapping[str, Any], mode: int = 0o6
         path,
         json.dumps(dict(payload), ensure_ascii=False, indent=2).encode("utf-8") + b"\n",
         mode=mode,
+    )
+
+
+def _isolated_urllib_transport_child() -> int:
+    """Run one urllib request from a stdin-only private request envelope."""
+
+    api_key = ""
+    try:
+        envelope = json.loads(sys.stdin.buffer.read().decode("utf-8"))
+        require(
+            isinstance(envelope, dict)
+            and set(envelope) == {"url", "api_key", "payload", "timeout"},
+            "isolated transport request schema mismatch",
+        )
+        api_key = str(envelope["api_key"])
+        response = urllib_transport(
+            str(envelope["url"]),
+            api_key,
+            envelope["payload"],
+            int(envelope["timeout"]),
+        )
+        result = {"ok": True, "response": response}
+    except BaseException as exc:
+        message = str(exc)
+        if api_key:
+            message = message.replace(api_key, "[REDACTED]")
+        result = {
+            "ok": False,
+            "error_type": type(exc).__name__,
+            "error_message": message,
+        }
+    sys.stdout.buffer.write(canonical_json_bytes(result))
+    sys.stdout.buffer.flush()
+    return 0
+
+
+def isolated_urllib_transport(
+    url: str,
+    api_key: str,
+    payload: dict[str, Any],
+    timeout: int,
+) -> dict[str, Any]:
+    """Call urllib in a killable child whose total lifetime is hard-capped.
+
+    The secret and request body are sent over stdin, never argv or the child
+    environment.  This protects long review shards from TLS/proxy handshakes
+    that occasionally ignore urllib's socket timeout.
+    """
+
+    private_request = canonical_json_bytes(
+        {
+            "url": url,
+            "api_key": api_key,
+            "payload": payload,
+            "timeout": timeout,
+        }
+    )
+    command = [sys.executable, str(Path(__file__).resolve()), ISOLATED_URLLIB_CHILD_ARG]
+    try:
+        completed = subprocess.run(
+            command,
+            input=private_request,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise TimeoutError(
+            f"VLM transport exceeded hard wall-clock timeout of {timeout} seconds"
+        ) from exc
+    if completed.returncode != 0:
+        raise ReviewTransportError(
+            f"isolated VLM transport child exited with code {completed.returncode}"
+        )
+    try:
+        result = json.loads(completed.stdout.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ReviewTransportError(
+            "isolated VLM transport child returned an invalid envelope"
+        ) from exc
+    require(isinstance(result, dict), "isolated transport result is not an object")
+    if result.get("ok") is True:
+        require(
+            set(result) == {"ok", "response"}
+            and isinstance(result["response"], dict),
+            "isolated transport success envelope mismatch",
+        )
+        return result["response"]
+    require(
+        set(result) == {"ok", "error_type", "error_message"}
+        and result.get("ok") is False,
+        "isolated transport error envelope mismatch",
+    )
+    child_type = str(result["error_type"])
+    child_message = str(result["error_message"]).replace(api_key, "[REDACTED]")
+    if child_type in {"TimeoutError", "socket.timeout"}:
+        raise TimeoutError(child_message)
+    raise ReviewTransportError(
+        f"isolated VLM transport failed ({child_type}): {child_message}"
     )
 
 
@@ -454,7 +556,7 @@ def evaluate_one(
     temperature: float,
     max_tokens: int,
     timeout: int,
-    transport: Transport = urllib_transport,
+    transport: Transport = isolated_urllib_transport,
 ) -> dict[str, Any]:
     descriptor = _request_descriptor(
         row, model=model, temperature=temperature, max_tokens=max_tokens
@@ -524,7 +626,7 @@ def run_review(
     timeout: int,
     base_url: str | None = None,
     api_key: str | None = None,
-    transport: Transport = urllib_transport,
+    transport: Transport = isolated_urllib_transport,
 ) -> dict[str, Any]:
     require(workers > 0, "workers must be positive")
     require(timeout > 0 and max_tokens > 0, "timeout/token limit must be positive")
@@ -598,49 +700,12 @@ def run_review(
 
     require(bool(base_url) and bool(api_key), "real review requires nonempty API URL and key")
     url = base_url.rstrip("/") + "/chat/completions"
-    results: list[tuple[int, Mapping[str, Any], dict[str, Any]]] = []
-    if workers == 1:
-        for index, row in enumerate(selected):
-            results.append(
-                (
-                    index,
-                    row,
-                    evaluate_one(
-                        row,
-                        url=url,
-                        api_key=api_key,
-                        model=model,
-                        temperature=temperature,
-                        max_tokens=max_tokens,
-                        timeout=timeout,
-                        transport=transport,
-                    ),
-                )
-            )
-    else:
-        with ThreadPoolExecutor(max_workers=workers) as executor:
-            pending = {
-                executor.submit(
-                    evaluate_one,
-                    row,
-                    url=url,
-                    api_key=api_key,
-                    model=model,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    timeout=timeout,
-                    transport=transport,
-                ): (index, row)
-                for index, row in enumerate(selected)
-            }
-            for future in as_completed(pending):
-                index, row = pending[future]
-                results.append((index, row, future.result()))
-        results.sort(key=lambda value: value[0])
+    successful_by_index: dict[int, dict[str, Any]] = {}
+    errors_by_index: dict[int, dict[str, Any]] = {}
 
-    successful: list[dict[str, Any]] = []
-    errors: list[dict[str, Any]] = []
-    for _, row, result in results:
+    def persist_result(
+        index: int, row: Mapping[str, Any], result: Mapping[str, Any]
+    ) -> None:
         review_id = row["assignment"]["anonymous_review_id"]
         descriptor = result["descriptor"]
         if not result["ok"]:
@@ -675,8 +740,8 @@ def run_review(
             require(tuple(error) == ERROR_FIELDS, "internal error schema drift")
             error_path = output_root / "errors" / f"{review_id}.json"
             write_json_exclusive(error_path, error, mode=0o600)
-            errors.append(relative_file_ref(output_root, error_path))
-            continue
+            errors_by_index[index] = relative_file_ref(output_root, error_path)
+            return
         raw_path = output_root / "raw_responses" / f"{review_id}.json"
         write_json_exclusive(raw_path, result["response"], mode=0o600)
         checkpoint = {
@@ -698,7 +763,35 @@ def run_review(
         require(tuple(checkpoint) == CHECKPOINT_FIELDS, "internal checkpoint schema drift")
         checkpoint_path = output_root / "checkpoints" / f"{review_id}.json"
         write_json_exclusive(checkpoint_path, checkpoint, mode=0o600)
-        successful.append(relative_file_ref(output_root, checkpoint_path))
+        successful_by_index[index] = relative_file_ref(output_root, checkpoint_path)
+
+    def evaluate_selected(row: Mapping[str, Any]) -> dict[str, Any]:
+        return evaluate_one(
+            row,
+            url=url,
+            api_key=api_key,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            timeout=timeout,
+            transport=transport,
+        )
+
+    if workers == 1:
+        for index, row in enumerate(selected):
+            persist_result(index, row, evaluate_selected(row))
+    else:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            pending = {
+                executor.submit(evaluate_selected, row): (index, row)
+                for index, row in enumerate(selected)
+            }
+            for future in as_completed(pending):
+                index, row = pending[future]
+                persist_result(index, row, future.result())
+
+    successful = [successful_by_index[index] for index in sorted(successful_by_index)]
+    errors = [errors_by_index[index] for index in sorted(errors_by_index)]
 
     summary = {
         "schema_version": 1,
@@ -1201,4 +1294,6 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    if sys.argv[1:] == [ISOLATED_URLLIB_CHILD_ARG]:
+        raise SystemExit(_isolated_urllib_transport_child())
     raise SystemExit(main())
