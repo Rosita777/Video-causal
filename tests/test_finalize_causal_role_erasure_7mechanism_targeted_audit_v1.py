@@ -21,6 +21,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SOURCE_CANDIDATES = (
     REPO_ROOT / "data/causal_role_erasure_7mechanism_main_v2/target_candidates.csv"
 )
+SOURCE_WATER_SCREEN = (
+    REPO_ROOT / "data/water_impact_dynamic_v1/train_targets_v1_screen_final.csv"
+)
 
 
 def _read_csv(path: Path) -> tuple[list[str], list[dict[str, str]]]:
@@ -157,19 +160,17 @@ def _fixture(tmp_path: Path):
         and row["historical_screen_status"] == "accept"
     ]
     assert len(water_candidates) == screening.SELECTED_PER_MECHANISM
-    water_rows = []
+    water_fields, water_rows = _read_csv(SOURCE_WATER_SCREEN)
+    accepted_pairs = {candidate["historical_pair_id"] for candidate in water_candidates}
+    assert {
+        row["pair_id"] for row in water_rows if row["final_status"] == "accept"
+    } == accepted_pairs
     for candidate in water_candidates:
         video = project / candidate["target_video_path"]
         video.parent.mkdir(parents=True, exist_ok=True)
         video.write_bytes((candidate["candidate_id"] + "\n").encode())
-        water_rows.append(
-            {
-                "pair_id": candidate["historical_pair_id"],
-                "desired_target_video": candidate["target_video_path"],
-            }
-        )
-    water_path = project / "water_accepted178.csv"
-    _write_csv(water_path, ("pair_id", "desired_target_video"), water_rows)
+    water_path = project / "water_screen.csv"
+    _write_csv(water_path, water_fields, water_rows)
     return {
         "project": project,
         "candidate_manifest": candidate_manifest,
@@ -194,9 +195,32 @@ def _finalize_args(fixture, output: Path, adjudication: Path | None):
         "adjudication_path": adjudication,
         "reviewer_a_binding": fixture["binding"],
         "candidate_manifest": fixture["candidate_manifest"],
-        "water_accepted178": fixture["water"],
+        "water_screen_csv": fixture["water"],
         "output_root": output,
+        "media_probe": lambda _path: dict(finalizer.MEDIA_CONTRACT),
     }
+
+
+def _write_boundary_adjudication(fixture, name: str = "adjudication.json") -> Path:
+    path = fixture["project"] / name
+    path.write_text(
+        json.dumps(
+            {
+                "reviewer": "blind_adjudicator",
+                "blind_to_reviewer_a_and_agent_audit_scores": True,
+                "items": [
+                    {
+                        "anonymous_review_id": fixture["boundary_id"],
+                        "scores": {"quality": 2},
+                        "evidence": _evidence("receiver is usable throughout"),
+                    }
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return path
 
 
 def test_natural_motion_is_soft_and_frozen_rank_tuple_is_score_first():
@@ -277,6 +301,35 @@ def test_plan_emits_only_selection_affecting_disagreement_and_hides_scores(tmp_p
     assert template["items"][0]["scores"] == {"quality": None}
 
 
+def test_field_targeted_agent_audit_uses_a_for_omitted_fields(tmp_path: Path):
+    fixture = _fixture(tmp_path)
+    payload = json.loads(fixture["audit"].read_text())
+    for item in payload["items"]:
+        if item["anonymous_review_id"] == fixture["boundary_id"]:
+            item["scores"] = {"quality": 0}
+        else:
+            item["scores"] = {"natural_motion": 1}
+    fixture["audit"].write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    output = fixture["project"] / "partial_field_selection"
+    finalizer.finalize_selection(
+        **_finalize_args(
+            fixture,
+            output,
+            _write_boundary_adjudication(fixture),
+        )
+    )
+    provenance = _read_csv(output / "audit_provenance.csv")[1]
+    omitted = next(
+        row
+        for row in provenance
+        if row["anonymous_review_id"] == fixture["boundary_id"]
+        and row["field"] == "receiver_recognizable"
+    )
+    assert omitted["audit_status"] == "not_audited"
+    assert omitted["resolution"] == "reviewer_a_unreviewed"
+    assert omitted["canonical_score"] == "2"
+
+
 def test_finalize_fails_until_affecting_field_is_adjudicated_then_freezes_178(tmp_path: Path):
     fixture = _fixture(tmp_path)
     with pytest.raises(finalizer.TargetedAuditError, match="selection-affecting"):
@@ -284,24 +337,7 @@ def test_finalize_fails_until_affecting_field_is_adjudicated_then_freezes_178(tm
             **_finalize_args(fixture, fixture["project"] / "must_not_exist", None)
         )
 
-    adjudication = fixture["project"] / "adjudication.json"
-    adjudication.write_text(
-        json.dumps(
-            {
-                "reviewer": "blind_adjudicator",
-                "blind_to_reviewer_a_and_agent_audit_scores": True,
-                "items": [
-                    {
-                        "anonymous_review_id": fixture["boundary_id"],
-                        "scores": {"quality": 2},
-                        "evidence": _evidence("receiver is usable throughout"),
-                    }
-                ],
-            }
-        )
-        + "\n",
-        encoding="utf-8",
-    )
+    adjudication = _write_boundary_adjudication(fixture)
     output = fixture["project"] / "selection"
     result = finalizer.finalize_selection(
         **_finalize_args(fixture, output, adjudication)
@@ -390,24 +426,7 @@ def test_finalize_fails_if_a_mechanism_has_fewer_than_178_nonhard(tmp_path: Path
 
 def test_finalize_rejects_selected_video_drift(tmp_path: Path):
     fixture = _fixture(tmp_path)
-    adjudication = fixture["project"] / "adjudication.json"
-    adjudication.write_text(
-        json.dumps(
-            {
-                "reviewer": "blind_adjudicator",
-                "blind_to_reviewer_a_and_agent_audit_scores": True,
-                "items": [
-                    {
-                        "anonymous_review_id": fixture["boundary_id"],
-                        "scores": {"quality": 2},
-                        "evidence": _evidence("usable receiver"),
-                    }
-                ],
-            }
-        )
-        + "\n",
-        encoding="utf-8",
-    )
+    adjudication = _write_boundary_adjudication(fixture)
     binding_rows = _read_csv(fixture["binding"])[1]
     drift = next(
         row
@@ -422,4 +441,34 @@ def test_finalize_rejects_selected_video_drift(tmp_path: Path):
                 fixture["project"] / "drift_must_not_freeze",
                 adjudication,
             )
+        )
+
+
+def test_bound_video_media_is_decoded_before_freeze(tmp_path: Path):
+    fixture = _fixture(tmp_path)
+    binding = next(iter(_read_csv(fixture["binding"])[1]))
+    wrong_media = {**finalizer.MEDIA_CONTRACT, "decoded_frames": 48}
+    with pytest.raises(finalizer.TargetedAuditError, match="decoded media contract differs"):
+        finalizer._verify_bound_video(
+            project_root=fixture["project"],
+            path_value=binding["video_path"],
+            expected_sha256=binding["video_sha256"],
+            label=binding["candidate_id"],
+            media_probe=lambda _path: wrong_media,
+        )
+
+
+def test_water_requires_full_192_row_frozen_screen_binding(tmp_path: Path):
+    fixture = _fixture(tmp_path)
+    fields, rows = _read_csv(fixture["water"])
+    rejected = next(row for row in rows if row["final_status"] == "reject")
+    rejected["video_path"] = "tampered/rejected-water.mp4"
+    _write_csv(fixture["water"], fields, rows)
+    _, candidates = screening.load_and_validate_candidates(fixture["candidate_manifest"])
+    with pytest.raises(finalizer.TargetedAuditError, match="target path differs"):
+        finalizer._load_water_screen(
+            fixture["water"],
+            candidate_by_id={row["candidate_id"]: row for row in candidates},
+            project_root=fixture["project"],
+            media_probe=lambda _path: dict(finalizer.MEDIA_CONTRACT),
         )

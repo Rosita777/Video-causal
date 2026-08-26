@@ -33,7 +33,8 @@ import os
 import shutil
 import sys
 from collections import Counter, defaultdict
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
@@ -361,13 +362,11 @@ def load_agent_audits(
                 f"{label} references an unknown assignment ID",
             )
             require(anonymous_id not in scores, f"targeted audit ID repeats: {anonymous_id}")
-            require(
-                isinstance(item["scores"], dict) and set(item["scores"]) == set(SCORE_FIELDS),
-                f"{label} score fields differ",
-            )
+            require(isinstance(item["scores"], dict) and item["scores"], f"{label} scores are empty")
+            require(set(item["scores"]) <= set(SCORE_FIELDS), f"{label} contains an unknown score field")
             scores[anonymous_id] = {
-                field: _score(item["scores"][field], f"{label}/{field}")
-                for field in SCORE_FIELDS
+                field: _score(raw_score, f"{label}/{field}")
+                for field, raw_score in item["scores"].items()
             }
             _validate_evidence(item["evidence"], label)
             metadata[anonymous_id] = {
@@ -404,6 +403,7 @@ def load_adjudication(
         require(isinstance(item["scores"], dict) and item["scores"], f"{label} scores are empty")
         require(set(item["scores"]) <= set(SCORE_FIELDS), f"{label} contains an unknown field")
         for field, raw_score in item["scores"].items():
+            require(field in audit_scores[anonymous_id], f"{label} field was not independently audited")
             require(
                 reviewer_a[anonymous_id][field] != audit_scores[anonymous_id][field],
                 f"{label} attempts to adjudicate a field without A/audit disagreement",
@@ -513,7 +513,7 @@ def _field_disagreements(
     return {
         (anonymous_id, field)
         for anonymous_id, scores in audit_scores.items()
-        for field in SCORE_FIELDS
+        for field in scores
         if reviewer_a[anonymous_id][field] != scores[field]
     }
 
@@ -534,7 +534,10 @@ def _score_domain(
             choices.append((field, (forced[field],)))
         elif key in adjudicated:
             choices.append((field, (adjudicated[key],)))
-        elif anonymous_id in audit_scores and audit_scores[anonymous_id][field] != base[field]:
+        elif (
+            field in audit_scores.get(anonymous_id, {})
+            and audit_scores[anonymous_id][field] != base[field]
+        ):
             choices.append((field, (base[field], audit_scores[anonymous_id][field])))
         else:
             choices.append((field, (base[field],)))
@@ -924,8 +927,9 @@ def _canonicalize(
         for field in SCORE_FIELDS:
             a_score = reviewer_a[anonymous_id][field]
             audit_score = audit_scores.get(anonymous_id, {}).get(field)
+            was_audited = field in audit_scores.get(anonymous_id, {})
             key = (anonymous_id, field)
-            if anonymous_id not in audit_scores:
+            if not was_audited:
                 value: int | None = a_score
                 resolution = "reviewer_a_unreviewed"
                 audit_status = "not_audited"
@@ -943,7 +947,7 @@ def _canonicalize(
                 audit_status = "disagreement"
                 domains[field] = sorted({a_score, int(audit_score)})
             canonical[field] = value
-            audit_meta = common["audit_metadata"].get(anonymous_id, {})
+            audit_meta = common["audit_metadata"].get(anonymous_id, {}) if was_audited else {}
             adjudication_meta = common["adjudication_metadata"]
             provenance.append(
                 {
@@ -980,14 +984,24 @@ def _representative_scores(
     }
 
 
-def _load_water_accepted(
+def _load_water_screen(
     path: Path,
     *,
     candidate_by_id: Mapping[str, Mapping[str, str]],
     project_root: Path,
+    media_probe: Callable[[Path], Mapping[str, Any]],
 ) -> list[dict[str, Any]]:
     fields, rows = read_csv(path)
-    require(len(rows) == SELECTED_PER_MECHANISM, "historical Water accepted CSV must contain exactly 178 rows")
+    require(
+        {"pair_id", "video_path", "final_status"} <= set(fields),
+        "historical Water screen is missing pair_id/video_path/final_status",
+    )
+    require(len(rows) == screening.ROWS_PER_MECHANISM, "historical Water screen must contain exactly 192 rows")
+    require(
+        Counter(row["final_status"] for row in rows)
+        == Counter({"accept": SELECTED_PER_MECHANISM, "reject": 14}),
+        "historical Water screen must freeze exactly 178 accept and 14 reject rows",
+    )
     water_candidates = {
         row["candidate_id"]: row
         for row in candidate_by_id.values()
@@ -1000,45 +1014,70 @@ def _load_water_accepted(
         if row.get("historical_screen_status") == "accept"
     }
     require(len(expected) == SELECTED_PER_MECHANISM, "candidate manifest does not freeze 178 accepted Water rows")
+    screen_by_pair = {row["pair_id"]: row for row in rows}
+    require(len(screen_by_pair) == screening.ROWS_PER_MECHANISM, "historical Water screen pair IDs repeat")
+    require(set(screen_by_pair) == set(by_pair), "historical Water screen/candidate pair inventories differ")
+    for pair_id, candidate in by_pair.items():
+        screen_row = screen_by_pair[pair_id]
+        require(
+            screen_row["final_status"] == candidate["historical_screen_status"],
+            f"Water pair {pair_id} screen status differs from candidate manifest",
+        )
+        require(
+            screen_row["video_path"] == candidate["target_video_path"],
+            f"Water pair {pair_id} target path differs from candidate manifest",
+        )
     selected: list[dict[str, Any]] = []
     seen: set[str] = set()
     for index, source in enumerate(rows):
-        if "candidate_id" in fields:
-            candidate_id = source["candidate_id"]
-            require(candidate_id in water_candidates, f"Water row {index} candidate is unknown")
-            candidate = water_candidates[candidate_id]
-        else:
-            require("pair_id" in fields, "historical Water CSV needs candidate_id or pair_id")
-            pair_id = source["pair_id"]
-            require(pair_id in by_pair, f"Water row {index} pair is unknown")
-            candidate = by_pair[pair_id]
-            candidate_id = candidate["candidate_id"]
+        if source["final_status"] != "accept":
+            continue
+        pair_id = source["pair_id"]
+        candidate = by_pair[pair_id]
+        candidate_id = candidate["candidate_id"]
         require(candidate_id not in seen, f"Water candidate repeats: {candidate_id}")
         seen.add(candidate_id)
-        declared_path = (
-            source.get("target_video_path")
-            or source.get("desired_target_video")
-            or candidate["target_video_path"]
-        )
-        require(declared_path == candidate["target_video_path"], f"Water row {index} target path differs")
+        declared_path = source["video_path"]
         video_path = Path(declared_path)
         resolved = video_path if video_path.is_absolute() else project_root / video_path
         regular_file(resolved, f"Water row {index} target video")
+        require(resolved.suffix.lower() == ".mp4", f"Water row {index} target is not MP4")
         actual_sha256 = sha256_file(resolved)
-        declared_sha256 = source.get("target_video_sha256") or source.get("desired_target_video_sha256")
-        if declared_sha256:
-            require_hex64(declared_sha256, f"Water row {index} declared video hash")
-            require(declared_sha256 == actual_sha256, f"Water row {index} target-video hash differs")
+        media = dict(media_probe(resolved))
+        require(media == MEDIA_CONTRACT, f"Water row {index} decoded media contract differs")
         selected.append(
             {
                 "candidate": candidate,
                 "video_path": declared_path,
                 "video_sha256": actual_sha256,
                 "size_bytes": resolved.stat().st_size,
+                "media": media,
             }
         )
-    require(seen == expected, "historical Water CSV differs from the frozen 178 accepts")
+    require(seen == expected, "historical Water screen accepts differ from candidate manifest")
     return selected
+
+
+def probe_video_media(path: Path) -> dict[str, Any]:
+    """Decode the complete video and return its exact media contract."""
+
+    try:
+        import av
+    except ImportError as exc:
+        raise TargetedAuditError("PyAV is required to verify selected target media") from exc
+    with av.open(str(path)) as container:
+        videos = [stream for stream in container.streams if stream.type == "video"]
+        audios = [stream for stream in container.streams if stream.type == "audio"]
+        require(len(videos) == 1 and not audios, f"selected video stream inventory differs: {path}")
+        stream = videos[0]
+        rate = stream.average_rate or stream.guessed_rate
+        decoded_frames = sum(1 for _ in container.decode(video=stream.index))
+        return {
+            "decoded_frames": decoded_frames,
+            "fps": "" if rate is None else f"{Fraction(rate).numerator}/{Fraction(rate).denominator}",
+            "height": int(stream.height),
+            "width": int(stream.width),
+        }
 
 
 def _verify_bound_video(
@@ -1047,14 +1086,18 @@ def _verify_bound_video(
     path_value: str,
     expected_sha256: str,
     label: str,
-) -> int:
+    media_probe: Callable[[Path], Mapping[str, Any]],
+) -> tuple[int, dict[str, Any]]:
     require_hex64(expected_sha256, f"{label} video hash")
     path = Path(path_value)
     resolved = path if path.is_absolute() else project_root / path
     regular_file(resolved, f"{label} video")
+    require(resolved.suffix.lower() == ".mp4", f"{label} video is not MP4")
     require(sha256_file(resolved) == expected_sha256, f"{label} video bytes differ from binding")
     require(resolved.stat().st_size > 0, f"{label} video is empty")
-    return resolved.stat().st_size
+    media = dict(media_probe(resolved))
+    require(media == MEDIA_CONTRACT, f"{label} decoded media contract differs")
+    return resolved.stat().st_size, media
 
 
 def finalize_selection(
@@ -1066,8 +1109,9 @@ def finalize_selection(
     adjudication_path: Path | None,
     reviewer_a_binding: Path,
     candidate_manifest: Path,
-    water_accepted178: Path,
+    water_screen_csv: Path,
     output_root: Path,
+    media_probe: Callable[[Path], Mapping[str, Any]] = probe_video_media,
 ) -> dict[str, Any]:
     common = _load_common(
         reviewer_a_completed=reviewer_a_completed,
@@ -1078,6 +1122,14 @@ def finalize_selection(
         candidate_manifest=candidate_manifest,
         require_private_binding=True,
     )
+    candidate_build_registry = candidate_manifest.parent / "build_registry.json"
+    if candidate_build_registry.is_file() and not candidate_build_registry.is_symlink():
+        build_registry = _load_json_object(candidate_build_registry, "candidate build registry")
+        require(
+            build_registry.get("input_sha256", {}).get("water_screen")
+            == sha256_file(water_screen_csv),
+            "historical Water screen bytes differ from candidate build registry",
+        )
     unresolved = _field_disagreements(common["reviewer_a"], common["audit_scores"]) - set(common["adjudicated"])
     affecting = selection_affecting_disagreements(
         assignment_rows=common["assignment_rows"],
@@ -1129,10 +1181,11 @@ def finalize_selection(
             screening_rank_by_id[anonymous_id] = rank
         selected_ids_by_mechanism[mechanism] = ranked[:SELECTED_PER_MECHANISM]
 
-    water_selected = _load_water_accepted(
-        water_accepted178,
+    water_selected = _load_water_screen(
+        water_screen_csv,
         candidate_by_id=common["candidate_by_id"],
         project_root=project_root,
+        media_probe=media_probe,
     )
     selected_candidate_ids = {
         common["subject_by_id"][anonymous_id]
@@ -1202,6 +1255,7 @@ def finalize_selection(
                         "video_path": record["video_path"],
                         "video_sha256": record["video_sha256"],
                         "size_bytes": record["size_bytes"],
+                        "media": record["media"],
                     }
                     for record in water_selected
                 ]
@@ -1212,11 +1266,12 @@ def finalize_selection(
                     binding = common["binding_by_id"][anonymous_id]
                     canonical = canonical_by_id[anonymous_id]
                     unresolved_fields = [field for field in SCORE_FIELDS if canonical[field] is None]
-                    size_bytes = _verify_bound_video(
+                    size_bytes, media = _verify_bound_video(
                         project_root=project_root,
                         path_value=binding["video_path"],
                         expected_sha256=binding["video_sha256"],
                         label=candidate_id,
+                        media_probe=media_probe,
                     )
                     records.append(
                         {
@@ -1229,6 +1284,7 @@ def finalize_selection(
                             "video_path": binding["video_path"],
                             "video_sha256": binding["video_sha256"],
                             "size_bytes": size_bytes,
+                            "media": media,
                         }
                     )
             records.sort(
@@ -1255,7 +1311,7 @@ def finalize_selection(
                         "selected_video_path": record["video_path"],
                         "selected_video_sha256": record["video_sha256"],
                         "selected_size_bytes": record["size_bytes"],
-                        "selected_media": json.dumps(MEDIA_CONTRACT, sort_keys=True, separators=(",", ":")),
+                        "selected_media": json.dumps(record["media"], sort_keys=True, separators=(",", ":")),
                     }
                 )
             path = selected_dir / f"{mechanism_index:02d}_{mechanism}.csv"
@@ -1297,7 +1353,7 @@ def finalize_selection(
             "adjudication": None if adjudication_path is None else file_ref(adjudication_path),
             "reviewer_a_binding": file_ref(reviewer_a_binding),
             "candidate_manifest": file_ref(candidate_manifest),
-            "water_historical_accepted178": file_ref(water_accepted178),
+            "water_historical_screen": file_ref(water_screen_csv),
             "audited_items": len(common["audit_scores"]),
             "atomic_audit_disagreements": len(_field_disagreements(common["reviewer_a"], common["audit_scores"])),
             "adjudicated_atomic_disagreements": len(common["adjudicated"]),
@@ -1354,7 +1410,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_common_arguments(finalize, private_optional=False)
     finalize.add_argument("--adjudication-json", type=Path)
-    finalize.add_argument("--water-accepted178", type=Path, required=True)
+    finalize.add_argument(
+        "--water-screen-csv",
+        type=Path,
+        default=Path("data/water_impact_dynamic_v1/train_targets_v1_screen_final.csv"),
+    )
     return parser
 
 
@@ -1378,7 +1438,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             result = finalize_selection(
                 project_root=project_root,
                 adjudication_path=_resolve(project_root, args.adjudication_json),
-                water_accepted178=_resolve(project_root, args.water_accepted178),
+                water_screen_csv=_resolve(project_root, args.water_screen_csv),
                 **common,
             )
         else:  # pragma: no cover - argparse prevents this
