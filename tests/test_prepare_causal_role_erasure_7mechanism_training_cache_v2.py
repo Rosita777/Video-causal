@@ -366,3 +366,57 @@ def test_sealed_registry_path_rejected_before_read(tmp_path: Path, monkeypatch):
         ]
     ) == 1
     assert called is False
+
+
+def test_live_model_inventory_accepts_frozen_project_relative_paths_and_cache_files(
+    tmp_path: Path,
+):
+    project, registry_path = _fixture(tmp_path)
+    registry_payload = json.loads(registry_path.read_text())
+    model_root = project / registry_payload["model_root"]
+    cache_file = model_root / ".cache/huggingface/download/config.json.lock"
+    cache_file.parent.mkdir(parents=True)
+    cache_file.write_bytes(b"frozen-cache-record")
+    files = []
+    for path in sorted(value for value in model_root.rglob("*") if value.is_file()):
+        files.append(
+            {
+                "path": path.relative_to(project).as_posix(),
+                "sha256": cache.sha256_file(path),
+                "size_bytes": path.stat().st_size,
+            }
+        )
+    inventory_path = project / registry_payload["model_inventory"]["path"]
+    inventory_path.write_text(
+        json.dumps(
+            {
+                "model_root": registry_payload["model_root"],
+                "file_count": len(files),
+                "files": files,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    registry_payload["model_inventory"] = _artifact(
+        project, inventory_path, len(files)
+    )
+    registry_path.write_text(json.dumps(registry_payload) + "\n", encoding="utf-8")
+    loaded = cache.load_registry(
+        project, registry_path, cache.sha256_file(registry_path)
+    )
+    validated = cache.validate_model_inventory(loaded, live=True)
+    assert validated["files"] == files
+
+
+def test_live_model_inventory_rejects_unregistered_cache_file(tmp_path: Path):
+    project, registry_path = _fixture(tmp_path)
+    loaded = cache.load_registry(
+        project, registry_path, cache.sha256_file(registry_path)
+    )
+    model_root = Path(loaded["model_root"])
+    extra = model_root / ".cache/download/new.lock"
+    extra.parent.mkdir(parents=True)
+    extra.write_bytes(b"not frozen")
+    with pytest.raises(ValueError, match="missing or extra"):
+        cache.validate_model_inventory(loaded, live=True)

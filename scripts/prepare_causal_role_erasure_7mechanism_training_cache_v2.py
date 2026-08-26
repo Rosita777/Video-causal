@@ -18,6 +18,7 @@ import json
 import os
 import platform
 import re
+import stat
 import sys
 from pathlib import Path
 from typing import Any, Mapping, Protocol, Sequence
@@ -286,26 +287,55 @@ def validate_model_inventory(registry: Mapping[str, Any], *, live: bool) -> dict
         )
     if live:
         require(root.is_dir() and not root.is_symlink(), "model root is missing or symlinked")
-        expected_relative_paths: set[str] = set()
+        project_root = Path(str(registry["project_root"])).resolve(strict=True)
+        root = root.resolve(strict=True)
+        try:
+            registered_root_relative = root.relative_to(project_root)
+        except ValueError as exc:
+            raise ValueError("model root escaped project root") from exc
+        expected_paths: list[Path] = []
         for index, item in enumerate(files):
             require(isinstance(item, dict), f"model inventory row {index} invalid")
             relative = item.get("path")
             require(isinstance(relative, str) and relative and not Path(relative).is_absolute(), f"model inventory row {index} path invalid")
-            expected_relative_paths.add(relative)
+            relative_path = Path(relative)
+            # The frozen v3 inventory records canonical project-relative
+            # paths (including the model-root prefix).  Unit-sized/legacy
+            # registries used by this tool recorded model-root-relative
+            # paths.  Resolve both representations to the same live file;
+            # never concatenate the model root twice.
+            if relative_path.parts[: len(registered_root_relative.parts)] == registered_root_relative.parts:
+                target = project_root / relative_path
+            else:
+                target = root / relative_path
+            resolved_target = target.resolve(strict=True)
+            require(
+                resolved_target == root or root in resolved_target.parents,
+                f"model inventory row {index} escaped model root",
+            )
+            require(resolved_target not in expected_paths, f"model inventory row {index} path repeats")
+            expected_paths.append(resolved_target)
             expected = require_sha256(item.get("sha256"), f"model inventory row {index}")
-            target = resolve_path(root, relative)
-            regular_file(target, f"model inventory row {index}")
+            regular_file(resolved_target, f"model inventory row {index}")
             if type(item.get("size_bytes", item.get("size"))) is int:
-                require(target.stat().st_size == item.get("size_bytes", item.get("size")), f"model inventory row {index} size mismatch")
-            require(sha256_file(target) == expected, f"model inventory row {index} byte mismatch")
-        actual_relative_paths = {
-            path.relative_to(root).as_posix()
-            for path in root.rglob("*")
-            if path.is_file()
-            and ".cache" not in path.relative_to(root).parts
-            and not path.name.endswith((".tmp", ".lock", ".incomplete", "~"))
-        }
-        require(actual_relative_paths == expected_relative_paths, "live model file inventory has missing or extra files")
+                require(resolved_target.stat().st_size == item.get("size_bytes", item.get("size")), f"model inventory row {index} size mismatch")
+            require(sha256_file(resolved_target) == expected, f"model inventory row {index} byte mismatch")
+        actual_paths: list[Path] = []
+        for candidate in sorted(root.rglob("*")):
+            info = os.lstat(candidate)
+            require(not stat.S_ISLNK(info.st_mode), "live model tree contains a symlink")
+            if stat.S_ISDIR(info.st_mode):
+                continue
+            require(
+                stat.S_ISREG(info.st_mode) and info.st_nlink == 1,
+                "live model tree contains a non-regular file or hardlink",
+            )
+            actual_paths.append(candidate.resolve(strict=True))
+        require(
+            expected_paths == sorted(set(expected_paths)),
+            "model inventory paths are not unique and sorted by live path",
+        )
+        require(actual_paths == expected_paths, "live model file inventory has missing or extra files")
     return payload
 
 
