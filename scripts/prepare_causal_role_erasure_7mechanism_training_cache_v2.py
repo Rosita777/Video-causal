@@ -484,7 +484,21 @@ class RealBackend:
 
     def encode_prompts(self, prompts: Sequence[str]) -> dict[str, Any]:
         from diffusers import WanPipeline
-        pipe = WanPipeline.from_pretrained(str(self.model), transformer=None, vae=None, torch_dtype=self.torch.bfloat16).to(self.device)
+        pipe = WanPipeline.from_pretrained(
+            str(self.model),
+            transformer=None,
+            vae=None,
+            torch_dtype=self.torch.bfloat16,
+        )
+        # Wan's UMT5 text encoder cannot be placed on one 80GB A100 with
+        # enough activation headroom.  Accelerate's sequential offload keeps
+        # the frozen bf16 modules on CPU and moves submodules to the registered
+        # CUDA device only for their forward calls.  Computation remains on
+        # CUDA, while peak device memory stays bounded.
+        pipe.enable_sequential_cpu_offload(
+            gpu_id=0 if self.device.index is None else self.device.index,
+            device=self.device.type,
+        )
         pipe.text_encoder.eval()
         result: dict[str, Any] = {}
         for index, prompt in enumerate(dict.fromkeys(prompts), 1):
