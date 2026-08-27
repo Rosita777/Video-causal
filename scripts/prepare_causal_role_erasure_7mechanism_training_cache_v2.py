@@ -49,6 +49,7 @@ FPS = 8
 HEIGHT = 480
 WIDTH = 832
 MAX_SEQUENCE_LENGTH = 226
+PROMPT_BATCH_SIZE = 16
 INVENTORY_ALGORITHM = "sha256_ordered_filename_nul_file_bytes_newline_v1"
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,199}$")
@@ -426,6 +427,7 @@ def build_plan(
             "height": HEIGHT,
             "width": WIDTH,
             "max_sequence_length": MAX_SEQUENCE_LENGTH,
+            "prompt_batch_size": PROMPT_BATCH_SIZE,
         },
         "input_binding_sha256": input_binding_sha256(
             mapping if mapping is not None else selected,
@@ -500,18 +502,34 @@ class RealBackend:
             device=self.device.type,
         )
         pipe.text_encoder.eval()
-        result: dict[str, Any] = {}
-        for index, prompt in enumerate(dict.fromkeys(prompts), 1):
+        unique_prompts = list(dict.fromkeys(prompts))
+        for index, prompt in enumerate(unique_prompts, 1):
             tokenized = pipe.tokenizer(prompt, add_special_tokens=True)
             require(len(tokenized.input_ids) <= MAX_SEQUENCE_LENGTH, f"prompt {index} exceeds 226 tokens")
-            embedding, _ = pipe.encode_prompt(
-                prompt=prompt, do_classifier_free_guidance=False,
+        result: dict[str, Any] = {}
+        for start in range(0, len(unique_prompts), PROMPT_BATCH_SIZE):
+            batch = unique_prompts[start : start + PROMPT_BATCH_SIZE]
+            embeddings, _ = pipe.encode_prompt(
+                prompt=batch, do_classifier_free_guidance=False,
                 num_videos_per_prompt=1, max_sequence_length=MAX_SEQUENCE_LENGTH,
                 device=self.device, dtype=self.torch.bfloat16,
             )
-            embedding = embedding.detach().contiguous().cpu()
-            self._validate(embedding, PROMPT_SHAPE, f"prompt {index}")
-            result[prompt] = embedding
+            embeddings = embeddings.detach().contiguous().cpu()
+            require(
+                tuple(embeddings.shape)
+                == (len(batch), PROMPT_SHAPE[1], PROMPT_SHAPE[2])
+                and embeddings.dtype == self.torch.bfloat16,
+                f"prompt batch {start // PROMPT_BATCH_SIZE}: tensor contract mismatch",
+            )
+            require(
+                bool(self.torch.isfinite(embeddings.float()).all()),
+                f"prompt batch {start // PROMPT_BATCH_SIZE}: non-finite tensor",
+            )
+            for offset, prompt in enumerate(batch):
+                embedding = embeddings[offset : offset + 1].clone().contiguous()
+                self._validate(embedding, PROMPT_SHAPE, f"prompt {start + offset + 1}")
+                result[prompt] = embedding
+            del embeddings
         del pipe
         self._clear()
         return result

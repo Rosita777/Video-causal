@@ -233,6 +233,7 @@ def test_dry_run_writes_plan_without_constructing_backend(tmp_path: Path, monkey
     assert plan["row_count"] == 214
     assert plan["tensor_contract"]["prompt_shape"] == [1, 226, 4096]
     assert plan["tensor_contract"]["latent_shape"] == [1, 16, 13, 60, 104]
+    assert plan["tensor_contract"]["prompt_batch_size"] == 16
     assert not list(output.glob("*.pt"))
     assert cache.main(
         [
