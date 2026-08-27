@@ -2,7 +2,7 @@
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-GPU_INDEX="${GPU_INDEX:-0}"
+GPU_DEVICES="${GPU_DEVICES:-0,1,2,3}"
 MIN_FREE_MIB="${MIN_FREE_MIB:-60000}"
 MAX_UTILIZATION="${MAX_UTILIZATION:-20}"
 POLL_SECONDS="${POLL_SECONDS:-60}"
@@ -49,17 +49,28 @@ log() {
 
 wait_for_gpu() {
   while true; do
-    IFS=, read -r free_mib utilization < <(
-      nvidia-smi --id="$GPU_INDEX" \
-        --query-gpu=memory.free,utilization.gpu \
-        --format=csv,noheader,nounits \
-        | tr -d ' '
-    )
-    if (( free_mib >= MIN_FREE_MIB && utilization <= MAX_UTILIZATION )); then
-      log "gpu_ready index=$GPU_INDEX free_mib=$free_mib utilization=$utilization"
+    local ready=1
+    local snapshot=""
+    local free_mib utilization index
+    local -a gpu_indices
+    IFS=',' read -r -a gpu_indices <<<"$GPU_DEVICES"
+    for index in "${gpu_indices[@]}"; do
+      IFS=, read -r free_mib utilization < <(
+        nvidia-smi --id="$index" \
+          --query-gpu=memory.free,utilization.gpu \
+          --format=csv,noheader,nounits \
+          | tr -d ' '
+      )
+      snapshot+="${index}:${free_mib}MiB/${utilization}% "
+      if (( free_mib < MIN_FREE_MIB || utilization > MAX_UTILIZATION )); then
+        ready=0
+      fi
+    done
+    if (( ready == 1 )); then
+      log "gpu_ready devices=$GPU_DEVICES snapshot=$snapshot"
       return
     fi
-    log "gpu_wait index=$GPU_INDEX free_mib=$free_mib utilization=$utilization"
+    log "gpu_wait devices=$GPU_DEVICES snapshot=$snapshot"
     sleep "$POLL_SECONDS"
   done
 }
@@ -100,7 +111,7 @@ run_cache() {
     command+=(--base-cache-dir "$base_dir")
   fi
   log "cache_start label=$label output=$output_dir"
-  CUDA_VISIBLE_DEVICES="$GPU_INDEX" \
+  CUDA_VISIBLE_DEVICES="$GPU_DEVICES" \
     PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
     "${command[@]}" >"$LOG_ROOT/$label.log" 2>&1
   [[ -f "$output_dir/cache_manifest.json" && ! -e "$output_dir/.run_reservation" ]]

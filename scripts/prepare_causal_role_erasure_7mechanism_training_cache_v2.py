@@ -50,6 +50,9 @@ HEIGHT = 480
 WIDTH = 832
 MAX_SEQUENCE_LENGTH = 226
 PROMPT_BATCH_SIZE = 16
+PROMPT_DEVICE_MAP = "balanced"
+PROMPT_SHARD_MAX_MEMORY_GIB = 18
+PROMPT_MIN_CUDA_DEVICES = 4
 INVENTORY_ALGORITHM = "sha256_ordered_filename_nul_file_bytes_newline_v1"
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,199}$")
@@ -428,6 +431,9 @@ def build_plan(
             "width": WIDTH,
             "max_sequence_length": MAX_SEQUENCE_LENGTH,
             "prompt_batch_size": PROMPT_BATCH_SIZE,
+            "prompt_device_map": PROMPT_DEVICE_MAP,
+            "prompt_shard_max_memory_gib": PROMPT_SHARD_MAX_MEMORY_GIB,
+            "prompt_min_cuda_devices": PROMPT_MIN_CUDA_DEVICES,
         },
         "input_binding_sha256": input_binding_sha256(
             mapping if mapping is not None else selected,
@@ -486,20 +492,40 @@ class RealBackend:
 
     def encode_prompts(self, prompts: Sequence[str]) -> dict[str, Any]:
         from diffusers import WanPipeline
+        from transformers import AutoTokenizer, UMT5EncoderModel
+
+        device_count = self.torch.cuda.device_count()
+        require(
+            device_count >= PROMPT_MIN_CUDA_DEVICES,
+            f"prompt encoding requires at least {PROMPT_MIN_CUDA_DEVICES} visible CUDA devices",
+        )
+        max_memory = {
+            index: f"{PROMPT_SHARD_MAX_MEMORY_GIB}GiB"
+            for index in range(device_count)
+        }
+        text_encoder = UMT5EncoderModel.from_pretrained(
+            str(self.model / "text_encoder"),
+            torch_dtype=self.torch.bfloat16,
+            device_map=PROMPT_DEVICE_MAP,
+            max_memory=max_memory,
+            low_cpu_mem_usage=True,
+        )
+        device_map = getattr(text_encoder, "hf_device_map", None)
+        require(isinstance(device_map, dict) and device_map, "prompt encoder device map is missing")
+        mapped_devices = set(device_map.values())
+        require(
+            all(type(value) is int for value in mapped_devices)
+            and len(mapped_devices) >= 2,
+            "prompt encoder was not sharded across CUDA devices",
+        )
+        tokenizer = AutoTokenizer.from_pretrained(str(self.model / "tokenizer"))
         pipe = WanPipeline.from_pretrained(
             str(self.model),
             transformer=None,
             vae=None,
+            text_encoder=text_encoder,
+            tokenizer=tokenizer,
             torch_dtype=self.torch.bfloat16,
-        )
-        # Wan's UMT5 text encoder cannot be placed on one 80GB A100 with
-        # enough activation headroom.  Accelerate's sequential offload keeps
-        # the frozen bf16 modules on CPU and moves submodules to the registered
-        # CUDA device only for their forward calls.  Computation remains on
-        # CUDA, while peak device memory stays bounded.
-        pipe.enable_sequential_cpu_offload(
-            gpu_id=0 if self.device.index is None else self.device.index,
-            device=self.device.type,
         )
         pipe.text_encoder.eval()
         unique_prompts = list(dict.fromkeys(prompts))
@@ -530,7 +556,7 @@ class RealBackend:
                 self._validate(embedding, PROMPT_SHAPE, f"prompt {start + offset + 1}")
                 result[prompt] = embedding
             del embeddings
-        del pipe
+        del pipe, text_encoder, tokenizer
         self._clear()
         return result
 
