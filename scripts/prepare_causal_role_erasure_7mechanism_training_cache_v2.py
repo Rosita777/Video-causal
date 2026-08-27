@@ -491,7 +491,7 @@ class RealBackend:
         self._std = None
 
     def encode_prompts(self, prompts: Sequence[str]) -> dict[str, Any]:
-        from diffusers import WanPipeline
+        from diffusers.pipelines.wan.pipeline_wan import prompt_clean
         from transformers import AutoTokenizer, UMT5EncoderModel
 
         device_count = self.torch.cuda.device_count()
@@ -519,26 +519,47 @@ class RealBackend:
             "prompt encoder was not sharded across CUDA devices",
         )
         tokenizer = AutoTokenizer.from_pretrained(str(self.model / "tokenizer"))
-        pipe = WanPipeline.from_pretrained(
-            str(self.model),
-            transformer=None,
-            vae=None,
-            text_encoder=text_encoder,
-            tokenizer=tokenizer,
-            torch_dtype=self.torch.bfloat16,
-        )
-        pipe.text_encoder.eval()
+        text_encoder.eval()
         unique_prompts = list(dict.fromkeys(prompts))
         for index, prompt in enumerate(unique_prompts, 1):
-            tokenized = pipe.tokenizer(prompt, add_special_tokens=True)
+            tokenized = tokenizer(prompt, add_special_tokens=True)
             require(len(tokenized.input_ids) <= MAX_SEQUENCE_LENGTH, f"prompt {index} exceeds 226 tokens")
         result: dict[str, Any] = {}
         for start in range(0, len(unique_prompts), PROMPT_BATCH_SIZE):
             batch = unique_prompts[start : start + PROMPT_BATCH_SIZE]
-            embeddings, _ = pipe.encode_prompt(
-                prompt=batch, do_classifier_free_guidance=False,
-                num_videos_per_prompt=1, max_sequence_length=MAX_SEQUENCE_LENGTH,
-                device=self.device, dtype=self.torch.bfloat16,
+            cleaned = [prompt_clean(prompt) for prompt in batch]
+            text_inputs = tokenizer(
+                cleaned,
+                padding="max_length",
+                max_length=MAX_SEQUENCE_LENGTH,
+                truncation=True,
+                add_special_tokens=True,
+                return_attention_mask=True,
+                return_tensors="pt",
+            )
+            mask = text_inputs.attention_mask
+            sequence_lengths = mask.gt(0).sum(dim=1).long()
+            input_device = text_encoder.shared.weight.device
+            with self.torch.inference_mode():
+                embeddings = text_encoder(
+                    text_inputs.input_ids.to(input_device),
+                    mask.to(input_device),
+                ).last_hidden_state
+            embeddings = embeddings.to(dtype=self.torch.bfloat16, device=self.device)
+            unpadded = [value[:length] for value, length in zip(embeddings, sequence_lengths)]
+            embeddings = self.torch.stack(
+                [
+                    self.torch.cat(
+                        [
+                            value,
+                            value.new_zeros(
+                                MAX_SEQUENCE_LENGTH - value.size(0), value.size(1)
+                            ),
+                        ]
+                    )
+                    for value in unpadded
+                ],
+                dim=0,
             )
             embeddings = embeddings.detach().contiguous().cpu()
             require(
@@ -556,7 +577,7 @@ class RealBackend:
                 self._validate(embedding, PROMPT_SHAPE, f"prompt {start + offset + 1}")
                 result[prompt] = embedding
             del embeddings
-        del pipe, text_encoder, tokenizer
+        del text_encoder, tokenizer
         self._clear()
         return result
 
