@@ -587,6 +587,7 @@ class RealBackend:
         from diffusers import AutoencoderKLWan, WanPipeline
         self._vae = AutoencoderKLWan.from_pretrained(str(self.model), subfolder="vae", torch_dtype=self.torch.bfloat16).to(self.device)
         self._vae.eval()
+        self._vae.requires_grad_(False)
         if hasattr(self._vae, "enable_tiling"):
             self._vae.enable_tiling()
         self._processor = WanPipeline.from_pretrained(str(self.model), transformer=None, text_encoder=None, tokenizer=None, vae=None).video_processor
@@ -606,8 +607,9 @@ class RealBackend:
             require(Fraction(str(stream.average_rate)) == Fraction(FPS, 1), f"{video_path}: expected 8 fps")
             require(stream.width == WIDTH and stream.height == HEIGHT, f"{video_path}: expected 832x480")
         video = self._processor.preprocess_video(frames, height=HEIGHT, width=WIDTH).to(device=self.device, dtype=self.torch.bfloat16)
-        raw = self._vae.encode(video).latent_dist.mode()
-        latent = ((raw - self._mean) / self._std).detach().contiguous().cpu()
+        with self.torch.inference_mode():
+            raw = self._vae.encode(video).latent_dist.mode()
+            latent = ((raw - self._mean) / self._std).detach().contiguous().cpu()
         self._validate(latent, LATENT_SHAPE, str(video_path))
         del video, raw
         self._clear()
