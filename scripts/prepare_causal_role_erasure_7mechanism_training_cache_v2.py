@@ -79,6 +79,12 @@ def require(condition: bool, message: str) -> None:
         raise ValueError(message)
 
 
+def fixed_prompt_batch(prompts: Sequence[str]) -> list[str]:
+    require(1 <= len(prompts) <= PROMPT_BATCH_SIZE, "prompt batch size is invalid")
+    values = list(prompts)
+    return values + [values[-1]] * (PROMPT_BATCH_SIZE - len(values))
+
+
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -527,7 +533,8 @@ class RealBackend:
         result: dict[str, Any] = {}
         for start in range(0, len(unique_prompts), PROMPT_BATCH_SIZE):
             batch = unique_prompts[start : start + PROMPT_BATCH_SIZE]
-            cleaned = [prompt_clean(prompt) for prompt in batch]
+            encoded_batch = fixed_prompt_batch(batch)
+            cleaned = [prompt_clean(prompt) for prompt in encoded_batch]
             text_inputs = tokenizer(
                 cleaned,
                 padding="max_length",
@@ -564,7 +571,7 @@ class RealBackend:
             embeddings = embeddings.detach().contiguous().cpu()
             require(
                 tuple(embeddings.shape)
-                == (len(batch), PROMPT_SHAPE[1], PROMPT_SHAPE[2])
+                == (PROMPT_BATCH_SIZE, PROMPT_SHAPE[1], PROMPT_SHAPE[2])
                 and embeddings.dtype == self.torch.bfloat16,
                 f"prompt batch {start // PROMPT_BATCH_SIZE}: tensor contract mismatch",
             )

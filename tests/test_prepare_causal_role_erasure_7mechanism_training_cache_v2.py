@@ -18,6 +18,15 @@ if str(SCRIPTS) not in sys.path:
 import prepare_causal_role_erasure_7mechanism_training_cache_v2 as cache  # noqa: E402
 
 
+def test_fixed_prompt_batch_repeats_only_the_last_value():
+    assert cache.fixed_prompt_batch(["a", "b"]) == ["a", "b"] + ["b"] * 14
+    assert cache.fixed_prompt_batch([str(index) for index in range(16)]) == [
+        str(index) for index in range(16)
+    ]
+    with pytest.raises(ValueError, match="batch size"):
+        cache.fixed_prompt_batch([])
+
+
 def _write_csv(path: Path, rows: list[dict[str, str]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as handle:
