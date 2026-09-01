@@ -48,6 +48,10 @@ EXPECTED_INITIAL_LORA_SHA256 = "af163fcb6706c8403ffb1eaa9001cb2b9ac8ef86110663e8
 EXPECTED_NOISE_RNG_INITIAL_SHA256 = "49b65850c0793680efb3a7cfc023601e240f13acb78ddb3aa483794c68136704"
 EXPECTED_NOISE_RNG_FINAL_SHA256 = "79ff6c9a3db46b02896073cc95e8d05d185e813c844475e14b1ae460dd61b33f"
 EXPECTED_SCHEDULE_SHA256 = "e006d4d730b807e699a033973537032bad41ea484a5a0808b80e9f9b5136be6e"
+RUN_SPEC_REGISTRY_RELATIVE = Path(
+    "outputs/causal_role_erasure_7mechanism_main_v2/training_run_specs_v2/run_spec_registry.json"
+)
+EXPECTED_RUN_SPEC_REGISTRY_SHA256 = "36c79a862918e436fec59098f052ac6c11e83ce4833dd74b53fc5842285602ca"
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,199}$")
 SEALED = ("final36", "sealed-final", "sealed_final")
@@ -163,6 +167,8 @@ def load_run_spec(project_root: Path, path: Path, expected_sha256: str) -> dict[
         "python_executable", "training_config", "output_dir",
         "matched_tensor_equality_receipt",
     }
+
+
     require(isinstance(payload, dict) and set(payload) == required, "run-spec fields are not exact")
     require(payload["schema_version"] == 1 and payload["protocol"] == RUN_SPEC_PROTOCOL, "run-spec schema/protocol mismatch")
     require(payload["protocol_version"] == PROTOCOL_VERSION and payload["status"] == "frozen", "run-spec is not frozen")
@@ -197,7 +203,40 @@ def load_run_spec(project_root: Path, path: Path, expected_sha256: str) -> dict[
     }
 
 
-def validate_cache(record: Mapping[str, Any], *, mode: str, mechanism: str, arm: str | None) -> dict[str, Any]:
+def validate_frozen_run_spec_registry(
+    project_root: Path, spec: Mapping[str, Any]
+) -> dict[str, Any]:
+    path = resolve_path(project_root, RUN_SPEC_REGISTRY_RELATIVE)
+    regular_file(path, "frozen run-spec registry")
+    require(
+        sha256_file(path) == EXPECTED_RUN_SPEC_REGISTRY_SHA256,
+        "frozen run-spec registry SHA-256 mismatch",
+    )
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    require(
+        payload.get("status") == "training_run_specs_frozen_after_cache_validation"
+        and payload.get("run_spec_count") == 18,
+        "frozen run-spec registry status/count mismatch",
+    )
+    record = payload.get("run_specs", {}).get(spec["run_id"])
+    require(isinstance(record, dict), "run is absent from frozen run-spec registry")
+    require(
+        resolve_path(project_root, record.get("path", ""))
+        == Path(str(spec["run_spec_path"])).resolve()
+        and record.get("sha256") == spec["run_spec_sha256"],
+        "run-spec registry binding mismatch",
+    )
+    return {
+        "path": str(path),
+        "sha256": EXPECTED_RUN_SPEC_REGISTRY_SHA256,
+        "row_count": 18,
+    }
+
+
+def validate_cache(
+    record: Mapping[str, Any], *, mode: str, mechanism: str,
+    arm: str | None, verify_payload_bytes: bool = True,
+) -> dict[str, Any]:
     root = Path(str(record["path"])); manifest_path = root / "cache_manifest.json"
     regular_file(manifest_path, f"{mode} cache manifest")
     require(sha256_file(manifest_path) == record["manifest_sha256"], f"{mode} cache manifest hash mismatch")
@@ -213,8 +252,12 @@ def validate_cache(record: Mapping[str, Any], *, mode: str, mechanism: str, arm:
     require(len(set(paths)) == len(paths), f"{mode} cache paths are not unique")
     for index, (item, path) in enumerate(zip(files, paths)):
         regular_file(path, f"{mode} cache row {index}")
-        require(item.get("index") == index and item.get("sha256") == sha256_file(path), f"{mode} cache row {index} binding mismatch")
-    require(inventory_sha256(paths) == record["ordered_inventory_sha256"], f"{mode} ordered inventory mismatch")
+        require(item.get("index") == index, f"{mode} cache row {index} index mismatch")
+        require_sha256(item.get("sha256"), f"{mode} cache row {index}")
+        if verify_payload_bytes:
+            require(item["sha256"] == sha256_file(path), f"{mode} cache row {index} binding mismatch")
+    if verify_payload_bytes:
+        require(inventory_sha256(paths) == record["ordered_inventory_sha256"], f"{mode} ordered inventory mismatch")
     require(manifest.get("ordered_inventory_sha256") == record["ordered_inventory_sha256"], f"{mode} manifest inventory mismatch")
     allowed = {manifest_path, root / "cache_plan.json", *paths}
     require(set(root.iterdir()) == allowed, f"{mode} cache directory contains unexpected entries")
@@ -301,7 +344,10 @@ def schedule_sha256(schedule: Sequence[tuple[str, int]]) -> str:
     return digest.hexdigest()
 
 
-def build_plan(spec: Mapping[str, Any], *, dry_run: bool) -> dict[str, Any]:
+def build_plan(
+    spec: Mapping[str, Any], *, dry_run: bool,
+    run_spec_registry: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     schedule = build_schedule()
     require(Counter(role for role, _ in schedule) == Counter({"erase": 100, "preserve": 100}), "schedule role counts invalid")
     require(all(role == ("erase" if step % 2 else "preserve") for step, (role, _) in enumerate(schedule, 1)), "schedule does not strictly alternate")
@@ -320,11 +366,21 @@ def build_plan(spec: Mapping[str, Any], *, dry_run: bool) -> dict[str, Any]:
         "training_config": EXPECTED_CONFIG, "schedule_sha256": digest,
         "role_step_counts": {"erase": 100, "preserve": 100},
         "null_preflight": "numeric_forward_loss_exact_numeric_gradient_l2_bounded_A_A_v3",
+        "cache_validation_basis": {
+            "mode": (
+                "full_per_file_hash_revalidation"
+                if run_spec_registry is None
+                else "frozen_run_spec_registry_plus_live_tensor_contract"
+            ),
+            "run_spec_registry": run_spec_registry,
+        },
         "checkpoint_policy": "only_checkpoint_000200",
     }
 
 
-def validate_live_model_runtime(spec: Mapping[str, Any]) -> None:
+def validate_live_model_runtime(
+    spec: Mapping[str, Any], *, verify_model_bytes: bool = True
+) -> None:
     # Reuse the generic cache preparer's inventory algorithms.  That module is
     # standard-library-only until live=True reaches its explicit torch check.
     import prepare_causal_role_erasure_7mechanism_training_cache_v2 as contract
@@ -336,7 +392,7 @@ def validate_live_model_runtime(spec: Mapping[str, Any]) -> None:
         "runtime_registry": spec["runtime_registry"],
         "python_executable": spec["python_executable"],
     }
-    contract.validate_model_inventory(binding, live=True)
+    contract.validate_model_inventory(binding, live=verify_model_bytes)
     contract.validate_runtime(binding, live=True)
 
 
@@ -433,6 +489,7 @@ def run_training(
         "status": "eligible_training_complete", "run_id": plan["run_id"],
         "mechanism": plan["mechanism"], "arm": plan["arm"], "step": 200,
         "run_spec_sha256": spec["run_spec_sha256"], "training_config": EXPECTED_CONFIG,
+        "cache_validation_basis": plan["cache_validation_basis"],
         "schedule_sha256": EXPECTED_SCHEDULE_SHA256, "role_step_counts": dict(role_counts),
         "initial_lora_sha256": initial, "noise_rng_initial_sha256": rng_initial,
         "noise_rng_final_sha256": rng_final, "mean_loss_last20": sum(losses[-20:]) / 20,
@@ -576,22 +633,25 @@ def main(argv:Sequence[str]|None=None)->int:
     parser=build_parser();args=parser.parse_args(argv)
     try:
         reject_sealed(args.project_root,args.run_spec);project=args.project_root.resolve(strict=True);spec_path=resolve_path(project,args.run_spec);spec=load_run_spec(project,spec_path,args.run_spec_sha256)
-        base=validate_cache(spec["base_cache"],mode="prepare-base",mechanism=spec["mechanism"],arm=None);teacher=validate_cache(spec["teacher_cache"],mode="prepare-teacher",mechanism=spec["mechanism"],arm=None);arm=validate_cache(spec["arm_cache"],mode="prepare-arm",mechanism=spec["mechanism"],arm=ARM_CACHE_NAMES[spec["arm"]]);validate_cache_stack(spec,base,teacher,arm);validate_matched_receipt(spec,base,arm)
-        plan=build_plan(spec,dry_run=args.dry_run);output=Path(spec["output_dir"])
+        trusted_registry=None if args.dry_run else validate_frozen_run_spec_registry(project,spec)
+        verify_payload_bytes=args.dry_run
+        base=validate_cache(spec["base_cache"],mode="prepare-base",mechanism=spec["mechanism"],arm=None,verify_payload_bytes=verify_payload_bytes);teacher=validate_cache(spec["teacher_cache"],mode="prepare-teacher",mechanism=spec["mechanism"],arm=None,verify_payload_bytes=verify_payload_bytes);arm=validate_cache(spec["arm_cache"],mode="prepare-arm",mechanism=spec["mechanism"],arm=ARM_CACHE_NAMES[spec["arm"]],verify_payload_bytes=verify_payload_bytes);validate_cache_stack(spec,base,teacher,arm);validate_matched_receipt(spec,base,arm)
+        plan=build_plan(spec,dry_run=args.dry_run,run_spec_registry=trusted_registry);output=Path(spec["output_dir"])
         if args.dry_run:reserve_output(output,plan);print(f"Planned training run {spec['run_id']} at {output}");return 0
         require(Path(sys.executable).resolve()==Path(spec["python_executable"]).resolve(),"run must use registered Python")
-        validate_live_model_runtime(spec)
+        validate_live_model_runtime(spec,verify_model_bytes=False)
         backend=RealBackend(spec)
         try:
             # Tensor payload validation precedes model initialization inside run_training.
             def revalidate_frozen() -> None:
                 reopened = load_run_spec(project, spec_path, args.run_spec_sha256)
-                checked_base = validate_cache(reopened["base_cache"], mode="prepare-base", mechanism=reopened["mechanism"], arm=None)
-                checked_teacher = validate_cache(reopened["teacher_cache"], mode="prepare-teacher", mechanism=reopened["mechanism"], arm=None)
-                checked_arm = validate_cache(reopened["arm_cache"], mode="prepare-arm", mechanism=reopened["mechanism"], arm=ARM_CACHE_NAMES[reopened["arm"]])
+                validate_frozen_run_spec_registry(project,reopened)
+                checked_base = validate_cache(reopened["base_cache"], mode="prepare-base", mechanism=reopened["mechanism"], arm=None,verify_payload_bytes=False)
+                checked_teacher = validate_cache(reopened["teacher_cache"], mode="prepare-teacher", mechanism=reopened["mechanism"], arm=None,verify_payload_bytes=False)
+                checked_arm = validate_cache(reopened["arm_cache"], mode="prepare-arm", mechanism=reopened["mechanism"], arm=ARM_CACHE_NAMES[reopened["arm"]],verify_payload_bytes=False)
                 validate_cache_stack(reopened, checked_base, checked_teacher, checked_arm)
                 validate_matched_receipt(reopened, checked_base, checked_arm)
-                validate_live_model_runtime(reopened)
+                validate_live_model_runtime(reopened,verify_model_bytes=False)
             reserve_output(output,plan);receipt=run_training(plan,spec,backend,base,teacher,arm,frozen_revalidator=revalidate_frozen)
         finally:backend.close()
         require(sha256_file(spec_path)==spec["run_spec_sha256"],"run-spec changed during training");print(f"Completed {spec['run_id']}: {receipt['checkpoint']['path']}");return 0
