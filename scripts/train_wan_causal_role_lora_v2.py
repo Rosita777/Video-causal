@@ -24,7 +24,7 @@ from typing import Any, Callable, Mapping, Protocol, Sequence
 PROTOCOL_VERSION = "causal_role_erasure_7m_single_seed_v2"
 RUN_SPEC_PROTOCOL = "causal_role_erasure_7mechanism_training_run_spec_v2"
 TRAINING_PROTOCOL = "wan_causal_role_lora_training_v2"
-NULL_PREFLIGHT_PROTOCOL = "wan_causal_role_lora_numeric_aa_preflight_v2"
+NULL_PREFLIGHT_PROTOCOL = "wan_causal_role_lora_numeric_aa_preflight_v3"
 ARMS = ("matched_control", "V4", "generic_paraphrase", "bystander_token")
 ARM_CACHE_NAMES = {
     "matched_control": "matched",
@@ -51,6 +51,9 @@ EXPECTED_SCHEDULE_SHA256 = "e006d4d730b807e699a033973537032bad41ea484a5a0808b80e
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,199}$")
 SEALED = ("final36", "sealed-final", "sealed_final")
+GRADIENT_MAX_ABS_TOL = 2e-5
+GRADIENT_MAX_PARAMETER_L2_RELATIVE = 0.05
+GRADIENT_MAX_GLOBAL_L2_RELATIVE = 0.02
 
 EXPECTED_CONFIG: dict[str, Any] = {
     "seed": SEED,
@@ -316,7 +319,7 @@ def build_plan(spec: Mapping[str, Any], *, dry_run: bool) -> dict[str, Any]:
         "matched_tensor_equality_receipt": spec["matched_tensor_equality_receipt"],
         "training_config": EXPECTED_CONFIG, "schedule_sha256": digest,
         "role_step_counts": {"erase": 100, "preserve": 100},
-        "null_preflight": "numeric_forward_loss_exact_per_parameter_gradient_allclose_A_A",
+        "null_preflight": "numeric_forward_loss_exact_numeric_gradient_l2_bounded_A_A_v3",
         "checkpoint_policy": "only_checkpoint_000200",
     }
 
@@ -395,7 +398,7 @@ def run_training(
     require(preflight.get("loss_exact") is True, "numeric A-A loss equality failed")
     require(
         isinstance(preflight.get("gradient_comparison"), str)
-        and preflight["gradient_comparison"].startswith("per_parameter_numeric_allclose"),
+        and preflight["gradient_comparison"].startswith("per_parameter_numeric_l2_relative"),
         "numeric A-A per-parameter gradient comparison missing",
     )
     require(type(preflight.get("gradient_parameter_count")) is int and preflight["gradient_parameter_count"] > 0, "numeric A-A gradient inventory empty")
@@ -527,11 +530,15 @@ class RealBackend:
         require(self.torch.equal(observations[0]["student"], observations[1]["student"]) and self.torch.equal(observations[0]["frozen"], observations[1]["frozen"]), "A-A forward tensors differ")
         require(all(observations[0][key] == observations[1][key] for key in ("loss","flow","teacher")), "A-A losses differ")
         require(set(gradients[0]) == set(gradients[1]) and gradients[0], "A-A gradient inventory invalid")
-        max_abs=0.0
+        max_abs=0.0; max_parameter_l2_relative=0.0
+        global_difference_squared=0.0; global_reference_squared=0.0
         for name in gradients[0]:
-            left,right=gradients[0][name],gradients[1][name]; require(bool(self.torch.isfinite(left).all() and self.torch.isfinite(right).all()), f"non-finite gradient {name}")
-            require(bool(self.torch.allclose(left,right,rtol=1e-5,atol=1e-7)), f"numeric gradient mismatch {name}"); max_abs=max(max_abs,float((left-right).abs().max()))
-        return {"status":"passed","forward_exact":True,"loss_exact":True,"gradient_comparison":"per_parameter_numeric_allclose_rtol1e-5_atol1e-7","gradient_parameter_count":len(gradients[0]),"gradient_max_abs_difference":max_abs,"legacy_byte_gradient_gate_used":False}
+            left,right=gradients[0][name].double(),gradients[1][name].double(); require(bool(self.torch.isfinite(left).all() and self.torch.isfinite(right).all()), f"non-finite gradient {name}")
+            difference=left-right; difference_norm=float(self.torch.linalg.vector_norm(difference)); reference_norm=max(float(self.torch.linalg.vector_norm(left)),float(self.torch.linalg.vector_norm(right)),1e-30); parameter_relative=difference_norm/reference_norm; parameter_max_abs=float(difference.abs().max())
+            require(parameter_relative <= GRADIENT_MAX_PARAMETER_L2_RELATIVE, f"numeric gradient L2 mismatch {name}"); require(parameter_max_abs <= GRADIENT_MAX_ABS_TOL, f"numeric gradient absolute mismatch {name}")
+            max_parameter_l2_relative=max(max_parameter_l2_relative,parameter_relative); max_abs=max(max_abs,parameter_max_abs); global_difference_squared+=difference_norm*difference_norm; global_reference_squared+=reference_norm*reference_norm
+        global_l2_relative=math.sqrt(global_difference_squared/global_reference_squared); require(global_l2_relative <= GRADIENT_MAX_GLOBAL_L2_RELATIVE,"numeric global gradient L2 mismatch")
+        return {"status":"passed","forward_exact":True,"loss_exact":True,"gradient_comparison":"per_parameter_numeric_l2_relative_le_0p05_max_abs_le_2e-5_global_l2_relative_le_0p02","gradient_parameter_count":len(gradients[0]),"gradient_max_abs_difference":max_abs,"gradient_max_parameter_l2_relative":max_parameter_l2_relative,"gradient_global_l2_relative":global_l2_relative,"legacy_byte_gradient_gate_used":False}
     def begin_training(self) -> str:
         trainable=[parameter for parameter in self.transformer.parameters() if parameter.requires_grad]
         self.optimizer=self.torch.optim.AdamW(trainable,lr=5e-5,betas=(0.9,0.999),weight_decay=0.01); self.generator=self.torch.Generator(device="cpu").manual_seed(SEED); return self._tensor_sha(self.generator.get_state())

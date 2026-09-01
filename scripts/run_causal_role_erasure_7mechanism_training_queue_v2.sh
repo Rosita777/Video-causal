@@ -11,6 +11,7 @@ MIN_FREE_MIB="${MIN_FREE_MIB:-60000}"
 MAX_UTILIZATION="${MAX_UTILIZATION:-20}"
 POLL_SECONDS="${POLL_SECONDS:-60}"
 GPU_DEVICES="${GPU_DEVICES:-0,1,2,3}"
+SLOTS_PER_GPU="${SLOTS_PER_GPU:-2}"
 
 mkdir -p "$LOG_ROOT"
 QUEUE_LOG="$LOG_ROOT/queue.log"
@@ -40,6 +41,13 @@ PY
 
 IFS=',' read -r -a gpu_indices <<<"$GPU_DEVICES"
 [[ "${#gpu_indices[@]}" -gt 0 ]]
+[[ "$SLOTS_PER_GPU" =~ ^[1-9][0-9]*$ ]]
+worker_gpus=()
+for gpu in "${gpu_indices[@]}"; do
+  for ((slot=0; slot<SLOTS_PER_GPU; slot++)); do
+    worker_gpus+=("$gpu")
+  done
+done
 
 wait_for_gpu() {
   local gpu="$1"
@@ -64,7 +72,7 @@ run_worker() {
   local worker_index="$1"
   local gpu="$2"
   local job_index run_id relative_spec spec_sha spec output_dir
-  for ((job_index=worker_index; job_index<${#jobs[@]}; job_index+=${#gpu_indices[@]})); do
+  for ((job_index=worker_index; job_index<${#jobs[@]}; job_index+=${#worker_gpus[@]})); do
     IFS=$'\t' read -r run_id relative_spec spec_sha <<<"${jobs[$job_index]}"
     spec="$PROJECT_ROOT/$relative_spec"
     output_dir="$($PYTHON - "$spec" "$PROJECT_ROOT" <<'PY'
@@ -98,8 +106,8 @@ PY
 }
 
 worker_pids=()
-for worker_index in "${!gpu_indices[@]}"; do
-  run_worker "$worker_index" "${gpu_indices[$worker_index]}" &
+for worker_index in "${!worker_gpus[@]}"; do
+  run_worker "$worker_index" "${worker_gpus[$worker_index]}" &
   worker_pids+=("$!")
 done
 

@@ -198,7 +198,7 @@ class FakeBackend:
             "status": "passed" if self.preflight_pass else "failed",
             "forward_exact": self.preflight_pass,
             "loss_exact": self.preflight_pass,
-            "gradient_comparison": "per_parameter_numeric_allclose",
+            "gradient_comparison": "per_parameter_numeric_l2_relative",
             "gradient_parameter_count": 4,
             "legacy_byte_gradient_gate_used": False,
         }
@@ -283,7 +283,7 @@ def test_dry_run_is_fresh_and_does_not_construct_backend(tmp_path: Path, monkeyp
     plan = json.loads((output / "run_plan.json").read_text())
     assert plan["dry_run"] is True
     assert plan["training_config"] == trainer.EXPECTED_CONFIG
-    assert plan["null_preflight"] == "numeric_forward_loss_exact_per_parameter_gradient_allclose_A_A"
+    assert plan["null_preflight"] == "numeric_forward_loss_exact_numeric_gradient_l2_bounded_A_A_v3"
     assert not list(output.glob("checkpoint-*"))
     assert trainer.main(
         ["--project-root", str(project), "--run-spec", str(spec), "--run-spec-sha256", trainer.sha256_file(spec), "--dry-run"]
