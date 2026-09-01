@@ -22,6 +22,10 @@ import run_causal_role_erasure_7mechanism_cogvideox_controls_v2 as controls  # n
 CODE_FILES = (
     "build_causal_role_erasure_7mechanism_baseline_registry_v2.py",
     "run_causal_role_erasure_7mechanism_cogvideox_controls_v2.py",
+    "run_causal_role_erasure_7mechanism_videoeraser_official_v2.py",
+    "run_causal_role_erasure_7mechanism_safree_cogvideox_v2.py",
+    "run_causal_role_erasure_7mechanism_t2v_adapted_v2.py",
+    "run_causal_role_erasure_7mechanism_baseline_queue_v2.py",
     "build_causal_role_erasure_7mechanism_t2v_training_registry_v2.py",
     "train_causal_role_erasure_7mechanism_t2v_adapted_v2.py",
     "run_causal_role_erasure_7mechanism_t2v_training_queue_v2.sh",
@@ -138,11 +142,20 @@ def _materialize_t2v_checkpoints(f: dict[str, Path], registry: dict) -> None:
         config.write_text('{"eraser_rank":128}\n', encoding="utf-8")
         state.write_text('{"step":100}\n', encoding="utf-8")
         receipt = {
+            "protocol": t2v_registry.PROTOCOL,
+            "protocol_version": baseline.PROTOCOL_VERSION,
             "status": "eligible",
+            "run_id": run["run_id"],
             "mechanism": run["mechanism"],
+            "step": 100,
             "run_spec_sha256": run["run_spec_sha256"],
+            "training_rows_sha256": json.loads(
+                (f["project"] / run["run_spec"]).read_text(encoding="utf-8")
+            )["training_rows"]["sha256"],
             "weights_sha256": baseline.sha256_file(weights),
             "config_sha256": baseline.sha256_file(config),
+            "training_state_sha256": baseline.sha256_file(state),
+            "formal_output_inspected": False,
         }
         (checkpoint / "training_receipt.json").write_bytes(baseline.canonical_json_bytes(receipt))
 
@@ -229,6 +242,7 @@ def test_controls_keep_arbitrary_formal_seeds_and_checkpoint_full_media(tmp_path
     _materialize_t2v_checkpoints(f, t2v)
     fixture_pipeline = f["videoeraser"] / "CogVideoX/cogvideox_pipeline.py"
     monkeypatch.setattr(baseline, "EXPECTED_VIDEOERASER_PIPELINE_SHA256", baseline.sha256_file(fixture_pipeline))
+    monkeypatch.setattr(baseline, "probe_runtime", _fake_runtime)
     baseline.build_registry(
         project_root=f["project"],
         formal_cases=f["formal"],

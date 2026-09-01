@@ -64,24 +64,26 @@ Only after the dry run is clean, launch the registered training queue:
 bash scripts/run_causal_role_erasure_7mechanism_t2v_training_queue_v2.sh
 ```
 
-## 3. Restore and freeze SAFREE
+## 3. Freeze the restored SAFREE checkout
 
-The official checkout is currently missing on `/data`. Restore
-`https://github.com/jaehong31/SAFREE` at
-`baselines/external/SAFREE`, then record its exact 40-hex commit and the SHA-256
-of `cogvideox/cogvideox_pipeline.py`. No floating branch name is accepted by
-the final builder.
+The official checkout at `baselines/external/SAFREE` is frozen at commit
+`b8b2c3fa9d7f51c46f5a570170503fc98bd9c7ec`.  The SHA-256 of
+`cogvideox/cogvideox_pipeline.py` is
+`55185f5972ec0942e9ba653176c14c9ecd5ac0e19ef308d92e31439a10ce2609`.
+The final builder must receive both exact values; no floating branch name is
+accepted.
 
 ## 4. Build the complete formal-generation registry
 
-Use a fresh final output directory and substitute the observed SAFREE values:
+Use a fresh final output directory after all seven T2V checkpoints exist:
 
 ```bash
 models/.wan-runtime/bin/python \
   scripts/build_causal_role_erasure_7mechanism_baseline_registry_v2.py \
   --project-root "$PWD" \
-  --safree-expected-commit "$SAFREE_COMMIT" \
-  --safree-expected-pipeline-sha256 "$SAFREE_PIPELINE_SHA256" \
+  --safree-expected-commit b8b2c3fa9d7f51c46f5a570170503fc98bd9c7ec \
+  --safree-expected-pipeline-sha256 \
+    55185f5972ec0942e9ba653176c14c9ecd5ac0e19ef308d92e31439a10ce2609 \
   --t2v-registry \
     outputs/causal_role_erasure_7mechanism_main_v2/t2v_training_specs_v2/t2v_training_registry.json \
   --output-root \
@@ -111,8 +113,33 @@ models/.wan-runtime/bin/python \
   --dry-run
 ```
 
-Use `--baseline negative_prompt` for the paired Negative Prompt stream. Remove
-`--dry-run` only for the formal launch. An interrupted run may use `--resume`;
+Use `--baseline negative_prompt` for the paired Negative Prompt stream. After
+the dry run freezes its output plan, replace `--dry-run` with `--resume` for
+the formal launch. An interrupted run may also use `--resume`;
 every existing video is re-decoded and hash-checked before it is skipped. Each
 accepted file must contain exactly 49 frames at 8 FPS and 480x720, and receives
 an individual immutable receipt.
+
+## 6. Run all five CogVideoX streams
+
+The unified queue dispatches all `5 x 7 = 35` stream/mechanism jobs and checks
+all 1,470 videos through the method-specific formal runners.  Use one SAFREE
+job at a time for the first formal run because its official pipeline is fp32:
+
+```bash
+models/.wan-runtime/bin/python \
+  scripts/run_causal_role_erasure_7mechanism_baseline_queue_v2.py \
+  --project-root "$PWD" \
+  --baseline-registry \
+    outputs/causal_role_erasure_7mechanism_main_v2/baseline_registry_v2_final/baseline_registry.json \
+  --output-root \
+    outputs/causal_role_erasure_7mechanism_main_v2/formal_baselines_v2 \
+  --gpus 0,1,2,3 \
+  --safree-max-concurrency 1 \
+  --dry-run
+```
+
+Inspect the deterministic plan, then replace `--dry-run` with `--resume` to
+execute that exact plan.  `--resume` is infrastructure-only: it revalidates
+the complete child plan, manifest, receipts, media, and hashes; partial or
+failed jobs are rejected in place.

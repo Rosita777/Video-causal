@@ -237,6 +237,11 @@ def inspect_safree(
 def inspect_t2v(
     project_root: Path,
     registry_path: Path | None,
+    *,
+    expected_model_root: Path,
+    expected_model_inventory_sha256: str,
+    expected_runtime_python: Path,
+    expected_runtime_python_sha256: str,
 ) -> dict[str, Any]:
     if registry_path is None or not registry_path.is_file():
         return {
@@ -248,18 +253,76 @@ def inspect_t2v(
     registry = json.loads(raw)
     require(registry.get("protocol") == "causal_role_erasure_7mechanism_t2v_training_registry_v2", "unexpected T2V registry protocol")
     require(registry.get("protocol_version") == PROTOCOL_VERSION, "T2V registry protocol version changed")
+    require(registry.get("status") == "t2v_training_specs_frozen_pre_training", "T2V training registry status changed")
+    require(registry.get("formal_output_inspected") is False, "T2V training registry was contaminated by formal outputs")
+    registered_model_root = Path(str(registry.get("model_root", "")))
+    registered_model_root = registered_model_root if registered_model_root.is_absolute() else project_root / registered_model_root
+    require(registered_model_root.resolve() == expected_model_root.resolve(), "T2V training base model differs from formal base model")
+    inventory_path = Path(str(registry.get("model_inventory", "")))
+    inventory_path = inventory_path if inventory_path.is_absolute() else project_root / inventory_path
+    require(inventory_path.is_file() and not inventory_path.is_symlink(), "T2V model inventory is missing")
+    require(sha256_file(inventory_path) == registry.get("model_inventory_sha256"), "T2V model inventory changed")
+    require(
+        registry.get("model_inventory_sha256") == expected_model_inventory_sha256,
+        "T2V training model inventory differs from formal base model inventory",
+    )
+    registered_runtime = Path(str(registry.get("runtime_python", "")))
+    registered_runtime = registered_runtime if registered_runtime.is_absolute() else project_root / registered_runtime
+    require(registered_runtime.resolve() == expected_runtime_python.resolve(), "T2V training runtime differs from formal runtime")
+    require(sha256_file(registered_runtime) == registry.get("runtime_python_sha256"), "T2V training runtime changed")
+    require(
+        registry.get("runtime_python_sha256") == expected_runtime_python_sha256,
+        "T2V training runtime hash differs from formal runtime",
+    )
+    for relative, digest in registry.get("code_sha256", {}).items():
+        path = project_root / str(relative)
+        require(path.is_file() and not path.is_symlink(), f"T2V registered code artifact missing: {path}")
+        require(sha256_file(path) == digest, f"T2V registered code artifact changed: {relative}")
     runs = registry.get("runs")
     require(isinstance(runs, list) and len(runs) == len(MECHANISMS), "T2V registry must contain seven runs")
     require([run.get("mechanism") for run in runs] == list(MECHANISMS), "T2V run order changed")
     bound = []
     ready = True
     for run in runs:
+        spec_path = Path(str(run.get("run_spec", "")))
+        spec_path = spec_path if spec_path.is_absolute() else project_root / spec_path
+        require(spec_path.is_file() and not spec_path.is_symlink(), f"T2V run spec missing: {spec_path}")
+        require(sha256_file(spec_path) == run.get("run_spec_sha256"), f"T2V run spec changed: {spec_path}")
+        spec = json.loads(spec_path.read_text(encoding="utf-8"))
+        require(spec.get("protocol") == registry["protocol"], f"T2V run-spec protocol changed: {spec_path}")
+        require(spec.get("protocol_version") == PROTOCOL_VERSION, f"T2V run-spec version changed: {spec_path}")
+        require(spec.get("run_id") == run.get("run_id"), f"T2V run ID mismatch: {spec_path}")
+        require(spec.get("mechanism") == run.get("mechanism"), f"T2V run-spec mechanism mismatch: {spec_path}")
+        require(spec.get("eligible_checkpoint") == run.get("eligible_checkpoint"), f"T2V eligible checkpoint mismatch: {spec_path}")
+        spec_model_root = Path(str(spec.get("model_root", "")))
+        spec_model_root = spec_model_root if spec_model_root.is_absolute() else project_root / spec_model_root
+        require(spec_model_root.resolve() == expected_model_root.resolve(), f"T2V run-spec base model mismatch: {spec_path}")
+        spec_inventory = spec.get("model_inventory", {})
+        require(
+            spec_inventory.get("sha256") == expected_model_inventory_sha256,
+            f"T2V run-spec model inventory mismatch: {spec_path}",
+        )
+        spec_runtime = Path(str(spec.get("runtime_python", "")))
+        spec_runtime = spec_runtime if spec_runtime.is_absolute() else project_root / spec_runtime
+        require(spec_runtime.resolve() == expected_runtime_python.resolve(), f"T2V run-spec runtime mismatch: {spec_path}")
+        require(
+            spec.get("runtime_python_sha256") == expected_runtime_python_sha256,
+            f"T2V run-spec runtime hash mismatch: {spec_path}",
+        )
+        training_rows = Path(str(spec.get("training_rows", {}).get("path", "")))
+        training_rows = training_rows if training_rows.is_absolute() else project_root / training_rows
+        require(training_rows.is_file() and not training_rows.is_symlink(), f"T2V training rows missing: {training_rows}")
+        require(
+            sha256_file(training_rows) == spec.get("training_rows", {}).get("sha256"),
+            f"T2V training rows changed: {training_rows}",
+        )
         checkpoint = Path(str(run["eligible_checkpoint"]))
         checkpoint = checkpoint if checkpoint.is_absolute() else project_root / checkpoint
         weights = checkpoint / "eraser_weights.pt"
         config = checkpoint / "eraser_config.json"
+        state = checkpoint / "training_state.json"
         receipt = checkpoint / "training_receipt.json"
-        present = all(path.is_file() and not path.is_symlink() for path in (weights, config, receipt))
+        present = all(path.is_file() and not path.is_symlink() for path in (weights, config, state, receipt))
         ready = ready and present
         item = {
             "mechanism": run["mechanism"],
@@ -270,15 +333,30 @@ def inspect_t2v(
             receipt_payload = json.loads(receipt.read_text(encoding="utf-8"))
             weights_sha256 = sha256_file(weights)
             config_sha256 = sha256_file(config)
+            state_sha256 = sha256_file(state)
             require(receipt_payload.get("status") == "eligible", f"T2V checkpoint is not eligible: {checkpoint}")
+            require(receipt_payload.get("protocol") == registry["protocol"], f"T2V receipt protocol mismatch: {checkpoint}")
+            require(receipt_payload.get("protocol_version") == PROTOCOL_VERSION, f"T2V receipt version mismatch: {checkpoint}")
+            require(receipt_payload.get("run_id") == run.get("run_id"), f"T2V receipt run ID mismatch: {checkpoint}")
             require(receipt_payload.get("mechanism") == run["mechanism"], f"T2V receipt mechanism mismatch: {checkpoint}")
+            require(
+                receipt_payload.get("step") == spec.get("parameters", {}).get("eligible_checkpoint_step"),
+                f"T2V receipt step mismatch: {checkpoint}",
+            )
             require(receipt_payload.get("run_spec_sha256") == run["run_spec_sha256"], f"T2V receipt run-spec mismatch: {checkpoint}")
+            require(
+                receipt_payload.get("training_rows_sha256") == spec.get("training_rows", {}).get("sha256"),
+                f"T2V receipt training rows mismatch: {checkpoint}",
+            )
             require(receipt_payload.get("weights_sha256") == weights_sha256, f"T2V weights receipt mismatch: {checkpoint}")
             require(receipt_payload.get("config_sha256") == config_sha256, f"T2V config receipt mismatch: {checkpoint}")
+            require(receipt_payload.get("training_state_sha256") == state_sha256, f"T2V state receipt mismatch: {checkpoint}")
+            require(receipt_payload.get("formal_output_inspected") is False, f"T2V checkpoint used formal outputs: {checkpoint}")
             item.update(
                 {
                     "weights_sha256": weights_sha256,
                     "config_sha256": config_sha256,
+                    "training_state_sha256": state_sha256,
                     "receipt_sha256": sha256_file(receipt),
                 }
             )
@@ -357,7 +435,14 @@ def build_registry(
         safree_expected_commit.casefold() if safree_expected_commit else None,
         safree_expected_pipeline_sha256.casefold() if safree_expected_pipeline_sha256 else None,
     )
-    t2v = inspect_t2v(project_root, t2v_registry)
+    t2v = inspect_t2v(
+        project_root,
+        t2v_registry,
+        expected_model_root=model_root,
+        expected_model_inventory_sha256=hashlib.sha256(canonical_json_bytes(model_inventory)).hexdigest(),
+        expected_runtime_python=runtime_python,
+        expected_runtime_python_sha256=sha256_file(runtime_python),
+    )
 
     output_root.parent.mkdir(parents=True, exist_ok=True)
     stage = Path(tempfile.mkdtemp(prefix=f".{output_root.name}.tmp-", dir=output_root.parent))
@@ -372,6 +457,10 @@ def build_registry(
         code_paths = (
             "scripts/build_causal_role_erasure_7mechanism_baseline_registry_v2.py",
             "scripts/run_causal_role_erasure_7mechanism_cogvideox_controls_v2.py",
+            "scripts/run_causal_role_erasure_7mechanism_videoeraser_official_v2.py",
+            "scripts/run_causal_role_erasure_7mechanism_safree_cogvideox_v2.py",
+            "scripts/run_causal_role_erasure_7mechanism_t2v_adapted_v2.py",
+            "scripts/run_causal_role_erasure_7mechanism_baseline_queue_v2.py",
             "scripts/build_causal_role_erasure_7mechanism_t2v_training_registry_v2.py",
             "scripts/train_causal_role_erasure_7mechanism_t2v_adapted_v2.py",
         )

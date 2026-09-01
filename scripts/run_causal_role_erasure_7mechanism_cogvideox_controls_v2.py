@@ -16,10 +16,15 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 from fractions import Fraction
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
+
+SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
 
 import build_causal_role_erasure_7mechanism_baseline_registry_v2 as baseline_registry
 
@@ -87,11 +92,15 @@ def load_registry(project_root: Path, registry_path: Path, receipt_path: Path) -
     require(registry.get("protocol_version") == baseline_registry.PROTOCOL_VERSION, "baseline protocol version changed")
     require(registry.get("formal_generation_authorized") is True, "baseline registry does not authorize formal generation")
     require(receipt.get("registry_sha256") == hashlib.sha256(registry_raw).hexdigest(), "baseline registry receipt mismatch")
-    runner_relative = "scripts/run_causal_role_erasure_7mechanism_cogvideox_controls_v2.py"
-    runner = project_root / runner_relative
-    require(runner_relative in registry.get("code_sha256", {}), "control runner is not bound by baseline registry")
-    require(runner.is_file() and not runner.is_symlink(), f"registered control runner missing: {runner}")
-    require(sha256_file(runner) == registry["code_sha256"][runner_relative], "control runner changed after baseline freeze")
+    code = registry.get("code_sha256", {})
+    for relative, label in (
+        ("scripts/build_causal_role_erasure_7mechanism_baseline_registry_v2.py", "baseline registry builder"),
+        ("scripts/run_causal_role_erasure_7mechanism_cogvideox_controls_v2.py", "control runner"),
+    ):
+        path = project_root / relative
+        require(relative in code, f"{label} is not bound by baseline registry")
+        require(path.is_file() and not path.is_symlink(), f"registered {label} missing: {path}")
+        require(sha256_file(path) == code[relative], f"{label} changed after baseline freeze")
     formal = resolve_registered(project_root, registry["formal_cases"]["path"])
     require(sha256_file(formal) == registry["formal_cases"]["sha256"], "formal cases changed after registration")
     inventory_path = resolve_registered(project_root, registry["model"]["inventory_path"])
@@ -105,7 +114,12 @@ def load_registry(project_root: Path, registry_path: Path, receipt_path: Path) -
         require(path.stat().st_size == item["size_bytes"], f"registered model file size changed: {path}")
         require(sha256_file(path) == item["sha256"], f"registered model file hash changed: {path}")
     runtime_python = resolve_registered(project_root, registry["runtime"]["python_executable"])
+    require(runtime_python.is_file() and not runtime_python.is_symlink(), f"registered runtime Python missing: {runtime_python}")
     require(sha256_file(runtime_python) == registry["runtime"]["python_executable_sha256"], "runtime Python changed")
+    require(Path(sys.executable).resolve() == runtime_python, f"wrong runtime Python: {Path(sys.executable).resolve()} != {runtime_python}")
+    observed_runtime = baseline_registry.probe_runtime(runtime_python)
+    for field in ("python", "implementation", "packages"):
+        require(observed_runtime.get(field) == registry["runtime"].get(field), f"runtime {field} changed after baseline freeze")
     return registry
 
 
