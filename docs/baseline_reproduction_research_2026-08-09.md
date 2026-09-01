@@ -24,6 +24,14 @@ The paper reports CogVideoX settings of rank 128, learning rate `1e-4`, 500 epoc
 
 An implementation from the paper would require a separate CogVideoX trainer, prompt augmentation, QK-mask extraction, and the Receler-style adapter. We should label that result `T2VUnlearning-adapted (ours)` unless the authors release matching checkpoints.
 
+The frozen seven-mechanism v2 experiment is a deliberately partial adaptation:
+it uses the paper's negatively guided velocity target, rank-128 attention-block
+adapters, and an adapter-residual localization penalty, but it does **not**
+claim the unreleased QK/target-token mask or prompt-augmentation procedure.
+Accordingly, paper tables and captions must call it
+`T2VUnlearning-adapted (ours)` and explicitly identify these deviations; it
+must not be presented as an official T2VUnlearning reproduction.
+
 ## VideoEraser
 
 Official paper: [arXiv:2508.15314](https://arxiv.org/abs/2508.15314). Official code: [bluedream02/VideoEraser](https://github.com/bluedream02/VideoEraser).
