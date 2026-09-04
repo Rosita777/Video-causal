@@ -30,6 +30,15 @@ def _package(tmp_path: Path, count: int = 4, pass_name: str = "pass_a"):
             (formal.COMPOSITE_WIDTH, formal.COMPOSITE_HEIGHT),
             color=(index * 20, 10, 30),
         ).save(image, format="JPEG", quality=formal.JPEG_QUALITY)
+        subtype = (
+            ""
+            if kind == "causal"
+            else (
+                "same_footprint_alternative_cause"
+                if index % 4 == 3
+                else "role_swap_or_near_causal"
+            )
+        )
         assignment = {
             "anonymous_review_id": review_id,
             "case_kind": kind,
@@ -37,8 +46,16 @@ def _package(tmp_path: Path, count: int = 4, pass_name: str = "pass_a"):
             "prompt": f"requested scene {index}",
             "source_object": f"source {index}",
             "receiver": f"receiver {index}",
+            "expected_trigger": f"registered trigger {index}",
             "expected_footprint": f"footprint {index}",
             "expected_counterfactual_state": f"counterfactual {index}",
+            "protected_object": "" if kind == "causal" else f"protected object {index}",
+            "specificity_subtype": subtype,
+            "acceptable_alternative_cause": (
+                f"alternative cause {index}"
+                if subtype == "same_footprint_alternative_cause"
+                else ""
+            ),
             "composite_path": f"media/{review_id}.jpg",
             "composite_sha256": formal.sha256_file(image),
             "assignment_sha256": "",
@@ -82,10 +99,15 @@ def _package(tmp_path: Path, count: int = 4, pass_name: str = "pass_a"):
             "format": "jpeg",
             "width": formal.COMPOSITE_WIDTH,
             "height": formal.COMPOSITE_HEIGHT,
+            "tile_width": formal.TILE_WIDTH,
+            "tile_height": formal.TILE_HEIGHT,
+            "tile_fit": "deterministic_center_crop_no_letterbox",
+            "resampling": "Pillow.Image.Resampling.LANCZOS",
             "jpeg_quality": formal.JPEG_QUALITY,
             "max_bytes": formal.MAX_IMAGE_BYTES,
             "one_image_per_assignment": True,
         },
+        "ordering_commitment": "0" * 64,
     }
     (root / "pass_manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False), encoding="utf-8"
@@ -113,6 +135,7 @@ def _model_object(kind: str, score: int = 1):
 def _response(kind: str, score: int = 1):
     return {
         "id": "resp_unit",
+        "model": formal.MODEL,
         "status": "completed",
         "output": [
             {"type": "reasoning", "id": "reasoning_unit", "summary": []},
@@ -163,6 +186,9 @@ def test_responses_payload_is_single_image_stateless_strict_and_dynamic(tmp_path
     assert specificity["text"]["format"]["schema"] == formal.response_json_schema(
         "specificity"
     )
+    specificity_prompt = specificity["input"][0]["content"][0]["text"]
+    assert "must not complete the registered trigger" in specificity_prompt
+    assert "Protected object that should remain visible" in specificity_prompt
     assert formal.responses_endpoint("http://127.0.0.1:4141") == (
         "http://127.0.0.1:4141/v1/responses"
     )
@@ -394,8 +420,9 @@ def test_incomplete_refusal_and_parse_error_are_not_scores(tmp_path: Path):
     row = _rows(assignments, scores)[0]
 
     for response in (
-        {"status": "incomplete", "output": []},
+        {"model": formal.MODEL, "status": "incomplete", "output": []},
         {
+            "model": formal.MODEL,
             "status": "completed",
             "output": [
                 {
@@ -405,6 +432,7 @@ def test_incomplete_refusal_and_parse_error_are_not_scores(tmp_path: Path):
             ],
         },
         {
+            "model": formal.MODEL,
             "status": "completed",
             "output": [
                 {
@@ -423,3 +451,51 @@ def test_incomplete_refusal_and_parse_error_are_not_scores(tmp_path: Path):
         )
         assert result["ok"] is False
         assert "normalized" not in result
+
+
+def test_strict_json_and_model_identity_reject_ambiguous_or_misrouted_output(
+    tmp_path: Path,
+):
+    assignments, scores, *_ = _package(tmp_path)
+    row = _rows(assignments, scores)[0]
+    valid = json.dumps(_model_object("causal"))
+    attacks = [
+        "```json\n" + valid + "\n```",
+        "prefix " + valid,
+        valid + valid,
+        valid.replace('"source_visibility": 1', '"source_visibility": 1, "source_visibility": 2'),
+    ]
+    for text in attacks:
+        response = _response("causal")
+        response["output"][1]["content"][0]["text"] = text
+        result = formal.evaluate_one(
+            row,
+            endpoint="http://127.0.0.1:4141/v1/responses",
+            api_key="secret",
+            timeout=10,
+            transport=lambda *_args, value=response: value,
+        )
+        assert result["ok"] is False
+        assert "normalized" not in result
+
+    wrong_model = _response("causal")
+    wrong_model["model"] = "gpt-5.6-sol"
+    result = formal.evaluate_one(
+        row,
+        endpoint="http://127.0.0.1:4141/v1/responses",
+        api_key="secret",
+        timeout=10,
+        transport=lambda *_args: wrong_model,
+    )
+    assert result["ok"] is False
+    assert result["observed_model"] == "gpt-5.6-sol"
+
+
+def test_pass_manifest_rejects_extra_method_mapping(tmp_path: Path):
+    assignments, scores, *_ = _package(tmp_path)
+    manifest_path = assignments.parent / "pass_manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["method_map"] = {"anon_0000": "V4"}
+    manifest_path.write_text(json.dumps(manifest))
+    with pytest.raises(formal.FormalReviewTransportError, match="fields differ"):
+        formal.load_public_pass(assignments, scores, expected_items=4)

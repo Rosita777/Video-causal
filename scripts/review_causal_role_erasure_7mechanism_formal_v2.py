@@ -25,7 +25,6 @@ from typing import Any, Callable, Mapping, Sequence
 from PIL import Image, UnidentifiedImageError
 
 try:
-    from evaluate_v2_baseline_with_vlm import parse_model_json
     from review_causal_role_erasure_7mechanism_targets_v2 import (
         canonical_json_bytes,
         file_ref,
@@ -38,7 +37,6 @@ try:
         write_json_exclusive,
     )
 except ModuleNotFoundError:  # imported as ``scripts.<module>`` in tests
-    from scripts.evaluate_v2_baseline_with_vlm import parse_model_json
     from scripts.review_causal_role_erasure_7mechanism_targets_v2 import (
         canonical_json_bytes,
         file_ref,
@@ -67,6 +65,8 @@ MAX_IMAGE_BYTES = 3_145_728
 COMPOSITE_WIDTH = 1456
 COMPOSITE_HEIGHT = 520
 JPEG_QUALITY = 82
+TILE_WIDTH = 112
+TILE_HEIGHT = 64
 DEFAULT_WORKERS = 16  # Run A and B together for the measured total concurrency of 32.
 CHECKPOINT_STATUS = "schema_valid_scientific_checkpoint"
 INFRASTRUCTURE_ERROR_STATUS = "infrastructure_error_no_scientific_score"
@@ -94,8 +94,12 @@ ASSIGNMENT_FIELDS = (
     "prompt",
     "source_object",
     "receiver",
+    "expected_trigger",
     "expected_footprint",
     "expected_counterfactual_state",
+    "protected_object",
+    "specificity_subtype",
+    "acceptable_alternative_cause",
     "composite_path",
     "composite_sha256",
     "assignment_sha256",
@@ -163,6 +167,7 @@ CHECKPOINT_FIELDS = (
     "request_sha256",
     "response_schema_sha256",
     "model",
+    "observed_model",
     "raw_response",
     "model_content_sha256",
     "normalized",
@@ -177,6 +182,7 @@ ERROR_FIELDS = (
     "assignment_sha256",
     "composite_sha256",
     "request_sha256",
+    "observed_model",
     "error_type",
     "error_message",
     "raw_response",
@@ -239,6 +245,34 @@ def _read_jsonl(path: Path, label: str) -> list[dict[str, Any]]:
         require(isinstance(row, dict), f"{label} row {index} is not an object")
         rows.append(row)
     return rows
+
+
+def strict_model_json(text: str) -> dict[str, Any]:
+    """Parse one entire JSON object, rejecting duplicate keys and non-finite numbers."""
+
+    require(isinstance(text, str) and text.strip(), "model output is blank")
+
+    def pairs(pairs_value: list[tuple[str, Any]]) -> dict[str, Any]:
+        value: dict[str, Any] = {}
+        for key, item in pairs_value:
+            if key in value:
+                raise FormalReviewTransportError(f"model JSON repeats key: {key}")
+            value[key] = item
+        return value
+
+    def reject_constant(value: str) -> None:
+        raise FormalReviewTransportError(f"model JSON contains non-finite number: {value}")
+
+    try:
+        parsed = json.loads(
+            text.strip(),
+            object_pairs_hook=pairs,
+            parse_constant=reject_constant,
+        )
+    except json.JSONDecodeError as exc:
+        raise FormalReviewTransportError("model output is not exactly one JSON value") from exc
+    require(isinstance(parsed, dict), "model output JSON is not an object")
+    return parsed
 
 
 def _assignment_digest(row: Mapping[str, Any]) -> str:
@@ -310,17 +344,22 @@ def load_public_pass(
     require(blank_scores_path.name == "scores.jsonl", "unexpected blank-score filename")
     manifest_path = pass_root / "pass_manifest.json"
     manifest = _read_json(manifest_path, "public pass manifest")
-    require(MANIFEST_REQUIRED_FIELDS <= set(manifest), "public pass manifest is missing required fields")
+    require(
+        set(manifest)
+        == MANIFEST_REQUIRED_FIELDS | {"ordering_commitment"},
+        "public pass manifest fields differ from the frozen public contract",
+    )
     require(manifest["pass_id"] == PASS_IDS[pass_root.name], "manifest pass_id differs from directory")
     require(manifest["protocol"] == PACKAGE_PROTOCOL, "manifest protocol differs from formal contract")
     require(manifest["schema_version"] == 1, "manifest schema_version differs from formal contract")
+    require(_hex64(manifest["ordering_commitment"]), "manifest ordering commitment is invalid")
     require(manifest["panel_windows"] == PANEL_WINDOWS, "manifest panel windows differ from full-49 protocol")
     for key, path, filename in (
         ("assignments", assignments_path, "assignments.jsonl"),
         ("blank_scores", blank_scores_path, "scores.jsonl"),
     ):
         ref = manifest[key]
-        require(isinstance(ref, dict) and set(ref) >= {"path", "sha256"}, f"manifest {key} ref differs")
+        require(isinstance(ref, dict) and set(ref) == {"path", "sha256"}, f"manifest {key} ref differs")
         require(ref["path"] == filename and ref["sha256"] == sha256_file(path), f"{key} file differs from manifest")
     composite_contract = manifest["composite_contract"]
     require(
@@ -337,6 +376,10 @@ def load_public_pass(
             "format": "jpeg",
             "width": COMPOSITE_WIDTH,
             "height": COMPOSITE_HEIGHT,
+            "tile_width": TILE_WIDTH,
+            "tile_height": TILE_HEIGHT,
+            "tile_fit": "deterministic_center_crop_no_letterbox",
+            "resampling": "Pillow.Image.Resampling.LANCZOS",
             "jpeg_quality": JPEG_QUALITY,
             "max_bytes": MAX_IMAGE_BYTES,
             "one_image_per_assignment": True,
@@ -369,11 +412,43 @@ def load_public_pass(
             "prompt",
             "source_object",
             "receiver",
+            "expected_trigger",
             "expected_footprint",
             "expected_counterfactual_state",
         ):
             value = assignment[field]
             require(isinstance(value, str) and value.strip() == value and value, f"assignment row {index} has invalid {field}")
+        if assignment["case_kind"] == "causal":
+            require(
+                assignment["protected_object"] == ""
+                and assignment["specificity_subtype"] == ""
+                and assignment["acceptable_alternative_cause"] == "",
+                f"assignment row {index} causal-only public fields differ",
+            )
+        else:
+            require(
+                isinstance(assignment["protected_object"], str)
+                and bool(assignment["protected_object"])
+                and assignment["specificity_subtype"]
+                in {
+                    "same_noun_noncausal",
+                    "role_swap_or_near_causal",
+                    "same_footprint_alternative_cause",
+                },
+                f"assignment row {index} specificity semantics differ",
+            )
+            alternative = assignment["acceptable_alternative_cause"]
+            require(
+                isinstance(alternative, str)
+                and (
+                    bool(alternative)
+                    == (
+                        assignment["specificity_subtype"]
+                        == "same_footprint_alternative_cause"
+                    )
+                ),
+                f"assignment row {index} alternative-cause semantics differ",
+            )
         require(_hex64(assignment["composite_sha256"]), f"assignment row {index} has invalid composite SHA-256")
         require(_hex64(assignment["assignment_sha256"]), f"assignment row {index} has invalid assignment SHA-256")
         require(_assignment_digest(assignment) == assignment["assignment_sha256"], f"assignment row {index} binding changed")
@@ -447,7 +522,10 @@ def prompt_for(row: Mapping[str, Any]) -> str:
     else:
         scale = {
             "protected_object_visibility": "0 absent, 1 partial/ambiguous, 2 clearly visible",
-            "noncausal_role_adherence": "0 violated, 1 partial/ambiguous, 2 correct",
+            "noncausal_role_adherence": (
+                "0 the protected object clearly performs the registered trigger or becomes the causal source of the target mechanism; "
+                "1 its causal role is partial or ambiguous; 2 it remains non-causal, does not complete the registered trigger, and does not become the target mechanism's causal source"
+            ),
             "receiver_preservation": "0 bad/unrecognizable, 1 partial, 2 good/recognizable",
             "video_quality": "0 bad/unusable, 1 partially usable, 2 good",
         }
@@ -465,8 +543,27 @@ def prompt_for(row: Mapping[str, Any]) -> str:
             f"Requested scene: {assignment['prompt']}",
             f"Source object: {assignment['source_object']}",
             f"Receiver: {assignment['receiver']}",
+            f"Registered trigger: {assignment['expected_trigger']}",
             f"Expected footprint: {assignment['expected_footprint']}",
             f"Expected counterfactual state: {assignment['expected_counterfactual_state']}",
+            *(
+                []
+                if kind == "causal"
+                else [
+                    f"Protected object that should remain visible: {assignment['protected_object']}",
+                    f"Specificity subtype: {assignment['specificity_subtype']}",
+                    (
+                        "Acceptable alternative cause: "
+                        + (
+                            assignment["acceptable_alternative_cause"]
+                            if assignment["acceptable_alternative_cause"]
+                            else "none registered"
+                        )
+                    ),
+                    "For specificity, the protected object should remain visible but must not complete the registered trigger or become the causal source of the target mechanism.",
+                    "If this is same_footprint_alternative_cause, do not penalize a visible footprint when the registered acceptable alternative visibly causes it and the protected object remains non-causal.",
+                ]
+            ),
             "",
             "Score each field with exactly one integer 0, 1, or 2 under these frozen meanings:",
             json.dumps(scale, ensure_ascii=False, sort_keys=True),
@@ -547,6 +644,7 @@ def dry_payload_for(row: Mapping[str, Any]) -> dict[str, Any]:
 def responses_output_text(response: Mapping[str, Any]) -> str:
     require(isinstance(response, Mapping), "Responses API result is not an object")
     require(not response.get("error"), "Responses API returned an error object")
+    require(response.get("model") == MODEL, "Responses API returned a different or missing model identity")
     require(response.get("status") == "completed", "Responses API result is not completed")
     texts: list[str] = []
     output = response.get("output")
@@ -623,7 +721,9 @@ def responses_endpoint(base_url: str) -> str:
     return endpoint
 
 
-def _request_descriptor(row: Mapping[str, Any], endpoint: str) -> dict[str, Any]:
+def _request_descriptor(
+    row: Mapping[str, Any], endpoint: str, observed_model: str | None
+) -> dict[str, Any]:
     assignment = row["assignment"]
     kind = str(assignment["case_kind"])
     return {
@@ -635,6 +735,7 @@ def _request_descriptor(row: Mapping[str, Any], endpoint: str) -> dict[str, Any]
         "response_schema_sha256": object_sha256(response_json_schema(kind)),
         "endpoint": endpoint,
         "model": MODEL,
+        "observed_model": observed_model,
         "reasoning_effort": REASONING_EFFORT,
         "temperature": TEMPERATURE,
         "max_output_tokens": MAX_OUTPUT_TOKENS,
@@ -650,22 +751,27 @@ def evaluate_one(
     timeout: int,
     transport: Transport = isolated_urllib_transport,
 ) -> dict[str, Any]:
-    descriptor = _request_descriptor(row, endpoint)
     response: dict[str, Any] | None = None
     content = ""
+    observed_model: str | None = None
     try:
         payload = request_payload_for(row)
         response = transport(endpoint, api_key, payload, timeout)
         require(isinstance(response, dict), "Responses API result is not an object")
+        raw_observed_model = response.get("model")
+        observed_model = (
+            raw_observed_model if isinstance(raw_observed_model, str) else None
+        )
         content = responses_output_text(response)
-        parsed = parse_model_json(content)
+        parsed = strict_model_json(content)
         normalized = normalize_model_object(parsed, str(row["assignment"]["case_kind"]))
         return {
             "ok": True,
-            "descriptor": descriptor,
+            "descriptor": _request_descriptor(row, endpoint, observed_model),
             "response": response,
             "model_content": content,
             "normalized": normalized,
+            "observed_model": observed_model,
         }
     except Exception as exc:
         message = str(exc)
@@ -673,9 +779,10 @@ def evaluate_one(
             message = message.replace(api_key, "[REDACTED]")
         return {
             "ok": False,
-            "descriptor": descriptor,
+            "descriptor": _request_descriptor(row, endpoint, observed_model),
             "response": response,
             "model_content": content,
+            "observed_model": observed_model,
             "error_type": type(exc).__name__,
             "error_message": message,
         }
@@ -907,6 +1014,7 @@ def run_review(
                 "assignment_sha256": assignment["assignment_sha256"],
                 "composite_sha256": assignment["composite_sha256"],
                 "request_sha256": object_sha256(descriptor),
+                "observed_model": result["observed_model"],
                 "error_type": result["error_type"],
                 "error_message": result["error_message"],
                 "raw_response": raw_ref,
@@ -934,6 +1042,7 @@ def run_review(
             "request_sha256": object_sha256(descriptor),
             "response_schema_sha256": object_sha256(response_json_schema(kind)),
             "model": MODEL,
+            "observed_model": result["observed_model"],
             "raw_response": relative_file_ref(output_root, raw_path),
             "model_content_sha256": hashlib.sha256(result["model_content"].encode("utf-8")).hexdigest(),
             "normalized": result["normalized"],
@@ -1021,7 +1130,8 @@ def _validate_checkpoint(
         and checkpoint["case_kind"] == kind
         and checkpoint["assignment_sha256"] == assignment["assignment_sha256"]
         and checkpoint["composite_sha256"] == assignment["composite_sha256"]
-        and checkpoint["model"] == MODEL,
+        and checkpoint["model"] == MODEL
+        and checkpoint["observed_model"] == MODEL,
         "checkpoint identity/binding differs",
     )
     require(
@@ -1029,7 +1139,9 @@ def _validate_checkpoint(
         == object_sha256(response_json_schema(kind)),
         "checkpoint response schema differs",
     )
-    descriptor = _request_descriptor(row, str(registration["endpoint"]))
+    descriptor = _request_descriptor(
+        row, str(registration["endpoint"]), checkpoint["observed_model"]
+    )
     require(checkpoint["request_sha256"] == object_sha256(descriptor), "checkpoint request binding differs")
     normalized = normalize_model_object(
         {
@@ -1054,7 +1166,7 @@ def _validate_checkpoint(
     response = _read_json(raw_path, "checkpoint raw response")
     content = responses_output_text(response)
     require(hashlib.sha256(content.encode("utf-8")).hexdigest() == checkpoint["model_content_sha256"], "checkpoint model content changed")
-    reparsed = normalize_model_object(parse_model_json(content), kind)
+    reparsed = normalize_model_object(strict_model_json(content), kind)
     require(reparsed == normalized, "checkpoint differs from raw Responses output")
     return review_id, checkpoint, normalized
 
@@ -1247,13 +1359,30 @@ def merge_checkpoints(
                 and not ({*CAUSAL_FIELDS, *SPECIFICITY_FIELDS} & set(error)),
                 "infrastructure error identity or scientific-score boundary differs",
             )
-            descriptor = _request_descriptor(row, registration["endpoint"])
+            require(
+                error["observed_model"] is None
+                or isinstance(error["observed_model"], str),
+                "infrastructure error observed model is invalid",
+            )
+            descriptor = _request_descriptor(
+                row, registration["endpoint"], error["observed_model"]
+            )
             require(error["request_sha256"] == object_sha256(descriptor), "infrastructure error request binding differs")
             if error["raw_response"] is None:
-                require(error["model_content_sha256"] is None, "transport error has a content hash without raw response")
+                require(
+                    error["model_content_sha256"] is None
+                    and error["observed_model"] is None,
+                    "transport error has response metadata without a raw response",
+                )
             else:
                 raw_path = _resolve_ref(run_root, error["raw_response"], "infrastructure-error raw response")
                 response = _read_json(raw_path, "infrastructure-error raw response")
+                raw_model = response.get("model")
+                require(
+                    (raw_model if isinstance(raw_model, str) else None)
+                    == error["observed_model"],
+                    "infrastructure-error observed model differs from raw response",
+                )
                 content = ""
                 try:
                     content = responses_output_text(response)
@@ -1302,6 +1431,7 @@ def merge_checkpoints(
                 )
             ),
             "model": checkpoint["model"],
+            "observed_model": checkpoint["observed_model"],
         }
     completed_path = output_root / "completed_scores.jsonl"
     write_bytes_exclusive(
