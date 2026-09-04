@@ -15,6 +15,9 @@ from PIL import Image
 from scripts import build_causal_role_erasure_7mechanism_review_package_v1 as review
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
 IDENTIFICATION_LOCAL_INDICES = (
     0,
     3,
@@ -91,13 +94,23 @@ def case_rows() -> list[dict[str, object]]:
                     "mechanism": mechanism,
                     "mechanism_name": mechanism.replace("_", " ").title(),
                     "case_kind": case_kind,
+                    "specificity_subtype": (
+                        ("same_noun_noncausal", "role_swap_or_near_causal", "same_footprint_alternative_cause")[(local_index - 24) % 3]
+                        if case_kind == "specificity"
+                        else ""
+                    ),
                     "source_object": f"protected source object {global_index}",
                     "receiver": f"receiver {global_index}",
                     "prompt": f"A neutral scene description for case {global_index}.",
+                    "expected_trigger": f"visible trigger {global_index}",
                     "expected_footprint": f"visible footprint {global_index}",
                     "expected_counterfactual_state": f"counterfactual state {global_index}",
                     "protected_object": f"protected source object {global_index}" if case_kind == "specificity" else "",
-                    "acceptable_alternative_cause": f"alternative cause {global_index}" if case_kind == "specificity" else "",
+                    "acceptable_alternative_cause": (
+                        f"alternative cause {global_index}"
+                        if case_kind == "specificity" and (local_index - 24) % 3 == 2
+                        else ""
+                    ),
                     "seed": 1_000_000 + global_index,
                     "num_frames": 49,
                     "fps": 8,
@@ -330,6 +343,23 @@ def test_cpu_fake_video_covers_all_49_frames_in_one_five_panel_image(tmp_path):
     assert output.stat().st_size <= 3_145_728
     with Image.open(output) as image:
         assert image.size == (review.COMPOSITE_WIDTH, review.COMPOSITE_HEIGHT)
+
+
+def test_real_frozen_formal_case_schema_accepts_intentionally_empty_alternative_causes():
+    path = PROJECT_ROOT / "data" / "causal_role_erasure_7mechanism_main_v2" / "formal_cases.csv"
+    with path.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+
+    by_id = review.validate_formal_cases(rows)
+
+    assert len(by_id) == 294
+    specificity = [row for row in rows if row["case_kind"] == "specificity"]
+    assert sum(not row["acceptable_alternative_cause"] for row in specificity) == 84
+    assert all(
+        row["acceptable_alternative_cause"]
+        for row in specificity
+        if row["specificity_subtype"] == "same_footprint_alternative_cause"
+    )
 
 
 def test_exact_2448_inventory_two_independent_blind_passes_and_private_modes(built_package):

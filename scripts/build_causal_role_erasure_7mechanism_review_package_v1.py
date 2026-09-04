@@ -105,8 +105,12 @@ PUBLIC_ASSIGNMENT_FIELDS = (
     "prompt",
     "source_object",
     "receiver",
+    "expected_trigger",
     "expected_footprint",
     "expected_counterfactual_state",
+    "protected_object",
+    "specificity_subtype",
+    "acceptable_alternative_cause",
     "composite_path",
     "composite_sha256",
     "assignment_sha256",
@@ -251,13 +255,35 @@ def validate_formal_cases(rows: Sequence[Mapping[str, str]]) -> dict[str, dict[s
             "prompt",
             "source_object",
             "receiver",
+            "expected_trigger",
             "expected_footprint",
             "expected_counterfactual_state",
         ):
             require(str(row.get(field, "")).strip(), f"{case_id}: missing {field}")
         if row["case_kind"] == "specificity":
             require(str(row.get("protected_object", "")).strip(), f"{case_id}: missing protected_object")
-            require(str(row.get("acceptable_alternative_cause", "")).strip(), f"{case_id}: missing alternative cause")
+            require(
+                row.get("specificity_subtype")
+                in ("same_noun_noncausal", "role_swap_or_near_causal", "same_footprint_alternative_cause"),
+                f"{case_id}: invalid specificity_subtype",
+            )
+            if row.get("specificity_subtype") == "same_footprint_alternative_cause":
+                require(
+                    str(row.get("acceptable_alternative_cause", "")).strip(),
+                    f"{case_id}: same-footprint specificity case is missing alternative cause",
+                )
+            else:
+                require(
+                    not str(row.get("acceptable_alternative_cause", "")).strip(),
+                    f"{case_id}: non-alternative-cause specificity case has an unexpected alternative cause",
+                )
+        else:
+            require(
+                not str(row.get("protected_object", "")).strip()
+                and not str(row.get("specificity_subtype", "")).strip()
+                and not str(row.get("acceptable_alternative_cause", "")).strip(),
+                f"{case_id}: causal case contains specificity-only fields",
+            )
         by_id[case_id] = dict(row)
     require(
         Counter(row["mechanism"] for row in rows) == {mechanism: 42 for mechanism in MECHANISMS},
@@ -481,9 +507,11 @@ def _normalize_item(
         "prompt": case["prompt"],
         "source_object": case["source_object"],
         "receiver": case["receiver"],
+        "expected_trigger": case["expected_trigger"],
         "expected_footprint": case["expected_footprint"],
         "expected_counterfactual_state": case["expected_counterfactual_state"],
         "protected_object": case.get("protected_object", ""),
+        "specificity_subtype": case.get("specificity_subtype", ""),
         "acceptable_alternative_cause": case.get("acceptable_alternative_cause", ""),
         "source_manifest": source_manifest,
         "source_video_path": str(source_path),
@@ -728,8 +756,12 @@ def _public_assignment(row: Mapping[str, Any], anonymous_id: str, composite_sha2
         "prompt": row["prompt"],
         "source_object": row["source_object"],
         "receiver": row["receiver"],
+        "expected_trigger": row["expected_trigger"],
         "expected_footprint": row["expected_footprint"],
         "expected_counterfactual_state": row["expected_counterfactual_state"],
+        "protected_object": row["protected_object"],
+        "specificity_subtype": row["specificity_subtype"],
+        "acceptable_alternative_cause": row["acceptable_alternative_cause"],
         "composite_path": f"media/{anonymous_id}.jpg",
         "composite_sha256": composite_sha256,
     }
