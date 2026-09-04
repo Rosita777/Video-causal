@@ -254,7 +254,12 @@ def validate_formal_cases(rows: Sequence[Mapping[str, str]]) -> dict[str, dict[s
             "mechanism_name",
             "prompt",
             "source_object",
+            "source_id",
             "receiver",
+            "receiver_id",
+            "generalization_group",
+            "source_membership",
+            "prompt_style",
             "expected_trigger",
             "expected_footprint",
             "expected_counterfactual_state",
@@ -283,6 +288,10 @@ def validate_formal_cases(rows: Sequence[Mapping[str, str]]) -> dict[str, dict[s
                 and not str(row.get("specificity_subtype", "")).strip()
                 and not str(row.get("acceptable_alternative_cause", "")).strip(),
                 f"{case_id}: causal case contains specificity-only fields",
+            )
+            require(
+                row.get("footprint_lexicalization") in ("explicit", "implicit"),
+                f"{case_id}: causal footprint lexicalization is invalid",
             )
         by_id[case_id] = dict(row)
     require(
@@ -427,10 +436,24 @@ def _resolve_artifact_ref(
     label: str,
     *,
     expected_path: Path | None = None,
+    registered_project_root: Path | None = None,
+    rebound_project_root: Path | None = None,
 ) -> Path:
     require(isinstance(ref, dict) and set(ref) >= {"path", "sha256"}, f"{label}: malformed artifact reference")
     registered = Path(str(ref["path"]))
-    candidate = registered if registered.is_absolute() else project_root / registered
+    if (
+        registered.is_absolute()
+        and registered_project_root is not None
+        and rebound_project_root is not None
+    ):
+        try:
+            relative = registered.relative_to(registered_project_root)
+        except ValueError:
+            candidate = registered
+        else:
+            candidate = rebound_project_root / relative
+    else:
+        candidate = registered if registered.is_absolute() else project_root / registered
     regular_file(candidate, label)
     resolved = candidate.resolve()
     try:
@@ -465,6 +488,8 @@ def validate_upstream_generation_chain(
     label: str,
     manifest_path: Path,
     manifest: Mapping[str, Any],
+    registered_project_root: Path | None = None,
+    rebound_project_root: Path | None = None,
 ) -> dict[str, Any]:
     """Validate the aggregate and every job-level receipt behind one final manifest."""
     configs = {
@@ -486,15 +511,33 @@ def validate_upstream_generation_chain(
         require(aggregate["expected_jobs"] == expected_jobs, f"{label}: aggregate expected_jobs mismatch")
     if "expected_videos" in aggregate:
         require(aggregate["expected_videos"] == expected_videos, f"{label}: aggregate expected_videos mismatch")
-    _resolve_artifact_ref(
-        project_root,
+    def resolve_ref(ref: Any, ref_label: str, expected_path: Path | None = None) -> Path:
+        return _resolve_artifact_ref(
+            project_root,
+            ref,
+            ref_label,
+            expected_path=expected_path,
+            registered_project_root=registered_project_root,
+            rebound_project_root=rebound_project_root,
+        )
+
+    def rebound_path(value: Any) -> Path:
+        path = Path(str(value))
+        if path.is_absolute() and registered_project_root is not None and rebound_project_root is not None:
+            try:
+                return rebound_project_root / path.relative_to(registered_project_root)
+            except ValueError:
+                return path
+        return path if path.is_absolute() else project_root / path
+
+    resolve_ref(
         aggregate.get("generation_manifest"),
         f"{label} aggregate generation manifest",
-        expected_path=manifest_path,
+        manifest_path,
     )
     for ref_name in ("run_manifest", "queue_plan"):
         if ref_name in aggregate:
-            _resolve_artifact_ref(project_root, aggregate[ref_name], f"{label} aggregate {ref_name}")
+            resolve_ref(aggregate[ref_name], f"{label} aggregate {ref_name}")
     if requires_complete:
         complete = root / ".complete"
         regular_file(complete, f"{label} completion marker")
@@ -539,12 +582,12 @@ def validate_upstream_generation_chain(
             )
             status_row = statuses_by_id[job_id]
             require(
-                status_row.get("receipt_path") == str(path)
+                rebound_path(status_row.get("receipt_path")).resolve() == path.resolve()
                 and status_row.get("receipt_sha256") == sha256_file(path),
                 f"Wan Original/{job_id}: status does not bind receipt",
             )
             for ref_name in ("run_manifest", "job_manifest", "prompt_shard", "generation_manifest"):
-                _resolve_artifact_ref(project_root, receipt.get(ref_name), f"Wan Original/{job_id} {ref_name}")
+                resolve_ref(receipt.get(ref_name), f"Wan Original/{job_id} {ref_name}")
             outputs = receipt.get("outputs")
             require(
                 isinstance(outputs, list)
@@ -572,8 +615,8 @@ def validate_upstream_generation_chain(
         require(set(aggregate_jobs_by_id) == set(receipt_by_id), "Wan Original aggregate/receipt jobs differ")
         for job_id, (receipt_path, receipt) in receipt_by_id.items():
             job = manifest_jobs[job_id]
-            _resolve_artifact_ref(project_root, job.get("receipt"), f"Wan Original/{job_id} final receipt", expected_path=receipt_path)
-            _resolve_artifact_ref(project_root, job.get("generation_manifest"), f"Wan Original/{job_id} final child manifest")
+            resolve_ref(job.get("receipt"), f"Wan Original/{job_id} final receipt", receipt_path)
+            resolve_ref(job.get("generation_manifest"), f"Wan Original/{job_id} final child manifest")
             require(job.get("mechanism") == receipt.get("mechanism"), f"Wan Original/{job_id}: final mechanism mismatch")
             aggregate_job = aggregate_jobs_by_id[job_id]
             require(
@@ -594,6 +637,7 @@ def validate_upstream_generation_chain(
             receipt_outputs.extend(dict(item) for item in outputs)
             output_dir = Path(str(descriptor.get("output_dir", "")))
             require(output_dir.is_absolute(), f"{label}/{job_id}: output_dir is not absolute")
+            output_dir = rebound_path(output_dir)
             child_manifest = output_dir / "generation_manifest.json"
             regular_file(child_manifest, f"{label}/{job_id} child generation manifest")
             require(
@@ -617,6 +661,44 @@ def validate_upstream_generation_chain(
         "job_count": expected_jobs,
         "validated_videos": expected_videos,
     }
+
+
+def validate_path_rebound_view(
+    *,
+    source: Mapping[str, Any],
+    rebound: Mapping[str, Any],
+    label: str,
+) -> None:
+    """Allow relocation to change only final-video and frozen CSV path strings."""
+    expected = json.loads(json.dumps(source))
+    source_items = expected.get("items")
+    rebound_items = rebound.get("items")
+    require(
+        isinstance(source_items, list)
+        and isinstance(rebound_items, list)
+        and len(source_items) == len(rebound_items),
+        f"{label}: rebound item inventory changed",
+    )
+    for index, (left, right) in enumerate(zip(source_items, rebound_items)):
+        require(
+            isinstance(left, dict)
+            and isinstance(right, dict)
+            and set(left) == set(right),
+            f"{label}: rebound item {index} schema changed",
+        )
+        left["video_path"] = right["video_path"]
+    expected_inputs = expected.get("inputs")
+    rebound_inputs = rebound.get("inputs")
+    require(
+        isinstance(expected_inputs, dict)
+        and isinstance(rebound_inputs, dict)
+        and set(expected_inputs) == set(rebound_inputs),
+        f"{label}: rebound input schema changed",
+    )
+    for field in ("formal_cases", "identification_subset"):
+        if field in expected_inputs:
+            expected_inputs[field] = rebound_inputs[field]
+    require(expected == rebound, f"{label}: rebound manifest changed non-path scientific content")
 
 
 def _manifest_items(manifest: Mapping[str, Any], count: int, label: str) -> list[dict[str, Any]]:
@@ -701,6 +783,14 @@ def _normalize_item(
         "mechanism": case["mechanism"],
         "mechanism_name": case["mechanism_name"],
         "case_kind": case["case_kind"],
+        "generalization_group": case.get("generalization_group", ""),
+        "source_membership": case.get("source_membership", ""),
+        "prompt_style": case.get("prompt_style", ""),
+        "footprint_lexicalization": case.get("footprint_lexicalization", ""),
+        "specificity_subtype": case.get("specificity_subtype", ""),
+        "m6_pair_id": case.get("m6_pair_id", ""),
+        "source_id": case.get("source_id", ""),
+        "receiver_id": case.get("receiver_id", ""),
         "seed": int(case["seed"]),
         "prompt": case["prompt"],
         "source_object": case["source_object"],
@@ -709,7 +799,6 @@ def _normalize_item(
         "expected_footprint": case["expected_footprint"],
         "expected_counterfactual_state": case["expected_counterfactual_state"],
         "protected_object": case.get("protected_object", ""),
-        "specificity_subtype": case.get("specificity_subtype", ""),
         "acceptable_alternative_cause": case.get("acceptable_alternative_cause", ""),
         "source_manifest": source_manifest,
         "source_video_path": str(source_path),
@@ -996,12 +1085,34 @@ def _private_key_row(row: Mapping[str, Any], anonymous_id: str, composite: Mappi
         "identification_case_index": row["identification_case_index"],
         "mechanism": row["mechanism"],
         "case_kind": row["case_kind"],
+        "generalization_group": row["generalization_group"],
+        "source_membership": row["source_membership"],
+        "prompt_style": row["prompt_style"],
+        "footprint_lexicalization": row["footprint_lexicalization"],
+        "specificity_subtype": row["specificity_subtype"],
+        "m6_pair_id": row["m6_pair_id"],
+        "source_id": row["source_id"],
+        "receiver_id": row["receiver_id"],
         "seed": row["seed"],
         "video_sha256": row["video_sha256"],
         "source_video_path": row["source_video_path"],
         "source_manifest": row["source_manifest"],
         "composite_sha256": composite["sha256"],
         "composite_size_bytes": composite["size_bytes"],
+    }
+
+
+def _audit_stratum_row(row: Mapping[str, Any], anonymous_id: str, blind_key: bytes) -> dict[str, Any]:
+    opaque = hmac.new(
+        blind_key,
+        f"audit-stream-stratum-v1\0{row['evaluation_partition']}\0{row['stream']}".encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()[:32]
+    return {
+        "anonymous_review_id": anonymous_id,
+        "case_kind": row["case_kind"],
+        "mechanism": row["mechanism"],
+        "stream_stratum": "ss_" + opaque,
     }
 
 
@@ -1054,6 +1165,7 @@ def _build_into(
     rendered_cache: dict[str, tuple[Path, dict[str, Any]]] = {}
     assignments: list[dict[str, Any]] = []
     key_rows: list[dict[str, Any]] = []
+    audit_strata_rows: list[dict[str, Any]] = []
     used_ids: set[str] = set()
     for row in ledger:
         anonymous_id = _anonymous_id(blind_key, str(row["ledger_record_sha256"]))
@@ -1094,6 +1206,7 @@ def _build_into(
         require(sha256_file(target_b) == composite["sha256"], f"{anonymous_id}: pass B composite differs")
         assignments.append(_public_assignment(row, anonymous_id, str(composite["sha256"])))
         key_rows.append(_private_key_row(row, anonymous_id, composite))
+        audit_strata_rows.append(_audit_stratum_row(row, anonymous_id, blind_key))
 
     require(len(assignments) == TOTAL_VIDEO_COUNT and len(used_ids) == TOTAL_VIDEO_COUNT, "anonymous ID inventory is not exact")
     assignment_by_id = {row["anonymous_review_id"]: row for row in assignments}
@@ -1142,15 +1255,22 @@ def _build_into(
     ledger_path = private_root / "generation_ledger.jsonl"
     original_key_path = private_root / "original_only_key.jsonl"
     full_key_path = private_root / "full_key.jsonl"
+    audit_strata_path = private_root / "audit_strata_key.jsonl"
     write_jsonl(ledger_path, ledger, mode=0o600)
     write_jsonl(original_key_path, original_key, mode=0o600)
     write_jsonl(full_key_path, full_key, mode=0o600)
-    for path in (ledger_path, original_key_path, full_key_path):
+    write_jsonl(
+        audit_strata_path,
+        sorted(audit_strata_rows, key=lambda row: row["anonymous_review_id"]),
+        mode=0o600,
+    )
+    for path in (ledger_path, original_key_path, full_key_path, audit_strata_path):
         require(stat.S_IMODE(path.stat().st_mode) == 0o600, f"private artifact mode is not 0600: {path.name}")
     commitments = {
         "protocol": PACKAGE_PROTOCOL,
         "schema_version": SCHEMA_VERSION,
         "commitment_scheme": "sha256(canonical-jsonl-bytes)",
+        "tier_0_audit_strata": {"row_count": TOTAL_VIDEO_COUNT, "sha256": sha256_file(audit_strata_path)},
         "tier_1_original_only": {"row_count": 588, "sha256": sha256_file(original_key_path)},
         "tier_2_full": {"row_count": TOTAL_VIDEO_COUNT, "sha256": sha256_file(full_key_path)},
         "generation_ledger": {"row_count": TOTAL_VIDEO_COUNT, "sha256": sha256_file(ledger_path)},
@@ -1169,6 +1289,7 @@ def _build_into(
         "inputs": dict(input_bindings),
         "private_artifacts": {
             "generation_ledger": {"path": "generation_ledger.jsonl", "sha256": sha256_file(ledger_path)},
+            "audit_strata_key": {"path": "audit_strata_key.jsonl", "sha256": sha256_file(audit_strata_path)},
             "original_only_key": {"path": "original_only_key.jsonl", "sha256": sha256_file(original_key_path)},
             "full_key": {"path": "full_key.jsonl", "sha256": sha256_file(full_key_path)},
         },
@@ -1196,6 +1317,9 @@ def build_review_package(
     output_dir: Path,
     decoder: Decoder = decode_video_pyav,
     renderer: Renderer = render_composite,
+    upstream_manifest_paths: Mapping[str, Path] | None = None,
+    upstream_rebase_roots: Mapping[str, Path] | None = None,
+    registered_project_root: Path | None = None,
 ) -> dict[str, Any]:
     project_root = project_root.resolve()
     require(project_root.is_dir(), f"project root is not a directory: {project_root}")
@@ -1220,6 +1344,51 @@ def build_review_package(
         "cog_core": load_json(inputs["cog_core_manifest"], "CogVideoX core manifest"),
         "safree": load_json(inputs["safree_manifest"], "SAFREE manifest"),
     }
+    if upstream_manifest_paths is not None:
+        require(
+            set(upstream_manifest_paths)
+            == {"wan_original", "trained_wan", "cog_core", "safree"},
+            "upstream source manifest mapping must contain exactly four labels",
+        )
+    upstream_paths = {
+        label: (
+            inputs[f"{label}_manifest"]
+            if upstream_manifest_paths is None
+            else resolve_input(project_root, upstream_manifest_paths[label])
+        )
+        for label in ("wan_original", "trained_wan", "cog_core", "safree")
+    }
+    upstream_manifests = {
+        label: load_json(path, f"{label} upstream source manifest")
+        for label, path in upstream_paths.items()
+    }
+    rebound_roots: dict[str, Path | None] = {
+        label: (
+            None
+            if upstream_rebase_roots is None
+            else Path(upstream_rebase_roots[label]).resolve()
+        )
+        for label in upstream_paths
+    }
+    if upstream_manifest_paths is not None:
+        require(
+            upstream_rebase_roots is not None
+            and set(upstream_rebase_roots) == set(upstream_paths)
+            and registered_project_root is not None,
+            "relocated upstream validation requires four rebase roots and the registered project root",
+        )
+        for label in upstream_paths:
+            require(
+                rebound_roots[label] is not None
+                and rebound_roots[label].is_dir()
+                and not rebound_roots[label].is_symlink(),
+                f"{label}: upstream rebase root is unsafe",
+            )
+            validate_path_rebound_view(
+                source=upstream_manifests[label],
+                rebound=manifests[label],
+                label=label,
+            )
     validate_manifest_input_bindings(
         project_root=project_root,
         formal_path=inputs["formal_cases"],
@@ -1230,8 +1399,10 @@ def build_review_package(
         label: validate_upstream_generation_chain(
             project_root=project_root,
             label=label,
-            manifest_path=inputs[f"{label}_manifest"],
-            manifest=manifests[label],
+            manifest_path=upstream_paths[label],
+            manifest=upstream_manifests[label],
+            registered_project_root=registered_project_root,
+            rebound_project_root=rebound_roots[label],
         )
         for label in ("wan_original", "trained_wan", "cog_core", "safree")
     }

@@ -116,6 +116,7 @@ def _public_copy(tmp_path: Path, count: int = 2) -> Path:
         "protocol": transport.PACKAGE_PROTOCOL,
         "schema_version": 1,
         "commitment_scheme": "sha256(canonical-jsonl-bytes)",
+        "tier_0_audit_strata": {"row_count": count, "sha256": "0" * 64},
         "tier_1_original_only": {"row_count": 588, "sha256": "1" * 64},
         "tier_2_full": {"row_count": count, "sha256": "2" * 64},
         "generation_ledger": {"row_count": count, "sha256": "3" * 64},
@@ -185,6 +186,53 @@ def test_dry_plan_is_32_total_concurrency_and_never_reads_key(tmp_path: Path, mo
     assert plan["primary_requests_total"] == 4896
     assert plan["api_calls"] == 0
     assert not launch_root.exists()
+
+
+def test_prepare_package_cli_breaks_snapshot_preflight_bootstrap_cycle(
+    tmp_path: Path, monkeypatch, capsys
+):
+    workspace = tmp_path / "workspace"
+    authority = workspace / "authority"
+    wan = workspace / "wan"
+    launch_root = workspace / "launch"
+    for path in (workspace, authority, wan):
+        path.mkdir(exist_ok=True)
+    package_root = workspace / "prepared" / "review_package"
+    public_root = package_root / "public"
+    public_root.mkdir(parents=True)
+    calls = []
+
+    def fake_prepare(**kwargs):
+        calls.append(kwargs)
+        return package_root
+
+    def fake_validate(path, expected_items=launch.TOTAL_ITEMS_PER_PASS):
+        assert path == public_root
+        return public_root, {"status": "validated", "item_count_per_pass": expected_items}
+
+    monkeypatch.setattr(launch, "prepare_review_package", fake_prepare)
+    monkeypatch.setattr(launch, "validate_public_package_copy", fake_validate)
+    assert launch.main(
+        [
+            "--project-root",
+            str(workspace),
+            "--workspace-root",
+            str(workspace),
+            "--authority-snapshot",
+            str(authority),
+            "--wan-original-snapshot",
+            str(wan),
+            "--launch-root",
+            str(launch_root),
+            "--prepare-package",
+        ]
+    ) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["status"] == "review_package_prepared_no_api_calls"
+    assert payload["public_root"] == str(public_root)
+    assert payload["api_calls"] == 0
+    assert len(calls) == 1
+    assert calls[0]["workspace_root"] == workspace.resolve()
 
 
 def test_copied_public_package_has_independent_equal_blind_inventories(tmp_path: Path):

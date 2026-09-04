@@ -240,6 +240,8 @@ def validate_public_package_copy(
         and commitments.get("schema_version") == 1
         and commitments.get("commitment_scheme")
         == "sha256(canonical-jsonl-bytes)"
+        and commitments.get("tier_0_audit_strata", {}).get("row_count")
+        == expected_items
         and commitments.get("tier_1_original_only", {}).get("row_count") == 588
         and commitments.get("tier_2_full", {}).get("row_count")
         == expected_items
@@ -248,6 +250,7 @@ def validate_public_package_copy(
         "copied public key commitments differ from the frozen protocol",
     )
     for name in (
+        "tier_0_audit_strata",
         "tier_1_original_only",
         "tier_2_full",
         "generation_ledger",
@@ -990,6 +993,23 @@ def prepare_review_package(
         safree_manifest_path=rebound["safree"],
         blind_key_path=blind_key,
         output_dir=package_root,
+        upstream_manifest_paths={
+            label: _snapshot_file(
+                authority_snapshot if snapshot_name == "authority" else wan_original_snapshot,
+                relative,
+                f"{label} upstream source manifest",
+            )
+            for label, (snapshot_name, relative, _expected_items) in MANIFEST_SPECS.items()
+        },
+        upstream_rebase_roots={
+            label: (
+                authority_snapshot
+                if snapshot_name == "authority"
+                else wan_original_snapshot
+            )
+            for label, (snapshot_name, _relative, _expected_items) in MANIFEST_SPECS.items()
+        },
+        registered_project_root=REMOTE_PROJECT_ROOT,
     )
     require(
         receipt.get("status")
@@ -1362,6 +1382,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--launch-root", type=Path, required=True)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--dry-run", action="store_true")
+    mode.add_argument("--prepare-package", action="store_true")
     mode.add_argument("--preflight", action="store_true")
     mode.add_argument("--run-formal", action="store_true")
     parser.add_argument("--copilot-key-file", type=Path)
@@ -1404,6 +1425,39 @@ def main(argv: Sequence[str] | None = None) -> int:
                 shard_size=args.shard_size,
                 proxy_version=args.proxy_version,
             )
+        elif args.prepare_package:
+            require(
+                args.workspace_root is not None
+                and args.authority_snapshot is not None
+                and args.wan_original_snapshot is not None,
+                "--prepare-package requires --workspace-root, --authority-snapshot, and --wan-original-snapshot",
+            )
+            require(
+                args.review_package_public is None,
+                "--prepare-package builds from snapshots and does not accept --review-package-public",
+            )
+            package_root = prepare_review_package(
+                workspace_root=_resolve(project_root, args.workspace_root),
+                authority_snapshot=_resolve(project_root, args.authority_snapshot),
+                wan_original_snapshot=_resolve(project_root, args.wan_original_snapshot),
+                launch_root=_resolve(project_root, args.launch_root),
+                blind_key_path=(
+                    None
+                    if args.blind_key_file is None
+                    else _resolve(project_root, args.blind_key_file)
+                ),
+            )
+            public_root, inventory = validate_public_package_copy(package_root / "public")
+            result = {
+                "schema_version": 1,
+                "workflow_version": WORKFLOW_VERSION,
+                "status": "review_package_prepared_no_api_calls",
+                "package_root": str(package_root),
+                "public_root": str(public_root),
+                "public_inventory": inventory,
+                "next_stage": "run --preflight with --review-package-public set to public_root",
+                "api_calls": 0,
+            }
         elif args.preflight:
             require(
                 args.review_package_public is not None,

@@ -94,13 +94,19 @@ def case_rows() -> list[dict[str, object]]:
                     "mechanism": mechanism,
                     "mechanism_name": mechanism.replace("_", " ").title(),
                     "case_kind": case_kind,
+                    "generalization_group": "specificity" if case_kind == "specificity" else "holdout_source_fresh_receiver",
+                    "source_membership": "eval_holdout",
+                    "prompt_style": "direct" if local_index % 2 == 0 else "natural",
+                    "footprint_lexicalization": "" if case_kind == "specificity" else "explicit" if local_index % 2 == 0 else "implicit",
                     "specificity_subtype": (
                         ("same_noun_noncausal", "role_swap_or_near_causal", "same_footprint_alternative_cause")[(local_index - 24) % 3]
                         if case_kind == "specificity"
                         else ""
                     ),
                     "source_object": f"protected source object {global_index}",
+                    "source_id": f"source_{global_index}",
                     "receiver": f"receiver {global_index}",
+                    "receiver_id": f"receiver_{global_index}",
                     "prompt": f"A neutral scene description for case {global_index}.",
                     "expected_trigger": f"visible trigger {global_index}",
                     "expected_footprint": f"visible footprint {global_index}",
@@ -111,6 +117,7 @@ def case_rows() -> list[dict[str, object]]:
                         if case_kind == "specificity" and (local_index - 24) % 3 == 2
                         else ""
                     ),
+                    "m6_pair_id": "",
                     "seed": 1_000_000 + global_index,
                     "num_frames": 49,
                     "fps": 8,
@@ -519,10 +526,19 @@ def test_exact_2448_inventory_two_independent_blind_passes_and_private_modes(bui
     ledger = read_jsonl(output / "private" / "generation_ledger.jsonl")
     full_key = read_jsonl(output / "private" / "full_key.jsonl")
     original_key = read_jsonl(output / "private" / "original_only_key.jsonl")
+    audit_strata = read_jsonl(output / "private" / "audit_strata_key.jsonl")
 
     assert receipt["status"] == "frozen_after_exact_2448_media_and_blinding_validation"
     assert len(ledger) == len(full_key) == len(pass_a) == len(pass_b) == len(scores_a) == 2448
     assert len(original_key) == 588
+    assert len(audit_strata) == 2448
+    assert set(audit_strata[0]) == {
+        "anonymous_review_id",
+        "case_kind",
+        "mechanism",
+        "stream_stratum",
+    }
+    assert len({row["stream_stratum"] for row in audit_strata}) == 10
     assert sum(row["evaluation_partition"] == "main" for row in ledger) == 2352
     assert sum(row["evaluation_partition"] == "identification" for row in ledger) == 96
     assert {row["stream"] for row in ledger if row["evaluation_partition"] == "main"} == set(review.MAIN_STREAMS)
@@ -540,9 +556,14 @@ def test_exact_2448_inventory_two_independent_blind_passes_and_private_modes(bui
         assert row["evidence_frames"] == {field: [] for field in fields}
         assert row["evidence_observations"] == {field: [] for field in fields}
         assert row["status"] == "pending"
-    for private_name in ("generation_ledger.jsonl", "full_key.jsonl", "original_only_key.jsonl", "package_receipt.json"):
+    for private_name in ("generation_ledger.jsonl", "audit_strata_key.jsonl", "full_key.jsonl", "original_only_key.jsonl", "package_receipt.json"):
         assert stat.S_IMODE((output / "private" / private_name).stat().st_mode) == 0o600
     assert stat.S_IMODE((output / "private").stat().st_mode) == 0o700
+    commitments = json.loads((output / "public" / "key_commitments.json").read_text())
+    assert commitments["tier_0_audit_strata"] == {
+        "row_count": 2448,
+        "sha256": sha256(output / "private" / "audit_strata_key.jsonl"),
+    }
 
 
 def test_public_contract_has_no_method_backbone_source_path_or_case_id_leak(built_package):
