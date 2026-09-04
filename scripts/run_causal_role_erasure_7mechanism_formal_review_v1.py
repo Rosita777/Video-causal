@@ -668,6 +668,7 @@ def validate_luna_metadata(models_payload: Mapping[str, Any]) -> dict[str, Any]:
         for endpoint in value
     }
     reasoning_values = [
+        *_recursive_values(metadata, "reasoning_effort"),
         *_recursive_values(metadata, "reasoning_efforts"),
         *_recursive_values(metadata, "supported_reasoning_efforts"),
     ]
@@ -677,10 +678,14 @@ def validate_luna_metadata(models_payload: Mapping[str, Any]) -> dict[str, Any]:
         if isinstance(value, list)
         for effort in value
     }
-    max_images = _metadata_maximum(metadata, "max_images")
+    max_images = max(
+        _metadata_maximum(metadata, "max_images"),
+        _metadata_maximum(metadata, "max_prompt_images"),
+    )
     max_image_size = max(
         _metadata_maximum(metadata, "max_image_size"),
         _metadata_maximum(metadata, "max_image_bytes"),
+        _metadata_maximum(metadata, "max_prompt_image_size"),
     )
     structured = _metadata_has_true(
         metadata, "structured_outputs"

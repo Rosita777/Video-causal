@@ -464,6 +464,33 @@ def test_luna_metadata_requires_responses_vision_structured_and_low_reasoning():
     with pytest.raises(launch.FormalLaunchError, match="structured outputs"):
         launch.validate_luna_metadata(payload)
 
+    # copilot-api 2.2.15 exposes these singular/prompt-prefixed names.
+    live_shape = {
+        "data": [
+            {
+                "id": transport.MODEL,
+                "supported_endpoints": ["/responses", "ws:/responses"],
+                "capabilities": {
+                    "limits": {
+                        "vision": {
+                            "max_prompt_images": 1,
+                            "max_prompt_image_size": transport.MAX_IMAGE_BYTES,
+                        }
+                    },
+                    "supports": {
+                        "structured_outputs": True,
+                        "reasoning_effort": ["none", "low", "medium"],
+                        "vision": True,
+                    },
+                },
+            }
+        ]
+    }
+    live_validated = launch.validate_luna_metadata(live_shape)
+    assert live_validated["max_images"] == 1
+    assert live_validated["max_image_size"] == transport.MAX_IMAGE_BYTES
+    assert live_validated["low_reasoning_supported"] is True
+
 
 def test_preflight_records_health_metadata_success_rate_and_latency_without_key(
     tmp_path: Path, monkeypatch
