@@ -25,6 +25,7 @@ from typing import Any, Callable, Mapping, Sequence
 from PIL import Image, UnidentifiedImageError
 
 try:
+    import causal_role_erasure_7mechanism_evaluation_code_registry_v1 as evaluation_code
     from review_causal_role_erasure_7mechanism_targets_v2 import (
         canonical_json_bytes,
         file_ref,
@@ -37,6 +38,7 @@ try:
         write_json_exclusive,
     )
 except ModuleNotFoundError:  # imported as ``scripts.<module>`` in tests
+    from scripts import causal_role_erasure_7mechanism_evaluation_code_registry_v1 as evaluation_code
     from scripts.review_causal_role_erasure_7mechanism_targets_v2 import (
         canonical_json_bytes,
         file_ref,
@@ -132,6 +134,7 @@ RUN_REGISTRATION_FIELDS = (
     "pass_id",
     "package_protocol",
     "package_schema",
+    "evaluation_code_registry_sha256",
     "pass_manifest",
     "assignments",
     "blank_scores",
@@ -344,6 +347,25 @@ def load_public_pass(
     require(blank_scores_path.name == "scores.jsonl", "unexpected blank-score filename")
     manifest_path = pass_root / "pass_manifest.json"
     manifest = _read_json(manifest_path, "public pass manifest")
+    registry_path = pass_root.parent / "evaluation_code_registry.json"
+    commitments_path = pass_root.parent / "key_commitments.json"
+    registry = _read_json(registry_path, "evaluation code registry")
+    commitments = _read_json(commitments_path, "public key commitments")
+    try:
+        evaluation_code.validate_registry(
+            registry, Path(__file__).resolve().parents[1]
+        )
+    except ValueError as exc:
+        raise FormalReviewTransportError(str(exc)) from exc
+    code_binding = commitments.get("evaluation_code_registry")
+    require(
+        isinstance(code_binding, dict)
+        and code_binding.get("path") == "evaluation_code_registry.json"
+        and code_binding.get("sha256") == sha256_file(registry_path)
+        and code_binding.get("registry_sha256")
+        == registry.get("registry_sha256"),
+        "public evaluation-code registry binding differs",
+    )
     require(
         set(manifest)
         == MANIFEST_REQUIRED_FIELDS | {"ordering_commitment"},
@@ -465,7 +487,11 @@ def load_public_pass(
     entries = list(media_root.iterdir())
     require(all(path.is_file() and not path.is_symlink() for path in entries), "public media directory contains unsafe entries")
     require({path.resolve(strict=True) for path in entries} == seen_composites, "public media inventory differs from assignments")
-    return {**manifest, "path": manifest_path}, loaded
+    return {
+        **manifest,
+        "path": manifest_path,
+        "evaluation_code_registry_sha256": registry["registry_sha256"],
+    }, loaded
 
 
 def response_json_schema(case_kind: str) -> dict[str, Any]:
@@ -839,6 +865,8 @@ def _load_retry_ids(
         require(
             registration["workflow_version"] == WORKFLOW_VERSION
             and registration["pass_id"] == manifest["pass_id"]
+            and registration["evaluation_code_registry_sha256"]
+            == manifest["evaluation_code_registry_sha256"]
             and registration["dry_run"] is False,
             "retry source identity differs",
         )
@@ -928,6 +956,9 @@ def run_review(
         "pass_id": manifest["pass_id"],
         "package_protocol": manifest["protocol"],
         "package_schema": manifest["schema_version"],
+        "evaluation_code_registry_sha256": manifest[
+            "evaluation_code_registry_sha256"
+        ],
         "pass_manifest": file_ref(manifest["path"]),
         "assignments": file_ref(assignments_path),
         "blank_scores": file_ref(blank_scores_path),
@@ -1226,6 +1257,8 @@ def _validate_real_run(
         and registration["pass_id"] == manifest["pass_id"]
         and registration["package_protocol"] == PACKAGE_PROTOCOL
         and registration["package_schema"] == 1
+        and registration["evaluation_code_registry_sha256"]
+        == manifest["evaluation_code_registry_sha256"]
         and registration["dry_run"] is False,
         "run registration identity differs",
     )
@@ -1324,6 +1357,7 @@ def merge_checkpoints(
                 registration["temperature"],
                 registration["max_output_tokens"],
                 json.dumps(registration["response_schemas_sha256"], sort_keys=True),
+                registration["evaluation_code_registry_sha256"],
             )
         )
         selected_ids = set(registration["selected_review_ids"])
@@ -1447,6 +1481,9 @@ def merge_checkpoints(
         "workflow_version": WORKFLOW_VERSION,
         "status": "complete_schema_valid_public_pass_review",
         "pass_id": manifest["pass_id"],
+        "evaluation_code_registry_sha256": manifest[
+            "evaluation_code_registry_sha256"
+        ],
         "row_count": len(completed_rows),
         "model": MODEL,
         "reasoning_effort": REASONING_EFFORT,

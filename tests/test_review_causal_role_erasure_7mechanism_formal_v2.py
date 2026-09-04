@@ -112,6 +112,23 @@ def _package(tmp_path: Path, count: int = 4, pass_name: str = "pass_a"):
     (root / "pass_manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False), encoding="utf-8"
     )
+    public_root = root.parent
+    registry = formal.evaluation_code.build_registry(
+        Path(__file__).resolve().parents[1]
+    )
+    registry_path = public_root / "evaluation_code_registry.json"
+    registry_path.write_bytes(formal.canonical_json_bytes(registry))
+    (public_root / "key_commitments.json").write_bytes(
+        formal.canonical_json_bytes(
+            {
+                "evaluation_code_registry": {
+                    "path": "evaluation_code_registry.json",
+                    "sha256": formal.sha256_file(registry_path),
+                    "registry_sha256": registry["registry_sha256"],
+                }
+            }
+        )
+    )
     return assignments_path, scores_path, assignments, blanks
 
 

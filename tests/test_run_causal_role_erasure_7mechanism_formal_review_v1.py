@@ -13,6 +13,9 @@ from scripts import review_causal_role_erasure_7mechanism_formal_v2 as transport
 from scripts import run_causal_role_erasure_7mechanism_formal_review_v1 as launch
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
 def _jsonl(path: Path, rows) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(b"".join(transport.canonical_json_bytes(row) for row in rows))
@@ -121,6 +124,14 @@ def _public_copy(tmp_path: Path, count: int = 2) -> Path:
         "tier_2_full": {"row_count": count, "sha256": "2" * 64},
         "generation_ledger": {"row_count": count, "sha256": "3" * 64},
         "blind_key_sha256": "4" * 64,
+    }
+    code_registry = launch.evaluation_code.build_registry(PROJECT_ROOT)
+    code_registry_path = public / "evaluation_code_registry.json"
+    code_registry_path.write_bytes(transport.canonical_json_bytes(code_registry))
+    commitments["evaluation_code_registry"] = {
+        "path": "evaluation_code_registry.json",
+        "sha256": transport.sha256_file(code_registry_path),
+        "registry_sha256": code_registry["registry_sha256"],
     }
     (public / "key_commitments.json").write_bytes(
         transport.canonical_json_bytes(commitments)
@@ -339,10 +350,11 @@ def test_formal_execution_keeps_key_out_of_argv_env_and_artifacts(
         "validate_public_package_copy",
         lambda _path: (
             public,
-            {
-                "status": "validated_copied_public_only_package",
-                "private_files_opened": 0,
-            },
+                {
+                    "status": "validated_copied_public_only_package",
+                    "private_files_opened": 0,
+                    "evaluation_code_registry_sha256": "4" * 64,
+                },
         ),
     )
     monkeypatch.setattr(
@@ -468,6 +480,7 @@ def test_preflight_records_health_metadata_success_rate_and_latency_without_key(
         "semantic_inventory_sha256": "6" * 64,
         "pass_manifests": {"pass_a": {"sha256": "7" * 64}},
         "key_commitments": {"sha256": "8" * 64},
+        "evaluation_code_registry_sha256": "5" * 64,
     }
     monkeypatch.setattr(
         launch,

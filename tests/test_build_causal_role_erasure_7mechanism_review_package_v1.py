@@ -609,6 +609,16 @@ def test_exact_2448_inventory_two_independent_blind_passes_and_private_modes(bui
         "row_count": 2448,
         "sha256": sha256(output / "private" / "audit_strata_key.jsonl"),
     }
+    code_registry = json.loads(
+        (output / "public" / "evaluation_code_registry.json").read_text()
+    )
+    assert len(code_registry["files"]) == 5
+    assert commitments["evaluation_code_registry"]["registry_sha256"] == code_registry[
+        "registry_sha256"
+    ]
+    assert receipt["public_artifacts"]["evaluation_code_registry"][
+        "registry_sha256"
+    ] == code_registry["registry_sha256"]
 
 
 def test_public_contract_has_no_method_backbone_source_path_or_case_id_leak(built_package):

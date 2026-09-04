@@ -16,6 +16,11 @@ from typing import Any, Iterable, Mapping, Sequence
 
 import numpy as np
 
+try:
+    import causal_role_erasure_7mechanism_evaluation_code_registry_v1 as evaluation_code
+except ModuleNotFoundError:
+    from scripts import causal_role_erasure_7mechanism_evaluation_code_registry_v1 as evaluation_code
+
 
 PROTOCOL = "causal_role_erasure_7m_formal_metrics_v1"
 CANONICAL_PROTOCOL = "causal_role_erasure_7m_human_canonicalization_v1"
@@ -210,6 +215,14 @@ def load_canonical_inputs(
         key_commitments_path,
     )
     commitments = load_json(key_commitments_path, "public key commitments")
+    code_registry_path = key_commitments_path.parent / "evaluation_code_registry.json"
+    code_registry = load_json(code_registry_path, "evaluation code registry")
+    try:
+        evaluation_code.validate_registry(
+            code_registry, Path(__file__).resolve().parents[1]
+        )
+    except ValueError as exc:
+        raise FormalMetricsError(str(exc)) from exc
     require(
         commitments.get("protocol") == REVIEW_PACKAGE_PROTOCOL
         and commitments.get("schema_version") == 1
@@ -217,6 +230,17 @@ def load_canonical_inputs(
         and commitments.get("tier_2_full", {}).get("row_count") == 2448
         and commitments.get("tier_2_full", {}).get("sha256") == sha256_file(full_key_path),
         "full method key differs from its pre-canonical commitment",
+    )
+    require(
+        commitments.get("evaluation_code_registry", {}).get("sha256")
+        == sha256_file(code_registry_path)
+        and commitments.get("evaluation_code_registry", {}).get(
+            "registry_sha256"
+        )
+        == code_registry["registry_sha256"]
+        and manifest.get("evaluation_code_registry_sha256")
+        == code_registry["registry_sha256"],
+        "canonical evaluation-code registry binding changed",
     )
     audit_strata_path = _resolve_ref(
         canonical_scores_path.parent,
@@ -238,6 +262,11 @@ def load_canonical_inputs(
         == "original_eligibility_and_shared_subsets_frozen_before_full_key_opening"
         and eligibility_manifest.get("full_method_key_opened") is False,
         "eligibility manifest identity/status mismatch",
+    )
+    require(
+        eligibility_manifest.get("evaluation_code_registry_sha256")
+        == code_registry["registry_sha256"],
+        "eligibility evaluation-code registry binding changed",
     )
     _resolve_ref(
         eligibility_manifest_path.parent,
@@ -976,6 +1005,9 @@ def compute_formal_metrics(
             "schema_version": 1,
             "protocol": PROTOCOL,
             "status": "formal_metrics_complete",
+            "evaluation_code_registry_sha256": evaluation_code.build_registry(
+                Path(__file__).resolve().parents[1]
+            )["registry_sha256"],
             "aggregation": "case_then_mechanism_mean_then_equal_weight_7_mechanism_macro",
             "metric_definitions": {
                 "original_eligibility": "source_visibility==2 and footprint_visibility>=1 and receiver_preservation>=1 and video_quality>=1",
@@ -1009,10 +1041,20 @@ def compute_formal_metrics(
             "schema_version": 1,
             "protocol": PROTOCOL,
             "status": "frozen_after_registered_10000_bootstrap_scoring",
+            "evaluation_code_registry_sha256": results[
+                "evaluation_code_registry_sha256"
+            ],
             "inputs": {
                 "canonical_scores": {"path": str(canonical_scores_path), "sha256": sha256_file(canonical_scores_path)},
                 "full_method_key": {"path": str(full_key_path), "sha256": sha256_file(full_key_path)},
                 "key_commitments": {"path": str(key_commitments_path), "sha256": sha256_file(key_commitments_path)},
+                "evaluation_code_registry": {
+                    "path": str(key_commitments_path.parent / "evaluation_code_registry.json"),
+                    "sha256": sha256_file(
+                        key_commitments_path.parent
+                        / "evaluation_code_registry.json"
+                    ),
+                },
                 "original_eligibility": {"path": str(original_eligibility_path), "sha256": sha256_file(original_eligibility_path)},
                 "shared_capability_subsets": {"path": str(shared_subsets_path), "sha256": sha256_file(shared_subsets_path)},
                 "formal_cases": {"path": str(formal_cases_path), "sha256": sha256_file(formal_cases_path)},

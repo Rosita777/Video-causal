@@ -27,6 +27,11 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping, Sequence
 
+try:
+    import causal_role_erasure_7mechanism_evaluation_code_registry_v1 as evaluation_code
+except ModuleNotFoundError:
+    from scripts import causal_role_erasure_7mechanism_evaluation_code_registry_v1 as evaluation_code
+
 
 PROTOCOL_VERSION = "causal_role_erasure_7m_single_seed_v2"
 PACKAGE_PROTOCOL = "causal_role_erasure_7m_anonymous_review_v1"
@@ -1181,12 +1186,15 @@ def _build_into(
     input_bindings: Mapping[str, Mapping[str, Any]],
     decoder: Decoder,
     renderer: Renderer,
+    evaluation_code_registry: Mapping[str, Any],
 ) -> dict[str, Any]:
     public_root = staging / "public"
     private_root = staging / "private"
     pass_roots = {"A": public_root / "pass_a", "B": public_root / "pass_b"}
     public_root.mkdir(mode=0o755)
     private_root.mkdir(mode=0o700)
+    code_registry_path = public_root / "evaluation_code_registry.json"
+    write_json(code_registry_path, dict(evaluation_code_registry), mode=0o644)
     for root in pass_roots.values():
         (root / "media").mkdir(parents=True, mode=0o755)
 
@@ -1319,6 +1327,11 @@ def _build_into(
         "protocol": PACKAGE_PROTOCOL,
         "schema_version": SCHEMA_VERSION,
         "commitment_scheme": "sha256(canonical-jsonl-bytes)",
+        "evaluation_code_registry": {
+            "path": "evaluation_code_registry.json",
+            "sha256": sha256_file(code_registry_path),
+            "registry_sha256": evaluation_code_registry["registry_sha256"],
+        },
         "tier_0_audit_strata": {"row_count": TOTAL_VIDEO_COUNT, "sha256": sha256_file(audit_strata_path)},
         "tier_1_original_only": {"row_count": 588, "sha256": sha256_file(original_key_path)},
         "tier_2_full": {"row_count": TOTAL_VIDEO_COUNT, "sha256": sha256_file(full_key_path)},
@@ -1346,6 +1359,11 @@ def _build_into(
             "pass_a_manifest_sha256": sha256_file(pass_roots["A"] / "pass_manifest.json"),
             "pass_b_manifest_sha256": sha256_file(pass_roots["B"] / "pass_manifest.json"),
             "key_commitments_sha256": sha256_file(public_root / "key_commitments.json"),
+            "evaluation_code_registry": {
+                "path": "../public/evaluation_code_registry.json",
+                "sha256": sha256_file(code_registry_path),
+                "registry_sha256": evaluation_code_registry["registry_sha256"],
+            },
         },
     }
     write_json(private_root / "package_receipt.json", receipt, mode=0o600)
@@ -1484,6 +1502,9 @@ def build_review_package(
             input_bindings=input_bindings,
             decoder=decoder,
             renderer=renderer,
+            evaluation_code_registry=evaluation_code.build_registry(
+                Path(__file__).resolve().parents[1]
+            ),
         )
         require(not output_dir.exists(), f"output directory appeared during build: {output_dir}")
         os.replace(staging, output_dir)

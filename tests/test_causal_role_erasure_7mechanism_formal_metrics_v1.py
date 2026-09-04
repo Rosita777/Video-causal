@@ -126,6 +126,9 @@ def write_merge(
         "workflow_version": canonical.TRANSPORT_WORKFLOW,
         "status": "complete_schema_valid_public_pass_review",
         "pass_id": pass_id,
+        "evaluation_code_registry_sha256": metrics.evaluation_code.build_registry(
+            PROJECT_ROOT
+        )["registry_sha256"],
         "row_count": 2448,
         "model": "gpt-5.6-luna",
         "reasoning_effort": "low",
@@ -304,12 +307,20 @@ def synthetic_inputs(root: Path):
     ]
     write_jsonl(audit_strata_key, sorted(audit_strata, key=lambda row: row["anonymous_review_id"]))
     commitments = root / "public" / "key_commitments.json"
+    code_registry = metrics.evaluation_code.build_registry(PROJECT_ROOT)
+    code_registry_path = root / "public" / "evaluation_code_registry.json"
+    code_registry_path.write_bytes(canonical.canonical_json_bytes(code_registry))
     commitments.write_text(
         json.dumps(
             {
                 "protocol": canonical.REVIEW_PROTOCOL,
                 "schema_version": 1,
                 "commitment_scheme": "sha256(canonical-jsonl-bytes)",
+                "evaluation_code_registry": {
+                    "path": "evaluation_code_registry.json",
+                    "sha256": canonical.sha256_file(code_registry_path),
+                    "registry_sha256": code_registry["registry_sha256"],
+                },
                 "tier_0_audit_strata": {"row_count": 2448, "sha256": canonical.sha256_file(audit_strata_key)},
                 "tier_1_original_only": {"row_count": 588, "sha256": canonical.sha256_file(original)},
                 "tier_2_full": {"row_count": 2448, "sha256": canonical.sha256_file(full_key)},

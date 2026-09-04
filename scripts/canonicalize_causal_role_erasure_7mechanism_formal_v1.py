@@ -27,8 +27,10 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
 try:
+    import causal_role_erasure_7mechanism_evaluation_code_registry_v1 as evaluation_code
     import review_causal_role_erasure_7mechanism_formal_v2 as transport
 except ModuleNotFoundError:
+    from scripts import causal_role_erasure_7mechanism_evaluation_code_registry_v1 as evaluation_code
     from scripts import review_causal_role_erasure_7mechanism_formal_v2 as transport
 
 
@@ -83,6 +85,7 @@ MERGE_MANIFEST_FIELDS = {
     "workflow_version",
     "status",
     "pass_id",
+    "evaluation_code_registry_sha256",
     "row_count",
     "model",
     "reasoning_effort",
@@ -279,6 +282,14 @@ def load_merged_scores(
         and manifest.get("pass_id") == pass_id,
         f"pass {pass_id}: merge manifest identity/status mismatch",
     )
+    current_registry = evaluation_code.build_registry(
+        Path(__file__).resolve().parents[1]
+    )
+    require(
+        manifest.get("evaluation_code_registry_sha256")
+        == current_registry["registry_sha256"],
+        f"pass {pass_id}: evaluation code registry changed",
+    )
     require(
         manifest.get("row_count") == expected_items
         and manifest.get("model") == "gpt-5.6-luna"
@@ -385,6 +396,29 @@ def load_key_commitments(path: Path) -> dict[str, Any]:
         and value.get("schema_version") == 1
         and value.get("commitment_scheme") == "sha256(canonical-jsonl-bytes)",
         "public key commitment protocol changed",
+    )
+    code_ref = value.get("evaluation_code_registry")
+    require(
+        isinstance(code_ref, dict)
+        and code_ref.get("path") == "evaluation_code_registry.json",
+        "public evaluation-code registry reference changed",
+    )
+    code_path = path.parent / "evaluation_code_registry.json"
+    regular_file(code_path, "evaluation code registry")
+    require(
+        code_ref.get("sha256") == sha256_file(code_path),
+        "evaluation code registry file hash changed",
+    )
+    registry = load_json(code_path, "evaluation code registry")
+    try:
+        evaluation_code.validate_registry(
+            registry, Path(__file__).resolve().parents[1]
+        )
+    except ValueError as exc:
+        raise CanonicalizationError(str(exc)) from exc
+    require(
+        code_ref.get("registry_sha256") == registry["registry_sha256"],
+        "evaluation code registry self-commitment changed",
     )
     for name, count in (
         ("tier_0_audit_strata", EXPECTED_ITEMS),
@@ -667,6 +701,9 @@ def build_audit_package(
     audit_strata = load_audit_strata_key(
         audit_strata_key_path, key_commitments_path, expected_items
     )
+    evaluation_code_registry_sha256 = load_key_commitments(
+        key_commitments_path
+    )["evaluation_code_registry"]["registry_sha256"]
     atoms = build_atoms(scores_a, scores_b, assignments, audit_strata)
     selected, reason_counts = select_audit_atoms(atoms)
     human_rows = [_human_row(atom) for atom in selected]
@@ -697,6 +734,7 @@ def build_audit_package(
             "schema_version": 1,
             "protocol": PROTOCOL,
             "status": "initial_human_audit_frozen",
+            "evaluation_code_registry_sha256": evaluation_code_registry_sha256,
             "audit_seed": AUDIT_SEED,
             "rules": {
                 "calibration_fraction_per_mechanism_stream_field": CALIBRATION_FRACTION,
@@ -746,6 +784,15 @@ def _load_audit_root(audit_root: Path) -> tuple[dict[str, Any], list[dict[str, A
     require(isinstance(inputs, dict), "audit manifest input bindings are missing")
     for name in ("scores_a", "scores_b", "assignments", "audit_strata_key", "key_commitments"):
         _resolve_ref(audit_root, inputs.get(name), f"audit input {name}")
+    commitments_path = _resolve_ref(
+        audit_root, inputs["key_commitments"], "audit input key_commitments"
+    )
+    commitments = load_key_commitments(commitments_path)
+    require(
+        manifest.get("evaluation_code_registry_sha256")
+        == commitments["evaluation_code_registry"]["registry_sha256"],
+        "audit manifest evaluation-code binding changed",
+    )
     key_path = _resolve_ref(audit_root, manifest["artifacts"]["audit_key"], "audit key")
     all_atoms_path = _resolve_ref(audit_root, manifest["artifacts"]["all_atoms"], "all atoms")
     media_manifest_path = _resolve_ref(
@@ -939,6 +986,9 @@ def expand_audit_package(
             "schema_version": 1,
             "protocol": PROTOCOL,
             "status": "expanded_human_audit_frozen" if added else "no_expansion_required_human_audit_frozen",
+            "evaluation_code_registry_sha256": source_manifest[
+                "evaluation_code_registry_sha256"
+            ],
             "audit_seed": AUDIT_SEED,
             "source_audit_manifest": file_ref(audit_root / "audit_manifest.json"),
             "completed_source_human_audit": file_ref(completed_human_path),
@@ -1085,6 +1135,9 @@ def freeze_canonical_scores(
             "schema_version": 1,
             "protocol": PROTOCOL,
             "status": "canonical_anonymous_scores_frozen_before_answer_key_opening",
+            "evaluation_code_registry_sha256": audit_manifest[
+                "evaluation_code_registry_sha256"
+            ],
             "row_count": expected_items,
             "atomic_count": len(all_rows),
             "inputs": {
@@ -1140,6 +1193,11 @@ def freeze_original_eligibility(
         key_commitments_path,
     )
     commitments = load_key_commitments(key_commitments_path)
+    require(
+        canonical_manifest.get("evaluation_code_registry_sha256")
+        == commitments["evaluation_code_registry"]["registry_sha256"],
+        "canonical evaluation-code binding changed before eligibility freeze",
+    )
     require(
         commitments["tier_1_original_only"]["sha256"] == sha256_file(original_key_path),
         "Original-only key differs from its precommitted SHA",
@@ -1209,6 +1267,9 @@ def freeze_original_eligibility(
             "schema_version": 1,
             "protocol": PROTOCOL,
             "status": "original_eligibility_and_shared_subsets_frozen_before_full_key_opening",
+            "evaluation_code_registry_sha256": canonical_manifest[
+                "evaluation_code_registry_sha256"
+            ],
             "inputs": {
                 "canonical_manifest": file_ref(canonical_root / "canonical_manifest.json"),
                 "canonical_scores": file_ref(canonical_path),

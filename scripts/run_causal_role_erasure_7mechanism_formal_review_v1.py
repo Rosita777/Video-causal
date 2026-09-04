@@ -33,9 +33,11 @@ from typing import Any, Callable, Mapping, Sequence
 
 try:
     import build_causal_role_erasure_7mechanism_review_package_v1 as package
+    import causal_role_erasure_7mechanism_evaluation_code_registry_v1 as evaluation_code
     import review_causal_role_erasure_7mechanism_formal_v2 as transport
 except ModuleNotFoundError:  # imported as ``scripts.<module>`` in tests
     from scripts import build_causal_role_erasure_7mechanism_review_package_v1 as package
+    from scripts import causal_role_erasure_7mechanism_evaluation_code_registry_v1 as evaluation_code
     from scripts import review_causal_role_erasure_7mechanism_formal_v2 as transport
 
 
@@ -197,7 +199,12 @@ def validate_public_package_copy(
     public_root = _public_root_from_copy(path)
     require(
         {entry.name for entry in public_root.iterdir()}
-        == {"pass_a", "pass_b", "key_commitments.json"},
+        == {
+            "pass_a",
+            "pass_b",
+            "key_commitments.json",
+            "evaluation_code_registry.json",
+        },
         "copied public package inventory differs",
     )
     by_pass: dict[str, list[dict[str, Any]]] = {}
@@ -235,6 +242,14 @@ def validate_public_package_copy(
     require(orders["pass_a"] != orders["pass_b"], "copied A/B orders are not independent")
     commitments_path = public_root / "key_commitments.json"
     commitments = _load_json(commitments_path, "public key commitments")
+    code_registry_path = public_root / "evaluation_code_registry.json"
+    code_registry = _load_json(code_registry_path, "evaluation code registry")
+    try:
+        evaluation_code.validate_registry(
+            code_registry, Path(__file__).resolve().parents[1]
+        )
+    except ValueError as exc:
+        raise FormalLaunchError(str(exc)) from exc
     require(
         commitments.get("protocol") == package.PACKAGE_PROTOCOL
         and commitments.get("schema_version") == 1
@@ -265,6 +280,15 @@ def validate_public_package_copy(
         isinstance(blind_sha, str) and re.fullmatch(r"[0-9a-f]{64}", blind_sha),
         "copied public blind-key commitment is invalid",
     )
+    code_binding = commitments.get("evaluation_code_registry")
+    require(
+        isinstance(code_binding, dict)
+        and code_binding.get("path") == "evaluation_code_registry.json"
+        and code_binding.get("sha256") == transport.sha256_file(code_registry_path)
+        and code_binding.get("registry_sha256")
+        == code_registry.get("registry_sha256"),
+        "copied public evaluation-code binding is invalid",
+    )
     inventory = {
         "schema_version": 1,
         "workflow_version": WORKFLOW_VERSION,
@@ -273,6 +297,8 @@ def validate_public_package_copy(
         "item_count_per_pass": expected_items,
         "pass_manifests": manifest_refs,
         "key_commitments": transport.file_ref(commitments_path),
+        "evaluation_code_registry": transport.file_ref(code_registry_path),
+        "evaluation_code_registry_sha256": code_registry["registry_sha256"],
         "semantic_inventory_sha256": transport.object_sha256(
             inventory_by_pass["pass_a"]
         ),
@@ -316,6 +342,7 @@ def build_dry_run_plan(
             public_candidate / "pass_b" / "assignments.jsonl",
             public_candidate / "pass_b" / "scores.jsonl",
             public_candidate / "key_commitments.json",
+            public_candidate / "evaluation_code_registry.json",
         ]
         missing = [str(path) for path in required if not path.is_file() or path.is_symlink()]
         readiness = {
@@ -833,6 +860,9 @@ def run_preflight(
         "workflow_version": WORKFLOW_VERSION,
         "status": PREFLIGHT_STATUS,
         "public_package_inventory": inventory,
+        "evaluation_code_registry_sha256": inventory[
+            "evaluation_code_registry_sha256"
+        ],
         "proxy": probe,
         "configured_proxy_version": proxy_version,
         "endpoint": LOCAL_RESPONSES_ENDPOINT,
@@ -885,6 +915,8 @@ def validate_preflight_receipt(
         and receipt.get("structured_outputs") is True
         and receipt.get("vision_input") is True
         and receipt.get("configured_proxy_version") == proxy_version
+        and receipt.get("evaluation_code_registry_sha256")
+        == public_inventory.get("evaluation_code_registry_sha256")
         and receipt.get("attempted") == receipt.get("successful")
         and receipt.get("success_rate") == 1.0
         and receipt.get("credential_persisted") is False,
@@ -1342,6 +1374,9 @@ def execute_formal_review(
         "status": "completed_two_independent_schema_valid_passes",
         "public_package_root": str(public_root),
         "public_package_inventory": package_inventory,
+        "evaluation_code_registry_sha256": package_inventory[
+            "evaluation_code_registry_sha256"
+        ],
         "pass_workers": PASS_WORKERS,
         "maximum_total_concurrency": TOTAL_CONCURRENCY,
         "primary_requests_per_pass": TOTAL_ITEMS_PER_PASS,
