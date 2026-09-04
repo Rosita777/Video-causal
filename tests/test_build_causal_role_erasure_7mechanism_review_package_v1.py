@@ -258,7 +258,13 @@ def write_upstream_chain(
                     "receipt": ref(receipt_path),
                 }
             )
-            aggregate_jobs.append({"job_id": job_id, "status": "completed"})
+            aggregate_jobs.append(
+                {
+                    "job_id": job_id,
+                    "status": "completed",
+                    "receipt_sha256": sha256(receipt_path),
+                }
+            )
         else:
             status["outputs"] = outputs
             if label in ("cog_core", "safree"):

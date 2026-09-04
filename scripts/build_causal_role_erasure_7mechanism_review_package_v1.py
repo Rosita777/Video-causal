@@ -564,11 +564,23 @@ def validate_upstream_generation_chain(
         require(set(manifest_jobs) == set(receipt_by_id), "Wan Original final manifest/receipt jobs differ")
         aggregate_jobs = aggregate.get("jobs")
         require(isinstance(aggregate_jobs, list) and len(aggregate_jobs) == expected_jobs, "Wan Original aggregate jobs mismatch")
+        aggregate_jobs_by_id = {
+            str(job.get("job_id", "")): job
+            for job in aggregate_jobs
+            if isinstance(job, dict)
+        }
+        require(set(aggregate_jobs_by_id) == set(receipt_by_id), "Wan Original aggregate/receipt jobs differ")
         for job_id, (receipt_path, receipt) in receipt_by_id.items():
             job = manifest_jobs[job_id]
             _resolve_artifact_ref(project_root, job.get("receipt"), f"Wan Original/{job_id} final receipt", expected_path=receipt_path)
             _resolve_artifact_ref(project_root, job.get("generation_manifest"), f"Wan Original/{job_id} final child manifest")
             require(job.get("mechanism") == receipt.get("mechanism"), f"Wan Original/{job_id}: final mechanism mismatch")
+            aggregate_job = aggregate_jobs_by_id[job_id]
+            require(
+                aggregate_job.get("status") == "completed"
+                and aggregate_job.get("receipt_sha256") == sha256_file(receipt_path),
+                f"Wan Original/{job_id}: aggregate receipt binding mismatch",
+            )
     else:
         for job_id, status_row in statuses_by_id.items():
             descriptor = descriptors_by_id[job_id]
