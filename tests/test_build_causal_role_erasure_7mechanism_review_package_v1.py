@@ -501,6 +501,51 @@ def test_wan_and_cogvideo_frames_use_identical_filled_tile_geometry():
     assert cog_tile.getpixel((111, 32)) == (20, 20, 180)
 
 
+def test_decoded_frame_buffers_are_closed_on_success_and_renderer_failure(tmp_path):
+    class TrackedFrame:
+        def __init__(self):
+            self.closed = 0
+
+        def close(self):
+            self.closed += 1
+
+    def decoded():
+        frames = tuple(TrackedFrame() for _ in range(49))
+        return frames, review.DecodedVideo(
+            frames=frames,
+            video_streams=1,
+            audio_streams=0,
+            decoded_frames=49,
+            fps="8/1",
+            width=832,
+            height=480,
+        )
+
+    row = {"stream": "wan_original", "ledger_id": "memory_bound_test"}
+    frames, video = decoded()
+    result, observed = review._render_and_release_decoded(
+        row,
+        video,
+        tmp_path / "unused.jpg",
+        lambda _frames, _path: {"status": "rendered"},
+    )
+    assert result == {"status": "rendered"}
+    assert observed["decoded_frames"] == 49
+    assert all(frame.closed == 1 for frame in frames)
+
+    frames, video = decoded()
+    with pytest.raises(RuntimeError, match="synthetic renderer failure"):
+        review._render_and_release_decoded(
+            row,
+            video,
+            tmp_path / "unused2.jpg",
+            lambda _frames, _path: (_ for _ in ()).throw(
+                RuntimeError("synthetic renderer failure")
+            ),
+        )
+    assert all(frame.closed == 1 for frame in frames)
+
+
 def test_real_frozen_formal_case_schema_accepts_intentionally_empty_alternative_causes():
     path = PROJECT_ROOT / "data" / "causal_role_erasure_7mechanism_main_v2" / "formal_cases.csv"
     with path.open(newline="", encoding="utf-8") as handle:

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import gc
 import hashlib
 import hmac
 import json
@@ -982,35 +983,44 @@ def render_composite(frames: Sequence[Any], output_path: Path) -> dict[str, Any]
     require(len(frames) == 49, "composite renderer requires exactly 49 decoded frames")
     canvas = Image.new("RGB", (COMPOSITE_WIDTH, COMPOSITE_HEIGHT), "white")
     draw = ImageDraw.Draw(canvas)
-    row_height = PANEL_HEADER_HEIGHT + THUMB_HEIGHT + FRAME_LABEL_HEIGHT + PANEL_GAP
-    for panel_index, (start, end) in enumerate(PANEL_WINDOWS):
-        y = panel_index * row_height
-        draw.rectangle((0, y, COMPOSITE_WIDTH, y + PANEL_HEADER_HEIGHT - 1), fill=(24, 24, 24))
-        draw.text((5, y + 4), f"Temporal panel {panel_index + 1}/5 | frames {start:02d}-{end:02d}", fill="white")
-        for column, frame_index in enumerate(range(start, end + 1)):
-            tile = normalize_frame_tile(frames[frame_index])
-            x = column * THUMB_WIDTH
-            canvas.paste(tile, (x, y + PANEL_HEADER_HEIGHT))
-            draw.text((x + 3, y + PANEL_HEADER_HEIGHT + THUMB_HEIGHT + 1), f"f{frame_index:02d}", fill=(35, 35, 35))
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    canvas.save(
-        output_path,
-        format="JPEG",
-        quality=JPEG_QUALITY,
-        optimize=False,
-        progressive=False,
-        subsampling=2,
-    )
-    size = output_path.stat().st_size
-    require(size <= MAX_COMPOSITE_BYTES, f"composite exceeds Copilot image limit: {size} > {MAX_COMPOSITE_BYTES}")
-    return {
-        "width": canvas.width,
-        "height": canvas.height,
-        "quality": JPEG_QUALITY,
-        "size_bytes": size,
-        "sha256": sha256_file(output_path),
-        "used_frame_indices": [list(indices) for indices in panel_frame_indices()],
-    }
+    try:
+        row_height = PANEL_HEADER_HEIGHT + THUMB_HEIGHT + FRAME_LABEL_HEIGHT + PANEL_GAP
+        for panel_index, (start, end) in enumerate(PANEL_WINDOWS):
+            y = panel_index * row_height
+            draw.rectangle((0, y, COMPOSITE_WIDTH, y + PANEL_HEADER_HEIGHT - 1), fill=(24, 24, 24))
+            draw.text((5, y + 4), f"Temporal panel {panel_index + 1}/5 | frames {start:02d}-{end:02d}", fill="white")
+            for column, frame_index in enumerate(range(start, end + 1)):
+                tile = normalize_frame_tile(frames[frame_index])
+                try:
+                    x = column * THUMB_WIDTH
+                    canvas.paste(tile, (x, y + PANEL_HEADER_HEIGHT))
+                    draw.text((x + 3, y + PANEL_HEADER_HEIGHT + THUMB_HEIGHT + 1), f"f{frame_index:02d}", fill=(35, 35, 35))
+                finally:
+                    close = getattr(tile, "close", None)
+                    if callable(close):
+                        close()
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        canvas.save(
+            output_path,
+            format="JPEG",
+            quality=JPEG_QUALITY,
+            optimize=False,
+            progressive=False,
+            subsampling=2,
+        )
+        size = output_path.stat().st_size
+        require(size <= MAX_COMPOSITE_BYTES, f"composite exceeds Copilot image limit: {size} > {MAX_COMPOSITE_BYTES}")
+        return {
+            "width": canvas.width,
+            "height": canvas.height,
+            "quality": JPEG_QUALITY,
+            "size_bytes": size,
+            "sha256": sha256_file(output_path),
+            "used_frame_indices": [list(indices) for indices in panel_frame_indices()],
+        }
+    finally:
+        del draw
+        canvas.close()
 
 
 def _verify_decoded_media(row: Mapping[str, Any], decoded: DecodedVideo) -> None:
@@ -1024,6 +1034,25 @@ def _verify_decoded_media(row: Mapping[str, Any], decoded: DecodedVideo) -> None
         "height": 480,
     }
     require(decoded.media() == expected, f"{row['ledger_id']}: physical media mismatch: {decoded.media()} != {expected}")
+
+
+def _render_and_release_decoded(
+    row: Mapping[str, Any],
+    decoded: DecodedVideo,
+    target: Path,
+    renderer: Renderer,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Render one video while guaranteeing all decoded frame buffers are closed."""
+    try:
+        _verify_decoded_media(row, decoded)
+        media = decoded.media()
+        composite = renderer(decoded.frames, target)
+        return composite, media
+    finally:
+        for frame in decoded.frames:
+            close = getattr(frame, "close", None)
+            if callable(close):
+                close()
 
 
 def _anonymous_id(blind_key: bytes, ledger_record_sha256: str) -> str:
@@ -1161,8 +1190,11 @@ def _build_into(
     for root in pass_roots.values():
         (root / "media").mkdir(parents=True, mode=0o755)
 
-    decoded_cache: dict[str, DecodedVideo] = {}
-    rendered_cache: dict[str, tuple[Path, dict[str, Any]]] = {}
+    # Never retain decoded frames across ledger rows.  One 49-frame video is
+    # tens of MiB after RGB expansion; caching the full 2,448-item review set
+    # makes the package builder grow without bound.  Only the small rendered
+    # composite receipt is cached for the unlikely duplicate-video case.
+    rendered_cache: dict[str, tuple[Path, dict[str, Any], dict[str, Any]]] = {}
     assignments: list[dict[str, Any]] = []
     key_rows: list[dict[str, Any]] = []
     audit_strata_rows: list[dict[str, Any]] = []
@@ -1174,12 +1206,13 @@ def _build_into(
         target_a = pass_roots["A"] / "media" / f"{anonymous_id}.jpg"
         cached = rendered_cache.get(str(row["video_sha256"]))
         if cached is None:
-            decoded = decoded_cache.get(str(row["video_sha256"]))
-            if decoded is None:
-                decoded = decoder(Path(str(row["source_video_path"])))
-                decoded_cache[str(row["video_sha256"])] = decoded
-            _verify_decoded_media(row, decoded)
-            composite = renderer(decoded.frames, target_a)
+            decoded = decoder(Path(str(row["source_video_path"])))
+            try:
+                composite, decoded_media = _render_and_release_decoded(
+                    row, decoded, target_a, renderer
+                )
+            finally:
+                del decoded
             require(
                 composite.get("width") == COMPOSITE_WIDTH
                 and composite.get("height") == COMPOSITE_HEIGHT
@@ -1194,12 +1227,26 @@ def _build_into(
             require(target_a.stat().st_size == composite.get("size_bytes"), f"{anonymous_id}: composite size receipt mismatch")
             require(target_a.stat().st_size <= MAX_COMPOSITE_BYTES, f"{anonymous_id}: composite exceeds image limit")
             require(sha256_file(target_a) == composite.get("sha256"), f"{anonymous_id}: composite SHA receipt mismatch")
-            rendered_cache[str(row["video_sha256"])] = (target_a, dict(composite))
+            rendered_cache[str(row["video_sha256"])] = (
+                target_a,
+                dict(composite),
+                decoded_media,
+            )
         else:
-            source_composite, composite = cached
-            cached_decoded = decoded_cache.get(str(row["video_sha256"]))
-            require(cached_decoded is not None, "internal decoded-media cache is incomplete")
-            _verify_decoded_media(row, cached_decoded)
+            source_composite, composite, decoded_media = cached
+            expected_width = 720 if row["stream"] in COGVIDEOX_STREAMS else 832
+            require(
+                decoded_media
+                == {
+                    "video_streams": 1,
+                    "audio_streams": 0,
+                    "decoded_frames": 49,
+                    "fps": "8/1",
+                    "width": expected_width,
+                    "height": 480,
+                },
+                f"{row['ledger_id']}: cached physical media mismatch",
+            )
             os.link(source_composite, target_a)
         target_b = pass_roots["B"] / "media" / f"{anonymous_id}.jpg"
         os.link(target_a, target_b)
@@ -1207,6 +1254,8 @@ def _build_into(
         assignments.append(_public_assignment(row, anonymous_id, str(composite["sha256"])))
         key_rows.append(_private_key_row(row, anonymous_id, composite))
         audit_strata_rows.append(_audit_stratum_row(row, anonymous_id, blind_key))
+        if len(assignments) % 32 == 0:
+            gc.collect()
 
     require(len(assignments) == TOTAL_VIDEO_COUNT and len(used_ids) == TOTAL_VIDEO_COUNT, "anonymous ID inventory is not exact")
     assignment_by_id = {row["anonymous_review_id"]: row for row in assignments}
