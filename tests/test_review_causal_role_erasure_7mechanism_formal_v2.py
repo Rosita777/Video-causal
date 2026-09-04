@@ -5,6 +5,7 @@ import threading
 from pathlib import Path
 
 import pytest
+from PIL import Image
 
 from scripts import review_causal_role_erasure_7mechanism_formal_v2 as formal
 
@@ -24,7 +25,11 @@ def _package(tmp_path: Path, count: int = 4, pass_name: str = "pass_a"):
         kind = "causal" if index % 2 == 0 else "specificity"
         review_id = f"anon_{index:04d}"
         image = media / f"{review_id}.jpg"
-        image.write_bytes(f"jpeg-{index}".encode())
+        Image.new(
+            "RGB",
+            (formal.COMPOSITE_WIDTH, formal.COMPOSITE_HEIGHT),
+            color=(index * 20, 10, 30),
+        ).save(image, format="JPEG", quality=formal.JPEG_QUALITY)
         assignment = {
             "anonymous_review_id": review_id,
             "case_kind": kind,
@@ -75,7 +80,11 @@ def _package(tmp_path: Path, count: int = 4, pass_name: str = "pass_a"):
             "path_base": "pass_root",
             "directory": "media",
             "format": "jpeg",
+            "width": formal.COMPOSITE_WIDTH,
+            "height": formal.COMPOSITE_HEIGHT,
+            "jpeg_quality": formal.JPEG_QUALITY,
             "max_bytes": formal.MAX_IMAGE_BYTES,
+            "one_image_per_assignment": True,
         },
     }
     (root / "pass_manifest.json").write_text(
@@ -414,4 +423,3 @@ def test_incomplete_refusal_and_parse_error_are_not_scores(tmp_path: Path):
         )
         assert result["ok"] is False
         assert "normalized" not in result
-

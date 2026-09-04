@@ -22,6 +22,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
+from PIL import Image, UnidentifiedImageError
+
 try:
     from evaluate_v2_baseline_with_vlm import parse_model_json
     from review_causal_role_erasure_7mechanism_targets_v2 import (
@@ -62,6 +64,9 @@ REASONING_EFFORT = "low"
 TEMPERATURE = 1.0
 MAX_OUTPUT_TOKENS = 1600
 MAX_IMAGE_BYTES = 3_145_728
+COMPOSITE_WIDTH = 1456
+COMPOSITE_HEIGHT = 520
+JPEG_QUALITY = 82
 DEFAULT_WORKERS = 16  # Run A and B together for the measured total concurrency of 32.
 CHECKPOINT_STATUS = "schema_valid_scientific_checkpoint"
 INFRASTRUCTURE_ERROR_STATUS = "infrastructure_error_no_scientific_score"
@@ -271,8 +276,20 @@ def _resolve_composite(pass_root: Path, value: str) -> Path:
     media_root = (pass_root / "media").resolve(strict=True)
     require(resolved.parent == media_root, "composite escaped this pass's public media root")
     regular_file(resolved, "public composite")
-    require(resolved.suffix.lower() in {".jpg", ".jpeg", ".png"}, "unsupported composite image type")
+    require(resolved.suffix.lower() == ".jpg", "public composite must be the frozen JPEG encoding")
     require(0 < resolved.stat().st_size <= MAX_IMAGE_BYTES, "composite violates the one-image size limit")
+    try:
+        with Image.open(resolved) as image:
+            require(image.format == "JPEG", "public composite bytes are not JPEG")
+            require(
+                image.size == (COMPOSITE_WIDTH, COMPOSITE_HEIGHT),
+                "public composite geometry differs from the frozen contract",
+            )
+            image.verify()
+    except (OSError, UnidentifiedImageError) as exc:
+        raise FormalReviewTransportError(
+            f"public composite is not a valid JPEG: {resolved}"
+        ) from exc
     return resolved
 
 
@@ -311,6 +328,20 @@ def load_public_pass(
         and composite_contract.get("path_base") == "pass_root"
         and composite_contract.get("directory") == "media",
         "manifest composite path contract differs",
+    )
+    require(
+        composite_contract
+        == {
+            "path_base": "pass_root",
+            "directory": "media",
+            "format": "jpeg",
+            "width": COMPOSITE_WIDTH,
+            "height": COMPOSITE_HEIGHT,
+            "jpeg_quality": JPEG_QUALITY,
+            "max_bytes": MAX_IMAGE_BYTES,
+            "one_image_per_assignment": True,
+        },
+        "manifest composite encoding contract differs",
     )
 
     assignments = _read_jsonl(assignments_path, "public assignments")
@@ -448,8 +479,8 @@ def prompt_for(row: Mapping[str, Any]) -> str:
 def image_data_url(path: Path) -> str:
     regular_file(path, "public composite")
     require(0 < path.stat().st_size <= MAX_IMAGE_BYTES, "composite violates the one-image size limit")
-    mime = "image/png" if path.suffix.lower() == ".png" else "image/jpeg"
-    return f"data:{mime};base64,{base64.b64encode(path.read_bytes()).decode('ascii')}"
+    require(path.suffix.lower() == ".jpg", "public composite must be JPEG")
+    return f"data:image/jpeg;base64,{base64.b64encode(path.read_bytes()).decode('ascii')}"
 
 
 def request_payload_for(row: Mapping[str, Any]) -> dict[str, Any]:
