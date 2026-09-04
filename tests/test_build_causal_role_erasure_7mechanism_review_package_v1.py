@@ -446,6 +446,8 @@ def test_generation_mutation_fails_closed_without_partial_output(tmp_path):
 def test_missing_wan_original_manifest_refuses_before_output(tmp_path):
     root = tmp_path / "case"
     root.mkdir()
+    (root / "formal.csv").write_text("case_id\n", encoding="utf-8")
+    (root / "identification.csv").write_text("case_id\n", encoding="utf-8")
     output = root / "review"
     with pytest.raises(review.ReviewPackageError, match="missing or symlinked"):
         review.build_review_package(
