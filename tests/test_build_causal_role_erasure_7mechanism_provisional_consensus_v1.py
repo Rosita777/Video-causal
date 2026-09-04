@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 import stat
 from pathlib import Path
 
@@ -253,7 +254,9 @@ def _fixture(tmp_path: Path):
         "scores_a": merged_paths["A"],
         "scores_b": merged_paths["B"],
         "assignments": assignments_by_pass["A"],
+        "assignments_b": assignments_by_pass["B"],
         "commitments": commitments_path,
+        "public_root": public,
     }
 
 
@@ -292,9 +295,12 @@ def test_post_unblinding_export_is_fresh_bound_and_exact_mean(tmp_path: Path):
     decision_path = output / "provisional_decision.json"
     scores_path = output / "provisional_scores.jsonl"
     receipt_path = output / "provisional_receipt.json"
+    snapshot_path = output / "implementation_snapshot.py"
     assert stat.S_IMODE(decision_path.stat().st_mode) == 0o444
     assert stat.S_IMODE(scores_path.stat().st_mode) == 0o444
     assert stat.S_IMODE(receipt_path.stat().st_mode) == 0o444
+    assert stat.S_IMODE(snapshot_path.stat().st_mode) == 0o444
+    assert snapshot_path.read_bytes() == Path(provisional.__file__).read_bytes()
     decision = json.loads(decision_path.read_text())
     body = {key: value for key, value in decision.items() if key != "decision_body_sha256"}
     assert decision["decision_body_sha256"] == hashlib.sha256(
@@ -307,6 +313,19 @@ def test_post_unblinding_export_is_fresh_bound_and_exact_mean(tmp_path: Path):
     assert receipt["artifacts"]["provisional_scores"]["sha256"] == provisional.sha256_file(
         scores_path
     )
+    assert receipt["artifacts"]["implementation_snapshot"] == {
+        "path": "implementation_snapshot.py",
+        "sha256": provisional.sha256_file(snapshot_path),
+        "size_bytes": snapshot_path.stat().st_size,
+    }
+    assert decision["code_provenance"]["implementation_snapshot"] == receipt[
+        "artifacts"
+    ]["implementation_snapshot"]
+    assert receipt["code_provenance"]["source_git"]["implementation_snapshot_is_authoritative"] is True
+    assert receipt["code_provenance"]["source_git"]["head_commit_reliable"] is True
+    assert len(receipt["code_provenance"]["source_git"]["head_commit"]) in (40, 64)
+    assert isinstance(receipt["code_provenance"]["source_git"]["dirty"], bool)
+    assert receipt["all_inputs_revalidated_immediately_before_publish"] is True
 
     rows = [json.loads(line) for line in scores_path.read_text().splitlines()]
     by_id = {row["anonymous_review_id"]: row for row in rows}
@@ -329,7 +348,8 @@ def test_post_unblinding_export_is_fresh_bound_and_exact_mean(tmp_path: Path):
         "scores_a_merge_manifest",
         "scores_b",
         "scores_b_merge_manifest",
-        "public_assignments",
+        "public_assignments_a",
+        "public_assignments_b",
         "public_key_commitments",
         "evaluation_code_registry",
         "provisional_implementation",
@@ -391,3 +411,93 @@ def test_public_commitments_reject_extra_fields_and_cli_has_no_private_key_input
     assert "--full-key" not in option_strings
     assert "--original-key" not in option_strings
     assert "--canonical-scores" not in option_strings
+
+
+@pytest.mark.parametrize("location", ("private", "renamed_public"))
+def test_commitments_must_be_exact_shared_public_file_before_content_read(
+    tmp_path: Path, monkeypatch, location: str
+):
+    fixture = _fixture(tmp_path)
+    if location == "private":
+        wrong = fixture["public_root"].parent / "private" / "key_commitments.json"
+    else:
+        wrong = fixture["public_root"] / "renamed_key_commitments.json"
+    wrong.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(fixture["commitments"], wrong)
+
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError("commitment contents were read before provenance refusal")
+
+    monkeypatch.setattr(provisional, "load_public_commitments", forbidden)
+    output = tmp_path / f"rejected-{location}"
+    with pytest.raises(
+        provisional.ProvisionalConsensusError,
+        match="exactly the shared public root/key_commitments.json",
+    ):
+        provisional.build_provisional_consensus(
+            scores_a_path=fixture["scores_a"],
+            scores_b_path=fixture["scores_b"],
+            assignments_path=fixture["assignments"],
+            key_commitments_path=wrong,
+            output_root=output,
+            expected_items=2,
+        )
+    assert not output.exists()
+
+
+def test_cross_package_pass_b_is_refused_before_commitment_content_read(
+    tmp_path: Path, monkeypatch
+):
+    first = _fixture(tmp_path / "first")
+    second = _fixture(tmp_path / "second")
+    merge_b_path = first["scores_b"].parent / "merge_manifest.json"
+    merge_b = json.loads(merge_b_path.read_text())
+    merge_b["assignments"] = _ref(second["assignments_b"])
+    merge_b_path.write_bytes(provisional.canonical_json_bytes(merge_b))
+
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError("commitment contents were read before package refusal")
+
+    monkeypatch.setattr(provisional, "load_public_commitments", forbidden)
+    output = tmp_path / "rejected-cross-package"
+    with pytest.raises(
+        provisional.ProvisionalConsensusError,
+        match="same review_package/public root",
+    ):
+        provisional.build_provisional_consensus(
+            scores_a_path=first["scores_a"],
+            scores_b_path=first["scores_b"],
+            assignments_path=first["assignments"],
+            key_commitments_path=first["commitments"],
+            output_root=output,
+            expected_items=2,
+        )
+    assert not output.exists()
+
+
+def test_input_change_during_build_is_refused_by_terminal_revalidation(
+    tmp_path: Path, monkeypatch
+):
+    fixture = _fixture(tmp_path)
+    original_builder = provisional.build_provisional_rows
+
+    def mutate_after_materialization(*args, **kwargs):
+        rows = original_builder(*args, **kwargs)
+        fixture["scores_a"].write_bytes(fixture["scores_a"].read_bytes() + b"\n")
+        return rows
+
+    monkeypatch.setattr(provisional, "build_provisional_rows", mutate_after_materialization)
+    output = tmp_path / "rejected-toctou"
+    with pytest.raises(
+        provisional.ProvisionalConsensusError,
+        match="changed|blank/noncanonical|SHA mismatch",
+    ):
+        provisional.build_provisional_consensus(
+            scores_a_path=fixture["scores_a"],
+            scores_b_path=fixture["scores_b"],
+            assignments_path=fixture["assignments"],
+            key_commitments_path=fixture["commitments"],
+            output_root=output,
+            expected_items=2,
+        )
+    assert not output.exists()

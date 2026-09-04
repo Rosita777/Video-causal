@@ -27,6 +27,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import tempfile
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
@@ -163,8 +164,141 @@ def relative_ref(root: Path, path: Path) -> dict[str, Any]:
     }
 
 
+def verify_file_refs(refs: Mapping[str, Mapping[str, Any]]) -> None:
+    """Re-hash every declared external input immediately before publication."""
+
+    for label, ref in refs.items():
+        require(
+            isinstance(ref, dict)
+            and set(ref) == {"path", "sha256", "size_bytes"},
+            f"{label} input reference schema changed",
+        )
+        path = Path(str(ref["path"]))
+        regular_file(path, f"{label} input")
+        require(path.resolve() == path, f"{label} input path is not resolved")
+        require(
+            path.stat().st_size == ref["size_bytes"]
+            and sha256_file(path) == ref["sha256"],
+            f"{label} input changed during provisional export",
+        )
+
+
+def _resolve_manifest_ref(root: Path, ref: Any, label: str) -> Path:
+    require(
+        isinstance(ref, dict)
+        and set(ref) >= {"path", "sha256"}
+        and _valid_sha(ref["sha256"]),
+        f"{label} reference is malformed",
+    )
+    value = Path(str(ref["path"]))
+    candidate = value if value.is_absolute() else root / value
+    regular_file(candidate, label)
+    return candidate.resolve()
+
+
+def resolve_public_provenance(
+    *,
+    scores_a_path: Path,
+    scores_b_path: Path,
+    assignments_path: Path,
+    key_commitments_path: Path,
+) -> dict[str, Path | dict[str, Any]]:
+    """Resolve the one public package before reading any commitment contents."""
+
+    require(
+        scores_a_path.name == scores_b_path.name == "completed_scores.jsonl",
+        "A/B completed-score filenames changed",
+    )
+    merge_a_path = scores_a_path.parent / "merge_manifest.json"
+    merge_b_path = scores_b_path.parent / "merge_manifest.json"
+    merge_a = load_json(merge_a_path, "pass A merge manifest")
+    merge_b = load_json(merge_b_path, "pass B merge manifest")
+    require(
+        merge_a.get("pass_id") == "A" and merge_b.get("pass_id") == "B",
+        "A/B merge manifest pass identities changed",
+    )
+    assignment_a = _resolve_manifest_ref(
+        merge_a_path.parent, merge_a.get("assignments"), "pass A public assignments"
+    )
+    assignment_b = _resolve_manifest_ref(
+        merge_b_path.parent, merge_b.get("assignments"), "pass B public assignments"
+    )
+    regular_file(assignments_path, "provided public assignments")
+    require(
+        assignments_path.resolve() == assignment_a,
+        "provided assignments do not match pass A merge manifest",
+    )
+    require(
+        assignment_a.name == assignment_b.name == "assignments.jsonl"
+        and assignment_a.parent.name == "pass_a"
+        and assignment_b.parent.name == "pass_b",
+        "A/B assignments are not formal public pass_a/pass_b files",
+    )
+    public_root_a = assignment_a.parent.parent
+    public_root_b = assignment_b.parent.parent
+    require(
+        public_root_a == public_root_b and public_root_a.name == "public",
+        "A/B assignments do not belong to the same review_package/public root",
+    )
+    require(
+        public_root_a.parent.name == "review_package",
+        "A/B assignments are not under a review_package/public root",
+    )
+    expected_commitments = public_root_a / "key_commitments.json"
+    regular_file(key_commitments_path, "provided public key commitments")
+    require(
+        key_commitments_path.resolve() == expected_commitments.resolve(),
+        "key commitments must be exactly the shared public root/key_commitments.json",
+    )
+    regular_file(expected_commitments, "shared public key commitments")
+    return {
+        "public_root": public_root_a,
+        "assignment_a": assignment_a,
+        "assignment_b": assignment_b,
+        "merge_a_path": merge_a_path.resolve(),
+        "merge_b_path": merge_b_path.resolve(),
+        "merge_a": merge_a,
+        "merge_b": merge_b,
+    }
+
+
+def capture_git_state(project_root: Path) -> dict[str, Any]:
+    """Record informative Git state; the embedded source snapshot is authoritative."""
+
+    def run(*args: str) -> subprocess.CompletedProcess[bytes]:
+        return subprocess.run(
+            ["git", "-C", str(project_root), *args],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            timeout=10,
+        )
+
+    head = run("rev-parse", "HEAD")
+    status = run("status", "--porcelain=v1", "--untracked-files=all")
+    commit = head.stdout.decode("ascii", errors="replace").strip()
+    reliable = head.returncode == 0 and _valid_git_oid(commit)
+    return {
+        "repository_root": str(project_root.resolve()),
+        "head_commit": commit if reliable else None,
+        "head_commit_reliable": reliable,
+        "dirty": None if status.returncode != 0 else bool(status.stdout),
+        "porcelain_status_sha256": (
+            None if status.returncode != 0 else sha256_bytes(status.stdout)
+        ),
+        "implementation_snapshot_is_authoritative": True,
+    }
+
+
 def _valid_sha(value: Any) -> bool:
     return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
+
+
+def _valid_git_oid(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", value) is not None
+    )
 
 
 def load_public_commitments(
@@ -340,6 +474,116 @@ def _fresh_staging(output_root: Path) -> Path:
     return staging
 
 
+def _load_bound_public_inputs(
+    *,
+    provenance: Mapping[str, Any],
+    scores_a_path: Path,
+    scores_b_path: Path,
+    assignments_path: Path,
+    key_commitments_path: Path,
+    expected_items: int,
+) -> tuple[
+    dict[str, Any],
+    Path,
+    dict[str, Any],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    dict[str, dict[str, Any]],
+]:
+    """Load public contents only after their common-root provenance is fixed."""
+
+    commitments, registry_path, registry = load_public_commitments(
+        key_commitments_path, expected_items=expected_items
+    )
+    try:
+        scores_a = canonical.load_merged_scores(
+            scores_a_path,
+            "A",
+            expected_items,
+            expected_assignments_path=assignments_path,
+        )
+        scores_b = canonical.load_merged_scores(
+            scores_b_path,
+            "B",
+            expected_items,
+        )
+        assignments = canonical.load_assignments(assignments_path, expected_items)
+    except ValueError as exc:
+        raise ProvisionalConsensusError(str(exc)) from exc
+    merge_a = provenance["merge_a"]
+    merge_b = provenance["merge_b"]
+    registry_sha = registry["registry_sha256"]
+    require(
+        isinstance(merge_a, dict)
+        and isinstance(merge_b, dict)
+        and merge_a.get("evaluation_code_registry_sha256")
+        == merge_b.get("evaluation_code_registry_sha256")
+        == commitments["evaluation_code_registry"]["registry_sha256"]
+        == registry_sha,
+        "A/B/key-commitment evaluation code registry bindings differ",
+    )
+    return commitments, registry_path, registry, scores_a, scores_b, assignments
+
+
+def _revalidate_before_publish(
+    *,
+    original_provenance: Mapping[str, Any],
+    original_commitments: Mapping[str, Any],
+    original_registry: Mapping[str, Any],
+    original_scores_a: Sequence[Mapping[str, Any]],
+    original_scores_b: Sequence[Mapping[str, Any]],
+    original_assignments: Mapping[str, Mapping[str, Any]],
+    inputs: Mapping[str, Mapping[str, Any]],
+    scores_a_path: Path,
+    scores_b_path: Path,
+    assignments_path: Path,
+    key_commitments_path: Path,
+    implementation_snapshot_path: Path,
+    expected_items: int,
+) -> None:
+    """Repeat all public validation and direct hashes as the final publish gate."""
+
+    provenance = resolve_public_provenance(
+        scores_a_path=scores_a_path,
+        scores_b_path=scores_b_path,
+        assignments_path=assignments_path,
+        key_commitments_path=key_commitments_path,
+    )
+    for name in (
+        "public_root",
+        "assignment_a",
+        "assignment_b",
+        "merge_a_path",
+        "merge_b_path",
+    ):
+        require(
+            provenance[name] == original_provenance[name],
+            f"{name} provenance changed during provisional export",
+        )
+    loaded = _load_bound_public_inputs(
+        provenance=provenance,
+        scores_a_path=scores_a_path,
+        scores_b_path=scores_b_path,
+        assignments_path=assignments_path,
+        key_commitments_path=key_commitments_path,
+        expected_items=expected_items,
+    )
+    commitments, _registry_path, registry, scores_a, scores_b, assignments = loaded
+    require(commitments == original_commitments, "public commitments changed during export")
+    require(registry == original_registry, "evaluation registry changed during export")
+    require(list(scores_a) == list(original_scores_a), "pass A scores changed during export")
+    require(list(scores_b) == list(original_scores_b), "pass B scores changed during export")
+    require(assignments == original_assignments, "public assignments changed during export")
+    verify_file_refs(inputs)
+    implementation_ref = inputs["provisional_implementation"]
+    require(
+        sha256_file(implementation_snapshot_path) == implementation_ref["sha256"]
+        and implementation_snapshot_path.stat().st_size
+        == implementation_ref["size_bytes"],
+        "implementation snapshot differs from the executed source",
+    )
+
+
 def build_provisional_consensus(
     *,
     scores_a_path: Path,
@@ -357,37 +601,32 @@ def build_provisional_consensus(
     )
     staging = _fresh_staging(output_root)
     try:
-        commitments, registry_path, registry = load_public_commitments(
-            key_commitments_path, expected_items=expected_items
+        # Resolve the exact common public root before opening key_commitments.
+        provenance = resolve_public_provenance(
+            scores_a_path=scores_a_path,
+            scores_b_path=scores_b_path,
+            assignments_path=assignments_path,
+            key_commitments_path=key_commitments_path,
         )
-        try:
-            scores_a = canonical.load_merged_scores(
-                scores_a_path,
-                "A",
-                expected_items,
-                expected_assignments_path=assignments_path,
-            )
-            scores_b = canonical.load_merged_scores(
-                scores_b_path,
-                "B",
-                expected_items,
-            )
-            assignments = canonical.load_assignments(assignments_path, expected_items)
-        except canonical.CanonicalizationError as exc:
-            raise ProvisionalConsensusError(str(exc)) from exc
-
-        merge_a_path = scores_a_path.parent / "merge_manifest.json"
-        merge_b_path = scores_b_path.parent / "merge_manifest.json"
-        merge_a = load_json(merge_a_path, "pass A merge manifest")
-        merge_b = load_json(merge_b_path, "pass B merge manifest")
-        registry_sha = registry["registry_sha256"]
+        loaded = _load_bound_public_inputs(
+            provenance=provenance,
+            scores_a_path=scores_a_path,
+            scores_b_path=scores_b_path,
+            assignments_path=assignments_path,
+            key_commitments_path=key_commitments_path,
+            expected_items=expected_items,
+        )
+        commitments, registry_path, registry, scores_a, scores_b, assignments = loaded
+        merge_a_path = provenance["merge_a_path"]
+        merge_b_path = provenance["merge_b_path"]
+        assignment_b_path = provenance["assignment_b"]
         require(
-            merge_a.get("evaluation_code_registry_sha256")
-            == merge_b.get("evaluation_code_registry_sha256")
-            == commitments["evaluation_code_registry"]["registry_sha256"]
-            == registry_sha,
-            "A/B/key-commitment evaluation code registry bindings differ",
+            isinstance(merge_a_path, Path)
+            and isinstance(merge_b_path, Path)
+            and isinstance(assignment_b_path, Path),
+            "internal public provenance types changed",
         )
+        registry_sha = registry["registry_sha256"]
 
         implementation_path = Path(__file__).resolve()
         inputs = {
@@ -395,10 +634,20 @@ def build_provisional_consensus(
             "scores_a_merge_manifest": file_ref(merge_a_path),
             "scores_b": file_ref(scores_b_path),
             "scores_b_merge_manifest": file_ref(merge_b_path),
-            "public_assignments": file_ref(assignments_path),
+            "public_assignments_a": file_ref(assignments_path),
+            "public_assignments_b": file_ref(assignment_b_path),
             "public_key_commitments": file_ref(key_commitments_path),
             "evaluation_code_registry": file_ref(registry_path),
             "provisional_implementation": file_ref(implementation_path),
+        }
+        implementation_snapshot_path = staging / "implementation_snapshot.py"
+        write_bytes(implementation_snapshot_path, implementation_path.read_bytes())
+        code_provenance = {
+            "live_implementation": inputs["provisional_implementation"],
+            "implementation_snapshot": relative_ref(
+                staging, implementation_snapshot_path
+            ),
+            "source_git": capture_git_state(implementation_path.parents[1]),
         }
         decision_body = {
             "schema_version": 1,
@@ -431,6 +680,7 @@ def build_provisional_consensus(
             "input_bindings_sha256": sha256_bytes(canonical_json_bytes(inputs)),
             "evaluation_code_registry_sha256": registry_sha,
             "inputs": inputs,
+            "code_provenance": code_provenance,
             "sequence_contract": [
                 "validate_public_blinded_inputs",
                 "freeze_this_decision_record",
@@ -483,14 +733,34 @@ def build_provisional_consensus(
                 "pass_b_rows": len(scores_b),
             },
             "inputs": inputs,
+            "code_provenance": code_provenance,
             "artifacts": {
+                "implementation_snapshot": relative_ref(
+                    staging, implementation_snapshot_path
+                ),
                 "provisional_decision": relative_ref(staging, decision_path),
                 "provisional_scores": relative_ref(staging, scores_path),
             },
             "key_and_metric_boundaries": decision_body["key_and_metric_boundaries"],
+            "all_inputs_revalidated_immediately_before_publish": True,
         }
         receipt_path = staging / "provisional_receipt.json"
         write_json(receipt_path, receipt)
+        _revalidate_before_publish(
+            original_provenance=provenance,
+            original_commitments=commitments,
+            original_registry=registry,
+            original_scores_a=scores_a,
+            original_scores_b=scores_b,
+            original_assignments=assignments,
+            inputs=inputs,
+            scores_a_path=scores_a_path,
+            scores_b_path=scores_b_path,
+            assignments_path=assignments_path,
+            key_commitments_path=key_commitments_path,
+            implementation_snapshot_path=implementation_snapshot_path,
+            expected_items=expected_items,
+        )
         require(not output_root.exists(), f"output appeared during build: {output_root}")
         os.replace(staging, output_root)
         return receipt
