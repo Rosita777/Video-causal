@@ -421,6 +421,192 @@ def validate_manifest_input_bindings(
     )
 
 
+def _resolve_artifact_ref(
+    project_root: Path,
+    ref: Any,
+    label: str,
+    *,
+    expected_path: Path | None = None,
+) -> Path:
+    require(isinstance(ref, dict) and set(ref) >= {"path", "sha256"}, f"{label}: malformed artifact reference")
+    registered = Path(str(ref["path"]))
+    candidate = registered if registered.is_absolute() else project_root / registered
+    regular_file(candidate, label)
+    resolved = candidate.resolve()
+    try:
+        resolved.relative_to(project_root)
+    except ValueError as exc:
+        raise ReviewPackageError(f"{label}: artifact escapes project root") from exc
+    if expected_path is not None:
+        require(resolved == expected_path.resolve(), f"{label}: registered path mismatch")
+    expected_sha = _hex_sha(ref["sha256"], f"{label} sha256")
+    require(sha256_file(resolved) == expected_sha, f"{label}: SHA-256 mismatch")
+    return resolved
+
+
+def _json_files_exact(directory: Path, count: int, label: str) -> list[Path]:
+    require(directory.is_dir() and not directory.is_symlink(), f"{label} directory missing or symlinked")
+    entries = sorted(directory.iterdir())
+    require(
+        len(entries) == count
+        and all(path.is_file() and not path.is_symlink() and path.suffix == ".json" for path in entries),
+        f"{label} inventory must contain exactly {count} regular JSON files",
+    )
+    return entries
+
+
+def _row_multiset(rows: Sequence[Mapping[str, Any]]) -> Counter[str]:
+    return Counter(sha256_bytes(canonical_json_bytes(dict(row))) for row in rows)
+
+
+def validate_upstream_generation_chain(
+    *,
+    project_root: Path,
+    label: str,
+    manifest_path: Path,
+    manifest: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Validate the aggregate and every job-level receipt behind one final manifest."""
+    configs = {
+        "wan_original": ("wan_original_aggregate.json", "job_manifests", 7, 294, False),
+        "trained_wan": ("eval_aggregate.json", "job_manifests", 18, 684, False),
+        "cog_core": ("aggregate.json", "jobs", 28, 1176, True),
+        "safree": ("aggregate.json", "jobs", 7, 294, True),
+    }
+    require(label in configs, f"unknown upstream chain label: {label}")
+    aggregate_name, descriptor_dir_name, expected_jobs, expected_videos, requires_complete = configs[label]
+    root = manifest_path.parent
+    aggregate_path = root / aggregate_name
+    aggregate = load_json(aggregate_path, f"{label} aggregate")
+    require(aggregate.get("schema_version") == 1, f"{label}: aggregate schema changed")
+    require(aggregate.get("status") == "completed", f"{label}: aggregate is not completed")
+    require(aggregate.get("validated_videos") == expected_videos, f"{label}: aggregate video count mismatch")
+    require(aggregate.get("status_counts") == {"completed": expected_jobs}, f"{label}: aggregate job statuses are not all complete")
+    if "expected_jobs" in aggregate:
+        require(aggregate["expected_jobs"] == expected_jobs, f"{label}: aggregate expected_jobs mismatch")
+    if "expected_videos" in aggregate:
+        require(aggregate["expected_videos"] == expected_videos, f"{label}: aggregate expected_videos mismatch")
+    _resolve_artifact_ref(
+        project_root,
+        aggregate.get("generation_manifest"),
+        f"{label} aggregate generation manifest",
+        expected_path=manifest_path,
+    )
+    for ref_name in ("run_manifest", "queue_plan"):
+        if ref_name in aggregate:
+            _resolve_artifact_ref(project_root, aggregate[ref_name], f"{label} aggregate {ref_name}")
+    if requires_complete:
+        complete = root / ".complete"
+        regular_file(complete, f"{label} completion marker")
+        require(
+            complete.read_bytes() == (sha256_file(manifest_path) + "\n").encode("ascii"),
+            f"{label}: completion marker does not bind the final manifest",
+        )
+
+    descriptors = [load_json(path, f"{label} job descriptor") for path in _json_files_exact(root / descriptor_dir_name, expected_jobs, f"{label} job descriptors")]
+    statuses = [load_json(path, f"{label} job status") for path in _json_files_exact(root / "statuses", expected_jobs, f"{label} job statuses")]
+    descriptors_by_id = {str(row.get("job_id", "")): row for row in descriptors}
+    statuses_by_id = {str(row.get("job_id", "")): row for row in statuses}
+    require(
+        len(descriptors_by_id) == len(statuses_by_id) == expected_jobs
+        and set(descriptors_by_id) == set(statuses_by_id),
+        f"{label}: descriptor/status job identities differ",
+    )
+    for job_id, status_row in statuses_by_id.items():
+        descriptor = descriptors_by_id[job_id]
+        expected_job_videos = _integer(status_row.get("expected_videos"), f"{label}/{job_id} expected_videos")
+        require(
+            status_row.get("status") == "completed"
+            and status_row.get("return_code") == 0
+            and status_row.get("validated_video_count") == expected_job_videos,
+            f"{label}/{job_id}: job status is not validated complete",
+        )
+        require(descriptor.get("job_id") == job_id, f"{label}/{job_id}: descriptor identity changed")
+
+    final_items = _manifest_items(manifest, expected_videos, label)
+    receipt_outputs: list[dict[str, Any]] = []
+    if label == "wan_original":
+        receipt_paths = _json_files_exact(root / "receipts", expected_jobs, "Wan Original receipts")
+        receipt_by_id: dict[str, tuple[Path, dict[str, Any]]] = {}
+        for path in receipt_paths:
+            receipt = load_json(path, "Wan Original job receipt")
+            job_id = str(receipt.get("job_id", ""))
+            require(
+                job_id in descriptors_by_id
+                and job_id not in receipt_by_id
+                and receipt.get("status") == "validated_complete",
+                "Wan Original receipt identity/status mismatch",
+            )
+            status_row = statuses_by_id[job_id]
+            require(
+                status_row.get("receipt_path") == str(path)
+                and status_row.get("receipt_sha256") == sha256_file(path),
+                f"Wan Original/{job_id}: status does not bind receipt",
+            )
+            for ref_name in ("run_manifest", "job_manifest", "prompt_shard", "generation_manifest"):
+                _resolve_artifact_ref(project_root, receipt.get(ref_name), f"Wan Original/{job_id} {ref_name}")
+            outputs = receipt.get("outputs")
+            require(
+                isinstance(outputs, list)
+                and len(outputs) == status_row["validated_video_count"]
+                and all(isinstance(item, dict) for item in outputs),
+                f"Wan Original/{job_id}: receipt outputs mismatch",
+            )
+            require(
+                receipt.get("validated_video_count") == len(outputs),
+                f"Wan Original/{job_id}: receipt validated count mismatch",
+            )
+            receipt_outputs.extend(dict(item) for item in outputs)
+            receipt_by_id[job_id] = (path, receipt)
+        jobs = manifest.get("jobs")
+        require(isinstance(jobs, list) and len(jobs) == expected_jobs, "Wan Original final manifest jobs mismatch")
+        manifest_jobs = {str(job.get("job_id", "")): job for job in jobs if isinstance(job, dict)}
+        require(set(manifest_jobs) == set(receipt_by_id), "Wan Original final manifest/receipt jobs differ")
+        aggregate_jobs = aggregate.get("jobs")
+        require(isinstance(aggregate_jobs, list) and len(aggregate_jobs) == expected_jobs, "Wan Original aggregate jobs mismatch")
+        for job_id, (receipt_path, receipt) in receipt_by_id.items():
+            job = manifest_jobs[job_id]
+            _resolve_artifact_ref(project_root, job.get("receipt"), f"Wan Original/{job_id} final receipt", expected_path=receipt_path)
+            _resolve_artifact_ref(project_root, job.get("generation_manifest"), f"Wan Original/{job_id} final child manifest")
+            require(job.get("mechanism") == receipt.get("mechanism"), f"Wan Original/{job_id}: final mechanism mismatch")
+    else:
+        for job_id, status_row in statuses_by_id.items():
+            descriptor = descriptors_by_id[job_id]
+            outputs = status_row.get("outputs")
+            require(
+                isinstance(outputs, list)
+                and len(outputs) == status_row["validated_video_count"]
+                and all(isinstance(item, dict) for item in outputs),
+                f"{label}/{job_id}: status outputs mismatch",
+            )
+            receipt_outputs.extend(dict(item) for item in outputs)
+            output_dir = Path(str(descriptor.get("output_dir", "")))
+            require(output_dir.is_absolute(), f"{label}/{job_id}: output_dir is not absolute")
+            child_manifest = output_dir / "generation_manifest.json"
+            regular_file(child_manifest, f"{label}/{job_id} child generation manifest")
+            require(
+                sha256_file(child_manifest) == status_row.get("generation_manifest_sha256"),
+                f"{label}/{job_id}: child generation manifest binding mismatch",
+            )
+            if label in ("cog_core", "safree"):
+                child_plan = output_dir / "generation_plan.json"
+                child_complete = output_dir / ".complete"
+                regular_file(child_plan, f"{label}/{job_id} generation plan")
+                regular_file(child_complete, f"{label}/{job_id} completion marker")
+                require(sha256_file(child_plan) == status_row.get("generation_plan_sha256"), f"{label}/{job_id}: generation plan binding mismatch")
+                require(child_complete.read_bytes() == (sha256_file(child_manifest) + "\n").encode("ascii"), f"{label}/{job_id}: child completion marker mismatch")
+    require(
+        len(receipt_outputs) == expected_videos
+        and _row_multiset(receipt_outputs) == _row_multiset(final_items),
+        f"{label}: final manifest differs from completed job receipts",
+    )
+    return {
+        "aggregate": {"path": str(aggregate_path), "sha256": sha256_file(aggregate_path)},
+        "job_count": expected_jobs,
+        "validated_videos": expected_videos,
+    }
+
+
 def _manifest_items(manifest: Mapping[str, Any], count: int, label: str) -> list[dict[str, Any]]:
     items = manifest.get("items")
     require(isinstance(items, list) and len(items) == count, f"{label} items must contain exactly {count} rows")
@@ -673,6 +859,20 @@ def panel_frame_indices() -> tuple[tuple[int, ...], ...]:
     return tuple(tuple(range(start, end + 1)) for start, end in PANEL_WINDOWS)
 
 
+def normalize_frame_tile(frame: Any) -> Any:
+    """Return the one frozen tile geometry shared by every source backbone."""
+    try:
+        from PIL import Image, ImageOps
+    except ImportError as exc:
+        raise ReviewPackageError("Pillow is required to normalize review frames") from exc
+    return ImageOps.fit(
+        frame.convert("RGB"),
+        (THUMB_WIDTH, THUMB_HEIGHT),
+        method=Image.Resampling.LANCZOS,
+        centering=(0.5, 0.5),
+    )
+
+
 def render_composite(frames: Sequence[Any], output_path: Path) -> dict[str, Any]:
     try:
         from PIL import Image, ImageDraw
@@ -687,10 +887,7 @@ def render_composite(frames: Sequence[Any], output_path: Path) -> dict[str, Any]
         draw.rectangle((0, y, COMPOSITE_WIDTH, y + PANEL_HEADER_HEIGHT - 1), fill=(24, 24, 24))
         draw.text((5, y + 4), f"Temporal panel {panel_index + 1}/5 | frames {start:02d}-{end:02d}", fill="white")
         for column, frame_index in enumerate(range(start, end + 1)):
-            image = frames[frame_index].convert("RGB")
-            image.thumbnail((THUMB_WIDTH, THUMB_HEIGHT), Image.Resampling.LANCZOS)
-            tile = Image.new("RGB", (THUMB_WIDTH, THUMB_HEIGHT), "white")
-            tile.paste(image, ((THUMB_WIDTH - image.width) // 2, (THUMB_HEIGHT - image.height) // 2))
+            tile = normalize_frame_tile(frames[frame_index])
             x = column * THUMB_WIDTH
             canvas.paste(tile, (x, y + PANEL_HEADER_HEIGHT))
             draw.text((x + 3, y + PANEL_HEADER_HEIGHT + THUMB_HEIGHT + 1), f"f{frame_index:02d}", fill=(35, 35, 35))
@@ -910,6 +1107,10 @@ def _build_into(
                 "width": COMPOSITE_WIDTH,
                 "height": COMPOSITE_HEIGHT,
                 "jpeg_quality": JPEG_QUALITY,
+                "tile_width": THUMB_WIDTH,
+                "tile_height": THUMB_HEIGHT,
+                "tile_fit": "deterministic_center_crop_no_letterbox",
+                "resampling": "Pillow.Image.Resampling.LANCZOS",
                 "max_bytes": MAX_COMPOSITE_BYTES,
                 "one_image_per_assignment": True,
             },
@@ -1013,6 +1214,15 @@ def build_review_package(
         identification_path=inputs["identification_subset"],
         manifests=manifests,
     )
+    upstream_chains = {
+        label: validate_upstream_generation_chain(
+            project_root=project_root,
+            label=label,
+            manifest_path=inputs[f"{label}_manifest"],
+            manifest=manifests[label],
+        )
+        for label in ("wan_original", "trained_wan", "cog_core", "safree")
+    }
     ledger = build_generation_ledger(
         project_root=project_root,
         formal_rows=formal_rows,
@@ -1029,6 +1239,8 @@ def build_review_package(
         except ValueError:
             recorded_path = str(path)
         input_bindings[label] = {"path": recorded_path, "sha256": sha256_file(path)}
+        if label.endswith("_manifest"):
+            input_bindings[label]["upstream_chain"] = upstream_chains[label.removesuffix("_manifest")]
     output_dir.parent.mkdir(parents=True, exist_ok=True)
     staging = Path(tempfile.mkdtemp(prefix=f".{output_dir.name}.tmp-", dir=output_dir.parent))
     staging.chmod(0o755)

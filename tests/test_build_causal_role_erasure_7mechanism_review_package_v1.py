@@ -184,6 +184,131 @@ def item(
     return result
 
 
+def ref(path: Path) -> dict[str, str]:
+    return {"path": str(path), "sha256": sha256(path)}
+
+
+def write_upstream_chain(
+    manifest_path: Path,
+    label: str,
+    manifest: dict[str, object],
+) -> None:
+    root = manifest_path.parent
+    descriptor_name = "jobs" if label in ("cog_core", "safree") else "job_manifests"
+    descriptor_dir = root / descriptor_name
+    status_dir = root / "statuses"
+    descriptor_dir.mkdir(parents=True)
+    status_dir.mkdir()
+    grouped: dict[str, list[dict[str, object]]] = {}
+    for value in manifest["items"]:
+        grouped.setdefault(str(value["job_id"]), []).append(value)
+    expected_jobs = {"wan_original": 7, "trained_wan": 18, "cog_core": 28, "safree": 7}[label]
+    assert len(grouped) == expected_jobs
+    upstream_manifest = root / ("wan_original_run_manifest.json" if label == "wan_original" else "eval_run_manifest.json" if label == "trained_wan" else "queue_plan.json")
+    write_json(upstream_manifest, {"label": label, "job_ids": sorted(grouped)})
+    wan_receipts = root / "receipts"
+    if label == "wan_original":
+        wan_receipts.mkdir()
+    final_jobs = []
+    aggregate_jobs = []
+    for job_index, (job_id, outputs) in enumerate(sorted(grouped.items())):
+        child = root / "child_jobs" / job_id
+        child.mkdir(parents=True)
+        child_manifest = child / "generation_manifest.json"
+        write_json(child_manifest, {"job_id": job_id, "row_count": len(outputs)})
+        descriptor_path = descriptor_dir / f"{job_index:02d}_{job_id}.json"
+        descriptor = {
+            "job_id": job_id,
+            "job_index": job_index,
+            "output_dir": str(child),
+        }
+        write_json(descriptor_path, descriptor)
+        status: dict[str, object] = {
+            "job_id": job_id,
+            "job_index": job_index,
+            "status": "completed",
+            "return_code": 0,
+            "expected_videos": len(outputs),
+            "validated_video_count": len(outputs),
+            "generation_manifest_sha256": sha256(child_manifest),
+        }
+        if label == "wan_original":
+            prompt_shard = root / "prompt_shards" / f"{job_id}.txt"
+            prompt_shard.parent.mkdir(exist_ok=True)
+            prompt_shard.write_text("frozen prompts\n", encoding="utf-8")
+            receipt_path = wan_receipts / f"{job_index:02d}_{job_id}.json"
+            receipt = {
+                "status": "validated_complete",
+                "job_id": job_id,
+                "mechanism": outputs[0]["mechanism"],
+                "validated_video_count": len(outputs),
+                "run_manifest": ref(upstream_manifest),
+                "job_manifest": ref(descriptor_path),
+                "prompt_shard": ref(prompt_shard),
+                "generation_manifest": ref(child_manifest),
+                "outputs": outputs,
+            }
+            write_json(receipt_path, receipt)
+            status.update({"receipt_path": str(receipt_path), "receipt_sha256": sha256(receipt_path)})
+            final_jobs.append(
+                {
+                    "job_id": job_id,
+                    "mechanism": outputs[0]["mechanism"],
+                    "generation_manifest": ref(child_manifest),
+                    "receipt": ref(receipt_path),
+                }
+            )
+            aggregate_jobs.append({"job_id": job_id, "status": "completed"})
+        else:
+            status["outputs"] = outputs
+            if label in ("cog_core", "safree"):
+                child_plan = child / "generation_plan.json"
+                write_json(child_plan, {"job_id": job_id, "status": "frozen"})
+                status["generation_plan_sha256"] = sha256(child_plan)
+                (child / ".complete").write_text(sha256(child_manifest) + "\n", encoding="ascii")
+        write_json(status_dir / f"{job_index:02d}_{job_id}.json", status)
+    if label == "wan_original":
+        manifest["jobs"] = final_jobs
+    write_json(manifest_path, manifest)
+    if label == "wan_original":
+        aggregate = {
+            "schema_version": 1,
+            "status": "completed",
+            "expected_jobs": expected_jobs,
+            "expected_videos": len(manifest["items"]),
+            "validated_videos": len(manifest["items"]),
+            "status_counts": {"completed": expected_jobs},
+            "run_manifest": ref(upstream_manifest),
+            "generation_manifest": ref(manifest_path),
+            "jobs": aggregate_jobs,
+        }
+        write_json(root / "wan_original_aggregate.json", aggregate)
+    elif label == "trained_wan":
+        aggregate = {
+            "schema_version": 1,
+            "status": "completed",
+            "expected_videos": len(manifest["items"]),
+            "validated_videos": len(manifest["items"]),
+            "status_counts": {"completed": expected_jobs},
+            "run_manifest": ref(upstream_manifest),
+            "generation_manifest": ref(manifest_path),
+        }
+        write_json(root / "eval_aggregate.json", aggregate)
+    else:
+        aggregate = {
+            "schema_version": 1,
+            "status": "completed",
+            "expected_jobs": expected_jobs,
+            "expected_videos": len(manifest["items"]),
+            "validated_videos": len(manifest["items"]),
+            "status_counts": {"completed": expected_jobs},
+            "queue_plan": ref(upstream_manifest),
+            "generation_manifest": ref(manifest_path),
+        }
+        write_json(root / "aggregate.json", aggregate)
+        (root / ".complete").write_text(sha256(manifest_path) + "\n", encoding="ascii")
+
+
 def frozen_fixture(root: Path) -> dict[str, Path]:
     cases = case_rows()
     identification = identification_rows(cases)
@@ -229,18 +354,19 @@ def frozen_fixture(root: Path) -> dict[str, Path]:
     paths = {
         "formal": formal_path,
         "identification": identification_path,
-        "wan_original": manifests / "wan_original_generation_manifest.json",
-        "trained_wan": manifests / "eval_generation_manifest.json",
-        "cog_core": manifests / "core_baseline_generation_manifest.json",
-        "safree": manifests / "safree_baseline_generation_manifest.json",
+        "wan_original": manifests / "wan_original" / "wan_original_generation_manifest.json",
+        "trained_wan": manifests / "trained_wan" / "eval_generation_manifest.json",
+        "cog_core": manifests / "cog_core" / "baseline_generation_manifest.json",
+        "safree": manifests / "safree" / "baseline_generation_manifest.json",
         "blind_key": root / "private_input" / "blind.key",
     }
     formal_binding = {
         "formal_cases": str(formal_path),
         "formal_cases_sha256": sha256(formal_path),
     }
-    write_json(
+    write_upstream_chain(
         paths["wan_original"],
+        "wan_original",
         {
             "schema_version": 1,
             "protocol_id": review.PROTOCOL_VERSION,
@@ -251,8 +377,9 @@ def frozen_fixture(root: Path) -> dict[str, Path]:
             "items": wan_original_items,
         },
     )
-    write_json(
+    write_upstream_chain(
         paths["trained_wan"],
+        "trained_wan",
         {
             "schema_version": 1,
             "protocol_id": review.PROTOCOL_VERSION,
@@ -267,8 +394,9 @@ def frozen_fixture(root: Path) -> dict[str, Path]:
             "items": trained_items,
         },
     )
-    write_json(
+    write_upstream_chain(
         paths["cog_core"],
+        "cog_core",
         {
             "schema_version": 1,
             "protocol": "causal_role_erasure_7mechanism_baseline_queue_v2",
@@ -280,8 +408,9 @@ def frozen_fixture(root: Path) -> dict[str, Path]:
             "items": core_items,
         },
     )
-    write_json(
+    write_upstream_chain(
         paths["safree"],
+        "safree",
         {
             "schema_version": 1,
             "protocol": "causal_role_erasure_7mechanism_baseline_queue_v2",
@@ -343,6 +472,20 @@ def test_cpu_fake_video_covers_all_49_frames_in_one_five_panel_image(tmp_path):
     assert output.stat().st_size <= 3_145_728
     with Image.open(output) as image:
         assert image.size == (review.COMPOSITE_WIDTH, review.COMPOSITE_HEIGHT)
+
+
+def test_wan_and_cogvideo_frames_use_identical_filled_tile_geometry():
+    wan = Image.new("RGB", (832, 480), (180, 20, 20))
+    cog = Image.new("RGB", (720, 480), (20, 20, 180))
+
+    wan_tile = review.normalize_frame_tile(wan)
+    cog_tile = review.normalize_frame_tile(cog)
+
+    assert wan_tile.size == cog_tile.size == (112, 64)
+    assert wan_tile.getpixel((0, 32)) == (180, 20, 20)
+    assert cog_tile.getpixel((0, 32)) == (20, 20, 180)
+    assert wan_tile.getpixel((111, 32)) == (180, 20, 20)
+    assert cog_tile.getpixel((111, 32)) == (20, 20, 180)
 
 
 def test_real_frozen_formal_case_schema_accepts_intentionally_empty_alternative_causes():
@@ -440,6 +583,8 @@ def test_assignment_hashes_and_pass_manifests_bind_exact_public_bytes(built_pack
         assert manifest["assignments"]["sha256"] == sha256(root / "assignments.jsonl")
         assert manifest["blank_scores"]["sha256"] == sha256(root / "scores.jsonl")
         assert manifest["composite_contract"]["path_base"] == "pass_root"
+        assert manifest["composite_contract"]["tile_fit"] == "deterministic_center_crop_no_letterbox"
+        assert manifest["composite_contract"]["resampling"] == "Pillow.Image.Resampling.LANCZOS"
         for row in assignments:
             claimed = row.pop("assignment_sha256")
             assert claimed == hashlib.sha256(review.canonical_json_bytes(row)).hexdigest()
@@ -456,7 +601,7 @@ def test_generation_mutation_fails_closed_without_partial_output(tmp_path):
     write_json(paths["wan_original"], manifest)
     output = root / "must_not_exist"
 
-    with pytest.raises(review.ReviewPackageError, match="seed mismatch"):
+    with pytest.raises(review.ReviewPackageError, match="aggregate generation manifest: SHA-256 mismatch"):
         review.build_review_package(
             project_root=root,
             formal_cases_path=paths["formal"],
@@ -471,6 +616,48 @@ def test_generation_mutation_fails_closed_without_partial_output(tmp_path):
         )
     assert not output.exists()
     assert not list(root.glob(".must_not_exist.tmp-*"))
+
+
+def test_aggregate_status_and_complete_marker_tampering_fail_closed(tmp_path):
+    root = tmp_path / "case"
+    paths = frozen_fixture(root)
+
+    aggregate_path = paths["trained_wan"].parent / "eval_aggregate.json"
+    original_aggregate = aggregate_path.read_bytes()
+    aggregate = json.loads(original_aggregate)
+    aggregate["status"] = "running"
+    write_json(aggregate_path, aggregate)
+    with pytest.raises(review.ReviewPackageError, match="aggregate is not completed"):
+        review.validate_upstream_generation_chain(
+            project_root=root,
+            label="trained_wan",
+            manifest_path=paths["trained_wan"],
+            manifest=json.loads(paths["trained_wan"].read_text()),
+        )
+    aggregate_path.write_bytes(original_aggregate)
+
+    status_path = sorted((paths["cog_core"].parent / "statuses").glob("*.json"))[0]
+    original_status = status_path.read_bytes()
+    status = json.loads(original_status)
+    status["return_code"] = 1
+    write_json(status_path, status)
+    with pytest.raises(review.ReviewPackageError, match="job status is not validated complete"):
+        review.validate_upstream_generation_chain(
+            project_root=root,
+            label="cog_core",
+            manifest_path=paths["cog_core"],
+            manifest=json.loads(paths["cog_core"].read_text()),
+        )
+    status_path.write_bytes(original_status)
+
+    (paths["safree"].parent / ".complete").write_text("0" * 64 + "\n", encoding="ascii")
+    with pytest.raises(review.ReviewPackageError, match="completion marker"):
+        review.validate_upstream_generation_chain(
+            project_root=root,
+            label="safree",
+            manifest_path=paths["safree"],
+            manifest=json.loads(paths["safree"].read_text()),
+        )
 
 
 def test_missing_wan_original_manifest_refuses_before_output(tmp_path):
