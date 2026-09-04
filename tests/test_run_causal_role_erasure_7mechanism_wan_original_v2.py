@@ -48,10 +48,18 @@ def _fixture(tmp_path: Path, monkeypatch):
     python.parent.mkdir(parents=True)
     python.write_text("#!/bin/sh\nexit 97\n", encoding="utf-8")
     python.chmod(0o755)
+    runtime_root = project / runner.DEFAULT_PYTHON.parents[1]
+    module_paths: dict[str, Path] = {}
+    for name in ("torch", "diffusers", "transformers"):
+        module_path = runtime_root / "lib/python3.11/site-packages" / name / "__init__.py"
+        module_path.parent.mkdir(parents=True, exist_ok=True)
+        module_path.write_text(f"# fixture {name}\n", encoding="utf-8")
+        module_paths[name] = module_path
 
     def fake_runtime_probe(executable: Path) -> dict[str, object]:
         return {
             "executable": str(executable.resolve()),
+            "prefix": str(runtime_root.resolve()),
             "binary_format": "ELF",
             "python_executable_sha256": runner.sha256_file(executable),
             "python": {"implementation": "CPython", "version": "3.11.15"},
@@ -64,6 +72,9 @@ def _fixture(tmp_path: Path, monkeypatch):
                 "torch": "2.6.0+cu124",
                 "diffusers": "0.33.1",
                 "transformers": "4.51.3",
+            },
+            "module_origins": {
+                name: str(path.resolve()) for name, path in module_paths.items()
             },
         }
 
@@ -94,11 +105,13 @@ def _fixture(tmp_path: Path, monkeypatch):
     )
 
     runtime_registry = project / runner.DEFAULT_RUNTIME_REGISTRY
+    runtime_content = runner.runtime_content_inventory(runtime_root)
     _write_json(
         runtime_registry,
         {
             "protocol": "water_impact_dynamic_v4_runtime_registry_v3",
             "status": "frozen",
+            "runtime_root": runner.DEFAULT_PYTHON.parents[1].as_posix(),
             "python_executable": runner.DEFAULT_PYTHON.as_posix(),
             "python": {"implementation": "CPython", "version": "3.11.15"},
             "torch": {"distribution_version": "2.6.0", "module_version": "2.6.0+cu124"},
@@ -106,6 +119,11 @@ def _fixture(tmp_path: Path, monkeypatch):
                 "torch": "2.6.0",
                 "diffusers": "0.33.1",
                 "transformers": "4.51.3",
+            },
+            **runtime_content,
+            "module_origins": {
+                name: runner.runtime_origin_record(project, runtime_root, path.as_posix())
+                for name, path in module_paths.items()
             },
         },
     )
