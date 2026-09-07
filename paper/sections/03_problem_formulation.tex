@@ -1,41 +1,148 @@
 \section{Causal-Role Erasure}
 \label{sec:problem-formulation}
 
-\outlineblock{Section purpose}{
-Define the intervention unit before presenting the implementation. A reader
-should finish this section knowing what must disappear, what must remain, and
-why ordinary object-erasure success criteria are insufficient.}
+Object-centered erasure typically asks whether a named object remains visible.
+For a physical event, this endpoint is incomplete: the object's visibility may
+weaken while its effects remain legible later in the video. We therefore
+define the intervention at the level of an entity's role in a registered event
+and distinguish the evidence to suppress from the content that must be
+preserved.
 
 \subsection{Source, Receiver, and Causal Footprint}
 \label{subsec:event-anatomy}
 
-\outlineblock{Definitions}{
-Represent a physical event with a causal source, receiver, trigger,
-downstream footprint, and scene context. Define each term operationally and
-instantiate it for water impact, rigid collision, brittle fracture, powder
-impact, elastic deformation, material release, and surface trace. Place the
-complete ontology in \appref{app:task-ontology}.}
+\paragraph{Registered event anatomy.}
+We represent case $i$ by the structured binding
+\begin{equation}
+    e_i=(m_i,s_i,a_i,r_i,f_i,h_i,c_i),
+    \label{eq:event-binding}
+\end{equation}
+where $m_i$ is a mechanism family, $s_i$ is the \emph{source}, $a_i$ is
+the registered trigger or interaction, $r_i$ is the \emph{receiver}, $f_i$
+is the downstream \emph{causal footprint}, $h_i$ is the registered no-source
+receiver state, and $c_i$ contains the remaining scene context. The source is
+the entity whose participation initiates the
+registered interaction; the receiver is the entity or medium on which that
+interaction acts. The footprint is not arbitrary co-occurring content. It is
+the mechanism-specific visual consequence expected after the trigger and
+dependent on the source's participation---for example, a displaced receiver,
+new fragments, or a persistent indentation. The state \(h_i\), such as
+remaining upright, intact, or unloaded, specifies what the receiver should do
+without the registered event. A structured factual renderer
+\(T_{m_i}^{\mathrm f}\) expresses the event binding as prompt \(p_i^{f}\);
+its target-side counterpart uses \(h_i\) to construct the no-source supervision in
+\S\ref{subsec:counterfactual-pairs}.
+
+\paragraph{Examples and scope.}
+In \emph{water impact}, a compact object is the source, its visible entry
+through the water surface is the trigger, the water receiver is the
+receiver, and the resulting splash and expanding ripples form the footprint.
+In \emph{brittle fracture}, an impactor is the source, its downward impact is
+the trigger, the initially intact brittle object is the receiver, and the new
+broken fragments form the footprint. Our frozen scope further includes rigid
+collision, powder impact, elastic deformation, material release, and surface
+trace; complete operational definitions appear in
+\appref{app:task-ontology}. These examples also separate identity from role:
+the same noun may denote a causal source in one prompt and a noncausal
+bystander or unrelated object in another. Although a receiver is a distinct
+role in the general event definition, the frozen specificity benchmark tests
+the protected source noun as a bystander rather than as the receiver.
 
 \subsection{The Role-Conditioned Source-Free World}
 \label{subsec:no-source-world}
 
-\outlineblock{Counterfactual target}{
-Define the desired distribution in which the causal source, trigger, and
-source-dependent footprint are absent while the receiver and surrounding
-scene remain valid and dynamic. Emphasize that this is a distributional
-counterfactual target, not the pixel-level counterfactual of one factual
-video.}
+Erasing a noun unconditionally cannot satisfy this role distinction. It may
+under-erase a causal prompt by leaving the source-dependent footprint, or
+over-erase a noncausal prompt by suppressing the same object in a legitimate
+bystander or otherwise noncausal use. The desired intervention must instead
+depend on the source slot occupied by the entity.
+
+For a factual binding $e_i$, the corresponding source-free target is the
+conditional video distribution in which the causal source, its registered
+trigger, and its dependent footprint are absent, while the receiver, context,
+and plausible temporal variation remain. A sample from this
+\emph{distributional source-free target} need not match any factual
+realization frame by frame, nor recover the unique physical history that would
+have occurred without the source. In particular, the source-free video should
+remain a natural dynamic video rather than a repeated clean frame. We denote
+the prompt specifying this target by $p_i^{cf}$ and construct it in
+\S\ref{subsec:counterfactual-pairs}.
+
+This target induces two complementary behavioral contracts. For a causal
+prompt $p_i^{f}$, the edited generator should move toward the source-free
+distribution by reducing evidence of both $s_i$ and $f_i$ while preserving
+$r_i$ and a usable video. For a specificity prompt, the same noun may be
+requested in a registered noncausal role, or a visually related footprint may
+be legitimately produced by an acceptable alternative cause. The edited
+generator should then preserve the protected object and follow that noncausal
+request. Thus the task construction and evaluation are defined relative to an
+externally registered event binding, not to a global blacklist of nouns or
+visual effects. At inference, the generator receives only the rendered text
+prompt and the mechanism-specific adapter; it receives no separate event
+tuple or role label.
+
+The role labels and mechanism definitions are provided by the structured
+dataset. We test whether editing induces role-conditioned behavior; we do not
+claim that the model discovers causal roles or learns a true internal causal
+representation.
 
 \subsection{Three Desiderata}
 \label{subsec:desiderata}
 
-\outlineblock{Behavioral contract}{
-The edited model must: (i) reduce source and footprint evidence for causal
-prompts; (ii) preserve the same nouns and legitimate alternative footprints
-in noncausal prompts; and (iii) retain the receiver, temporal quality, and
-overall usability. Introduce \ces\ and \su\ conceptually and defer their
-exact scoring and inference to \S\ref{subsec:experimental-setup} and
-\appref{app:evaluation-metrics}.}
+A valid causal-role erasure operator must jointly satisfy three desiderata.
+\emph{Efficacy} requires less visible evidence of the registered source and
+its footprint on causal cases. \emph{Specificity} requires retaining the same
+nouns and legitimate alternative footprints on noncausal cases.
+\emph{Validity} requires preserving the receiver and avoiding unusable or
+low-quality videos. The last condition prevents scene destruction from being
+counted as erasure.
 
-\claimboundary{The source role is supplied by the structured data. The task is
-role-conditioned intervention learning, not unsupervised causal discovery.}
+We encode these requirements with full-video atomic scores on a frozen
+$0/1/2$ rubric. For causal case $u$ and method $k$, let $S_k(u)$ and $F_k(u)$
+denote source and footprint visibility, where $0$, $1$, and $2$ mean absent,
+partial, and clear; let $R_k(u)$ and $Q_k(u)$ denote receiver preservation and
+video quality, where higher is better. A case earns causal-erasure credit only
+when the corresponding unedited backbone $b$ first demonstrates the event:
+\begin{align}
+E_b(u)={}&\mathbb{1}\!\left[S_{\operatorname{Orig}(b)}(u)=2,
+F_{\operatorname{Orig}(b)}(u)\geq 1,
+R_{\operatorname{Orig}(b)}(u)\geq 1,
+Q_{\operatorname{Orig}(b)}(u)\geq 1\right], \\
+U_k(u)={}&\mathbb{1}\!\left[R_k(u)\geq 1,\;Q_k(u)\geq 1\right].
+\label{eq:eligibility-usability}
+\end{align}
+The per-case Causal Erasure Score is then
+\begin{equation}
+\ces_k(u)=E_b(u)U_k(u)
+\frac{(2-S_k(u))+(2-F_k(u))}{4}.
+\label{eq:ces}
+\end{equation}
+Original-ineligible and unusable cases receive zero rather than disappearing
+from the denominator. Consequently, \ces{} cannot reward a backbone that never
+generated the registered event or an edit that destroys the video.
+It is nevertheless an absolute gated output score rather than an improvement
+score. Treatment efficacy is established by a paired \ces{} contrast against
+the same-backbone Matched Control, or by a registered Original-normalized
+contrast for an external method; nonzero credit for one output does not by
+itself demonstrate an editing gain.
+
+For a specificity case, let $P_k(u)$ be protected-object visibility and
+$N_k(u)$ be adherence to the registered noncausal role, both scored from $0$
+to $2$. With
+$U_k^{\mathrm{sp}}(u)=\mathbb{1}[R_k(u)\geq1,\,Q_k(u)\geq1]$, Specificity
+Utility is
+\begin{equation}
+\su_k(u)=U_k^{\mathrm{sp}}(u)\frac{P_k(u)+N_k(u)}{4}.
+\label{eq:su}
+\end{equation}
+Both metrics lie in $[0,1]$, and neither replaces the separately reported
+receiver, quality, usability, and base-capability statistics. Exact rubrics,
+aggregation, uncertainty estimation, and human canonicalization are specified
+in \appref{app:evaluation-metrics}.
+
+These scores deliberately admit partial progress. Moving a source or
+footprint from clear to partial visibility earns intermediate credit when the
+output remains usable; complete absence is not required for nonzero per-case
+credit. Source absence, footprint absence, and strict success---which requires
+$E_b=1$, $S_k=F_k=0$, and $R_k=Q_k=2$---are therefore secondary outcomes
+rather than the definition of success.

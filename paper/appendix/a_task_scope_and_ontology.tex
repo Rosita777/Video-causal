@@ -1,46 +1,211 @@
 \section{Task Scope and Seven-Mechanism Ontology}
 \label{app:task-ontology}
 
-\outlineblock{Reviewer question}{
-What operationally counts as a source, trigger, receiver, and footprint, and
-why are these seven mechanisms the frozen scope?}
+This appendix fixes the intervention unit before describing either training or
+results.  A case is not defined by a noun alone: it binds an entity to a
+mechanism-specific source role, a receiver, a trigger, and a downstream visual
+footprint.  The same entity can therefore be protected in a noncausal role even
+when it is suppressed as the registered source of an event.
 
 \subsection{Causal-Role Notation}
 \label{app:causal-role-notation}
 
-\outlineblock{Content}{
-Provide the complete event notation and its mapping to prompts, target worlds,
-atomic review fields, and case identifiers. Include one compact causal graph
-showing source to trigger to footprint on the receiver.}
+We represent formal case \(u\) by the registered tuple
+
+\begin{equation}
+  e_u=(m_u,s_u,a_u,r_u,f_u,h_u,c_u),
+  \label{eq:event-tuple}
+\end{equation}
+
+where \(m_u\) is the mechanism, \(s_u\) the source identity, \(a_u\) the
+visible trigger or interaction, \(r_u\) the receiver, \(f_u\) the
+source-dependent footprint, \(h_u\) the registered no-source receiver state,
+and \(c_u\) the retained scene context and natural dynamics. The
+registered event factorization is
+
+\begin{equation}
+  s_u \longrightarrow a_u \longrightarrow f_u(r_u).
+  \label{eq:event-graph}
+\end{equation}
+
+Equation~\ref{eq:event-graph} is an operational annotation graph, not a claim
+that the generator discovers a structural causal model.  In particular,
+\(f_u\) must be visual evidence that appears after the registered trigger
+and whose requested presence depends on \(s_u\); arbitrary co-occurring motion
+is not a footprint.
+
+The factual prompt \(p_u^{\mathrm f}\) instantiates the factual fields in
+Eq.~\ref{eq:event-tuple} through \(T_{m_u}^{\mathrm f}\). Its paired target
+prompt \(p_u^{\mathrm{cf}}=T_{m_u}^{\mathrm{cf}}(r_u,h_u,c_u)\) retains the
+receiver, registered no-source state, and context while requesting no
+\(s_u\), no \(a_u\), and no \(f_u\). A target
+video is sampled independently using \(p_u^{\mathrm{cf}}\) together with the
+generation-only exclusion condition detailed in
+\S\ref{app:distributional-targets}, so it specifies a
+\emph{distributional source-free world}; it is not a frame-aligned edit of the
+factual realization. Direct and natural templates alter wording, and an
+implicit-footprint factual prompt omits the surface form of \(f_u\), but
+neither operation changes the registered event tuple.
+
+The formal manifest maps this tuple to one immutable
+\texttt{case\_id}, prompt, and seed.  IDs take the form
+\texttt{eval7m\_mXX\_cYY}, where \texttt{mXX} is the contiguous seven-mechanism
+index and \texttt{cYY} is the within-mechanism case index.  For causal cases,
+reviewers score source visibility, footprint visibility, receiver
+preservation, and video quality.  For specificity cases, they instead score
+protected-object visibility, adherence to the registered noncausal role,
+receiver preservation, and video quality.  A specificity case may license a
+separate alternative cause for a similar footprint; that cause never licenses
+the registered source-trigger chain in a causal case.
 
 \subsection{Seven Mechanism Definitions}
 \label{app:mechanism-definitions}
 
-\outlineblock{Table A1}{
-For every mechanism, list source role, trigger, receiver, downstream
-footprint, counterfactual state, and acceptable alternative cause. Preserve
-the registered order used by every macro result.}
+Table~\ref{tab:seven-mechanism-ontology} states the complete registered event
+semantics.  A ``source role'' below includes the physical type needed to
+execute the trigger; individual identities are supplied by the source pools in
+Sec.~\ref{app:source-receiver-ontology}.  The last column records the valid
+source-free state and the sole alternative cause used by the
+same-footprint specificity subtype.
+
+\begin{table*}[t]
+  \centering
+  \caption{Frozen seven-mechanism ontology in macro-aggregation order.  The
+  alternative cause is valid only in its registered specificity case; it is
+  not an acceptable realization of the causal prompt.}
+  \label{tab:seven-mechanism-ontology}
+  \footnotesize
+  \setlength{\tabcolsep}{3.5pt}
+  \begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X@{}}
+    \toprule
+    Mechanism & Source role and trigger & Receiver & Footprint & Source-free state; specificity alternative cause \\
+    \midrule
+    Water impact & A visible compact object enters through the water surface. & An open, bounded, water-filled vessel or body. & A brief splash and expanding circular ripples. & Water remains smooth, level, and undisturbed; a small mechanical paddle may separately strike the water. \\
+    Rigid collision & A compact rigid object slides or rolls into visible contact with one upright receiver. & A single freestanding rigid object. & The receiver tips over and slides a short distance. & Receiver remains upright and in place; a separate black ball may strike it. \\
+    Brittle fracture & A compact rigid impactor visibly strikes downward onto an intact brittle object. & An initially intact, supported brittle object. & Separate broken fragments remain around the impact point. & Receiver remains intact and uncracked; a small mechanical press may descend onto it. \\
+    Powder impact & A compact rigid object makes visible downward contact with a flat powder bed. & A flat, initially undisturbed bed of loose powder in an open tray. & A deep round crater remains around the half-embedded source. & Powder remains flat, smooth, and undisturbed; a round mechanical plunger may press into it. \\
+    Elastic deformation & A visible compact object loads a flat elastic bed from above. & An initially flat, taut bed on a supported frame. & The bed remains deeply bowed beneath the resting source. & Bed remains flat, taut, and unloaded; a separate dark sandbag may be lowered onto it. \\
+    Material release & A rigid pointed object visibly punctures a sealed particle-filled pouch. & A sealed, suspended pouch containing particles. & The pouch tears and newly released particles collect below it. & Pouch stays sealed and retains its contents; separate scissors may cut its lower corner. \\
+    Surface trace & A rigid imprinting face presses vertically into an initially smooth surface. & A bounded, susceptible, initially unmarked surface. & A deep, crisp, shape-specific indentation remains. & Surface remains smooth and unmarked; a separate embossing die may press into it. \\
+    \bottomrule
+  \end{tabularx}
+\end{table*}
+
+The table also fixes what the benchmark does \emph{not} conflate.  Collision
+requires receiver displacement rather than mere contact; fracture requires
+new fragments rather than texture change; and surface trace excludes the
+earlier toy-car-track and ink-stain constructions.  The registered
+counterfactual removes the source, trigger, and dependent footprint together,
+while leaving the receiver and ordinary scene dynamics available.
 
 \subsection{Source and Receiver Ontology}
 \label{app:source-receiver-ontology}
 
-\outlineblock{Content}{
-Document original-training, augmentation-bank, and evaluation-holdout source
-sets; training, seen-anchor, and fresh receivers; semantic-family separation;
-and the physical-compatibility mask. Report counts and validation hashes.}
+Each mechanism has the same pool sizes but a mechanism-specific physical
+contract.  Its 64-item training source bank contains eight original training
+identities and 56 augmentation-only identities.  A separate set of 48
+evaluation-holdout identities never enters this bank.  The registry rejects
+overlap between the 64-item bank and the holdout set at three levels: source
+ID, normalized canonical phrase, and curator-assigned semantic family. Five
+compact-impact mechanisms reuse the same 56-item augmentation vocabulary and
+48-item evaluation-holdout vocabulary, but retain mechanism-specific sets of
+eight original-training sources and bind all sources to different motion
+phrases, receiver types, prompts, and adapters. Material release and surface
+trace use mechanism-specific pointed and imprinting pools.
+
+The receiver side contains 12 training receivers, of which eight immutable
+IDs serve as seen-receiver evaluation anchors, plus 56 fresh evaluation
+receivers.  Training and fresh receiver pools are disjoint by both receiver ID
+and normalized phrase.  Thus ``seen'' denotes a frozen member of the training
+receiver pool, whereas ``fresh'' denotes a receiver excluded from that pool;
+it does not denote a judgment made after viewing generated media.
+
+Physical compatibility is enforced before any case is instantiated.  Every
+source and receiver carries the mechanism's required tag set, and the registry
+uses a homogeneous all-to-all, fail-closed contract.  Per mechanism it binds
+\(8\times12=96\) original-source/training-receiver pairs,
+\(64\times12=768\) bank/training pairs,
+\(64\times56=3{,}584\) bank/fresh pairs,
+\(48\times8=384\) holdout/seen-anchor pairs, and
+\(48\times56=2{,}688\) holdout/fresh pairs.  A pair outside this registered mask
+cannot later be restored to fill a quota.
+
+{\footnotesize The complete ontology is committed as SHA-256
+\texttt{37ef4920\allowbreak{}665e0cbc\allowbreak{}aae86e0b\allowbreak{}31257708\allowbreak{}facc882b\allowbreak{}b6a8478c\allowbreak{}9e66ecd5\allowbreak{}0e2036}.
+The build registry that binds this ontology to the formal cases, target
+candidates, run matrix, and identification subset has SHA-256
+\texttt{4f7dd07e\allowbreak{}0ac25d05\allowbreak{}23e310e8\allowbreak{}e3c790a5\allowbreak{}979c6852\allowbreak{}82e047c4\allowbreak{}7dc3e10e\allowbreak{}cb1f6602}.\par}
 
 \subsection{Freezing the Seven-Mechanism Scope}
 \label{app:scope-freeze}
 
-\outlineblock{Content}{
-Document the pre-treatment capability study, exclusion of airflow, bounded
-prompt-refresh smoke, decision timing, and the rule that capability evidence
-cannot be reused as independent confirmation.}
+The seven-mechanism scope was selected from a fresh, Original-only capability
+study before main-adapter training or treatment generation.  Capability v2
+crossed eight mechanisms with 24 videos per mechanism and reviewed all 49
+frames.  Airflow-mediated response produced only \(4/24\) task-relevant
+Original videos, whereas every retained mechanism produced at least \(12/24\).
+The protocol therefore excluded airflow without substituting another
+mechanism.  It retained Water, Rigid Collision, Brittle Fracture, Powder
+Impact, Elastic Deformation, Material Release, and Surface Trace as equal
+members of the final scope, each weighted \(1/7\).  Their historical capability
+indices \(0,1,2,3,4,6,7\) remain recorded alongside contiguous main indices
+\(0,\ldots,6\).  The complete eight-mechanism capability batch and its failure
+remain development evidence; neither is reused as independent confirmation of
+the seven-mechanism experiment.
+
+A single bounded prompt-refresh smoke then tested two prompts for each of five
+mechanisms, using ten fixed videos and seeds \(979000\)--\(979009\), with no
+retry.  The refreshed Rigid Collision construction yielded \(0/2\) complete
+sanity examples, so the frozen capability-v2 construction was retained (it had
+\(17/24\) task-relevant Originals).  Refreshed constructions were promoted for
+Brittle Fracture (\(2/2\)), Powder Impact (\(2/2\)), Elastic Deformation
+(\(1/2\)), and Surface Trace (\(1/2\)); Water and Material Release semantics
+were unchanged.  These ten videos only selected prompt construction and are
+not paper outcomes.  After this one-time decision, mechanism definitions,
+templates, and the seven-way denominator were frozen.  {\footnotesize The decision record is
+committed as SHA-256
+\texttt{8223fb47\allowbreak{}d9c9fa9c\allowbreak{}88f51dff\allowbreak{}9164ca5f\allowbreak{}09495504\allowbreak{}fa0efc78\allowbreak{}e23cba5f\allowbreak{}c3e0a3af}.\par}
 
 \subsection{Dataset Inventory}
 \label{app:dataset-inventory}
 
-\outlineblock{Table A2}{
-Reconcile 294 semantic cases, 2352 main outputs, 96 additional identification
-outputs, and 2448 total formal videos. Bind every count to the dataset and
-build registries.}
+The formal inventory follows directly from the frozen case and stream
+crossings in Table~\ref{tab:formal-inventory}.  Counts refer to unique physical
+videos, not reviewer passes or temporal panels.
+
+\begin{table}[t]
+  \centering
+  \caption{Formal seven-mechanism inventory.  The identification study reuses
+  the Matched Control and \methodshort{} videos already present in the main
+  inventory; only its two diagnostic streams add videos.}
+  \label{tab:formal-inventory}
+  \small
+  \begin{tabular}{@{}lr@{}}
+    \toprule
+    Inventory component & Count \\
+    \midrule
+    Causal semantic cases: \(7\times24\) & 168 \\
+    Specificity semantic cases: \(7\times18\) & 126 \\
+    All semantic cases & 294 \\
+    Main videos: \(294\times8\) physical streams & 2,352 \\
+    Identification cases: \(2\times24\) existing cases & 48 \\
+    Additional identification videos: \(48\times2\) streams & 96 \\
+    \midrule
+    Total formal videos: \(2{,}352+96\) & \textbf{2,448} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Each mechanism contributes 24 causal and 18 specificity cases.  Every one of
+the 294 cases is generated by the same eight named physical streams in the
+main study.  The Water/Fracture identification subset selects 24 existing
+cases per mechanism---12 causal and 12 specificity---and adds Generic
+Paraphrase and Bystander Token outputs; its Matched Control and \methodshort{}
+outputs are reused rather than regenerated.  {\footnotesize The formal-case manifest and
+identification subset are respectively committed as SHA-256
+\texttt{555ec79a\allowbreak{}1f084a8b\allowbreak{}75c802cd\allowbreak{}570801fa\allowbreak{}f98531fc\allowbreak{}063fa0eb\allowbreak{}5170ab8c\allowbreak{}1d710a04}
+and
+\texttt{07e102ec\allowbreak{}70f3957b\allowbreak{}7d6cface\allowbreak{}7826ccdd\allowbreak{}e428c4a4\allowbreak{}36560a6c\allowbreak{}c3631c01\allowbreak{}bbd6c897}.\par}
+The earlier 192-video capability screen and ten-video prompt-refresh smoke are
+development stages and are therefore excluded from the 2,448-video formal
+inventory.

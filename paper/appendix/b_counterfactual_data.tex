@@ -1,47 +1,293 @@
 \section{Counterfactual Data Construction and Quality Control}
 \label{app:counterfactual-data}
 
-\outlineblock{Reviewer question}{
-How is a dynamic no-source target produced, and what prevents leakage,
-post-treatment replacement, or selection on method outcomes?}
+This appendix specifies how the source-free supervision was constructed and
+frozen before training.  The procedure operates on registered event fields,
+generates a new video from a source-free prompt, and screens that video without
+access to a treatment label or any trained-model output.  It therefore defines
+the training target; it does not measure the effect of \methodshort.  Digest
+strings below are 12-hex SHA-256 prefixes; the cited registries store the full
+digests.
 
 \subsection{Structured Factual and Target Prompts}
 \label{app:structured-prompts}
 
-\outlineblock{Content}{
-Show the structured fields and complete prompt templates for factual and
-source-free worlds. Include examples from multiple mechanisms and both direct
-and natural wording.}
+\paragraph{Candidate grid.}
+For each mechanism, we form the Cartesian product of eight original training
+sources, 12 training receivers, and two prompt styles (\emph{direct} and
+\emph{natural}), giving \(8\times12\times2=192\) candidate bindings.  A
+binding records the mechanism, source identity and phrase, receiver identity
+and clean state, trigger, footprint, counterfactual state, prompt style, and
+generation seed.  Factual and target prompts are rendered from these fields;
+neither is obtained by deleting a noun from a free-form sentence.
+
+For the six newly constructed mechanisms, the factual surface form is
+
+\begin{quote}\footnotesize\ttfamily\raggedright
+A simple realistic locked-camera video: <receiver> is visible;
+<clean state>. <style-specific event clause>. Afterward, <footprint>;
+<source end state>.
+\end{quote}
+
+The event clause contains the assigned source, the registered interaction,
+and the receiver.  The direct and natural variants express the same field
+binding with different syntax (for example, ``falls from above and visibly
+strikes'' versus ``falls naturally onto and hits'').  The corresponding target
+surface form is
+
+\begin{quote}\footnotesize\ttfamily\raggedright
+A simple realistic locked-camera close-up of <receiver>.
+<counterfactual state>. <style-specific natural receiver motion>.
+The viewpoint, receiver identity, lighting, and background geometry remain
+stable.
+\end{quote}
+
+Water uses the previously frozen version of the same construction.  Its
+factual template describes a source entering a named water-filled receiver,
+the resulting splash and ripples, a moving reflected highlight, and stable
+viewpoint and geometry.  Its target template retains the named receiver,
+smooth water and gradual reflected-light motion, while omitting the entering
+source, water contact, splash, and ripples.  The retained Water prompts are
+validated byte-for-byte against their historical manifest rather than
+regenerated from a revised template.
+
+\paragraph{Registered examples.}
+The following examples are exact prompt pairs from the candidate manifest
+(line wrapping is typographic only).
+
+\begin{quote}\small
+\textbf{Direct, Water impact---factual.}
+\emph{A simple realistic close-up video in one continuous shot. One large
+clear water droplet falls naturally from above, enters the center of the water
+in a calm shallow pond, and makes contact. The contact produces a visible
+brief splash followed by circular ripples spreading across the water. A soft
+reflected highlight moves slowly from left to right across the water and
+receiver throughout the shot. The viewpoint, receiver, and background
+geometry remain stable.}
+
+\textbf{Direct, Water impact---target.}
+\emph{A simple realistic close-up video in one continuous shot showing a calm
+shallow pond. The water surface stays smooth, level, and undisturbed. A soft
+reflected highlight moves slowly from left to right across the water and
+receiver. The viewpoint, receiver, and background geometry remain stable.}
+
+\textbf{Natural, Brittle fracture---factual.}
+\emph{A simple realistic locked-camera video: one clear glass bowl on a dark
+tabletop is visible; the brittle receiver is intact, uncracked, and still. As
+the scene unfolds, one polished steel ball falls naturally onto one clear
+glass bowl on a dark tabletop and hits its center. Afterward, the receiver
+breaks and separate fragments remain around the impact point; the source rests
+visibly among or beside the receiver.}
+
+\textbf{Natural, Brittle fracture---target.}
+\emph{A simple realistic locked-camera close-up of one clear glass bowl on a
+dark tabletop. The brittle receiver remains intact and uncracked. Throughout
+the shot, a reflected highlight moves gently across the intact surface. The
+viewpoint, receiver identity, lighting, and background geometry remain
+stable.}
+\end{quote}
+
+These pairs illustrate the intended textual intervention: the target retains
+the receiver and low-amplitude scene dynamics but contains neither the source
+nor language describing the registered trigger or footprint.  Mechanism-
+specific forbidden-lexeme checks additionally reject target prompts that
+contain the original source phrase or registered trigger/footprint terms.
 
 \subsection{Dynamic Distributional Counterfactual Targets}
 \label{app:distributional-targets}
 
-\outlineblock{Content}{
-Explain independent target generation, the lack of pixel alignment, allowed
-natural dynamics, and forbidden source, trigger, and footprint evidence.
-Include a diagram from prompt to video, latent, and frozen-teacher cache.}
+Each target video is sampled directly from its source-free target prompt with
+the frozen Wan2.1-T2V-1.3B generator.  Generation uses 25 inference steps,
+guidance scale 5, bfloat16 inference, and an explicitly registered seed, and
+produces 49 frames at 8 fps and \(832\times480\) resolution.  The
+mechanism-specific exclusion phrase is supplied as negative conditioning; it
+lists source-object cues, trigger, and footprint content forbidden for that
+target.  Water contributes 192 previously generated, manifest-bound
+candidates.  The other six mechanisms contribute 1,152 newly generated
+candidates, for 1,344 candidates in total.  The new-generation aggregate
+records all 1,152 expected videos as decoded and valid.
+
+Crucially, a target is not produced by editing or inverting a factual video.
+The factual prompt and target prompt share a registered receiver and context,
+but the target is an independent draw from the generator.  Natural motion of
+the receiver, illumination, or other non-event scene content is allowed.  The
+construction consequently supplies a screened \emph{distributional
+approximation} to the source-free world: it does not claim that every residual
+cue is absent, or that object trajectories, textures, or pixels are aligned
+with a particular factual realization. The candidate manifest is committed by
+SHA-256
+\texttt{80522812b906};
+the validated new-target generation manifest is committed by
+\texttt{b86fe17ea2ca}.
 
 \subsection{Treatment-Blind Target Screening}
 \label{app:target-screening}
 
-\outlineblock{Tables B1--B2}{
-Report 192 candidates and the deterministic selection of 178 targets per
-mechanism, the complete atomic screen, failure reasons, and the fail-closed
-rule if the quota is not met. Show accepted and rejected examples with
-specific visual reasons.}
+Screening asks whether a candidate is usable as supervision, not whether a
+method succeeds. For the six newly generated mechanisms, blind agents see the
+complete 49-frame target through five
+overlapping panels covering frames 0--12, 9--21, 18--30, 27--39, and 36--48.
+Candidate identities are replaced by anonymous review identifiers and the
+within-mechanism order is hash-randomized.  The review package explicitly
+contains no treatment output or formal-evaluation video.
+
+Each candidate from the six new mechanisms receives six atomic scores in
+\(\{0,1,2\}\). The fields are receiver recognizability, source absence,
+trigger absence, footprint absence, visual quality, and natural motion. Zero
+denotes failed satisfaction---for example, an absent receiver, clearly
+present forbidden content, or unusable quality; one denotes partial or
+uncertain satisfaction, and two denotes clear satisfaction. A zero in any of
+the first five fields is a hard rejection. Natural motion is a soft ranking
+signal and never rejects one of these 1,152 new candidates by itself. The
+survivors are ranked, in order, by the minimum and sum of the three core
+absence fields, receiver recognizability, quality, natural motion, and the sum
+of all six scores.  Exact ties are broken by ascending
+\(
+\operatorname{SHA256}(\texttt{target-select-v1}\mathbin{|}\texttt{candidate\_id})
+\).
+
+The six newly generated mechanisms received one full anonymous VLM review.
+Four independently assigned blind agent-audit files then covered 239 targeted
+candidates without access to the first pass's scores. Of 417 audited atomic
+disagreements, 311 were resolved by two further blind adjudication passes that
+did not receive either parent score.
+The remaining 106 disagreements were retained as unresolved domains only
+after exhaustive completion checks showed that neither endpoint could change
+membership in the selected set. Water instead uses its earlier frozen,
+named technical and semantic screen, which records 178 accepts and 14 rejects.
+That legacy rule could reject a nearly static target on motion alone and must
+not be conflated with the six-field rule above. Thus, all seven selections are
+fixed without reference to either training arm.
+
+The final treatment-blind selection manifest replaces the unused static
+pre-media selection contract in the build registry. The initial contract
+treated all six fields as eligibility conditions and proposed a hash-only
+choice among candidates with fully absent core content. After anonymous target
+review and targeted audit, but still before either training arm, the final
+manifest froze the first-five-field hard rejection and score-based ranking
+reported here, with natural motion used only in ranking. We therefore call
+this the frozen treatment-blind selection rule, not a pre-registered method
+outcome rule.
+
+\begin{table}[t]
+  \centering
+  \caption{Treatment-blind target selection. \emph{Admissible} is the number
+  remaining after the frozen hard-rejection rule; candidates above the quota
+  are held back by the final frozen ranking rather than relabelled as failures.}
+  \label{tab:target-screen-counts}
+  \small
+  \begin{tabular}{lrrr}
+    \toprule
+    Mechanism & Candidates & Admissible & Selected \\
+    \midrule
+    Water impact        & 192 & 178 & 178 \\
+    Rigid collision     & 192 & 186 & 178 \\
+    Brittle fracture    & 192 & 178 & 178 \\
+    Powder impact       & 192 & 191 & 178 \\
+    Elastic deformation & 192 & 184 & 178 \\
+    Material release    & 192 & 179 & 178 \\
+    Surface trace       & 192 & 191 & 178 \\
+    \midrule
+    Total               & 1,344 & 1,287 & 1,246 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Observed hard-rejection reasons were confined to the registered fields:
+missing or unrecognizable receivers, residual source cues, residual trigger or
+footprint evidence, and unusable visual quality.  For example, the historical
+Water rejects include an unrecognizable receiver, an entering hand or object,
+surface patches resembling an unwanted footprint, and a nearly static target.
+No candidate was rejected because a trained method later performed poorly.
+If fewer than 178 candidates survive for a mechanism, the data version is
+invalidated rather than replenished or screened after training.  The final
+selected set contains exactly 178 targets per mechanism and is committed by
+\texttt{d5d97dfb9868}.
 
 \subsection{Source-Bank Separation and Assignment}
 \label{app:source-bank}
 
-\outlineblock{Content}{
-Document the 64-item bank, exclusion of original identities, balanced
-assignment frequencies, no overlap with 48 held-out identities, and the
-deterministic assignment commitment.}
+Each mechanism has a 64-item training source bank comprising the eight
+original training identities and 56 augmentation identities.  A separate set
+of 48 identities is reserved for held-out-source evaluation.  The registry
+requires the training bank and held-out set to be disjoint by source ID,
+normalized phrase, and semantic family; held-out identities never enter a
+training assignment.  For five mechanisms with compatible compact rigid
+sources, the same public augmentation and holdout vocabularies are imported,
+but receiver ontologies, prompts, compatibility tags, and adapters remain
+mechanism-specific.  Material release and surface trace use their own
+mechanism-compatible pointed and imprinting source banks.
+
+For \methodshort, the 64-item bank is ordered by a deterministic SHA-256 rank
+derived from the protocol, mechanism, and frozen ontology.  The resulting
+permutation is repeated over the scheduled 100 erasure updates and then over
+the 78 inactive selected rows.  Within each partition, deterministic swaps
+repair any collision with that row's original source.  Consequently, the
+assigned source differs from the original in both registered ID and normalized
+phrase for every one of the 178 rows.  This is the sense in which the original
+identity is excluded from an assignment; the other seven original-training
+identities remain legitimate members of the 64-item bank.
+
+All 64 identities occur in the active 100-row schedule: 36 occur twice and 28
+once. Across the complete 178-row mapping, 50 identities occur three times
+and 14 twice. These counts hold for every mechanism. The complete 178-row
+assignment is stored in a registry-bound CSV. The per-mechanism registry
+commits to a second hash of the deterministically derived assignment salt and
+to the active-100 and full-178 projections. The ontology
+registry is committed by
+\texttt{37ef4920665e},
+and the top-level training-input registry binds all seven mapping registries.
 
 \subsection{Preservation Bank and Cache Integrity}
 \label{app:preservation-data}
 
-\outlineblock{Content}{
-Describe the 36 shared preservation bindings and the target/teacher cache
-contract. Report tensor shapes, dtypes, model identity, prompt hashes, and
-cache-validation receipts without embedding machine-specific absolute paths.}
+\paragraph{Shared preservation bindings.}
+All adapters use the same 36 generic preservation bindings.  They consist of
+12 scene contents---books, vase, lamp, clock, fan, toy train, pendulum,
+conveyor, walking person, clouds, traffic light, and turntable---each rendered
+with three registered prompt variants.  The variants respectively request
+stable identities and context, exclude abrupt target-like physical events,
+or exclude entries from above and abrupt events.  Each prompt is paired with
+a separately generated 49-frame target video.  The frozen preservation CSV is
+committed by
+\texttt{d5cbe96ac838}
+and is shared byte-for-byte by all seven mechanism registries.
+
+\paragraph{What is cached.}
+For each mechanism, the base cache has 214 entries: 178 selected target-video
+latents with their canonical factual-prompt embeddings, followed by 36
+preservation latents and prompt embeddings.  The teacher cache contains the
+178 source-free target-prompt embeddings, and each arm cache contains the 178
+student-prompt embeddings for that arm.  Frozen-teacher predictions are
+computed online at the sampled noise level with the adapter disabled; they are
+not stored as target videos or precomputed output tensors.  All cached tensors
+use \texttt{torch.bfloat16}.  Video latents have shape
+\([1,16,13,60,104]\), and prompt embeddings have shape
+\([1,226,4096]\).
+
+\paragraph{Integrity contract.}
+Before encoding, every selected and preservation video is decoded and checked
+for one video stream, no audio, 49 frames, 8 fps, and \(832\times480\)
+resolution, and its bytes must match the registered SHA-256.  Each cache entry
+then records the SHA-256 of the serialized file and of each latent or prompt-
+embedding tensor, including its shape and dtype in the tensor digest.  Each
+cache manifest additionally binds the ordered file inventory, selected-target
+CSV, preservation CSV, model inventory, runtime registry, and cache-input
+registry. Before model initialization, training validates the frozen run
+specification and cache manifests as well as every loaded tensor's identity,
+shape, dtype, and finiteness. It repeats the frozen registry and manifest
+binding checks after optimization and before checkpointing.
+
+The model is the frozen Wan2.1-T2V-1.3B Diffusers checkpoint.  Its content
+inventory contains 94 files and 28,935,657,115 bytes, with ordered content
+digest
+\texttt{717d6d2d9518};
+the inventory file itself has digest
+\texttt{51e7199b99ee}.
+The frozen runtime registry has digest
+\texttt{9043adf7f823}.
+Finally, each of the seven Matched-Control receipts compares all 178 factual
+prompt-embedding tensors against the corresponding base-cache tensors and
+requires exact equality.  The run-spec registry was released only after all
+cache manifests and equality receipts passed; it is committed by
+\texttt{36c79a862918}.

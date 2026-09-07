@@ -1,44 +1,131 @@
 \section{\methodname}
 \label{sec:method}
 
-\outlineblock{Section roadmap}{
-First construct dynamic source-free targets. Then randomize only the identity
-occupying the causal-source slot while keeping each target fixed. Finally
-distill the edited model toward the frozen counterfactual teacher and preserve
-unrelated behavior. Every component must map to a later control or guardrail.}
+Our method is organized around a single training invariant: the identity
+occupying a causal-source slot may change, while the desired no-source world
+does not. We first construct dynamic source-free supervision from structured
+event descriptions (\S\ref{subsec:counterfactual-pairs}). We then randomize
+only the source-slot identity while retaining the same counterfactual target
+and the same schedule and stochastic draws
+(\S\ref{subsec:source-slot-randomization}), before
+training the adapter with counterfactual distillation and preservation updates
+(\S\ref{subsec:training-objectives}).
 
 \subsection{Structured Dynamic Counterfactual Pairs}
 \label{subsec:counterfactual-pairs}
 
-\outlineblock{Failure mode and design response}{
-A static clean frame, spatial mask, or independently worded negative prompt
-does not specify a plausible dynamic world after removing an event source.
-Construct each factual prompt from structured source, trigger, receiver,
-footprint, and context fields, and pair it with an independently generated
-dynamic source-free target. State that factual and target videos are not
-pixel-aligned.}
+\paragraph{Structured factual bindings.}
+A target noun or spatial mask does not specify the event whose consequence
+must also be removed. For each mechanism \(m\), we therefore build factual
+prompts from registered event fields rather than editing free-form strings.
+For training binding \(i\), let
+\begin{equation}
+  p_i^{\mathrm{f}}
+  =
+  T_{m_i}^{\mathrm f}(s_i,a_i,r_i,f_i,c_i),
+  \label{eq:factual-prompt}
+\end{equation}
+where \(s_i\) is the source, \(a_i\) the trigger or interaction, \(r_i\)
+the receiver, \(f_i\) the downstream footprint, and \(c_i\) the remaining
+scene context. The factual template \(T_{m_i}^{\mathrm f}\) realizes these
+fields in one of the registered prompt styles while preserving their roles.
 
-\outlineblock{Required details}{
-Explain the treatment-blind candidate screen, 178 selected erasure bindings
-per mechanism, 36 shared preservation bindings, frozen target latents, and
-counterfactual-teacher caches. Move templates, rejection reasons, hashes, and
-examples to \appref{app:counterfactual-data}.}
+\paragraph{Dynamic source-free targets.}
+Removing the event fields from text alone still does not provide a plausible
+dynamic training target. We construct a source-free prompt
+\begin{equation}
+  p_i^{\mathrm{cf}}
+  =
+  T_{m_i}^{\mathrm{cf}}(r_i,h_i,c_i)
+  \quad\text{and generate a proxy}\quad
+  x_i^{\mathrm{cf}}
+  \sim G_{\theta}(\,\cdot\mid p_i^{\mathrm{cf}},n_i),
+  \label{eq:distributional-counterfactual}
+\end{equation}
+where \(h_i\) is the registered no-source receiver state and \(n_i\) is a
+generation-only exclusion condition naming forbidden source, trigger, and
+footprint content. Using the frozen base generator \(G_{\theta}\), the target
+prompt requests that the receiver follow \(h_i\) with natural temporal
+variation, while the exclusion condition discourages event leakage. The
+generated video is an independently sampled, screened proxy for the ideal
+source-free distribution, not the frame-aligned counterfactual of one
+realized video. The embedding of \(p_i^{\mathrm{cf}}\) later conditions the
+online teacher; \(n_i\) is used for target-media generation only and is not
+part of that teacher condition.
+
+\paragraph{Screening and preservation.}
+Each mechanism begins with 192 target candidates. A treatment-blind anonymous
+review is followed by a deterministic hard-rejection, ranking, and tie-break
+rule that freezes exactly 178 eligible erasure bindings before either training
+arm is run; a data version with fewer eligible candidates is invalid rather
+than replenished after training. Selected media are finite proxies: the
+screen rejects clear violations and ranks the remaining candidates, but an
+atomic absence score may still record a partial or uncertain cue. We
+additionally freeze 36 generic preservation bindings shared by all adapters. For every selected
+erasure row, the target latent and the factual, source-free-target, and
+arm-specific prompt embeddings are cached and hash-bound before optimization.
+The frozen base prediction under \(p_i^{\mathrm{cf}}\) is instead computed
+online on the same noised target latent used by the student. Complete
+templates, screening fields, rejection reasons, preservation prompts, and
+cache contracts appear in \appref{app:counterfactual-data}.
 
 \subsection{Randomizing the Causal-Source Slot}
 \label{subsec:source-slot-randomization}
 
-\outlineblock{Core intervention}{
-For each erasure binding, replace the original source identity with a
-deterministically assigned identity from the disjoint 64-item mechanism bank.
-Rebuild the prompt from structured fields rather than substring replacement.
-The source identity changes; the source-free target, receiver, trigger type,
-footprint semantics, and training trajectory remain fixed.}
+\paragraph{Identity is a shortcut.}
+With only a small set of repeated training sources, an adapter can associate
+the objective with particular nouns or recurring surface forms. Such a
+shortcut can suppress familiar sources without learning a rule that transfers
+to a new entity occupying the same event role. We target this ambiguity
+directly rather than changing the counterfactual videos, loss weights, or
+optimization schedule.
 
-\outlineblock{Mechanistic hypothesis}{
-Across bindings, the stable supervisory relation is that whichever entity
-occupies the causal-source slot and the footprint that depends on it should be
-absent in the no-source world. Contrast this with ordinary paraphrasing, but
-defer the behavioral test to \S\ref{subsec:role-or-word}.}
+\paragraph{A single source-slot intervention.}
+For mechanism \(m\), let \(\mathcal{Q}_m\) be its frozen 64-item source bank,
+and let \(q_i\in\mathcal{Q}_{m_i}\) be the deterministically assigned source
+for erasure binding \(i\), with \(q_i\neq s_i\). The augmented factual prompt
+is rebuilt from the same structured fields:
+\begin{equation}
+  p_i^{\mathrm{aug}}
+  =
+  T_{m_i}^{\mathrm f}(q_i,a_i,r_i,f_i,c_i).
+  \label{eq:source-slot-prompt}
+\end{equation}
+This reconstruction changes the occupant of the source slot; it is not
+substring substitution. The committed assignment balances the bank over the
+active erasure schedule and is fixed before training rather than sampled
+online.
+
+The complete frozen pair banks can be written as
+\begin{align}
+  \mathcal{B}_{\mathrm{Matched}}
+    &= \{(p_i^{\mathrm{f}},x_i^{\mathrm{cf}})\}_{i=1}^{178},
+      \label{eq:matched-pairs}\\
+  \mathcal{B}_{\mathrm{SRCD}}
+    &= \{(p_i^{\mathrm{aug}},x_i^{\mathrm{cf}})\}_{i=1}^{178}.
+      \label{eq:srcd-pairs}
+\end{align}
+The registered schedule shuffles each bank and optimizes on the same
+100-element active erase-index set \(\mathcal{I}_{\mathrm{er}}\); the remaining
+78 rows stay cached and mapped but do not enter the 200-update optimization.
+The two arms share the counterfactual videos and target prompts, target
+latents, target-prompt embeddings, preservation data, initialization, sample
+order, noise and sigma draws (and hence timesteps), optimizer, and inference
+configuration. The arm-specific student embedding differs only through the
+source identity in its factual conditioning; the frozen teacher prediction is
+computed online under the shared target-prompt embedding.
+
+\paragraph{Training pressure and falsification.}
+Across bindings, source identity varies while the desired source-free outcome
+remains fixed. This construction makes identity a less reliable shortcut and
+places pressure on the adapter to associate suppression with the registered
+source slot and its dependent footprint. It does not guarantee that the model
+acquires a causal representation. We test the narrower behavioral
+interpretation against the same-backbone Matched Control on all seven
+mechanisms, against Generic Paraphrase and frequency-matched Bystander Token
+controls on Water and Fracture, and on held-out-source, implicit-footprint,
+and specificity cases (Sections~\ref{subsec:role-or-word}
+and~\ref{subsec:generalization}).
 
 \subsection{Counterfactual Distillation and Preservation}
 \label{subsec:training-objectives}
@@ -50,12 +137,11 @@ plain language immediately after its equation. Keep the two registered loss
 weights in the main text; move optimizer, rank, schedule, and runtime details
 to \appref{app:training-baselines}.}
 
-\outlineblock{Single-factor comparison}{
-State prominently that the Matched Control shares targets, teacher, caches,
-initialization, optimization schedule, random draws, and inference settings.
-Its only intended difference is the absence of source-slot randomization. Each
-mechanism has its own adapter; \methodshort\ is a shared training principle,
-not one universal seven-mechanism model.}
+\outlineblock{Training schedule and scope}{
+Explain the strictly alternating 100 erasure and 100 preservation updates,
+online frozen-teacher forward, registered loss weights, and LoRA-only
+optimization. Each mechanism has its own adapter; \methodshort\ is a shared
+training principle, not one universal seven-mechanism model.}
 
 \outlineblock{Figure 2 - method overview}{
 Show the factual event and dynamic source-free target, the identity change
