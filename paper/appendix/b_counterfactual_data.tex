@@ -1,0 +1,47 @@
+\section{Counterfactual Data Construction and Quality Control}
+\label{app:counterfactual-data}
+
+\outlineblock{Reviewer question}{
+How is a dynamic no-source target produced, and what prevents leakage,
+post-treatment replacement, or selection on method outcomes?}
+
+\subsection{Structured Factual and Target Prompts}
+\label{app:structured-prompts}
+
+\outlineblock{Content}{
+Show the structured fields and complete prompt templates for factual and
+source-free worlds. Include examples from multiple mechanisms and both direct
+and natural wording.}
+
+\subsection{Dynamic Distributional Counterfactual Targets}
+\label{app:distributional-targets}
+
+\outlineblock{Content}{
+Explain independent target generation, the lack of pixel alignment, allowed
+natural dynamics, and forbidden source, trigger, and footprint evidence.
+Include a diagram from prompt to video, latent, and frozen-teacher cache.}
+
+\subsection{Treatment-Blind Target Screening}
+\label{app:target-screening}
+
+\outlineblock{Tables B1--B2}{
+Report 192 candidates and the deterministic selection of 178 targets per
+mechanism, the complete atomic screen, failure reasons, and the fail-closed
+rule if the quota is not met. Show accepted and rejected examples with
+specific visual reasons.}
+
+\subsection{Source-Bank Separation and Assignment}
+\label{app:source-bank}
+
+\outlineblock{Content}{
+Document the 64-item bank, exclusion of original identities, balanced
+assignment frequencies, no overlap with 48 held-out identities, and the
+deterministic assignment commitment.}
+
+\subsection{Preservation Bank and Cache Integrity}
+\label{app:preservation-data}
+
+\outlineblock{Content}{
+Describe the 36 shared preservation bindings and the target/teacher cache
+contract. Report tensor shapes, dtypes, model identity, prompt hashes, and
+cache-validation receipts without embedding machine-specific absolute paths.}

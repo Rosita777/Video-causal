@@ -1,0 +1,64 @@
+\section{\methodname}
+\label{sec:method}
+
+\outlineblock{Section roadmap}{
+First construct dynamic source-free targets. Then randomize only the identity
+occupying the causal-source slot while keeping each target fixed. Finally
+distill the edited model toward the frozen counterfactual teacher and preserve
+unrelated behavior. Every component must map to a later control or guardrail.}
+
+\subsection{Structured Dynamic Counterfactual Pairs}
+\label{subsec:counterfactual-pairs}
+
+\outlineblock{Failure mode and design response}{
+A static clean frame, spatial mask, or independently worded negative prompt
+does not specify a plausible dynamic world after removing an event source.
+Construct each factual prompt from structured source, trigger, receiver,
+footprint, and context fields, and pair it with an independently generated
+dynamic source-free target. State that factual and target videos are not
+pixel-aligned.}
+
+\outlineblock{Required details}{
+Explain the treatment-blind candidate screen, 178 selected erasure bindings
+per mechanism, 36 shared preservation bindings, frozen target latents, and
+counterfactual-teacher caches. Move templates, rejection reasons, hashes, and
+examples to \appref{app:counterfactual-data}.}
+
+\subsection{Randomizing the Causal-Source Slot}
+\label{subsec:source-slot-randomization}
+
+\outlineblock{Core intervention}{
+For each erasure binding, replace the original source identity with a
+deterministically assigned identity from the disjoint 64-item mechanism bank.
+Rebuild the prompt from structured fields rather than substring replacement.
+The source identity changes; the source-free target, receiver, trigger type,
+footprint semantics, and training trajectory remain fixed.}
+
+\outlineblock{Mechanistic hypothesis}{
+Across bindings, the stable supervisory relation is that whichever entity
+occupies the causal-source slot and the footprint that depends on it should be
+absent in the no-source world. Contrast this with ordinary paraphrasing, but
+defer the behavioral test to \S\ref{subsec:role-or-word}.}
+
+\subsection{Counterfactual Distillation and Preservation}
+\label{subsec:training-objectives}
+
+\outlineblock{Core equations}{
+Define the noised target latent, velocity target, counterfactual-teacher
+distillation loss, and frozen-model preservation loss. Explain every term in
+plain language immediately after its equation. Keep the two registered loss
+weights in the main text; move optimizer, rank, schedule, and runtime details
+to \appref{app:training-baselines}.}
+
+\outlineblock{Single-factor comparison}{
+State prominently that the Matched Control shares targets, teacher, caches,
+initialization, optimization schedule, random draws, and inference settings.
+Its only intended difference is the absence of source-slot randomization. Each
+mechanism has its own adapter; \methodshort\ is a shared training principle,
+not one universal seven-mechanism model.}
+
+\outlineblock{Figure 2 - method overview}{
+Show the factual event and dynamic source-free target, the identity change
+inside the source slot, the fixed target/teacher path, and the preservation
+path. Add a compact inset indicating exactly what Matched, Generic Paraphrase,
+Bystander Token, and \methodshort\ vary and hold fixed.}

@@ -1,0 +1,42 @@
+% Stable paper terminology. Baseline names and metric symbols should be changed
+% here rather than retyped inconsistently throughout the manuscript.
+\newcommand{\methodname}{Source-slot Randomized Counterfactual Distillation}
+\newcommand{\methodshort}{\textsc{SRCD}}
+\newcommand{\ces}{\ensuremath{\mathrm{CES}}}
+\newcommand{\su}{\ensuremath{\mathrm{SU}}}
+\newcommand{\matchedcontrol}{Matched Control}
+\newcommand{\negativeprompt}{Negative Prompt}
+\newcommand{\videoeraser}{VideoEraser}
+\newcommand{\tvtwounlearning}{T2VUnlearning-adapted}
+\newcommand{\safree}{SAFREE}
+
+% Main-only builds do not load appendix labels. Keep their prose readable and
+% warning-free while preserving numbered appendix references in full builds.
+\newcommand{\appref}[1]{%
+  \ifdefined\paperwithoutappendix
+    the supplementary material%
+  \else
+    Appendix~\ref{#1}%
+  \fi}
+
+% Architecture mode renders planning boxes. The submission wrapper defines
+% \paperfinalmode before loading main.tex, which makes the final driver
+% explicitly fail away from outline mode.
+\newif\ifoutline
+\ifdefined\paperfinalmode
+  \outlinefalse
+\else
+  \outlinetrue
+\fi
+
+\newcommand{\outlineblock}[2]{%
+  \ifoutline
+    \par\medskip
+    \noindent\colorbox{blue!6}{%
+      \parbox{\dimexpr\linewidth-2\fboxsep\relax}{%
+        \textbf{#1.} #2}}
+    \par\medskip
+  \fi}
+
+\newcommand{\claimboundary}[1]{%
+  \outlineblock{Claim boundary}{#1}}

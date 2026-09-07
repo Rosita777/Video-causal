@@ -1,0 +1,29 @@
+\section{Scope and Limitations}
+\label{sec:limitations}
+
+\outlineblock{Model and intervention scope}{
+The study learns seven mechanism-specific adapters under one shared training
+principle; it does not produce one universal eraser. It uses a single training
+seed and one frozen generation seed per semantic case.}
+
+\outlineblock{Counterfactual and causal scope}{
+Targets are distributional rather than pixel-level individual
+counterfactuals. The structured data provide the causal-source role.
+Behavioral controls can support a role-conditioned interpretation but cannot
+establish a true internal causal representation.}
+
+\outlineblock{Evaluation and generalization scope}{
+Discuss incomplete removal, mechanism heterogeneity, Original-capability
+limits, cross-backbone estimability, fixed-camera synthetic prompts, reviewer
+subjectivity, and the bounds of the seven registered mechanisms.}
+
+\outlineblock{Protocol deviation and remaining blinding}{
+Disclose that a separate read-only audit opened the full method key before
+human canonicalization and before the exploratory A/B-mean rule was
+materialized. This global pre-unblinding state cannot be restored. The frozen
+human queue can still be labeled by answer-key-blind reviewers, and only those
+human-canonical scores may supply final paper metrics; the post-unblinding VLM
+preview remains drafting evidence only.}
+
+% TODO-PAPER: Replace any preliminary-evaluation wording with final
+% human-canonical coverage and agreement statistics before submission.

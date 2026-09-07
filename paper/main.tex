@@ -1,0 +1,38 @@
+\documentclass[10pt]{article}
+
+% This is the venue-neutral driver. Replace the class and venue-specific
+% packages here when the submission venue is frozen; section files must remain
+% venue agnostic.
+\usepackage[margin=1in]{geometry}
+\input{preamble/common_packages}
+\usepackage[hidelinks]{hyperref}
+\input{preamble/macros}
+
+\title{Causal-Role Erasure for Text-to-Video Diffusion Models}
+\author{Anonymous Authors}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\input{sections/00_abstract}
+\end{abstract}
+
+\input{paper}
+
+\ifoutline
+  \section*{References}
+  \outlineblock{Reference plan}{Maintain references in \texttt{references.bib}. The final venue driver will load the required bibliography package and style. No citation or priority claim should be added without source verification.}
+\else
+  \bibliographystyle{plain}
+  \bibliography{references}
+\fi
+
+\ifdefined\paperwithoutappendix
+  % Main-only build requested by a wrapper such as main_only.tex.
+\else
+  \input{supplement}
+\fi
+
+\end{document}

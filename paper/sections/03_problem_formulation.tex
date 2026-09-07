@@ -1,0 +1,41 @@
+\section{Causal-Role Erasure}
+\label{sec:problem-formulation}
+
+\outlineblock{Section purpose}{
+Define the intervention unit before presenting the implementation. A reader
+should finish this section knowing what must disappear, what must remain, and
+why ordinary object-erasure success criteria are insufficient.}
+
+\subsection{Source, Receiver, and Causal Footprint}
+\label{subsec:event-anatomy}
+
+\outlineblock{Definitions}{
+Represent a physical event with a causal source, receiver, trigger,
+downstream footprint, and scene context. Define each term operationally and
+instantiate it for water impact, rigid collision, brittle fracture, powder
+impact, elastic deformation, material release, and surface trace. Place the
+complete ontology in \appref{app:task-ontology}.}
+
+\subsection{The Role-Conditioned Source-Free World}
+\label{subsec:no-source-world}
+
+\outlineblock{Counterfactual target}{
+Define the desired distribution in which the causal source, trigger, and
+source-dependent footprint are absent while the receiver and surrounding
+scene remain valid and dynamic. Emphasize that this is a distributional
+counterfactual target, not the pixel-level counterfactual of one factual
+video.}
+
+\subsection{Three Desiderata}
+\label{subsec:desiderata}
+
+\outlineblock{Behavioral contract}{
+The edited model must: (i) reduce source and footprint evidence for causal
+prompts; (ii) preserve the same nouns and legitimate alternative footprints
+in noncausal prompts; and (iii) retain the receiver, temporal quality, and
+overall usability. Introduce \ces\ and \su\ conceptually and defer their
+exact scoring and inference to \S\ref{subsec:experimental-setup} and
+\appref{app:evaluation-metrics}.}
+
+\claimboundary{The source role is supplied by the structured data. The task is
+role-conditioned intervention learning, not unsupervised causal discovery.}

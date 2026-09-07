@@ -1,0 +1,53 @@
+\section{Training, Baselines, and Generation Integrity}
+\label{app:training-baselines}
+
+\outlineblock{Reviewer question}{
+Does \methodshort\ differ from the Matched Control in exactly one factor, are
+external baselines represented faithfully, and were all expected outputs
+generated under registered settings?}
+
+\subsection{Single-Factor Matched Design}
+\label{app:matched-design}
+
+\outlineblock{Table C1}{
+Compare Matched and \methodshort\ field by field. Targets, teacher, caches,
+initialization, update order, noise, sigma, optimizer, and inference must be
+identical; only the student factual source-slot assignment differs. Include
+the null-sidecar equivalence preflight.}
+
+\subsection{Optimization and Inference}
+\label{app:optimization-details}
+
+\outlineblock{Table C2}{
+List the common training seed, 200 updates, alternating erase/preserve
+schedule, LoRA modules and rank, learning rate, loss weights, inference scale,
+frame count, resolution, FPS, sampling steps, and precision.}
+
+\subsection{Identification Training Arms}
+\label{app:identification-arms}
+
+\outlineblock{Table C3}{
+Define Matched, Generic Paraphrase, Bystander Token, and \methodshort\ by what
+each arm changes and holds fixed. Reconcile seven Matched, seven method, and
+four identification training runs.}
+
+\subsection{External Baseline Implementations}
+\label{app:baseline-implementations}
+
+\outlineblock{Table C4}{
+For \negativeprompt, \videoeraser, \tvtwounlearning, and \safree, report
+repository revision, official versus adapted status, local patches,
+checkpoints, concept input, unavoidable interface constraints, and exact paper
+display name.}
+
+\subsection{Runtime and Generation Accounting}
+\label{app:generation-accounting}
+
+\outlineblock{Tables C5--C6}{
+Separate Wan and CogVideoX fairness blocks, report hardware and runtime, and
+reconcile 294 Wan Original, 684 trained-Wan, 1176 Cog core, and 294 SAFREE
+outputs. Bind counts to per-run receipts and aggregate manifests.}
+
+\claimboundary{Raw Wan and CogVideoX scores are not a same-backbone method
+ablation. T2VUnlearning-adapted must never be presented as an unavailable
+official mechanism checkpoint.}

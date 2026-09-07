@@ -1,0 +1,97 @@
+\section{Experiments}
+\label{sec:experiments}
+
+\outlineblock{Evidence order}{
+The section proceeds from overall efficacy to out-of-surface-form behavior,
+role identification, preservation, and visible failures. This order answers
+whether the method works, what explanation survives the controls, and where
+the conclusion stops.}
+
+\subsection{Experimental Setup}
+\label{subsec:experimental-setup}
+
+\outlineblock{Seven mechanisms}{
+List the seven equal-status mechanisms and the 24 causal plus 18 specificity
+cases per mechanism. Report 294 semantic cases, eight main streams, 2352 main
+videos, and 96 additional Water/Fracture identification videos.}
+
+\outlineblock{Models and baselines}{
+Separate the Wan block (Original, \matchedcontrol, \methodshort) from the
+CogVideoX block (Original, \negativeprompt, \videoeraser,
+\tvtwounlearning, \safree). State why raw scores across backbones are
+descriptive and why external headline contrasts require shared Original
+capability.}
+
+\outlineblock{Evaluation and statistics}{
+Give the compact definitions of Original eligibility, usability, \ces, and
+\su. State full-49-frame blinded review, final human-canonical authority,
+case-level inference, mechanism-first equal weighting, paired bootstrap,
+Holm correction, and registered non-inferiority margins. Put the full rubric,
+audit flow, and formulas in \appref{app:evaluation-metrics}.}
+
+\subsection{Main Results across Seven Mechanisms}
+\label{subsec:main-results}
+
+\outlineblock{Table 1 - seven-mechanism main view}{
+Present eight methods by seven mechanisms plus macro \ces, visibly separated
+into Wan and CogVideoX blocks. Report observed ranking, mechanism
+heterogeneity, and the descriptive cross-backbone boundary.}
+
+\outlineblock{Table 2 - Wan main contrast and guardrails}{
+Report the single-factor \methodshort-minus-Matched contrast together with
+\su, Original capability, receiver preservation, video quality, usability,
+confidence intervals, multiplicity status, and registered preservation
+margins. State external shared-capability estimability separately.}
+
+\claimboundary{Use \emph{highest observed} rather than a significance claim
+unless the final interval, multiplicity correction, and estimability gates all
+pass. Do not convert a non-estimable external contrast into a win or a loss.}
+
+\subsection{Role or Word? Identification Controls}
+\label{subsec:role-or-word}
+
+\outlineblock{Table 3 - two-mechanism identification design}{
+Compare \methodshort\ with Generic Paraphrase and frequency-matched Bystander
+Token controls. For each, report causal \ces, the implicit-footprint subset,
+and specificity difference against its registered non-inferiority margin.
+Explain what lexical explanation each control removes and state explicitly
+that these runs cover only Water and Fracture.}
+
+\claimboundary{If any final identification guardrail fails, describe the
+evidence as partial support or as behavior consistent with role conditioning.
+Do not claim that the full role-conditioned novelty criterion passed.}
+
+\subsection{Beyond Explicit Footprints and Seen Sources}
+\label{subsec:generalization}
+
+\outlineblock{Table 4 - two generalization questions}{
+Test whether the gain remains when the prompt does not name the footprint and
+when the source identity is excluded from training. Report the paired
+contrasts, intervals, per-mechanism counts, and their overlap. These are
+behavioral generalization tests, not independent replications.}
+
+\subsection{Preservation and Failure Analysis}
+\label{subsec:preservation-failures}
+
+\outlineblock{Continuous efficacy components}{
+Separate the gated source and footprint contributions to \ces. Distinguish a
+graded reduction in visibility from complete absence and strict success.}
+
+\outlineblock{Guardrails and difficult mechanisms}{
+Report \su, receiver preservation, video quality, and usable fraction against
+their prespecified margins. Then discuss negative or weak mechanisms,
+Original-capability limits, residual sources or footprints, and any
+efficacy-preservation trade-off. Do not hide these observations in the
+appendix.}
+
+\subsection{Qualitative Comparisons}
+\label{subsec:qualitative-main}
+
+\outlineblock{Figure 3 - compact temporal evidence}{
+Use identical frame indices and method order for one representative success,
+one implicit-footprint case, and one failure. Label source, footprint, and
+receiver. Use a deterministic metadata-only selection rule that never reads
+per-method media or scores, and disclose that this rule is frozen after
+aggregate unblinding. Treat the display as descriptive; move the full
+eight-stream, seven-mechanism grids to
+\appref{app:qualitative-failures}.}

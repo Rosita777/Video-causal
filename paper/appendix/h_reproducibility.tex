@@ -1,0 +1,48 @@
+\section{Reproducibility and Artifact Provenance}
+\label{app:reproducibility}
+
+\outlineblock{Reviewer question}{
+Can a reader reconstruct every dataset, output, score, and paper table from
+versioned code and frozen inputs?}
+
+\subsection{End-to-End Artifact Graph}
+\label{app:artifact-graph}
+
+\outlineblock{Figure H1}{
+Trace ontology and formal cases through target generation, screening, caches,
+training, 2448 formal videos, anonymous packages, two VLM passes, human audit,
+canonical scores, and paper tables. Label each transition with its registry or
+receipt.}
+
+\subsection{Models, Environments, and Commands}
+\label{app:commands-environments}
+
+\outlineblock{Table H1}{
+List model inventory, repository commit, environment identity, executable
+command, hardware, precision, and expected output count for every stage. Do
+not expose secrets or machine-specific private paths.}
+
+\subsection{Registries, Hashes, and Completion Receipts}
+\label{app:registries-receipts}
+
+\outlineblock{Table H2}{
+Map each stage to its input registry, output manifest, row or media count,
+SHA-256 commitment, completion status, and documented infrastructure replay.}
+
+\subsection{Paper-Table Provenance}
+\label{app:table-provenance}
+
+\outlineblock{Table H3}{
+Map every main and appendix table to its canonical CSV/JSON, generation
+script, code snapshot or commit, row count, and artifact hash. Generated LaTeX
+tables must include this provenance in comments and must not be edited by
+hand.}
+
+\subsection{Release and Submission Checklist}
+\label{app:release-checklist}
+
+\outlineblock{Content}{
+Enumerate released ontology, prompts, formal cases and seeds, evaluator
+rubrics, schemas, source code, aggregate scores permitted by policy, and
+reproduction commands. Include a final check that no preliminary,
+non-canonical result is imported by the submission driver.}

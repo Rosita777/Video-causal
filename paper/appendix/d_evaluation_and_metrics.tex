@@ -1,0 +1,73 @@
+\section{Blind Full-Video Evaluation and Statistical Protocol}
+\label{app:evaluation-metrics}
+
+\outlineblock{Reviewer question}{
+What did each evaluator see, how was method identity hidden, how are humans
+used, and how do atomic labels become claims?}
+
+\subsection{Anonymous Package and Key Separation}
+\label{app:anonymous-package}
+
+\outlineblock{Content}{
+Describe random review identifiers, method/backbone removal, interleaved
+ordering, Original-only and full answer-key commitments, code-registry
+binding, and both the registered and observed opening sequences. Include the
+full evidence-chain diagram.}
+
+\subsection{Protocol Deviations and Remaining Blinding}
+\label{app:evaluation-deviations}
+
+\outlineblock{Required disclosure}{
+Record that a separate read-only audit opened the full method key before human
+canonicalization and before the exploratory A/B-mean decision was
+materialized. Distinguish the unaffected anonymous A/B scoring, the
+post-unblinding exploratory drafting tables, and the still-answer-key-blind
+human review queue. State that final human-canonical tables cannot
+retroactively recover a globally pre-unblinding analysis.}
+
+\subsection{Full-49-Frame Temporal Representation}
+\label{app:temporal-panels}
+
+\outlineblock{Figure D1}{
+Show the five overlapping indexed panels covering frames 0--48. Explain the
+center-crop contract, one-image-per-item interface, and why a sparse
+five-frame sheet is insufficient.}
+
+\subsection{Two Independent VLM Passes}
+\label{app:vlm-review}
+
+\outlineblock{Tables D1--D2}{
+Give the complete causal and specificity 0/1/2 rubrics, evaluator prompt,
+strict response schema, confidence and evidence fields, independent ordering,
+retry rules, model identity, and zero-fallback requirement.}
+
+\subsection{Human Calibration, Audit, and Adjudication}
+\label{app:human-audit}
+
+\outlineblock{Content}{
+Specify the two-human calibration sample, VLM disagreement and partial-item
+review, low-confidence and unusable review, high-confidence agreement audit,
+third-person adjudication, expansion threshold, and final coverage/agreement
+statistics. Only post-adjudication atoms may feed final paper results.}
+
+\subsection{Eligibility, CES, and Specificity Utility}
+\label{app:metric-definitions}
+
+\outlineblock{Figure D2 and Table D3}{
+Trace atomic scores through Original eligibility, usability, per-case \ces\
+or \su, mechanism mean, and equal-weight seven-mechanism macro. Give formulas,
+ranges, direction, fixed-denominator policy, and a worked partial-credit
+example.}
+
+\subsection{Inference, Multiplicity, and Claim Gates}
+\label{app:statistical-protocol}
+
+\outlineblock{Tables D4--D5}{
+Specify paired case-cluster bootstrap, 10000 replicates, registered seeds,
+five-comparison Holm family, shared-capability minimum, non-inferiority
+margins, and the exact gates for efficacy, retention, generalization, and
+role-versus-word evidence.}
+
+\claimboundary{Non-inferiority is decided by the confidence-interval lower
+bound relative to its margin. Do not label a superiority p-value relative to
+zero as a non-inferiority p-value.}
