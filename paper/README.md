@@ -1,10 +1,11 @@
 # Paper architecture
 
-This directory is a venue-neutral, modular scaffold for the causal-role
-erasure paper. The current driver uses the standard article class only to make
-the architecture inspectable and compilable. When the venue is frozen, change
-main.tex and keep paper.tex, supplement.tex, section files, labels, figures,
-and tables stable.
+This directory uses the official ICLR 2027 LaTeX style for the causal-role
+erasure paper. ICLR uses a narrow 5.5-inch single-column layout with anonymous
+line numbers during review; it is not a two-column format. The official style
+and bibliography files are vendored byte-for-byte and must not be edited.
+Template provenance and hashes are recorded in
+[ICLR2027_TEMPLATE_SOURCE.md](ICLR2027_TEMPLATE_SOURCE.md).
 
 Paragraph-level writing must follow [WRITING_PLAN.md](WRITING_PLAN.md). That
 plan is reviewed before manuscript prose is drafted.
@@ -43,7 +44,10 @@ Use these terms consistently instead of cycling through synonyms.
 | 6 Scope and Limitations | Freeze what the evidence does and does not establish | Explicit boundaries | 0.35 page |
 | 7 Conclusion | Recover the problem, intervention, and supported behavior | No new claims | 0.20 page |
 
-The eight-page budget is a planning target rather than a venue decision.
+ICLR 2027 permits at most nine pages of main text for the initial submission
+and ten pages during discussion and camera-ready preparation. The internal
+eight-page content budget remains a conservative target that leaves room for
+floats and revision.
 
 ## Appendix architecture
 
@@ -135,13 +139,24 @@ tables/main and tables/appendix.
 
 ## Build and submission checks
 
-Build the full architecture, including appendices, from this directory:
+Build the full architecture preview, including appendices, from this
+directory:
 
     latexmk -pdf main.tex
 
-Build only the main-paper architecture:
+Build the clean anonymous main text for page-budget inspection:
 
     latexmk -pdf main_only.tex
+
+Build the clean anonymous submission PDF with references followed by the
+appendix:
+
+    latexmk -pdf submission.tex
+
+The outline build displays the complete Appendix A--H architecture. The clean
+submission includes only appendices whose prose has passed review; move each
+later appendix outside the `\ifoutline` block in `supplement.tex` as it is
+completed.
 
 The generated files are written to build and ignored by Git.
 
@@ -149,9 +164,18 @@ Before submission, run the fail-closed gate:
 
     python3 scripts/check_submission.py
 
+The gate rebuilds `main_only.tex` and `submission.tex`, reads an explicit
+main-text page marker, and rejects compilation errors, undefined references,
+overfull boxes, camera-ready mode, modified official style assets, or a main
+text longer than nine pages.
+
 Also require:
 
-- submission.tex explicitly selects final and main-only modes;
+- submission.tex explicitly disables planning mode but does not enable
+  camera-ready mode;
+- the main text is at most nine pages before references;
+- the mandatory AI Use Statement is complete and author-reviewed;
+- references precede the appendix in the combined submission PDF;
 - no preliminary table included by a final section;
 - all figure/table paths relative to paper;
 - all labels semantic rather than position-dependent;

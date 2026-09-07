@@ -10,20 +10,24 @@
 \newcommand{\tvtwounlearning}{T2VUnlearning-adapted}
 \newcommand{\safree}{SAFREE}
 
-% Main-only builds do not load appendix labels. Keep their prose readable and
-% warning-free while preserving numbered appendix references in full builds.
+% Main-only builds do not load appendix labels. Clean combined previews may
+% also omit architecture-only appendices, so fall back gracefully until the
+% referenced appendix has entered the build.
 \newcommand{\appref}[1]{%
   \ifdefined\paperwithoutappendix
     the supplementary material%
   \else
-    Appendix~\ref{#1}%
+    \ifcsname r@#1\endcsname
+      Appendix~\ref{#1}%
+    \else
+      the supplementary material%
+    \fi
   \fi}
 
-% Architecture mode renders planning boxes. The submission wrapper defines
-% \paperfinalmode before loading main.tex, which makes the final driver
-% explicitly fail away from outline mode.
+% Architecture mode renders planning boxes. Clean main-only and anonymous
+% submission wrappers define \paperprosemode before loading main.tex.
 \newif\ifoutline
-\ifdefined\paperfinalmode
+\ifdefined\paperprosemode
   \outlinefalse
 \else
   \outlinetrue

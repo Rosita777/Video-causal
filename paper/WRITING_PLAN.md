@@ -87,7 +87,7 @@ The writing order should not follow the final section order.
 | 8 | Appendix G and Section 5.6 | Not ready | Metadata-only selection manifest frozen and disclosed as post-unblinding descriptive |
 | 9 | Related Work | Needs source ledger | Closest-work claims and citations verified |
 | 10 | Introduction | Partly ready | Problem and method stable; result paragraph waits for canonical evidence |
-| 11 | Scope, Conclusion | Partly ready | Final evidence boundary known |
+| 11 | Scope, Conclusion, and ICLR statements | Partly ready | Final evidence boundary and author-reviewed AI-use history known |
 | 12 | Abstract | Write last | Every sentence is supported by the completed paper |
 
 Results prose must be distilled from generated Appendix E/F tables. We must
@@ -403,6 +403,21 @@ Use three moves:
 3. state the final supported behavioral conclusion.
 
 Do not add numbers, new applications, or a stronger causal claim.
+
+### Required ICLR 2027 statements
+
+Place these unnumbered sections after the conclusion and before references:
+
+- AI Use Statement: mandatory, author-reviewed, and matched to the actual use
+  of generative AI across methodology, code, analysis, interpretation,
+  literature work, structure, and writing.
+- Ethics Statement: recommended here because selective video-model editing has
+  both safety and misuse implications.
+- Reproducibility Statement: a short navigation paragraph pointing to the
+  relevant main sections, appendices, and anonymous artifacts.
+
+These statements do not count toward the ICLR 2027 main-text page limit.
+References follow them, and appendices follow the references.
 
 ## 5. Figure and table choreography
 
