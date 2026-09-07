@@ -6,6 +6,9 @@ the architecture inspectable and compilable. When the venue is frozen, change
 main.tex and keep paper.tex, supplement.tex, section files, labels, figures,
 and tables stable.
 
+Paragraph-level writing must follow [WRITING_PLAN.md](WRITING_PLAN.md). That
+plan is reviewed before manuscript prose is drafted.
+
 ## Paper spine
 
 The manuscript follows one claim-driven chain:
@@ -31,7 +34,7 @@ Use these terms consistently instead of cycling through synonyms.
 
 | Section | Function | Main evidence | Budget |
 | --- | --- | --- | ---: |
-| Abstract | Complete problem-to-evidence arc in five sentences | Final headline only | 0.25 page |
+| Abstract | Complete problem-to-evidence arc in seven functional sentences | Final headline only | 0.25 page |
 | 1 Introduction | Phenomenon, gap, method idea, evidence, contributions | Task teaser | 1.10 pages |
 | 2 Related Work | Position the task without bibliography dumping | Three precise gaps | 0.55 page |
 | 3 Causal-Role Erasure | Define source, receiver, footprint, and no-source world | Task diagram and desiderata | 0.85 page |
@@ -112,9 +115,10 @@ Main figures:
 1. Task teaser: source, receiver, and lingering footprint.
 2. Method overview: structured pair, randomized source slot, fixed no-source
    target, distillation, and preservation.
-3. Compact temporal comparison: one success, one implicit-footprint case, and
-   one failure, selected by a metadata-only deterministic rule frozen after
-   aggregate unblinding and labeled descriptive.
+3. Compact temporal comparison: one explicit causal case, one implicit causal
+   case, and one specificity case, selected by a metadata-only deterministic
+   rule frozen after aggregate unblinding and labeled descriptive. The caption
+   reports the observed outcome rather than guaranteeing success or failure.
 
 Main tables:
 
