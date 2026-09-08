@@ -10,6 +10,10 @@ Template provenance and hashes are recorded in
 Paragraph-level writing must follow [WRITING_PLAN.md](WRITING_PLAN.md). That
 plan is reviewed before manuscript prose is drafted.
 
+Current draft status (2026-09-08): Section 3, Method 4.1--4.3, and Appendices
+A--C contain prose. Appendix D/H and Section 5.1 are next. Final quantitative
+tables and result prose remain blocked on human canonicalization.
+
 ## Paper spine
 
 The manuscript follows one claim-driven chain:
@@ -92,6 +96,13 @@ The paper must also disclose that a separate read-only audit opened the full
 method key before human canonicalization and before the exploratory A/B-mean
 rule was materialized. Human reviewers may remain answer-key blind, but the
 global pre-unblinding state cannot be restored.
+
+Because the current v1 canonicalizer labels outputs as frozen before key
+opening, do not run its final freeze/metric path unchanged. First freeze a
+versioned provenance amendment that preserves all scoring rules and records
+the already-opened global key truthfully. Keep every evaluation-registry-bound
+v1 implementation byte-identical and add the amendment through new versioned
+files or wrappers.
 
 Allowed only when supported by the final artifact:
 

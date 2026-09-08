@@ -1,101 +1,126 @@
 # Video Causal Erasure
 
-This repository studies a narrow failure of text-to-video concept erasure:
-removing an object should also remove the downstream visual effect it caused,
-while leaving the receiver, camera, and unrelated scene content usable.
+This repository studies causal-role erasure in text-to-video diffusion:
+reducing a registered source and its downstream visual footprint while
+preserving the receiver, scene quality, and noncausal uses of the same entity.
 
 ## Current Status
 
-The active experiment is **water impact** on **Wan 2.1 T2V 1.3B**:
+Updated 2026-09-08.  The active protocol is
+`causal_role_erasure_7m_single_seed_v2`; the earlier single-mechanism
+water-impact studies are historical development evidence.
 
-`object enters water -> splash and expanding ripples`
+The formal experiment contains seven equal-status mechanisms:
 
-The retained control is a training-based, preservation-balanced dynamic SFT
-LoRA. It is trained from 178 accepted counterfactual targets plus 36 generic
-preservation videos. The reported checkpoint is step 200, inferred at LoRA
-scale 1.25. This is a working research prototype, not a finished method or a
-universal adapter.
+1. water impact;
+2. rigid collision;
+3. brittle fracture;
+4. powder impact;
+5. elastic deformation;
+6. material release; and
+7. surface trace.
 
-The first controlled eval has 12 held-out prompts covering unseen source
-objects, unseen receivers, and both unseen. All methods use the same prompts,
-seeds, Wan backbone, resolution, frame count, and inference steps.
+Airflow was excluded by a frozen Original-capability amendment before formal
+training or treatment generation.  It was not replaced by another mechanism.
 
-The latest development result is the frozen v3b-versus-v3c comparison on a
-fresh 24-case split, documented in
-[`docs/water_impact_dynamic_v3c_fresh_dev24_results_2026-08-16.md`](docs/water_impact_dynamic_v3c_fresh_dev24_results_2026-08-16.md).
-V3c preserved quality but failed the preregistered complete-deletion gate, so
-it was not promoted and the sealed 36-case final set remains unopened. The
-paper main experiment has not started.
+The eight main streams are Wan Original, Matched Control, Source-slot
+Randomized Counterfactual Distillation (SRCD; recorded as `V4` in frozen
+artifacts), CogVideoX Original, Negative Prompt, VideoEraser (official
+CogVideoX), T2VUnlearning-adapted (ours), and SAFREE-CogVideoX.
+Here “(ours)” identifies the internal baseline adaptation, not the proposed
+SRCD method.
 
-The selected next hypothesis is source-slot randomized counterfactual
-distillation, documented in
-[`docs/water_impact_dynamic_v4_source_slot_randomization.md`](docs/water_impact_dynamic_v4_source_slot_randomization.md).
-It is a reviewed design only; its private ontology, fresh development data,
-implementation, and machine gate must be frozen before any v4 GPU run.
+Formal data construction, training, and generation are complete:
 
-The important metrics are valid target and footprint suppression, computed
-only on outputs whose receiver and video quality remain usable. Apparent
-suppression from a collapsed video is not counted as success.
+| Artifact | Frozen count or status |
+| --- | ---: |
+| Selected source-free targets | 7 x 178 = 1,246 |
+| Shared preservation bindings | 36 |
+| Wan method/control training runs | 18 eligible step-200 checkpoints |
+| Adapted T2VUnlearning runs | 7 eligible step-100 checkpoints |
+| Main-study videos | 2,352 |
+| Identification-study additions | 96 |
+| Total validated videos | 2,448 |
+
+Two blinded, independently ordered passes of the same `gpt-5.6-luna` judge
+are also complete: each covers 2,448/2,448 videos, satisfies the registered
+response schema, and records zero scientific fallback scores.
+
+Final human labeling has not started.  Its frozen initial queue
+contains 3,633 atomic judgments covering 2,009 anonymous videos.  Until two
+independent human reviews, disagreement adjudication, any required audit
+expansion, and the canonical metric freeze are complete, no current numeric
+result is final.
+
+The existing generated tables are explicitly labeled
+`POST_UNBLINDING_EXPLORATORY_PRELIMINARY`, `NOT_CANONICAL`, and
+`WRITING_PREVIEW_ONLY_NOT_FOR_FINAL_SCIENTIFIC_CLAIMS`.  They may guide paper
+structure and internal discussion but must not supply final paper claims.
+
+## Paper Status
+
+The manuscript uses the official ICLR 2027 template under `paper/`.
+Section 3, Method 4.1--4.3, and Appendices A--C have draft prose.  Results,
+final tables, and the abstract result sentence remain gated on human-canonical
+scores.  The writing order and claim boundaries are in
+[`paper/WRITING_PLAN.md`](paper/WRITING_PLAN.md).
 
 ## Start Here
 
-Read [`docs/PROJECT_HANDOFF.md`](docs/PROJECT_HANDOFF.md) first. It is the
-single handoff document and explains the current data, training, evaluation,
-baselines, known failures, and exact commands.
+- [`docs/PROJECT_HANDOFF.md`](docs/PROJECT_HANDOFF.md): authoritative current
+  state, artifact locations, and next actions.
+- [`docs/causal_role_erasure_7mechanism_protocol_v2.md`](docs/causal_role_erasure_7mechanism_protocol_v2.md):
+  frozen seven-mechanism scope and main protocol.
+- [`data/causal_role_erasure_7mechanism_main_v2/run_matrix.csv`](data/causal_role_erasure_7mechanism_main_v2/run_matrix.csv):
+  the 18 Wan method/control training runs.
+- [`paper/README.md`](paper/README.md): paper architecture, build commands, and
+  submission checks.
 
-## Current Commands
+## Immediate Next Actions
 
-Commands assume the project is on the A100 machine at
-`/data/xiaohuang_workspace/ljc/Video-causal`, with Wan weights available under
-`models/Wan2.1-T2V-1.3B-Diffusers` and the environment at
-`models/.wan-runtime/bin/python`.
+The method and GPU experiment are frozen.  Do not tune another checkpoint,
+seed, mechanism weight, prompt set, or method variant on the formal data.
 
-Build the dynamic pair manifests:
+1. Freeze a provenance amendment that truthfully records the already-opened
+   global method key while preserving process-local answer-key-blind human
+   review and every registered scoring rule.  Add new versioned files/wrappers;
+   do not edit any v1 evaluation-registry-bound implementation.
+2. Implement and freeze the final human-canonical table exporter before
+   viewing canonical metrics; the current exporter is preview-only.
+3. Freeze sanitized reviewer instructions, then give each independent reviewer
+   an isolated copy of only
+   `../causal7m_formal_review_launch_v5/human_audit_stage0/public/`.  Never
+   copy its parent directory or any `private/` directory.
+4. Adjudicate every human disagreement and apply the registered greater-than-
+   5% high-confidence-error expansion rule.
+5. Freeze anonymous canonical scores, then freeze Original eligibility and
+   shared-capability subsets.
+6. Run the amended formal metric builder and the already-frozen final table
+   exporter.
+7. In parallel, continue paper sections that do not depend on final scores:
+   evaluation details, reproducibility, experimental setup, and related work.
 
-```bash
-models/.wan-runtime/bin/python scripts/build_water_impact_dynamic_pairs_v1.py
-```
+## Artifact Locations
 
-Train the current adapter:
+The formal A100 project is
+`/data/xiaohuang_workspace/ljc/Video-causal-v4`, with outputs under
+`outputs/causal_role_erasure_7mechanism_main_v2`.  Frozen local media and
+review artifacts live outside this Git checkout in the sibling workspaces:
 
-```bash
-bash scripts/run_water_impact_dynamic_sft_preserve_v2.sh
-```
+- `../causal7m_formal_media_snapshot_v1`;
+- `../causal7m_wan_original_snapshot_v1`; and
+- `../causal7m_formal_review_launch_v5`.
 
-Run the current 12-sample method evaluation:
+Do not clean, overwrite, or regenerate these roots.  Model weights, videos,
+caches, private answer keys, and review secrets remain outside Git.  Commit
+source code, public manifests, paper text, and sanitized public aggregate
+summaries only; never copy a private receipt verbatim into Git.
 
-```bash
-bash scripts/run_water_impact_dynamic_eval12.sh
-```
+## Claim Boundary
 
-Run the matched Wan baselines one at a time to avoid GPU memory contention:
-
-```bash
-bash scripts/run_water_impact_dynamic_eval12_baselines.sh negative_prompt
-bash scripts/run_water_impact_dynamic_eval12_baselines.sh videoeraser
-bash scripts/run_water_impact_dynamic_eval12_baselines.sh t2vunlearning
-```
-
-## Repository Map
-
-- `scripts/`: generation, training, evaluation, and baseline entry points.
-- `data/water_impact_dynamic_v1/`: current water-impact manifests.
-- `prompts/water_impact_dynamic_v1/`: current train/eval prompt files.
-- `docs/PROJECT_HANDOFF.md`: current project handoff.
-- `docs/*water_impact_dynamic*`: current experiment documentation.
-- `docs/experiment_log.md` and older `waterdrop_*` documents: historical
-  evidence; they are not the current training or evaluation protocol.
-- `outputs/`, model weights, videos, and checkpoints: local/remote artifacts,
-  intentionally not versioned.
-
-## Important Caveats
-
-The current counterfactual targets are separately generated videos, so they are
-not pixel-aligned with factual videos. The current adapter weakens causal
-footprints more reliably than it removes the source object. The Wan baseline
-proxies for T2VUnlearning and VideoEraser can collapse the scene; therefore
-their apparent erasure must always be reported with receiver preservation and
-video quality.
-
-Keep code, manifests, scores, summaries, and documentation in GitHub. Do not
-commit model weights, generated videos, or adapter checkpoints.
+The controlled method comparison is SRCD versus Matched on the same Wan
+backbone.  CogVideoX baselines form a separately normalized benchmark block;
+raw cross-backbone scores are descriptive.  The paper does not claim complete
+source removal, one universal seven-mechanism adapter, discovery of an
+internal causal representation, or superiority over every baseline unless
+the final registered evidence licenses that statement.

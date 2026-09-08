@@ -22,13 +22,14 @@ For training binding \(i\), let
 \begin{equation}
   p_i^{\mathrm{f}}
   =
-  T_{m_i}^{\mathrm f}(s_i,a_i,r_i,f_i,c_i),
+  T_{m_i}^{\mathrm f}(s_i,a_i,r_i,f_i,c_i;w_i),
   \label{eq:factual-prompt}
 \end{equation}
 where \(s_i\) is the source, \(a_i\) the trigger or interaction, \(r_i\)
-the receiver, \(f_i\) the downstream footprint, and \(c_i\) the remaining
-scene context. The factual template \(T_{m_i}^{\mathrm f}\) realizes these
-fields in one of the registered prompt styles while preserving their roles.
+the receiver, \(f_i\) the downstream footprint, \(c_i\) the remaining scene
+context, and \(w_i\) the registered direct or natural surface realization.
+The factual template \(T_{m_i}^{\mathrm f}\) realizes these fields while
+preserving their roles.
 
 \paragraph{Dynamic source-free targets.}
 Removing the event fields from text alone still does not provide a plausible
@@ -36,7 +37,7 @@ dynamic training target. We construct a source-free prompt
 \begin{equation}
   p_i^{\mathrm{cf}}
   =
-  T_{m_i}^{\mathrm{cf}}(r_i,h_i,c_i)
+  T_{m_i}^{\mathrm{cf}}(r_i,h_i,c_i;w_i)
   \quad\text{and generate a proxy}\quad
   x_i^{\mathrm{cf}}
   \sim G_{\theta}(\,\cdot\mid p_i^{\mathrm{cf}},n_i),
@@ -61,7 +62,8 @@ arm is run; a data version with fewer eligible candidates is invalid rather
 than replenished after training. Selected media are finite proxies: the
 screen rejects clear violations and ranks the remaining candidates, but an
 atomic absence score may still record a partial or uncertain cue. We
-additionally freeze 36 generic preservation bindings shared by all adapters. For every selected
+additionally freeze 36 generic preservation bindings shared by all 18 Wan
+method/control training runs. For every selected
 erasure row, the target latent and the factual, source-free-target, and
 arm-specific prompt embeddings are cached and hash-bound before optimization.
 The frozen base prediction under \(p_i^{\mathrm{cf}}\) is instead computed
@@ -88,7 +90,7 @@ is rebuilt from the same structured fields:
 \begin{equation}
   p_i^{\mathrm{aug}}
   =
-  T_{m_i}^{\mathrm f}(q_i,a_i,r_i,f_i,c_i).
+  T_{m_i}^{\mathrm f}(q_i,a_i,r_i,f_i,c_i;w_i).
   \label{eq:source-slot-prompt}
 \end{equation}
 This reconstruction changes the occupant of the source slot; it is not
@@ -130,21 +132,100 @@ and~\ref{subsec:generalization}).
 \subsection{Counterfactual Distillation and Preservation}
 \label{subsec:training-objectives}
 
-\outlineblock{Core equations}{
-Define the noised target latent, velocity target, counterfactual-teacher
-distillation loss, and frozen-model preservation loss. Explain every term in
-plain language immediately after its equation. Keep the two registered loss
-weights in the main text; move optimizer, rank, schedule, and runtime details
-to \appref{app:training-baselines}.}
+\paragraph{Counterfactual erasure update.}
+For erasure binding \(i\), let \(z_i^{\mathrm{cf}}\) be the cached latent of
+the independently generated source-free target. We sample
+\(\epsilon_i\sim\mathcal{N}(0,I)\) and
+\(\sigma_i\sim\mathcal{U}(0,1)\), and form
+\begin{equation}
+  z_{i,\sigma}
+  =
+  (1-\sigma_i)z_i^{\mathrm{cf}}+\sigma_i\epsilon_i,
+  \qquad
+  v_i^\star=\epsilon_i-z_i^{\mathrm{cf}}.
+  \label{eq:counterfactual-flow-path}
+\end{equation}
+Here \(z_{i,\sigma}\) is the noised target latent and \(v_i^\star\) is its
+flow-matching target. Let
+\(\ell\in\{\mathrm{Matched},\mathrm{SRCD}\}\) index the training arm, and let
+\(\widehat v_{\theta,\phi_{m,\ell}}(z,t;p)\) denote the prediction of the
+frozen base parameters \(\theta\) with the LoRA parameters for mechanism \(m\)
+and arm \(\ell\), at model timestep \(t\) under prompt \(p\). The erasure
+update is
+\begin{align}
+  \mathcal{L}_{\mathrm{erase}}^{(i,\ell)}
+  ={}&
+  \operatorname{MSE}\!\left(
+    \widehat v_{\theta,\phi_{m,\ell}}(z_{i,\sigma},t_i;\rho_{i,\ell}),
+    v_i^\star
+  \right)
+  \nonumber\\
+  &+
+  \lambda_{\mathrm T}
+  \operatorname{MSE}\!\left(
+    \widehat v_{\theta,\phi_{m,\ell}}(z_{i,\sigma},t_i;\rho_{i,\ell}),
+    \operatorname{sg}\!\left[
+      \widehat v_{\theta}(z_{i,\sigma},t_i;p_i^{\mathrm{cf}})
+    \right]
+  \right),
+  \qquad \lambda_{\mathrm T}=4,
+  \label{eq:counterfactual-erasure-loss}
+\end{align}
+where \(t_i=1000\sigma_i\), \(\operatorname{sg}\) stops gradients through
+the adapter-disabled online teacher, and
+\(\rho_{i,\ell}=p_i^{\mathrm{aug}}\) for \methodshort{} but
+\(\rho_{i,\ell}=p_i^{\mathrm f}\) for the Matched Control. The
+first term fits the flow of the source-free target latent. The second aligns
+the factual-conditioned student with the frozen-model prediction under the
+source-free target prompt; both predictions receive the same noised latent
+and timestep. The \ces{} components convert source and footprint visibility
+into gated per-output erasure credit. Only the paired \methodshort{}--Matched
+contrast tests an improvement attributable to the source-slot intervention.
 
-\outlineblock{Training schedule and scope}{
-Explain the strictly alternating 100 erasure and 100 preservation updates,
-online frozen-teacher forward, registered loss weights, and LoRA-only
-optimization. Each mechanism has its own adapter; \methodshort\ is a shared
-training principle, not one universal seven-mechanism model.}
+\paragraph{Preservation update.}
+For generic preservation binding \(j\), let \(z_j^{\mathrm{pr}}\) and
+\(p_j^{\mathrm{pr}}\) denote its cached video latent and prompt, and obtain
+\(z_{j,\sigma}^{\mathrm{pr}}\) from \(z_j^{\mathrm{pr}}\) by the same
+interpolation as in Eq.~\eqref{eq:counterfactual-flow-path}. We match adapted
+and frozen predictions under identical inputs:
+\begin{equation}
+  \mathcal{L}_{\mathrm{preserve}}^{(j,\ell)}
+  =
+  \lambda_{\mathrm P}
+  \operatorname{MSE}\!\left(
+    \widehat v_{\theta,\phi_{m,\ell}}
+      (z_{j,\sigma}^{\mathrm{pr}},t_j;p_j^{\mathrm{pr}}),
+    \operatorname{sg}\!\left[
+      \widehat v_{\theta}
+        (z_{j,\sigma}^{\mathrm{pr}},t_j;p_j^{\mathrm{pr}})
+    \right]
+  \right),
+  \qquad \lambda_{\mathrm P}=4.
+  \label{eq:preservation-loss}
+\end{equation}
+The student and frozen reference share the latent, sampled noise, timestep,
+and prompt. The 36 preservation bindings contain generic non-target scenes,
+not specificity cases or hard-negative training examples. This update
+constrains drift; the registered specificity, receiver-preservation, quality,
+and usability measurements test whether that constraint is respected.
 
-\outlineblock{Figure 2 - method overview}{
-Show the factual event and dynamic source-free target, the identity change
-inside the source slot, the fixed target/teacher path, and the preservation
-path. Add a compact inset indicating exactly what Matched, Generic Paraphrase,
-Bystander Token, and \methodshort\ vary and hold fixed.}
+\paragraph{Schedule and scope.}
+Training applies Eqs.~\eqref{eq:counterfactual-erasure-loss}
+and~\eqref{eq:preservation-loss} on separate, strictly alternating updates;
+it does not optimize their sum on a common minibatch. The frozen 200-update
+schedule contains 100 erasure and 100 preservation updates, with 100 distinct
+erasure bindings selected from the 178-row bank. Only \(\phi_{m,\ell}\) is
+optimized,
+and checkpoint 200 is the sole checkpoint eligible for evaluation. We train a
+separate adapter for each mechanism, so \methodshort{} denotes a shared
+training principle rather than one universal seven-mechanism adapter. The
+Matched and \methodshort{} arms share both objectives, their weights,
+counterfactual and preservation data, initialization, schedule, stochastic
+draws, optimizer, and checkpoint policy. Their comparison therefore isolates
+source-slot replacement, not the necessity of flow matching, teacher
+distillation, preservation matching, or LoRA itself. Full optimization and
+inference settings appear in \appref{app:optimization-details}.
+
+% Figure 2 is specified in paper/WRITING_PLAN.md and
+% paper/figures/main/README.md. Insert the frozen asset only after its source
+% manifest and hash exist.

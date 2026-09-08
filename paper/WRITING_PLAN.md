@@ -1,7 +1,8 @@
 # Writing plan before prose
 
-Status: planning document for author review. No manuscript prose should be
-drafted until this plan is accepted or revised.
+Status: accepted writing contract. Progress updated 2026-09-08: Section 3,
+Method 4.1--4.3, and Appendices A--C have draft prose. The next evidence-ready
+batch is Appendix D/H followed by Section 5.1.
 
 This plan separates three things:
 
@@ -76,12 +77,12 @@ The writing order should not follow the final section order.
 
 | Stage | Material | Current readiness | Gate before writing |
 | --- | --- | --- | --- |
-| 0 | This plan and claim matrix | Ready for author review | Author accepts structure and boundaries |
-| 1 | Section 3 problem formulation | Ready | Terminology and operational definitions agree with frozen ontology |
-| 2 | Section 4 method and Figure 2 specification | Ready | Training scripts, registries, and Matched single-factor contract agree |
-| 3 | Appendices A--C | Ready | Every count and implementation statement has a frozen artifact source |
-| 4 | Appendix D protocol and Appendix H provenance | Partly ready | Leave final human agreement and final-table hashes open |
-| 5 | Section 5.1 experimental setup | Ready after A--D | Compress only verified appendix facts |
+| 0 | This plan and claim matrix | Accepted | Structure and boundaries frozen for drafting |
+| 1 | Section 3 problem formulation | Drafted | Initial prose complete; final compression remains |
+| 2 | Section 4 method and Figure 2 specification | Method drafted | Figure 2 asset remains gated on a source manifest and hash |
+| 3 | Appendices A--C | Drafted | Initial prose compiled against frozen artifacts |
+| 4 | Appendix D protocol and Appendix H provenance | Next | Freeze a deviation-aware provenance amendment; leave final human agreement and final-table hashes open |
+| 5 | Section 5.1 experimental setup | Queued after D | Compress only verified appendix facts |
 | 6 | Final quantitative Appendices E--F | Not ready | Human calibration, audit, adjudication, and canonical metrics complete |
 | 7 | Sections 5.2--5.5 | Not ready | Generated human-canonical tables and registered claim gates available |
 | 8 | Appendix G and Section 5.6 | Not ready | Metadata-only selection manifest frozen and disclosed as post-unblinding descriptive |
@@ -485,6 +486,16 @@ audit before human canonicalization and before the exploratory A/B-mean rule
 was materialized. Final human labels can remain answer-key blind, but the
 global pre-unblinding state cannot be restored.
 
+The current v1 canonicalizer and metric builder encode provenance states that
+assume the answer key and full method key have not been opened. They must not
+produce final artifacts unchanged. A versioned amendment must preserve every
+scoring, expansion, estimability, and claim rule while distinguishing
+process-local answer-key-blind human review from the already-opened global key.
+This amendment must be additive: all evaluation-registry-bound v1 files remain
+byte-identical, while new versioned files or wrappers bind the old registry and
+the amendment digest. The final human-canonical table exporter is implemented
+and frozen before canonical metrics are opened.
+
 ## 8. Paragraph style contract
 
 - The first sentence states the question or conclusion.
@@ -537,6 +548,9 @@ A section is ready for author review only if:
     unanswered.
 
 ## 10. First writing batch after plan approval
+
+Status: complete. Section 3, Method 4.1--4.3, and Appendices A--C now have
+evidence-grounded draft prose. Figure 2 remains a separately gated asset.
 
 Do not begin with the abstract or introduction. The first batch should be:
 

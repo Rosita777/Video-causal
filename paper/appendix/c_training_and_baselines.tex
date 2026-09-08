@@ -1,53 +1,276 @@
 \section{Training, Baselines, and Generation Integrity}
 \label{app:training-baselines}
 
-\outlineblock{Reviewer question}{
-Does \methodshort\ differ from the Matched Control in exactly one factor, are
-external baselines represented faithfully, and were all expected outputs
-generated under registered settings?}
+This appendix separates the controlled Wan comparison from the external
+CogVideoX benchmark block.  Within Wan, the Matched Control and \methodshort{}
+differ only in the identity placed in the student prompt's registered source
+slot.  The CogVideoX methods instead run on their own frozen backbone and are
+interpreted relative to CogVideoX Original; raw Wan--CogVideoX differences are
+descriptive rather than same-backbone method ablations.
 
 \subsection{Single-Factor Matched Design}
 \label{app:matched-design}
 
-\outlineblock{Table C1}{
-Compare Matched and \methodshort\ field by field. Targets, teacher, caches,
-initialization, update order, noise, sigma, optimizer, and inference must be
-identical; only the student factual source-slot assignment differs. Include
-the null-sidecar equivalence preflight.}
+The main comparison isolates source-slot replacement.  For each mechanism,
+the Matched Control conditions the student on the original factual prompt
+\(p_i^{\mathrm f}\), whereas \methodshort{} conditions it on the reconstructed
+prompt \(p_i^{\mathrm{aug}}\).  Table~\ref{tab:matched-contract} lists the
+quantities shared by construction.
+
+\begin{table}[H]
+  \centering
+  \caption{Registered single-factor contract between the two Wan arms.  A
+  shared entry is hash- or value-bound before training.  The arm-specific
+  student condition is the only intended treatment difference.}
+  \label{tab:matched-contract}
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.27\linewidth}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X@{}}
+    \toprule
+    Quantity & Matched Control & \methodshort{} \\
+    \midrule
+    Student factual condition
+      & Original source in \(p_i^{\mathrm f}\)
+      & Assigned bank source in \(p_i^{\mathrm{aug}}\) \\
+    Counterfactual media and latent
+      & \multicolumn{2}{c}{Shared \(x_i^{\mathrm{cf}}\) and \(z_i^{\mathrm{cf}}\)} \\
+    Frozen-teacher condition
+      & \multicolumn{2}{c}{Shared \(p_i^{\mathrm{cf}}\) on the same noised latent} \\
+    Preservation branch
+      & \multicolumn{2}{c}{Same 36 videos, prompts, latents, and embeddings} \\
+    Erasure indices and update order
+      & \multicolumn{2}{c}{Same active 100 indices and alternating schedule} \\
+    Initialization and stochastic draws
+      & \multicolumn{2}{c}{Same LoRA initialization, noise, \(\sigma\), and timestep trace} \\
+    Optimizer, checkpoint, and inference
+      & \multicolumn{2}{c}{Identical registered configuration} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Seven equality receipts cover the 178 Matched student embeddings in each
+mechanism and require every fresh Matched encoding to equal its base-cache
+factual embedding tensor exactly.  Each training run then repeats an A--A
+numerical preflight: forward tensors and losses must match exactly, while the
+registered gradient tolerances require maximum absolute difference at most
+\(10^{-4}\), per-parameter relative \(\ell_2\) difference at most \(0.15\),
+and global relative \(\ell_2\) difference at most \(0.05\).  This preflight
+checks exact A--A forward/loss repeatability and bounded numerical variation
+in gradients; it does not require the
+Matched and \methodshort{} gradients or optimized trajectories to coincide
+after their student prompts diverge.
 
 \subsection{Optimization and Inference}
 \label{app:optimization-details}
 
-\outlineblock{Table C2}{
-List the common training seed, 200 updates, alternating erase/preserve
-schedule, LoRA modules and rank, learning rate, loss weights, inference scale,
-frame count, resolution, FPS, sampling steps, and precision.}
+Erasure and preservation are separate alternating updates.  On an erasure
+step, the student receives the arm-specific factual condition and a noised
+source-free target latent, while the adapter-disabled transformer supplies the
+online target-prompt prediction on the same latent and timestep.  On a
+preservation step, the student and frozen transformer receive the same generic
+prompt and noised preservation latent.  The implementation never sums the two
+objectives on one minibatch.
+
+\begin{table}[H]
+  \centering
+  \caption{Common Wan training and formal-inference configuration.  Every one
+  of the 18 registered Wan runs uses these values without mechanism-specific
+  tuning.}
+  \label{tab:wan-optimization-config}
+  \small
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.36\linewidth}>{\raggedright\arraybackslash}X@{}}
+    \toprule
+    Field & Registered value \\
+    \midrule
+    Base model & Wan 2.1 T2V 1.3B Diffusers \\
+    Adapter unit & One mechanism-specific LoRA per training run \\
+    Training data & 178 erasure bindings; 36 preservation bindings \\
+    Active schedule & 200 updates, strictly alternating 100 erasure and 100 preservation \\
+    Training seed / precision & 26000 / bfloat16 \\
+    LoRA & Rank 16, alpha 16, on \texttt{to\_q}, \texttt{to\_k}, \texttt{to\_v}, and \texttt{to\_out.0} \\
+    Optimizer & AdamW, learning rate \(5\!\times\!10^{-5}\), betas \((0.9,0.999)\), weight decay 0.01 \\
+    Batch / accumulation / clipping & 1 / 1 / maximum gradient norm 1.0 \\
+    Loss weights & \(\lambda_{\mathrm T}=4\), \(\lambda_{\mathrm P}=4\) \\
+    Checkpoint policy & Step 200 only \\
+    Formal inference & LoRA scale 1.25; guidance 5; 25 denoising steps \\
+    Video specification & 49 frames, 8 fps, \(832\!\times\!480\), bfloat16 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+All 18 runs produced an eligible step-200 checkpoint.  Their receipts record
+100 erasure and 100 preservation updates, a passed finite-parameter check, and
+the precommitted initialization, schedule, and noise-generator digests.  The
+formal generation runner verified the corresponding receipt and checkpoint
+hashes before producing any output.  These are 18 mechanism/control
+operators, not one jointly trained multi-mechanism adapter.
 
 \subsection{Identification Training Arms}
 \label{app:identification-arms}
 
-\outlineblock{Table C3}{
-Define Matched, Generic Paraphrase, Bystander Token, and \methodshort\ by what
-each arm changes and holds fixed. Reconcile seven Matched, seven method, and
-four identification training runs.}
+The identification study varies the surface realization and causal or
+noncausal placement of source vocabulary without changing the target, teacher,
+preservation branch, objective, schedule, or checkpoint policy.  The main
+design trains seven Matched and seven
+\methodshort{} adapters.  Water Impact and Brittle Fracture additionally
+receive a Generic Paraphrase and a Bystander Token adapter, yielding 18 Wan
+runs in total.
+
+\begin{table}[H]
+  \centering
+  \caption{Student-prompt intervention in each Wan training arm.  The two
+  identification controls are restricted to Water Impact and Brittle
+  Fracture.}
+  \label{tab:identification-arms}
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.23\linewidth}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{0.22\linewidth}@{}}
+    \toprule
+    Arm & Student factual condition & Runs \\
+    \midrule
+    Matched Control
+      & Original causal-source identity and registered wording
+      & Seven, one per mechanism \\
+    Generic Paraphrase
+      & Original causal-source identity with the opposite registered direct/natural wording
+      & Two: Water, Fracture \\
+    Bystander Token
+      & Original causal source retained; the \methodshort{}-assigned identity appears motionless in a far-background noncausal clause
+      & Two: Water, Fracture \\
+    \methodshort{}
+      & \methodshort{}-assigned identity occupies the causal-source slot
+      & Seven, one per mechanism \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+The Bystander Token construction matches the assigned-identity frequency
+distribution of \methodshort{} exactly while leaving the true causal source in
+place.  Generic Paraphrase instead preserves the original source and changes
+only its registered surface realization.  Thus these arms test paraphrase
+exposure and noun-frequency placement; they are not component-removal
+ablations of the losses in Sec.~\ref{subsec:training-objectives}.  The frozen
+identification subset contains 24 cases from each of Water and Fracture.  The
+Matched and \methodshort{} outputs are reused from the main evaluation, while
+Generic Paraphrase and Bystander Token add \(2\times2\times24=96\) videos.
 
 \subsection{External Baseline Implementations}
 \label{app:baseline-implementations}
 
-\outlineblock{Table C4}{
-For \negativeprompt, \videoeraser, \tvtwounlearning, and \safree, report
-repository revision, official versus adapted status, local patches,
-checkpoints, concept input, unavoidable interface constraints, and exact paper
-display name.}
+The external block uses one frozen CogVideoX-2B model inventory and supplies
+the same positive prompt and case seed to every compatible interface.
+CogVideoX Original receives no erasure concept.  Negative Prompt, VideoEraser,
+and SAFREE receive the registered mechanism name through their respective
+concept-string interfaces.  T2VUnlearning-adapted instead loads a separately
+trained operator for each mechanism and receives no concept string at
+inference.  Table~\ref{tab:external-baselines} distinguishes official
+pipelines from the internal adaptation required when matching public training
+code and mechanism checkpoints were unavailable.
+
+\begin{table}[H]
+  \centering
+  \caption{CogVideoX benchmark implementations and fidelity boundaries.}
+  \label{tab:external-baselines}
+  \footnotesize
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.25\linewidth}>{\raggedright\arraybackslash}X@{}}
+    \toprule
+    Display name & Registered implementation \\
+    \midrule
+    CogVideoX Original
+      & Unmodified positive-prompt generation on CogVideoX-2B. \\
+    \negativeprompt
+      & The mechanism name is supplied through the native negative-prompt interface. \\
+    \videoeraser
+      & Unmodified official CogVideoX SPEA/ARNG pipeline snapshot; the mechanism name is passed through its unsafe-concept interface. \\
+    \tvtwounlearning
+      & Paper-guided internal CogVideoX adaptation using negatively guided velocity matching and an unmasked adapter-residual magnitude penalty.  It does not claim parity with the unreleased QK/target-token mask or prompt-augmentation training procedure. \\
+    \safree
+      & Official CogVideoX pipeline snapshot with the mechanism name inserted as one registered in-memory concept entry; this interface runs in fp32. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+The VideoEraser snapshot is frozen at commit
+\texttt{ba19cceb561d}, with pipeline SHA-256 prefix
+\texttt{bd9e4052740e}.  The SAFREE snapshot is frozen at commit
+\texttt{b8b2c3fa9d7f}, with pipeline SHA-256 prefix
+\texttt{55185f5972ec}.  The complete revisions and digests are retained in the
+frozen baseline registry.
+For \tvtwounlearning, 36 prompts per mechanism are selected by a frozen
+hash rule and train rank-128 residual adapters on every CogVideoX
+\texttt{attn1} block.  Its precommitted configuration uses seed 12000,
+learning rate \(10^{-4}\), negative-velocity scale 7, residual-magnitude
+weight 1,
+no preservation term, and 100 updates; step 100 is the only eligible
+checkpoint.  Seven such checkpoints were frozen before formal generation.
 
 \subsection{Runtime and Generation Accounting}
 \label{app:generation-accounting}
 
-\outlineblock{Tables C5--C6}{
-Separate Wan and CogVideoX fairness blocks, report hardware and runtime, and
-reconcile 294 Wan Original, 684 trained-Wan, 1176 Cog core, and 294 SAFREE
-outputs. Bind counts to per-run receipts and aggregate manifests.}
+The frozen execution environment uses CPython 3.11.15, PyTorch 2.6.0 with
+CUDA 12.4, Diffusers 0.33.1, Transformers 4.51.3, and four NVIDIA
+A100-SXM4-80GB devices.  Table~\ref{tab:generation-config} records the two
+backbone-specific generation configurations.  Matching holds within each
+block; the different backbone, resolution, denoising budget, guidance, and
+SAFREE precision prevent raw cross-block scores from being interpreted as a
+pure method comparison.
 
-\claimboundary{Raw Wan and CogVideoX scores are not a same-backbone method
-ablation. T2VUnlearning-adapted must never be presented as an unavailable
-official mechanism checkpoint.}
+\begin{table}[H]
+  \centering
+  \caption{Backbone-specific formal generation settings.}
+  \label{tab:generation-config}
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.27\linewidth}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X@{}}
+    \toprule
+    Field & Wan block & CogVideoX block \\
+    \midrule
+    Backbone & Wan 2.1 T2V 1.3B & CogVideoX-2B \\
+    Resolution & \(832\!\times\!480\) & \(720\!\times\!480\) \\
+    Frames / fps & 49 / 8 & 49 / 8 \\
+    Denoising steps & 25 & 50 \\
+    Guidance scale & 5 & 6 \\
+    Scheduler & Frozen Wan pipeline default & CogVideoX DPM, trailing spacing, dynamic CFG \\
+    Precision & bfloat16 & Mixed: core backbone in bfloat16; T2V residual adapters and SAFREE in fp32 \\
+    Pairing & Same case prompt and seed within Wan & Same case prompt and seed within CogVideoX \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Every generated file was decoded before publication into the anonymous review
+package and checked for one video stream, no audio, 49 frames, 8 fps, the
+registered resolution, and a byte hash matching its generation receipt.
+Table~\ref{tab:generation-accounting} reconciles the complete package.
+
+\begin{table}[H]
+  \centering
+  \caption{Frozen formal-generation accounting.  The trained-Wan block
+  contains 588 main Matched/\methodshort{} videos and 96 additional
+  identification-control videos.}
+  \label{tab:generation-accounting}
+  \small
+  \begin{tabular}{@{}lrrr@{}}
+    \toprule
+    Block & Jobs & Expected & Validated \\
+    \midrule
+    Wan Original & 7 & 294 & 294 \\
+    Trained Wan & 18 & 684 & 684 \\
+    CogVideoX core four & 28 & 1,176 & 1,176 \\
+    SAFREE-CogVideoX & 7 & 294 & 294 \\
+    \midrule
+    Total & 60 & 2,448 & 2,448 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The 2,448 outputs consist of 2,352 main-study videos---294 cases under each
+of eight streams---and the 96 identification additions.  The four generation
+aggregates report complete expected and validated counts, and the package
+receipt confirms exact media and blinding validation.  Its SHA-256 prefix is
+\texttt{63933393ea04}.  The final baseline registry is frozen, authorizes
+formal generation, and has SHA-256 prefix \texttt{8a9d92b86bd1}; the full
+digests are contained in the frozen package receipt and baseline registry.
+Generation completion establishes inventory integrity, not a same-backbone
+comparison between Wan and CogVideoX or an official-training claim for
+\tvtwounlearning.
