@@ -1,8 +1,9 @@
 # Writing plan before prose
 
-Status: accepted writing contract. Progress updated 2026-09-08: Section 3,
-Method 4.1--4.3, and Appendices A--C have draft prose. The next evidence-ready
-batch is Appendix D/H followed by Section 5.1.
+Status: accepted writing contract. Progress updated 2026-09-09: Section 3,
+Method 4.1--4.3, Section 5.1, and Appendices A--D and H have draft prose.
+Appendices D and H retain explicit completion gates for the not-yet-materialized
+human-canonical and release artifacts.
 
 This plan separates three things:
 
@@ -81,8 +82,8 @@ The writing order should not follow the final section order.
 | 1 | Section 3 problem formulation | Drafted | Initial prose complete; final compression remains |
 | 2 | Section 4 method and Figure 2 specification | Method drafted | Figure 2 asset remains gated on a source manifest and hash |
 | 3 | Appendices A--C | Drafted | Initial prose compiled against frozen artifacts |
-| 4 | Appendix D protocol and Appendix H provenance | Next | Freeze a deviation-aware provenance amendment; leave final human agreement and final-table hashes open |
-| 5 | Section 5.1 experimental setup | Queued after D | Compress only verified appendix facts |
+| 4 | Appendix D protocol and Appendix H provenance | Drafted with completion gates | Freeze a deviation-aware provenance amendment; final human agreement and final-table hashes remain open |
+| 5 | Section 5.1 experimental setup | Drafted | Contains only verified appendix facts; final compression remains |
 | 6 | Final quantitative Appendices E--F | Not ready | Human calibration, audit, adjudication, and canonical metrics complete |
 | 7 | Sections 5.2--5.5 | Not ready | Generated human-canonical tables and registered claim gates available |
 | 8 | Appendix G and Section 5.6 | Not ready | Metadata-only selection manifest frozen and disclosed as post-unblinding descriptive |
@@ -462,8 +463,8 @@ it does not repeat the same compact tables verbatim.
 
 The A/B atomic-mean aggregation analysis is explicitly post-unblinding,
 non-canonical evaluator sensitivity. It is not a final primary endpoint or a
-claim gate. Final evaluator evidence is VLM-human agreement, coverage,
-adjudication, and human-canonical scores.
+claim gate and is excluded from the submission. Final evaluator evidence is
+VLM-human agreement, coverage, adjudication, and human-canonical scores.
 
 ## 7. Claim-to-evidence matrix
 
@@ -547,17 +548,25 @@ A section is ready for author review only if:
 10. removing the subsection would leave one identifiable reviewer question
     unanswered.
 
-## 10. First writing batch after plan approval
+## 10. Completed evidence-independent writing batches
 
-Status: complete. Section 3, Method 4.1--4.3, and Appendices A--C now have
-evidence-grounded draft prose. Figure 2 remains a separately gated asset.
+Status: complete through the second batch. Section 3, Method 4.1--4.3,
+Section 5.1, and Appendices A--D and H now have evidence-grounded draft prose.
+Figure 2 remains a separately gated asset; Appendices D and H retain visible
+completion gates for artifacts that do not yet exist.
 
-Do not begin with the abstract or introduction. The first batch should be:
+The completed first batch was:
 
 1. Section 3.1--3.3;
 2. Section 4.1--4.2 and the Figure 2 specification;
 3. Appendix A;
 4. Appendix B.
 
-Review that batch for logical necessity and terminology before writing the
-loss equations, experiment setup, or any result prose.
+That batch was reviewed for logical necessity and terminology before the loss
+equations and experimental setup were drafted.
+
+The completed second batch was Appendix D, Appendix H, and Section 5.1.  The
+next paper-only task is the citation ledger and Related Work.  The next
+experiment-provenance task is the additive deviation amendment, v2 wrappers,
+reviewer instructions, and final table exporter; result sections remain
+blocked until human canonicalization.

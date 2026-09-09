@@ -1,48 +1,373 @@
 \section{Reproducibility and Artifact Provenance}
 \label{app:reproducibility}
 
-\outlineblock{Reviewer question}{
-Can a reader reconstruct every dataset, output, score, and paper table from
-versioned code and frozen inputs?}
+The realized experiment is a content-addressed artifact graph rather than a
+collection of trusted file names.  Every completed stage binds its inputs and
+outputs by SHA-256; implementations are also bound where an existing registry
+records them, and the release manifest must close the remaining code-binding
+gaps.  These commitments identify the realized artifacts; they do not
+promise bitwise regeneration under a different CUDA stack or a future hosted
+model endpoint.  The graph is complete through the frozen initial human-audit
+queue.  Canonical scores, Original eligibility, shared-capability subsets,
+formal metrics, and final paper tables do not yet exist and therefore appear
+as pending rather than receiving prospective hashes.
 
 \subsection{End-to-End Artifact Graph}
 \label{app:artifact-graph}
 
-\outlineblock{Figure H1}{
-Trace ontology and formal cases through target generation, screening, caches,
-training, 2448 formal videos, anonymous packages, two VLM passes, human audit,
-canonical scores, and paper tables. Label each transition with its registry or
-receipt.}
+Figure~\ref{fig:artifact-graph} separates completed, private, and pending
+nodes.  The ontology and static build bind 1,344 target candidates, 294 formal
+cases and seeds, a 48-case identification subset, and the 18-run Wan matrix.
+Target generation contributes 1,152 new target videos and 192 manifest-bound
+Water target videos.  Treatment-blind screening freezes 1,246 source-free targets,
+exactly 178 per mechanism.  These targets, 36 preservation bindings, model and
+runtime inventories, and cache/run-spec registries feed 18 Wan checkpoints
+and seven adapted CogVideoX checkpoints.
 
-\subsection{Models, Environments, and Commands}
+The formal cases and checkpoint or baseline registries feed four generation
+branches: 294 Wan Original, 684 trained-Wan, 1,176 CogVideoX core, and 294
+SAFREE videos.  Path-rebound manifest views change only registered path fields
+and retain receipts for each rewrite; the source manifests remain unchanged.
+The package builder joins the 2,448 validated outputs only after re-decoding
+and hash verification, then creates two independently ordered anonymous
+passes and public commitments to the private mappings.  Their completed VLM
+scores determine the frozen 3,633-atom initial human queue.
+
+\begin{figure}[H]
+  \centering
+  \small
+  \fbox{%
+    \begin{minipage}{0.94\linewidth}
+      \centering
+      Frozen ontology, formal cases/seeds, and target candidates\\
+      \(\Downarrow\) target generation and treatment-blind screening\\
+      1,246 selected targets + 36 preservation bindings
+      \(\longrightarrow\) cache and run-spec registries\\
+      \(\Downarrow\) 18 Wan checkpoints + 7 adapted-T2V checkpoints\\
+      \(\Downarrow\) four generation aggregates
+      \(\longrightarrow\) 2,448 validated videos\\
+      \(\Downarrow\) \textbf{private} generation ledger and mappings
+      + \textbf{public} commitments\\
+      \(\Downarrow\) anonymous pass A + anonymous pass B
+      \(\longrightarrow\) two completed VLM score files\\
+      \(\Downarrow\) frozen initial human-audit queue\\[2pt]
+      \textit{Pending:} two human reviews \(\rightarrow\) adjudication
+      \(\rightarrow\) conditional expansion \(\rightarrow\)
+      deviation-aware canonical scores \(\rightarrow\) eligibility
+      \(\rightarrow\) formal metrics \(\rightarrow\) generated paper tables
+    \end{minipage}}
+  \caption{Artifact graph and current completion boundary.  Solid text denotes
+  materialized, hash-bound artifacts; the italicized final branch has not yet
+  been materialized.  SRCD is recorded as \texttt{V4} in the frozen run
+  artifacts.}
+  \label{fig:artifact-graph}
+\end{figure}
+
+\subsection{Models, Environments, and Entry Points}
 \label{app:commands-environments}
 
-\outlineblock{Table H1}{
-List model inventory, repository commit, environment identity, executable
-command, hardware, precision, and expected output count for every stage. Do
-not expose secrets or machine-specific private paths.}
+The A100 execution environment is frozen by a runtime registry: CPython
+3.11.15; PyTorch 2.6.0 with CUDA 12.4 and cuDNN 9.1.0 (reported as 90100); Diffusers 0.33.1;
+Transformers 4.51.3; Accelerate 1.14.0; and PEFT 0.15.2 on four NVIDIA
+A100-SXM4-80GB devices.  The runtime-registry and environment-content digest
+prefixes are respectively \texttt{9043adf7f823} and
+\texttt{cc3985d203ac}.  The Wan inventory contains 94 files and is bound by
+prefix \texttt{51e7199b99ee}; the CogVideoX-2B inventory contains 58 files and
+is bound by prefix \texttt{3cc964406b2a}.
+
+Tables~\ref{tab:stage-entry-points} and~\ref{tab:review-entry-points} inventory
+sanitized repository-relative entry points; they are not executable command
+lines.  A complete ledger with interpreter, subcommand, every required public
+argument, and placeholders for private inputs remains a release gate.
+
+\begin{table}[H]
+  \centering
+  \caption{Registry-driven data, training, and generation entry-point
+  inventory.  Complete executable commands are pending the release ledger.}
+  \label{tab:stage-entry-points}
+  \scriptsize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.15\linewidth}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{0.18\linewidth}>{\raggedright\arraybackslash}p{0.19\linewidth}@{}}
+    \toprule
+    Stage & Sanitized entry point & Environment & Realized output \\
+    \midrule
+    Static manifests
+      & \path{scripts/build_causal_role_erasure_7mechanism_main_v2.py}
+      & CPU Python
+      & 1,344 candidates; 294 cases; 18 runs \\
+    Target generation
+      & \path{scripts/run_causal_role_erasure_7mechanism_targets_v2.py --run}
+      & A100; Wan bf16
+      & 1,152 new + 192 reused target videos \\
+    Target selection
+      & \path{scripts/finalize_causal_role_erasure_7mechanism_targeted_audit_v1.py finalize}
+      & CPU validation
+      & 1,246 selected targets \\
+    Wan cache
+      & \path{scripts/run_causal_role_erasure_7mechanism_cache_queue_v2.sh}
+      & 4 A100s; bf16
+      & Frozen cache registries \\
+    Wan training
+      & \path{scripts/run_causal_role_erasure_7mechanism_training_queue_v2.sh}
+      & 4 A100s; bf16
+      & 18 eligible step-200 checkpoints \\
+    Adapted T2V training
+      & \path{scripts/run_causal_role_erasure_7mechanism_t2v_training_queue_v2.sh}
+      & 4 A100s; mixed
+      & 7 eligible step-100 checkpoints \\
+    Wan generation
+      & \path{scripts/run_causal_role_erasure_7mechanism_wan_original_queue_v2.sh}; \path{scripts/run_causal_role_erasure_7mechanism_eval_queue_v2.sh}
+      & A100; bf16
+      & 294 + 684 videos \\
+    CogVideoX generation
+      & \path{scripts/run_causal_role_erasure_7mechanism_baseline_queue_v2.py}
+      & A100; mixed
+      & 1,176 + 294 videos \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{Review and pending finalization entry points.  A clean pre-metric
+  code commit remains to be frozen.}
+  \label{tab:review-entry-points}
+  \footnotesize
+  \setlength{\tabcolsep}{3.5pt}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.18\linewidth}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{0.21\linewidth}>{\raggedright\arraybackslash}p{0.22\linewidth}@{}}
+    \toprule
+    Stage & Sanitized entry point & Environment & Realized output \\
+    \midrule
+    Anonymous package
+      & \path{scripts/run_causal_role_erasure_7mechanism_formal_review_v1.py --prepare-package}
+      & Local CPU; lock pending
+      & Two 2,448-item public passes \\
+    VLM review
+      & \path{scripts/run_causal_role_erasure_7mechanism_formal_review_v1.py --run-formal}
+      & Hosted registered configuration (Appendix~\ref{app:vlm-review})
+      & \(2\times2{,}448\) rows; 19,584 scored values \\
+    Canonicalization and tables
+      & Additive v2 wrappers and final exporter
+      & CPU; release lock pending
+      & Pending \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+The local composite and VLM workflow binds its five implementation files,
+panel contract, proxy/model parameters, raw responses, normalized checkpoints,
+and merged outputs, but it does not yet have a complete Python/package
+environment receipt.  A release-time reproduction environment is therefore a
+gate rather than a claim about the already executed local environment.
+Hosted-model responses are retained as realized scored
+artifacts rather than assumed to be bitwise replayable: downstream
+canonicalization consumes the frozen completed-score files, while a fresh API
+run tests the procedure without guaranteeing identical judgments.
 
 \subsection{Registries, Hashes, and Completion Receipts}
 \label{app:registries-receipts}
 
-\outlineblock{Table H2}{
-Map each stage to its input registry, output manifest, row or media count,
-SHA-256 commitment, completion status, and documented infrastructure replay.}
+Tables~\ref{tab:upstream-registry-map} and~\ref{tab:downstream-registry-map}
+list digest prefixes for compactness; the authority files retain complete
+SHA-256 values.  A mutable checkout commit is not used as the execution
+authority because the A100 worktree was not clean.  Release instead requires a
+new clean source commit whose relevant bytes reproduce every registry-bound
+implementation.
+
+\begin{table}[H]
+  \centering
+  \caption{Upstream data and training registry map.}
+  \label{tab:upstream-registry-map}
+  \footnotesize
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.27\linewidth}>{\raggedright\arraybackslash}Xl@{}}
+    \toprule
+    Stage / authority & Bound count or status & SHA prefix \\
+    \midrule
+    Static build registry & 7 mechanisms; 1,344 candidates; 294 cases; 18 runs & \texttt{4f7dd07e0ac2} \\
+    Ontology registry & 7 mechanisms & \texttt{37ef4920665e} \\
+    Formal cases & 294 rows & \texttt{555ec79a1f08} \\
+    Identification subset & 48 rows & \texttt{07e102ec70f3} \\
+    Target generation aggregate & 1,152 new + 192 Water reuse; complete & \texttt{3b7bc97cd4d2} \\
+    Target selection registry & 1,246; 178 per mechanism & \texttt{efe43d540f7a} \\
+    Selected-target table & 1,246 rows & \texttt{d5d97dfb9868} \\
+    Training-input registry & 1,246 targets + 36 preservation; 18 runs & \texttt{cd97ea21e7aa} \\
+    Wan run-spec registry & 18 frozen specs & \texttt{36c79a862918} \\
+    Adapted-T2V registry & 7 frozen specs & \texttt{cd71f08fdb9d} \\
+    Baseline registry & Stack ready; 1,470 expected outputs & \texttt{8a9d92b86bd1} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+All 18 Wan run receipts were checked individually: each records an eligible
+step-200 checkpoint, 100 erasure and 100 preservation updates, passed finite
+validation, and checkpoint, initialization, RNG, and schedule digests.  No
+single aggregate receipt inventory currently exists, so no aggregate digest
+is invented here; release must add a read-only inventory of those 18 existing
+files.
+
+\begin{table}[H]
+  \centering
+  \caption{Generation and evaluation registry map.}
+  \label{tab:downstream-registry-map}
+  \footnotesize
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.26\linewidth}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{0.27\linewidth}@{}}
+    \toprule
+    Stage / authority & Bound count or status & Digest prefix / kind \\
+    \midrule
+    Wan Original aggregate & 294/294 validated & \texttt{42cb825655bf} \\
+    Trained-Wan aggregate & 684/684 validated & \texttt{a5b482223480} \\
+    CogVideoX core aggregate & 1,176/1,176 validated & \texttt{fc25120ba705} \\
+    SAFREE aggregate & 294/294 validated & \texttt{2e73eb99b935} \\
+    Path-rebound registry & Four receipt-bound manifest views & \texttt{a13682bf3efb} \\
+    Anonymous package receipt & 2,448 validated and blinded & \texttt{63933393ea04} \\
+    Evaluation-code registry & 5 byte-frozen v1 implementations
+      & identity \texttt{bafc045ba94a}; file SHA \texttt{c4f10b712949} \\
+    Public key commitments & Three mapping tiers + blind-key commitment & \texttt{825d0d3c207b} \\
+    Pass-A merge & 2,448 schema-valid; zero fallback & \texttt{98b7f1b61070} \\
+    Pass-B merge & 2,448 schema-valid; zero fallback & \texttt{a5cc4a44c4eb} \\
+    Formal VLM launch receipt & Two complete passes & \texttt{833254ac9b38} \\
+    Initial human-audit manifest & 3,633 atoms; 2,009 videos & \texttt{d8f40e586ce3} \\
+    Additive v2 onward & Not materialized & --- \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+The full-key deviation does not authorize rewriting the five v1 files.  New
+versioned wrappers must bind the original evaluation-registry digest and a
+new deviation-amendment digest, state that global full-key access already
+occurred, and retain process-local answer-key blindness for the human
+reviewers.  They may change provenance statements but no score, audit,
+eligibility, bootstrap, estimability, multiplicity, margin, or claim rule.
+The original v1 \texttt{freeze}, \texttt{freeze-eligibility}, and formal
+metrics stages must not be run unchanged.
 
 \subsection{Paper-Table Provenance}
 \label{app:table-provenance}
 
-\outlineblock{Table H3}{
-Map every main and appendix table to its canonical CSV/JSON, generation
-script, code snapshot or commit, row count, and artifact hash. Generated LaTeX
-tables must include this provenance in comments and must not be edited by
-hand.}
+Final quantitative tables must be generated from canonical artifacts rather
+than edited from the current VLM preview.  Table~\ref{tab:paper-table-map}
+freezes the intended source mapping before canonical metrics are opened.
+
+\begin{table}[H]
+  \centering
+  \caption{Table-level provenance plan.  Descriptive setup tables already bind
+  materialized registries; quantitative result tables remain pending.}
+  \label{tab:paper-table-map}
+  \scriptsize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.17\linewidth}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{0.23\linewidth}@{}}
+    \toprule
+    Paper output & Required source & Status / exporter record \\
+    \midrule
+    Main T1 & \path{mechanism_metrics.csv} + \path{macro_metrics.csv}
+      & Pending: exporter, rows, hashes \\
+    Main T2 & \path{headline_contrasts.csv} + \path{noninferiority.csv} + \path{original_eligibility.csv} + \path{shared_capability_subsets.csv}
+      & Pending: exporter, rows, hashes \\
+    Main T3 & \path{identification_contrasts.csv}
+      & Pending: exporter, rows, hashes \\
+    Main T4 & \path{role_conditioned_evidence.csv}
+      & Pending: exporter, rows, hashes \\
+    E1 & \path{mechanism_metrics.csv} + \path{macro_metrics.csv} + \path{headline_mechanism_contrasts.csv}
+      & Pending: exporter, rows, hashes \\
+    E2 & \path{mechanism_metrics.csv} + \path{noninferiority.csv} + \path{per_case_metrics.csv}
+      & Pending: exporter, rows, hashes \\
+    E3 & \path{original_eligibility.csv} + \path{shared_capability_subsets.csv}
+      & Pending: exporter, rows, hashes \\
+    E4--E5 & \path{headline_contrasts.csv} + \path{headline_mechanism_contrasts.csv} + \path{noninferiority.csv}
+      & Pending: exporter, rows, hashes \\
+    E6--E7 & \path{secondary_metrics.csv} + \path{m6_pairs.csv}
+      & Pending: exporter, rows, hashes \\
+    F1--F2 & \path{identification_contrasts.csv}
+      & Pending: exporter, rows, hashes \\
+    F3 & \path{role_conditioned_evidence.csv} + \path{per_case_metrics.csv}
+      & Pending: exporter, rows, hashes \\
+    F Fig. 1 & \path{m6_pairs.csv}
+      & Pending: exporter, rows, hashes \\
+    F Fig. 2 & \path{headline_mechanism_contrasts.csv}
+      & Pending: exporter, rows, hashes \\
+    G1 & Canonical failure inventory + frozen qualitative-selection manifest
+      & Pending: selector/exporter/hashes \\
+    A--C & Frozen setup and training registries
+      & Materialized draft; source-bound \\
+    D & v1 evaluation registry + additive v2 amendment
+      & v1 source-bound; v2 pending \\
+    H & Reproduction-release manifest
+      & Draft; final manifest pending \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Before any canonical metric is viewed, the final exporter must freeze table
+schemas, ordering, decimal precision, missing-value rendering, and emphasis
+rules.  Each generated TeX header records canonical status; source manifest,
+table path, digest, and row count; evaluation-registry and deviation-amendment
+digests; exporter path and digest; the clean pre-metric code commit; and the
+input-score and metric-artifact digests.  Regeneration must byte-check these
+outputs.  The current preview exporter is permanently
+non-canonical and cannot be renamed or copied into the submission.
+Its A/B nonlinear-order sensitivity table is likewise excluded.  Retaining
+such a sensitivity analysis would require a separately frozen, explicitly
+descriptive exporter and a corresponding submission-gate update.
 
 \subsection{Release and Submission Checklist}
 \label{app:release-checklist}
 
-\outlineblock{Content}{
-Enumerate released ontology, prompts, formal cases and seeds, evaluator
-rubrics, schemas, source code, aggregate scores permitted by policy, and
-reproduction commands. Include a final check that no preliminary,
-non-canonical result is imported by the submission driver.}
+During anonymous review, the evaluator-facing public package contains randomized identifiers,
+assignments, temporal composites, blank score schemas, the evaluation-code
+registry, and commitments to hidden mappings.  It contains no stream, method,
+or backbone identity, and its launcher records zero private files opened.  A
+human reviewer will receive an isolated copy of
+\path{human_audit_stage0/public/} only.  The parent workspace and unsanitized
+blind secret, mappings, generation ledger, package receipt, and API
+credentials remain outside reviewer copies and the paper-submission tree.
+Machine-specific absolute paths may remain in internal handoff documentation,
+but release checks reject them from reviewer deliveries and released
+manifests; only permitted hashes and sanitized aggregate facts are public.
+
+After human and metric freeze, reproducibility requires more than those
+anonymous commitments.  The release must publish a sanitized derivative of
+the package-provenance receipt that binds its private parent digest
+\texttt{63933393ea04\ldots}, together with de-anonymized canonical/per-case
+artifacts sufficient to recompute method-indexed tables, without publishing
+the blind secret itself.  The released receipt carries the complete parent
+digest; the manuscript prints only its prefix.  Selected target media,
+checkpoints, and formal videos must be released where policy permits;
+otherwise their manifests, hashes, access conditions, and resulting
+reproduction limit must be stated explicitly rather than presenting aggregate
+verification as full rerunnability.
+
+The release procedure is:
+\begin{enumerate}
+  \item during anonymous review, retain every private mapping and secret
+        outside the submission and reviewer deliveries;
+  \item add and freeze the local evaluation-environment lock, the 18-receipt
+        inventory, the additive deviation amendment, v2 wrappers, reviewer
+        instructions, the full executable-command ledger, the artifact-DAG
+        verifier, and final table exporter before viewing canonical metrics;
+  \item freeze a clean pre-metric code commit and its stage-to-code/artifact
+        manifest, including every component from the preceding item;
+  \item complete two human reviews, adjudication, and any required expansion;
+  \item materialize canonical scores, eligibility, shared subsets, formal
+        metrics, generated tables, and their parent-hash chain;
+  \item run the artifact-DAG verifier and submission gate against the exact
+        tree to be committed, confirming that no preview root, non-canonical
+        manifest, or private path is reachable from the submission driver;
+  \item freeze a post-metric artifact-and-paper commit without changing the
+        pre-metric scoring code, then bind that commit and its released
+        artifacts in an immutable out-of-tree release receipt or Git tag; and
+  \item release the sanitized package-provenance receipt,
+        de-anonymized canonical/per-case tables, ontology, selected-target
+        manifests and treatment-blind screening scores, prompts, formal cases
+        and seeds, identification subset, rubrics, schemas, code, audit and
+        adjudication provenance, available media/checkpoints, aggregate
+        results, reproduction commands, and explicit availability limits.
+\end{enumerate}
+
+\outlineblock{Final release completion gate}{
+Fill the pending v2 and table rows only from newly materialized receipts.
+Record final hashes, human agreement/coverage, the clean pre-metric code
+commit, and the intended out-of-tree binding for the post-metric
+artifact-and-paper commit; then remove this block after the DAG and submission
+checks pass.}

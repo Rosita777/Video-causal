@@ -1,6 +1,6 @@
 # Project Handoff
 
-Last updated: 2026-09-08
+Last updated: 2026-09-09
 
 This is the authoritative handoff document. When another document conflicts
 with this one, treat the other document as historical until explicitly updated.
@@ -136,14 +136,14 @@ data.
 8. Run the amended `freeze` stage to produce anonymous canonical scores.
 9. Run the amended `freeze-eligibility` stage to freeze
    Original capability and shared subsets.
-10. Run the amended formal metric builder and the already-frozen final table
-    exporter.  The existing exporter remains preview-only.
+10. Run the amended formal metric builder and the pre-metric-frozen final
+    table exporter.  The existing exporter remains preview-only.
 
-In parallel with human review, write only evidence-independent paper material:
-evaluation protocol, reproducibility, and experimental setup.  Method and
-training/baseline details now have draft prose.  Appendix E/F tables, Sections
-5.2--5.5, the abstract result sentence, and the introduction's result paragraph
-wait for the final human-canonical artifacts.
+The evidence-independent evaluation protocol, reproducibility appendix, and
+experimental setup now have draft prose.  Citation-ledger construction and
+Related Work may proceed in parallel with human review.  Appendix E/F tables,
+Sections 5.2--5.5, the abstract result sentence, and the introduction's result
+paragraph wait for the final human-canonical artifacts.
 
 ## 5. Artifact Locations
 
@@ -178,10 +178,10 @@ reviewers.
 
 ## 6. Paper and Claim Boundary
 
-The paper uses the official ICLR 2027 template.  Section 3, Method 4.1--4.3,
-and Appendices A--C have draft prose.  Appendix D/H and Section 5.1 are the
-next writing batch.  The final result tables and result prose remain blocked
-on human canonicalization.
+The paper uses the official ICLR 2027 template. Section 3, Method 4.1--4.3,
+Section 5.1, and Appendices A--D and H have draft prose. Appendices D and H
+retain explicit completion gates. The final result tables and result prose
+remain blocked on human canonicalization.
 
 Permitted before final scoring:
 

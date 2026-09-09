@@ -10,9 +10,10 @@ Template provenance and hashes are recorded in
 Paragraph-level writing must follow [WRITING_PLAN.md](WRITING_PLAN.md). That
 plan is reviewed before manuscript prose is drafted.
 
-Current draft status (2026-09-08): Section 3, Method 4.1--4.3, and Appendices
-A--C contain prose. Appendix D/H and Section 5.1 are next. Final quantitative
-tables and result prose remain blocked on human canonicalization.
+Current draft status (2026-09-09): Section 3, Method 4.1--4.3, Section 5.1,
+and Appendices A--D and H contain prose. Appendices D and H retain explicit
+completion gates. Final quantitative tables and result prose remain blocked
+on human canonicalization.
 
 ## Paper spine
 
@@ -62,7 +63,7 @@ floats and revision.
 | C Training and Baselines | Is the Matched-versus-method comparison single-factor, and are baselines faithful? |
 | D Evaluation and Metrics | What did VLMs and humans see, and how do atomic labels become CES/SU? |
 | E Complete Results | Are all methods, mechanisms, guardrails, contrasts, and secondary outcomes visible? |
-| F Controls and Sensitivity | Is the behavior role-conditioned rather than lexical, and is it aggregation-robust? |
+| F Controls and Sensitivity | Is the behavior role-conditioned rather than lexical, and is it stable across mechanisms? |
 | G Qualitative and Failures | What changes over time, where does the method fail, and how were examples chosen? |
 | H Reproducibility | Can every table be traced to frozen registries, commands, and receipts? |
 

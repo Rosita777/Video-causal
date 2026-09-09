@@ -6,7 +6,7 @@ preserving the receiver, scene quality, and noncausal uses of the same entity.
 
 ## Current Status
 
-Updated 2026-09-08.  The active protocol is
+Updated 2026-09-09.  The active protocol is
 `causal_role_erasure_7m_single_seed_v2`; the earlier single-mechanism
 water-impact studies are historical development evidence.
 
@@ -60,9 +60,10 @@ structure and internal discussion but must not supply final paper claims.
 ## Paper Status
 
 The manuscript uses the official ICLR 2027 template under `paper/`.
-Section 3, Method 4.1--4.3, and Appendices A--C have draft prose.  Results,
-final tables, and the abstract result sentence remain gated on human-canonical
-scores.  The writing order and claim boundaries are in
+Section 3, Method 4.1--4.3, Section 5.1, and Appendices A--D and H have draft
+prose. Appendices D and H retain explicit completion gates. Results, final
+tables, and the abstract result sentence remain gated on human-canonical
+scores. The writing order and claim boundaries are in
 [`paper/WRITING_PLAN.md`](paper/WRITING_PLAN.md).
 
 ## Start Here
@@ -95,10 +96,10 @@ seed, mechanism weight, prompt set, or method variant on the formal data.
    5% high-confidence-error expansion rule.
 5. Freeze anonymous canonical scores, then freeze Original eligibility and
    shared-capability subsets.
-6. Run the amended formal metric builder and the already-frozen final table
+6. Run the amended formal metric builder and the pre-metric-frozen final table
    exporter.
-7. In parallel, continue paper sections that do not depend on final scores:
-   evaluation details, reproducibility, experimental setup, and related work.
+7. In parallel, build the citation ledger and draft Related Work; refine the
+   completed evidence-independent sections only against frozen evidence.
 
 ## Artifact Locations
 

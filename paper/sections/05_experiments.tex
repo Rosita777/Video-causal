@@ -10,24 +10,59 @@ the conclusion stops.}
 \subsection{Experimental Setup}
 \label{subsec:experimental-setup}
 
-\outlineblock{Seven mechanisms}{
-List the seven equal-status mechanisms and the 24 causal plus 18 specificity
-cases per mechanism. Report 294 semantic cases, eight main streams, 2352 main
-videos, and 96 additional Water/Fracture identification videos.}
+\paragraph{Mechanisms and cases.}
+We evaluate seven equal-status mechanisms: water impact, rigid collision,
+brittle fracture, powder impact, elastic deformation, material release, and
+surface trace. Each contributes 24 causal and 18 specificity cases. The causal
+set balances three source--receiver generalization groups and crosses direct
+or natural wording with explicit or implicit footprint descriptions. The
+specificity set crosses three source memberships, two wording styles, and
+three noncausal subtypes: same-noun noncausal use, role swap or near-causal
+use, and the
+same footprint produced by an alternative cause. This gives 294 semantic
+cases. Eight main streams produce 2,352 videos; Generic Paraphrase and
+Bystander Token on a frozen 48-case Water/Fracture subset add 96, for 2,448
+formal outputs.
 
-\outlineblock{Models and baselines}{
-Separate the Wan block (Original, \matchedcontrol, \methodshort) from the
-CogVideoX block (Original, \negativeprompt, \videoeraser,
-\tvtwounlearning, \safree). State why raw scores across backbones are
-descriptive and why external headline contrasts require shared Original
-capability.}
+\paragraph{Models and baselines.}
+The eight main streams are separated by backbone. The Wan block contains Wan Original,
+\matchedcontrol, and \methodshort, while the CogVideoX block contains
+CogVideoX Original, \negativeprompt, \videoeraser, \tvtwounlearning, and
+\safree. Methods within each block receive the same positive case prompt and
+seed. The
+Wan \methodshort{}--Matched contrast is the single-factor comparison. Raw
+scores across backbone blocks are descriptive; registered external contrasts
+instead normalize each method by its same-backbone Original and will be
+restricted to cases for which both Originals satisfy the registered
+eligibility criterion. These remain cross-backbone normalized benchmark
+comparisons rather than pure method ablations.
 
-\outlineblock{Evaluation and statistics}{
-Give the compact definitions of Original eligibility, usability, \ces, and
-\su. State full-49-frame blinded review, final human-canonical authority,
-case-level inference, mechanism-first equal weighting, paired bootstrap,
-Holm correction, and registered non-inferiority margins. Put the full rubric,
-audit flow, and formulas in \appref{app:evaluation-metrics}.}
+\paragraph{Evaluation and statistics.}
+Every output receives a randomized review identifier, and the public package
+removes method, backbone, checkpoint, and source-path cues while interleaving
+all streams. Each judgment covers all 49 indexed frames through five
+overlapping temporal panels. Two independently ordered passes of the same registered
+VLM judge assign the registered \(0/1/2\) atomic scores for source or
+protected-object visibility, footprint visibility or noncausal-role
+adherence, receiver preservation, and video quality. These outputs are
+prelabels rather than final authority. Two process-locally answer-key-blind
+humans will independently score the registered audit atoms, and a third will
+adjudicate every disagreement. A mechanism-by-field stratum will expand to all
+remaining atoms when the audited high-confidence A/B agreements disagree with
+resolved human labels at a rate strictly above 5\%. Final paper statistics
+will use the
+resulting post-adjudication canonical table: audited atoms use human consensus
+or adjudication, while an unaudited atom may retain only qualifying
+high-confidence VLM agreement. As defined in
+Sec.~\ref{subsec:desiderata}, \ces{} gives graded causal-erasure credit only
+when the same-backbone Original is eligible and the output remains usable;
+\su{} measures protected-object visibility and noncausal-role adherence on
+usable specificity cases. We average cases within each mechanism and weight
+the seven means equally. Inference uses 10,000 paired,
+mechanism-stratified case-bootstrap replicates, unadjusted 2.5--97.5
+percentile intervals, Holm correction over five headline p-values, and prespecified
+non-inferiority margins. Full rubrics, audit rules, provenance deviation, and
+claim gates appear in \appref{app:evaluation-metrics}.
 
 \subsection{Main Results across Seven Mechanisms}
 \label{subsec:main-results}

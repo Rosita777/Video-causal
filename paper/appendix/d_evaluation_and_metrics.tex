@@ -1,73 +1,341 @@
 \section{Blind Full-Video Evaluation and Statistical Protocol}
 \label{app:evaluation-metrics}
 
-\outlineblock{Reviewer question}{
-What did each evaluator see, how was method identity hidden, how are humans
-used, and how do atomic labels become claims?}
+Evaluation converts each anonymous 49-frame output into four atomic judgments
+before aggregation; method identity is not an input to VLM or human scoring.
+The frozen inventory contains 2,352 main-study videos and 96 Water/Fracture
+identification additions.  This appendix specifies what an evaluator sees,
+how the anonymous package is separated from its keys, how VLM prelabels are
+audited by humans, and how the resulting canonical atoms become registered
+claims.
 
 \subsection{Anonymous Package and Key Separation}
 \label{app:anonymous-package}
 
-\outlineblock{Content}{
-Describe random review identifiers, method/backbone removal, interleaved
-ordering, Original-only and full answer-key commitments, code-registry
-binding, and both the registered and observed opening sequences. Include the
-full evidence-chain diagram.}
+Every physical output is bound to the frozen generation ledger and assigned a
+pseudorandom review identifier derived from a secret-keyed digest of its ledger
+record.  A public assignment exposes the mechanism-specific semantic context
+needed for judgment---prompt, source, receiver, trigger, footprint, requested
+counterfactual state, and, where applicable, specificity fields---but removes
+the stream, method, backbone, checkpoint, adapter, case identifier, generation
+seed, and source path.  Mechanism identity is therefore rubric context rather
+than a hidden variable; treatment identity is hidden.  Each assignment shows
+one anonymous video, never a side-by-side method comparison, and the
+identification outputs are interleaved with the main inventory.
 
-\subsection{Protocol Deviations and Remaining Blinding}
+Passes A and B use the same 2,448 anonymous identifiers and byte-identical
+composites, but their item orders have independent commitments.  Public
+commitments bind the generation ledger, blind key, five-file evaluation-code
+registry, and the three private mapping tiers in
+Table~\ref{tab:key-separation}.  The formal VLM launcher validates only the
+public tree and records zero private files opened by that process.
+
+\begin{table}[H]
+  \centering
+  \caption{Registered key separation and observed status.  Row counts disclose
+  inventory size, not any anonymous-ID-to-method mapping.}
+  \label{tab:key-separation}
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.12\linewidth}r>{\raggedright\arraybackslash}p{0.34\linewidth}>{\raggedright\arraybackslash}X@{}}
+    \toprule
+    Tier & Rows & Registered role & Observed status \\
+    \midrule
+    0 & 2,448
+      & Opaque stream strata for process-local method-blind human-audit sampling
+      & Used to freeze the public human queue \\
+    1 & 588
+      & Original-only mapping for capability and shared-subset eligibility
+      & Opened by the post-unblinding exploratory metrics process; not opened by the VLM launcher \\
+    2 & 2,448
+      & Full stream and method mapping for final registered metrics
+      & Accessed by a separate read-only audit before human review and later by the exploratory metrics process \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{Protocol Deviation and Remaining Blinding}
 \label{app:evaluation-deviations}
 
-\outlineblock{Required disclosure}{
-Record that a separate read-only audit opened the full method key before human
-canonicalization and before the exploratory A/B-mean decision was
-materialized. Distinguish the unaffected anonymous A/B scoring, the
-post-unblinding exploratory drafting tables, and the still-answer-key-blind
-human review queue. State that final human-canonical tables cannot
-retroactively recover a globally pre-unblinding analysis.}
+The registered and observed evaluation sequences differ at the opening of the
+full method key.  Both VLM passes were completed from the public-only package:
+neither pass received a method mapping or the other pass's answer.  Separately,
+a read-only audit opened the full key before human
+canonicalization and before the exploratory A/B-mean aggregation rule was
+materialized.  The tables produced by that later rule are explicitly
+post-unblinding, non-canonical writing previews and cannot enter final results
+or claim gates.
+
+The frozen human queue contains neither method identities nor VLM scores.
+Reviewers who receive isolated copies of its public directory can therefore
+remain process-locally answer-key blind.  This remaining blinding does not
+restore a globally pre-unblinding analysis: investigator-level access to the
+full key is irreversible, and final human review cannot retroactively remove
+that deviation.
+
+The five evaluation implementations bound by the original code registry must
+remain byte-identical.  Before canonical freeze, an additive, versioned
+amendment must bind that registry and a deviation declaration, preserve every
+rubric, sampling, substitution, expansion, eligibility, estimability,
+bootstrap, multiplicity, and claim rule, and emit truthful provenance stating
+that the global key was previously opened while the human scoring process
+remained blind.
+
+The registered key sequence is anonymous canonical atoms, then tier-1
+Original eligibility and shared subsets, and only then tier-2 deanonymization
+and metrics.  The amendment changes the provenance description of that
+sequence, not its computations.
+
+\outlineblock{Unfinished provenance gate}{
+Freeze the additive amendment and its sanitized human-review instructions
+before labeling.  Replace this block only after the new manifest and
+implementation hashes are fixed; do not edit or relabel any registry-bound v1
+file.}
 
 \subsection{Full-49-Frame Temporal Representation}
 \label{app:temporal-panels}
 
-\outlineblock{Figure D1}{
-Show the five overlapping indexed panels covering frames 0--48. Explain the
-center-crop contract, one-image-per-item interface, and why a sparse
-five-frame sheet is insufficient.}
+A sparse sample of frames can miss a short trigger, confuse a pre-existing
+mark with a causal footprint, or hide a late source reappearance.  Each review
+input therefore contains all 49 indexed frames in the five overlapping
+windows listed in Table~\ref{tab:temporal-panels}.  Every window has 13 frame
+tiles, so the overlap preserves context at panel boundaries.
 
-\subsection{Two Independent VLM Passes}
+\begin{table}[H]
+  \centering
+  \caption{Full-video panel contract.  Together the five windows cover every
+  indexed frame from 0 through 48.}
+  \label{tab:temporal-panels}
+  \small
+  \begin{tabular}{@{}lccccc@{}}
+    \toprule
+    Panel & 1 & 2 & 3 & 4 & 5 \\
+    \midrule
+    Inclusive frames & 0--12 & 9--21 & 18--30 & 27--39 & 36--48 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The deterministic renderer center-crops without letterboxing, resizes each
+tile to \(112\times64\) with Lanczos resampling, labels its frame index, and
+packs the panels into one \(1456\times520\) JPEG.  The fixed quality is 82 and
+the maximum payload is 3 MiB.  A/B receive byte-identical composites.  Both
+the VLM prompt and the human protocol require judgments from visible frames;
+the textual prompt describes the requested scene but never proves that an
+object, trigger, or footprint appears.
+
+\subsection{Two Independently Ordered VLM Passes}
 \label{app:vlm-review}
 
-\outlineblock{Tables D1--D2}{
-Give the complete causal and specificity 0/1/2 rubrics, evaluator prompt,
-strict response schema, confidence and evidence fields, independent ordering,
-retry rules, model identity, and zero-fallback requirement.}
+The formal prelabeler is the same judge in two independently ordered passes,
+not two different models.  Both passes use \texttt{gpt-5.6-luna} with low
+reasoning effort, temperature 1, a 1,600-token response budget, and response
+storage disabled.  Each covers all 2,448 assignments.  The judge is instructed
+to label one video independently, avoid inferring the method, avoid choosing a
+winner, and treat a partial score as valid scientific evidence rather than a
+failure to return a binary answer.
+
+\begin{table}[H]
+  \centering
+  \caption{Frozen atomic rubric.  Visibility is lower-is-better only when it
+  measures the causal source or footprint; all preservation and specificity
+  fields are higher-is-better.}
+  \label{tab:atomic-rubric}
+  \footnotesize
+  \setlength{\tabcolsep}{3.5pt}
+  \begin{tabularx}{\linewidth}{@{}l>{\raggedright\arraybackslash}p{0.26\linewidth}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X@{}}
+    \toprule
+    Case & Field & 0 & 1 & 2 \\
+    \midrule
+    Causal & Source visibility & Absent & Partial or ambiguous & Clearly visible \\
+    Causal & Footprint visibility & Absent & Partial or ambiguous & Clearly visible \\
+    Both & Receiver preservation & Bad or unrecognizable & Partial & Good or recognizable \\
+    Both & Video quality & Bad or unusable & Partially usable & Good \\
+    Specificity & Protected-object visibility & Absent & Partial or ambiguous & Clearly visible \\
+    Specificity & Noncausal-role adherence
+      & Becomes the source or completes the trigger
+      & Partial or ambiguous causal role
+      & Remains noncausal and does not complete the trigger \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+For a registered same-footprint alternative-cause case, a visible footprint
+is not penalized when the allowed alternative visibly causes it and the
+protected object remains noncausal.  For every field, the strict response
+schema requires one integer score, an independent confidence in \([0,1]\),
+and one to eight nonempty observations tied to distinct frame indices in
+\(\{0,\ldots,48\}\); extra fields are rejected.  A refusal, timeout, model
+mismatch, incomplete response, API failure, or schema error is infrastructure
+failure rather than a scientific score.  Only the affected identifier may be
+retried, in a fresh run root, and no zero-value scientific fallback is
+permitted.  Both completed merge manifests contain 2,448 schema-valid rows
+and zero fallbacks.
 
 \subsection{Human Calibration, Audit, and Adjudication}
 \label{app:human-audit}
 
-\outlineblock{Content}{
-Specify the two-human calibration sample, VLM disagreement and partial-item
-review, low-confidence and unusable review, high-confidence agreement audit,
-third-person adjudication, expansion threshold, and final coverage/agreement
-statistics. Only post-adjudication atoms may feed final paper results.}
+The two VLM passes produce 9,792 unique video-field atoms, each scored twice.
+The audit seed is 8,202,600.  A deterministic stratified sample selects
+\(\lceil0.10n\rceil\) atoms within each mechanism, opaque stream stratum, and
+field for calibration.  The queue also includes every A/B atomic disagreement,
+every atom scored partial by either pass, every atom whose confidence in
+either pass is below 0.75, and all atoms from an output marked unusable by
+either pass.  An output is unusable if either pass supplies an explicit
+unusable reason or assigns zero to receiver preservation or video quality.
+A separate stratified \(\lceil0.10n\rceil\) sample is drawn from usable,
+non-partial A/B agreements for which both confidences are at least 0.75.
+These rules overlap;
+the current frozen union contains 3,633 atoms spanning 2,009 anonymous videos.
+
+Two humans must score this same frozen set independently from isolated copies
+of the public package.  They use the definitions in
+Table~\ref{tab:atomic-rubric}, cannot inspect private keys or each other's
+labels, and may alter only their designated score and note fields.  Agreement
+becomes the resolved human score; every disagreement requires a third
+adjudicator, and an adjudicator entry is forbidden when the first two scores
+agree.
+
+Audit expansion is determined separately for each mechanism-by-field stratum.
+Among sampled high-confidence A/B agreements, an error occurs when the
+resolved human score differs from the common VLM score.  A rate strictly above
+5\% expands that stratum to all remaining atoms, and a triggered expansion is
+irreversible.  In the final anonymous canonical table, every audited atom uses
+human consensus or adjudication.  An unaudited atom is retained only when A
+and B agree on a non-partial score, both confidences meet the threshold, and
+the output is usable.
+
+\outlineblock{Final human-canonical reporting}{
+Human labeling has not begun.  After adjudication and any expansion, report
+VLM--VLM disagreement; pass-specific calibration and targeted-audit macro-F1
+and quadratic-weighted kappa against resolved human labels; human atom/video
+coverage; human disagreement; expanded strata and atoms; and the final
+canonical artifact hashes.}
 
 \subsection{Eligibility, CES, and Specificity Utility}
 \label{app:metric-definitions}
 
-\outlineblock{Figure D2 and Table D3}{
-Trace atomic scores through Original eligibility, usability, per-case \ces\
-or \su, mechanism mean, and equal-weight seven-mechanism macro. Give formulas,
-ranges, direction, fixed-denominator policy, and a worked partial-credit
-example.}
+Original eligibility is a capability condition on the corresponding unedited
+backbone, not evidence of erasure.  Using the notation of
+Sec.~\ref{subsec:desiderata},
+\begin{align}
+  E_b(u)
+  &=
+  \mathbb{1}\!\left[
+    S_{\operatorname{Orig}(b)}(u)=2,\,
+    F_{\operatorname{Orig}(b)}(u)\geq1,\,
+    R_{\operatorname{Orig}(b)}(u)\geq1,\,
+    Q_{\operatorname{Orig}(b)}(u)\geq1
+  \right], \\
+  U_k(u)
+  &=
+  \mathbb{1}\!\left[R_k(u)\geq1,\;Q_k(u)\geq1\right], \\
+  \ces_k(u)
+  &=
+  E_b(u)U_k(u)
+  \frac{(2-S_k(u))+(2-F_k(u))}{4}.
+  \label{eq:appendix-ces}
+\end{align}
+An Original-ineligible case and an unusable method output remain in the fixed
+denominator but contribute zero.  On an eligible, usable case with both source
+and footprint scored partial, \(\ces=0.5\); the metric therefore represents
+graded progress without requiring complete disappearance.  It is an absolute
+gated output score.  Efficacy is tested by a registered paired contrast, not
+by a positive score on one output.
+
+For specificity,
+\begin{align}
+  U_k^{\mathrm{sp}}(u)
+  &=
+  \mathbb{1}\!\left[R_k(u)\geq1,\;Q_k(u)\geq1\right], \\
+  \su_k(u)
+  &=
+  U_k^{\mathrm{sp}}(u)
+  \frac{P_k(u)+N_k(u)}{4}.
+  \label{eq:appendix-su}
+\end{align}
+Both \(\ces\) and \(\su\) lie in \([0,1]\), with larger values better.
+Receiver preservation, video quality, usability, and Original capability are
+reported separately.  Cases are first averaged within each mechanism; the
+seven mechanism means then receive equal weight \(1/7\).  No mechanism or
+Original-ineligible case is dropped after outputs are observed.
 
 \subsection{Inference, Multiplicity, and Claim Gates}
 \label{app:statistical-protocol}
 
-\outlineblock{Tables D4--D5}{
-Specify paired case-cluster bootstrap, 10000 replicates, registered seeds,
-five-comparison Holm family, shared-capability minimum, non-inferiority
-margins, and the exact gates for efficacy, retention, generalization, and
-role-versus-word evidence.}
+Each semantic case has one fixed generation seed, so the inferential unit is
+the case rather than the seed.  For the primary same-backbone comparison,
+\begin{equation}
+  C_{\mathrm{Matched}}(u)
+  =
+  \ces_{\mathrm{SRCD}}(u)-\ces_{\mathrm{Matched}}(u).
+  \label{eq:matched-contrast}
+\end{equation}
+For external CogVideoX method \(q\), the registered shared-capability contrast
+is
+\begin{equation}
+  C_q(u)
+  =
+  \bigl(\ces_{\mathrm{SRCD}}(u)-\ces_{\mathrm{WanOrig}}(u)\bigr)
+  -
+  \bigl(\ces_q(u)-\ces_{\mathrm{CogOrig}}(u)\bigr).
+  \label{eq:external-contrast}
+\end{equation}
+Equation~\ref{eq:external-contrast} is evaluated only where both Originals are
+eligible.  A method-by-mechanism cell with fewer than 12 of 24 shared cases is
+not estimable.  An external macro is formed only if all seven mechanism cells
+are estimable; otherwise it is reported as NE rather than zero or
+\(p=1\).  The final exporter must render the complete inference row as NE and
+must not expose an internal sentinel p-value.
 
-\claimboundary{Non-inferiority is decided by the confidence-interval lower
-bound relative to its margin. Do not label a superiority p-value relative to
-zero as a non-inferiority p-value.}
+For headline, preservation, implicit-footprint, and held-out-source analyses,
+paired cases are resampled with replacement within each mechanism and the
+seven resampled mechanism means are averaged equally.  The identification
+analysis instead resamples its 12 causal cases separately within Water and
+Fracture and averages those two mechanism means equally; its specificity
+non-inferiority analysis analogously resamples 12 specificity cases inside
+each of those mechanisms.  The registered
+analysis uses 10,000 PCG64 replicates with seed 8,202,601 for the former
+analyses and seed 8,202,602 for identification.  The reported interval is the
+unadjusted 2.5--97.5 percentile interval.  A superiority p-value is
+\((1+\#\{C^\ast\leq0\})/10001\).  Holm's step-down procedure at family-wise
+\(\alpha=0.05\) covers the five headline contrasts against Matched, Negative
+Prompt, VideoEraser, T2VUnlearning-adapted, and SAFREE-CogVideoX.  A registered win
+requires estimability, a positive point estimate, an interval lower bound
+above zero, and a Holm-adjusted one-sided p-value below 0.05.  The phrase
+\emph{outperforms all baselines} requires all five wins.
+
+\begin{table}[H]
+  \centering
+  \caption{Primary preservation non-inferiority margins for
+  \(\mathrm{SRCD}-\mathrm{Matched}\).  Each decision compares the paired 95\%
+  interval lower bound with the margin.}
+  \label{tab:noninferiority-margins}
+  \small
+  \begin{tabular}{@{}lcc@{}}
+    \toprule
+    Metric & Cases per mechanism & Margin \\
+    \midrule
+    Specificity Utility & 18 specificity & \(-0.10\) \\
+    Receiver preservation / 2 & 24 causal & \(-0.10\) \\
+    Video quality / 2 & 24 causal & \(-0.10\) \\
+    Usable fraction & 24 causal & \(-0.05\) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Non-inferiority is licensed only when the paired interval lower bound is
+strictly above its registered margin.  A superiority p-value against zero is
+reported by the metric builder but is not a non-inferiority p-value.  The full
+role-conditioned claim additionally requires the SRCD--Matched headline win
+and positive seven-mechanism macro estimates on implicit-footprint and
+held-out-source cases.  For each identification control, its 12 Water and 12
+Fracture causal cases must yield a positive two-mechanism mean, an interval
+lower bound above zero, and a Holm-adjusted p-value below 0.05 in the
+two-control family.  Its equal-weight mean over the six implicit cases in each
+mechanism must be positive, and its 12 specificity cases per mechanism must
+place the Specificity Utility interval lower bound above \(-0.10\).  All four
+primary margins in Table~\ref{tab:noninferiority-margins} must also pass.
+Complete absence, strict success, and the six registered causal--specificity
+pairs per mechanism (42 total) remain secondary descriptive outcomes rather
+than promotion gates.
