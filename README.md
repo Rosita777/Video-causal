@@ -6,7 +6,7 @@ preserving the receiver, scene quality, and noncausal uses of the same entity.
 
 ## Current Status
 
-Updated 2026-09-09.  The active protocol is
+Updated 2026-09-10.  The active protocol is
 `causal_role_erasure_7m_single_seed_v2`; the earlier single-mechanism
 water-impact studies are historical development evidence.
 
@@ -57,6 +57,11 @@ The existing generated tables are explicitly labeled
 `WRITING_PREVIEW_ONLY_NOT_FOR_FINAL_SCIENTIFIC_CLAIMS`.  They may guide paper
 structure and internal discussion but must not supply final paper claims.
 
+The additive pre-metric authority is now frozen at implementation commit
+`b0fffa4fc8d9` and out-of-tree manifest `b3892f5d6b59...`.  Its release
+environment records 64 passed tests with zero failures or skips, and its
+verified prefix DAG retains all nine human/canonical/final outputs as pending.
+
 ## Paper Status
 
 The manuscript uses the official ICLR 2027 template under `paper/`.
@@ -82,23 +87,20 @@ scores. The writing order and claim boundaries are in
 The method and GPU experiment are frozen.  Do not tune another checkpoint,
 seed, mechanism weight, prompt set, or method variant on the formal data.
 
-1. Freeze a provenance amendment that truthfully records the already-opened
-   global method key while preserving process-local answer-key-blind human
-   review and every registered scoring rule.  Add new versioned files/wrappers;
-   do not edit any v1 evaluation-registry-bound implementation.
-2. Implement and freeze the final human-canonical table exporter before
-   viewing canonical metrics; the current exporter is preview-only.
-3. Freeze sanitized reviewer instructions, then give each independent reviewer
-   an isolated copy of only
-   `../causal7m_formal_review_launch_v5/human_audit_stage0/public/`.  Never
-   copy its parent directory or any `private/` directory.
-4. Adjudicate every human disagreement and apply the registered greater-than-
-   5% high-confidence-error expansion rule.
-5. Freeze anonymous canonical scores, then freeze Original eligibility and
-   shared-capability subsets.
-6. Run the amended formal metric builder and the pre-metric-frozen final table
-   exporter.
-7. In parallel, build the citation ledger and draft Related Work; refine the
+1. Preserve clean pre-metric implementation commit `b0fffa4fc8d9` and the
+   out-of-tree freeze rooted at `../causal7m_pre_metric_freeze_v2/`; do not
+   modify or bypass its bound v1/v2 components.
+2. Use the frozen delivery builder to give each reviewer an isolated,
+   receipt-bound copy of only the public human-audit package.  Have both
+   reviewers independently complete all 3,633 initial atoms.
+3. Adjudicate every disagreement and freeze the initial review-process
+   receipt.  Run the registered expansion decision, then complete and attest
+   the reviewer-specific final projections and freeze the final process
+   receipt even when no expansion is needed.
+4. Run only the deviation-aware v2 canonical freeze, eligibility freeze, and
+   formal metric wrapper, followed by the pre-metric-frozen final exporter.
+   The v1 final entry points and preview exporter remain prohibited.
+5. In parallel, build the citation ledger and draft Related Work; refine the
    completed evidence-independent sections only against frozen evidence.
 
 ## Artifact Locations
@@ -109,8 +111,10 @@ The formal A100 project is
 review artifacts live outside this Git checkout in the sibling workspaces:
 
 - `../causal7m_formal_media_snapshot_v1`;
-- `../causal7m_wan_original_snapshot_v1`; and
-- `../causal7m_formal_review_launch_v5`.
+- `../causal7m_wan_original_snapshot_v1`;
+- `../causal7m_formal_review_launch_v5`;
+- `../causal7m_environment_receipt_v1`; and
+- `../causal7m_pre_metric_freeze_v2`.
 
 Do not clean, overwrite, or regenerate these roots.  Model weights, videos,
 caches, private answer keys, and review secrets remain outside Git.  Commit

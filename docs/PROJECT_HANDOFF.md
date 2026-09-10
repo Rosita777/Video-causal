@@ -1,6 +1,6 @@
 # Project Handoff
 
-Last updated: 2026-09-09
+Last updated: 2026-09-10
 
 This is the authoritative handoff document. When another document conflicts
 with this one, treat the other document as historical until explicitly updated.
@@ -81,8 +81,8 @@ record zero scientific fallback values.  The formal launch receipt has status
 
 Human labeling has not started.  The frozen initial audit contains
 3,633 atomic judgments over 2,009 anonymous videos.  Reviewer 1, reviewer 2,
-and adjudicator fields are all blank.  Two answer-key-blind reviewers must
-score the same queue independently; a third reviewer adjudicates every human
+and adjudicator fields are all blank.  Two process-locally answer-key-blind
+reviewers must score the same queue independently; a third reviewer adjudicates every human
 disagreement.  If a mechanism-by-field stratum has greater than 5% error among
 the audited high-confidence VLM agreements, the frozen workflow expands that
 stratum before canonical scores are frozen.
@@ -95,21 +95,22 @@ into final paper tables or result claims.
 
 A separate read-only audit opened the complete method key before human
 canonicalization and before the exploratory A/B-mean rule was materialized.
-The final human reviewers can remain answer-key blind, but the global
-pre-unblinding state cannot be restored.  The evaluation section must disclose
+The final human reviewers can remain process-locally answer-key blind, but the
+global pre-unblinding state cannot be restored.  The evaluation section must disclose
 this protocol deviation.
 
-This deviation also makes the current v1 provenance labels
+This deviation also makes the v1 provenance labels
 `canonical_anonymous_scores_frozen_before_answer_key_opening` and
 `original_eligibility_and_shared_subsets_frozen_before_full_key_opening`
 globally false.  Do not run the v1 `freeze`, `freeze-eligibility`, or formal
-metrics stages unchanged.  Before canonical freeze, create and freeze a
-versioned amendment that preserves the scoring, audit-expansion, and
-estimability rules while recording that the reviewers remain process-locally
-answer-key blind after a separate process opened the global key.
-Keep every v1 evaluation-registry-bound implementation byte-identical.  The
-amendment must be additive: new versioned files or wrappers bind the old
-registry and the new amendment digest rather than rewriting frozen v1 code.
+metrics stages unchanged.  The additive v2 amendment, wrappers, release
+environment, reviewer-process layer, final exporter, command ledger, and
+prefix DAG are now frozen by implementation commit `b0fffa4fc8d9` and
+out-of-tree pre-metric manifest `b3892f5d6b59...`.  All five v1
+evaluation-registry-bound implementations remain byte-identical.
+The bound release-environment receipt records 64 passed tests with zero
+failures or skips; the independently rerun prefix DAG verifier reports 40
+materialized nodes and leaves all nine human/canonical/final nodes pending.
 
 ## 4. Exact Next Actions
 
@@ -117,27 +118,28 @@ No additional method tuning, training seed, checkpoint selection, generation
 replicate, case replacement, or GPU experiment is authorized on the formal
 data.
 
-1. Freeze the deviation-aware canonicalization and metric-provenance amendment
-   described above; do not alter any score, audit, or claim threshold and do
-   not edit any v1 registry-bound implementation.
-2. Implement and freeze the human-canonical table exporter before opening
-   canonical metrics, so presentation cannot be tailored to observed values.
-3. Freeze sanitized 0/1/2 human-review instructions and two isolated copies of
+1. Preserve implementation commit `b0fffa4fc8d9` and
+   `../causal7m_pre_metric_freeze_v2/`; do not edit a bound component or use a
+   direct v1 final entry point.
+2. Use the frozen delivery builder to prepare two receipt-bound isolated
+   reviewer copies of
    `../causal7m_formal_review_launch_v5/human_audit_stage0/public/`.  Never
    copy its parent directory or any `private/` directory to a reviewer.
-4. Have reviewer 1 and reviewer 2 independently complete all 3,633 atomic
+3. Have reviewer 1 and reviewer 2 independently complete all 3,633 atomic
    judgments without seeing the other's labels.
-5. Merge only the reviewer score/note columns into one schema-preserving
+4. Merge only the reviewer score/note columns into one schema-preserving
    completed CSV; all binding and context field values must remain exactly
    unchanged.
-6. Adjudicate every disagreement with a third reviewer.
-7. Run the amended `expand-audit` stage.  If it emits an expansion, repeat
-   independent review and adjudication for the added atoms.
-8. Run the amended `freeze` stage to produce anonymous canonical scores.
-9. Run the amended `freeze-eligibility` stage to freeze
+5. Adjudicate every disagreement with a third reviewer and freeze the initial
+   review-process receipt.
+6. Run the registered `expand-audit` stage.  Prepare reviewer-specific final
+   projections, independently score any added rows, adjudicate, and freeze the
+   final process receipt; this round remains required when no expansion fires.
+7. Run the v2 `freeze` stage to produce anonymous canonical scores.
+8. Run the v2 `freeze-eligibility` stage to freeze
    Original capability and shared subsets.
-10. Run the amended formal metric builder and the pre-metric-frozen final
-    table exporter.  The existing exporter remains preview-only.
+9. Run the v2 formal metric wrapper and the pre-metric-frozen final
+   table exporter.  The existing exporter remains preview-only.
 
 The evidence-independent evaluation protocol, reproducibility appendix, and
 experimental setup now have draft prose.  Citation-ledger construction and
@@ -170,7 +172,11 @@ Frozen local workspaces outside this checkout are:
 - `../causal7m_formal_media_snapshot_v1` (2,154 non-Wan-Original videos);
 - `../causal7m_wan_original_snapshot_v1` (294 Wan Original videos); and
 - `../causal7m_formal_review_launch_v5` (review package, VLM passes, audit
-  queue, and exploratory previews).
+  queue, and exploratory previews);
+- `../causal7m_environment_receipt_v1` (64-pass release-environment receipt);
+  and
+- `../causal7m_pre_metric_freeze_v2` (clean implementation, command ledger,
+  18-run inventory, and verified prefix DAG).
 
 Do not clean, move, overwrite, or regenerate these roots.  Private key files,
 answer mappings, and blind secrets must not enter Git or be shown to human

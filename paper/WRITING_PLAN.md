@@ -1,9 +1,10 @@
 # Writing plan before prose
 
-Status: accepted writing contract. Progress updated 2026-09-09: Section 3,
+Status: accepted writing contract. Progress updated 2026-09-10: Section 3,
 Method 4.1--4.3, Section 5.1, and Appendices A--D and H have draft prose.
-Appendices D and H retain explicit completion gates for the not-yet-materialized
-human-canonical and release artifacts.
+The pre-metric provenance prefix and final table interface are frozen;
+Appendices D and H retain explicit completion gates only for the
+not-yet-materialized human-canonical and final-release artifacts.
 
 This plan separates three things:
 
@@ -82,7 +83,7 @@ The writing order should not follow the final section order.
 | 1 | Section 3 problem formulation | Drafted | Initial prose complete; final compression remains |
 | 2 | Section 4 method and Figure 2 specification | Method drafted | Figure 2 asset remains gated on a source manifest and hash |
 | 3 | Appendices A--C | Drafted | Initial prose compiled against frozen artifacts |
-| 4 | Appendix D protocol and Appendix H provenance | Drafted with completion gates | Freeze a deviation-aware provenance amendment; final human agreement and final-table hashes remain open |
+| 4 | Appendix D protocol and Appendix H provenance | Pre-metric prefix drafted and frozen | Final human agreement, canonical outputs, and final-release hashes remain open |
 | 5 | Section 5.1 experimental setup | Drafted | Contains only verified appendix facts; final compression remains |
 | 6 | Final quantitative Appendices E--F | Not ready | Human calibration, audit, adjudication, and canonical metrics complete |
 | 7 | Sections 5.2--5.5 | Not ready | Generated human-canonical tables and registered claim gates available |
@@ -484,18 +485,18 @@ VLM-human agreement, coverage, adjudication, and human-canonical scores.
 
 The paper must disclose that the full method key was opened by a read-only
 audit before human canonicalization and before the exploratory A/B-mean rule
-was materialized. Final human labels can remain answer-key blind, but the
+was materialized. Final human labels can remain process-locally answer-key
+blind, but the
 global pre-unblinding state cannot be restored.
 
-The current v1 canonicalizer and metric builder encode provenance states that
-assume the answer key and full method key have not been opened. They must not
-produce final artifacts unchanged. A versioned amendment must preserve every
+The v1 canonicalizer and metric builder encode provenance states that assume
+the answer key and full method key have not been opened. They must not produce
+final artifacts unchanged. The frozen additive v2 amendment preserves every
 scoring, expansion, estimability, and claim rule while distinguishing
 process-local answer-key-blind human review from the already-opened global key.
-This amendment must be additive: all evaluation-registry-bound v1 files remain
-byte-identical, while new versioned files or wrappers bind the old registry and
-the amendment digest. The final human-canonical table exporter is implemented
-and frozen before canonical metrics are opened.
+All evaluation-registry-bound v1 files remain byte-identical; the new wrappers
+bind the old registry and amendment digest. The final human-canonical table
+exporter is likewise frozen before canonical metrics are opened.
 
 ## 8. Paragraph style contract
 
@@ -566,7 +567,8 @@ That batch was reviewed for logical necessity and terminology before the loss
 equations and experimental setup were drafted.
 
 The completed second batch was Appendix D, Appendix H, and Section 5.1.  The
-next paper-only task is the citation ledger and Related Work.  The next
-experiment-provenance task is the additive deviation amendment, v2 wrappers,
-reviewer instructions, and final table exporter; result sections remain
-blocked until human canonicalization.
+next paper-only task is the citation ledger and Related Work.  The additive
+deviation amendment, v2 wrappers, reviewer instructions, tested release
+environment, and final table exporter are frozen; the next experimental stage
+is independent human review. Result sections remain blocked until human
+canonicalization.

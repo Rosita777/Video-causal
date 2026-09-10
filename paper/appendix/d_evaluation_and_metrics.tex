@@ -73,24 +73,27 @@ restore a globally pre-unblinding analysis: investigator-level access to the
 full key is irreversible, and final human review cannot retroactively remove
 that deviation.
 
-The five evaluation implementations bound by the original code registry must
-remain byte-identical.  Before canonical freeze, an additive, versioned
-amendment must bind that registry and a deviation declaration, preserve every
-rubric, sampling, substitution, expansion, eligibility, estimability,
-bootstrap, multiplicity, and claim rule, and emit truthful provenance stating
-that the global key was previously opened while the human scoring process
-remained blind.
+The five evaluation implementations bound by the original code registry
+remain byte-identical.  A frozen additive v2 amendment now binds that registry
+and the deviation declaration.  Its wrappers change only manifest schema,
+provenance wording, and orchestration: every rubric, sampling, substitution,
+expansion, eligibility, estimability, bootstrap, multiplicity, margin, and
+claim rule remains the registered v1 computation.  The human-review process
+must still establish its own answer-key blindness through isolated deliveries
+and explicit process attestations.
 
 The registered key sequence is anonymous canonical atoms, then tier-1
 Original eligibility and shared subsets, and only then tier-2 deanonymization
 and metrics.  The amendment changes the provenance description of that
 sequence, not its computations.
-
-\outlineblock{Unfinished provenance gate}{
-Freeze the additive amendment and its sanitized human-review instructions
-before labeling.  Replace this block only after the new manifest and
-implementation hashes are fixed; do not edit or relabel any registry-bound v1
-file.}
+The amendment self-digest begins \texttt{f65652b23bc8}.  The out-of-tree
+pre-metric manifest begins \texttt{b3892f5d6b59} and binds clean implementation
+commit \texttt{b0fffa4fc8d9} (tree \texttt{4edcade573bf}), the sanitized
+review instructions, the tested release environment, the final table
+exporter, and the additive wrappers.  Its prefix artifact DAG passes the
+registered pre-metric verifier.  This closes the provenance-before-labeling
+gate without changing any registry-bound v1 byte; final human-canonical
+reporting remains pending.
 
 \subsection{Full-49-Frame Temporal Representation}
 \label{app:temporal-panels}
@@ -195,6 +198,13 @@ labels, and may alter only their designated score and note fields.  Agreement
 becomes the resolved human score; every disagreement requires a third
 adjudicator, and an adjudicator entry is forbidden when the first two scores
 agree.
+
+After the initial process receipt is frozen, the registered expansion
+decision always creates a final audit child.  Each reviewer receives a
+separate projection that retains only that reviewer's own prior columns,
+blanks peer and adjudicator columns, and leaves any added atoms blank.  A
+final process receipt is required even when the decision adds no atoms; only
+this receipt can authorize canonical freeze.
 
 Audit expansion is determined separately for each mechanism-by-field stratum.
 Among sampled high-confidence A/B agreements, an error occurs when the
