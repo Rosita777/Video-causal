@@ -20,6 +20,12 @@ frozen before human labeling; quantitative tables and the headline result
 sentences in the Introduction and abstract remain blocked on human
 canonicalization.
 
+An internal post-unblinding VLM-only Results draft now lives in
+`tables/preliminary/results_writing_preview_v2_preliminary.tex`. It is visible
+only in the outline build, is explicitly non-canonical, and is deliberately
+rejected by the submission gate. Clean prose-mode PDFs continue to omit all
+preview numbers.
+
 ## Paper spine
 
 The manuscript follows one claim-driven chain:
@@ -68,7 +74,7 @@ floats and revision.
 | C Training and Baselines | Is the Matched-versus-method comparison single-factor, and are baselines faithful? |
 | D Evaluation and Metrics | What did VLMs and humans see, and how do atomic labels become CES/SU? |
 | E Complete Results | Are all methods, mechanisms, guardrails, contrasts, and secondary outcomes visible? |
-| F Controls and Sensitivity | Is the behavior role-conditioned rather than lexical, and is it stable across mechanisms? |
+| F Role Controls, Generalization, and Heterogeneity | Is the behavior role-conditioned rather than lexical, and how does it vary across mechanisms? |
 | G Qualitative and Failures | What changes over time, where does the method fail, and how were examples chosen? |
 | H Reproducibility | Can every table be traced to frozen registries, commands, and receipts? |
 
@@ -138,17 +144,22 @@ Main figures:
    target, distillation, and preservation.
 3. Compact temporal comparison: one explicit causal case, one implicit causal
    case, and one specificity case, selected by a metadata-only deterministic
-   rule frozen after aggregate unblinding and labeled descriptive. The caption
-   reports the observed outcome rather than guaranteeing success or failure.
+   rule frozen after aggregate unblinding and labeled descriptive. The G0
+   selection commitment excludes Original eligibility and all outcome data; a
+   later immutable render receipt records eligibility and media/figure hashes.
+   The caption reports the observed outcome rather than guaranteeing success
+   or failure.
 
 Main tables:
 
 1. Eight methods by seven mechanisms plus equal-weight macro CES, separated
    into Wan and CogVideoX blocks.
-2. Macro efficacy and preservation guardrails.
-3. Generic-paraphrase and bystander-token identification controls, including
-   specificity.
-4. Implicit-footprint and held-out-source evidence.
+2. Wan macro efficacy and preservation guardrails.
+3. External Original-normalized contrasts and estimability.
+
+Generic-paraphrase, Bystander Token, implicit-footprint, and held-out-source
+results are summarized in main-text prose; their complete tables live in
+Appendix F.
 
 All preliminary tables live under tables/preliminary and must carry an
 explicit VLM-only, non-canonical label. Final generated tables will live under

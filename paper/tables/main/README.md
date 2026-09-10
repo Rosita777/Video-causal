@@ -10,6 +10,12 @@ Planned interfaces:
 - tab_identification_controls.tex
 - tab_generalization.tex
 
+The frozen exporter keeps all four files in this generated interface. Under
+the current nine-page plan, the compact identification and generalization
+projections are generated for compatibility but are not rendered. Section 5.3
+summarizes them in prose and points to the exporter's distinct, more complete
+Appendix F1--F3 projections.
+
 Each generated file must begin with comments recording the source result
 manifest, source hash, row count, code commit, and canonical status. Generated
 tables are never edited by hand.

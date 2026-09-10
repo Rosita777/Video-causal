@@ -73,6 +73,10 @@ Introduction headline sentences remain gated on human-canonical scores. The
 writing order and claim boundaries are in
 [`paper/WRITING_PLAN.md`](paper/WRITING_PLAN.md).
 
+The internal outline build now contains an explicitly non-canonical VLM-only
+Results writing preview. Prose-mode and submission builds omit every preview
+number; only the later human-canonical exporter may populate final results.
+
 ## Start Here
 
 - [`docs/PROJECT_HANDOFF.md`](docs/PROJECT_HANDOFF.md): authoritative current
@@ -102,9 +106,10 @@ seed, mechanism weight, prompt set, or method variant on the formal data.
 4. Run only the deviation-aware v2 canonical freeze, eligibility freeze, and
    formal metric wrapper, followed by the pre-metric-frozen final exporter.
    The v1 final entry points and preview exporter remain prohibited.
-5. In parallel, refine the completed evidence-independent prose and citation
-   ledger only against frozen evidence.  Keep result paragraphs and the
-   abstract headline gated on the human-canonical tables.
+5. In parallel, refine the evidence-independent prose and use the isolated
+   VLM-only preview only to prepare result-writing branches. Keep every final
+   result paragraph, table, and abstract headline gated on the
+   human-canonical exporter.
 
 ## Artifact Locations
 

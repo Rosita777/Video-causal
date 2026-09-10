@@ -64,71 +64,48 @@ percentile intervals, Holm correction over five headline p-values, and prespecif
 non-inferiority margins. Full rubrics, audit rules, provenance deviation, and
 claim gates appear in \appref{app:evaluation-metrics}.
 
-\subsection{Main Results across Seven Mechanisms}
+% The hand-written VLM preview is visible only in the internal outline build.
+% Its path deliberately trips the fail-closed submission gate until final
+% human-canonical tables replace it; prose-mode PDFs never load the file.
+\ifoutline
+  \input{tables/preliminary/results_writing_preview_v2_preliminary}
+\fi
+
+\subsection{Main Efficacy and Guardrails}
 \label{subsec:main-results}
 
-\outlineblock{Table 1 - seven-mechanism main view}{
-Present eight methods by seven mechanisms plus macro \ces, visibly separated
-into Wan and CogVideoX blocks. Report observed ranking, mechanism
-heterogeneity, and the descriptive cross-backbone boundary.}
-
-\outlineblock{Table 2 - Wan main contrast and guardrails}{
-Report the single-factor \methodshort-minus-Matched contrast together with
-\su, Original capability, receiver preservation, video quality, usability,
-confidence intervals, multiplicity status, and registered preservation
-margins. State external shared-capability estimability separately.}
+\ifoutline
+  \previewmainresults
+\fi
 
 \claimboundary{Use \emph{highest observed} rather than a significance claim
 unless the final interval, multiplicity correction, and estimability gates all
 pass. Do not convert a non-estimable external contrast into a win or a loss.}
 
-\subsection{Role or Word? Identification Controls}
+\subsection{Role Evidence beyond Lexical Shortcuts}
+\label{subsec:role-evidence}
 \label{subsec:role-or-word}
-
-\outlineblock{Table 3 - two-mechanism identification design}{
-Compare \methodshort\ with Generic Paraphrase and frequency-matched Bystander
-Token controls. For each, report causal \ces, require a positive
-implicit-footprint point estimate, and report specificity difference against
-its registered non-inferiority margin.
-Explain what lexical explanation each control removes and state explicitly
-that these runs cover only Water and Fracture.}
-
-\claimboundary{If any final identification guardrail fails, describe the
-evidence as partial support or as behavior consistent with role conditioning.
-Do not claim that the full role-conditioned novelty criterion passed.}
-
-\subsection{Beyond Explicit Footprints and Seen Sources}
 \label{subsec:generalization}
 
-\outlineblock{Table 4 - two generalization questions}{
-Test whether the gain remains when the prompt does not name the footprint and
-when the source identity is excluded from training. Report the paired
-contrasts, intervals, per-mechanism counts, and their overlap. These are
-behavioral generalization tests, not independent replications.}
+\ifoutline
+  \previewroleevidence
+\fi
 
-\subsection{Preservation and Failure Analysis}
+\claimboundary{The Generic Paraphrase and Bystander Token runs cover only
+Water and Fracture. If any final identification or specificity condition
+fails, report partial support rather than claiming that the full
+role-conditioned criterion passed. Implicit-footprint and held-out-source
+subsets overlap and are not independent replications.}
+
+\subsection{Components, Failures, and Qualitative Evidence}
 \label{subsec:preservation-failures}
-
-\outlineblock{Continuous efficacy components}{
-Separate the gated source and footprint contributions to \ces. Distinguish a
-graded reduction in visibility from complete absence and strict success.}
-
-\outlineblock{Guardrails and difficult mechanisms}{
-Report \su, receiver preservation, video quality, and usable fraction against
-their prespecified margins. Then discuss negative or weak mechanisms,
-Original-capability limits, residual sources or footprints, and any
-efficacy-preservation trade-off. Do not hide these observations in the
-appendix.}
-
-\subsection{Qualitative Comparisons}
 \label{subsec:qualitative-main}
 
-\outlineblock{Figure 3 - compact temporal evidence}{
-Use identical frame indices and method order for one explicit causal case, one
-implicit causal case, and one specificity case. Label source, footprint, and
-receiver. Use a deterministic metadata-only selection rule that never reads
-per-method media or scores, and disclose that this rule is frozen after
-aggregate unblinding. Describe whatever outcome is actually visible rather
-than promising a success or failure. Treat the display as descriptive; move the full
-eight-stream, seven-mechanism grids to
-\appref{app:qualitative-failures}.}
+\ifoutline
+  \previewcomponentsfailures
+\fi
+
+\claimboundary{Distinguish graded visibility reduction from complete absence
+and strict success. Report weak mechanisms and preservation costs in the main
+text. Insert no qualitative result before the metadata-only selection
+commitment is frozen, and never replace a selected case after viewing it.}

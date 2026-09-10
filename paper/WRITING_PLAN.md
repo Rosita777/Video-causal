@@ -88,8 +88,8 @@ The writing order should not follow the final section order.
 | 4 | Appendix D protocol and Appendix H provenance | Pre-metric prefix drafted and frozen | Final human agreement, canonical outputs, and final-release hashes remain open |
 | 5 | Section 5.1 experimental setup | Drafted | Contains only verified appendix facts; final compression remains |
 | 6 | Final quantitative Appendices E--F | Not ready | Human calibration, audit, adjudication, and canonical metrics complete |
-| 7 | Sections 5.2--5.5 | Not ready | Generated human-canonical tables and registered claim gates available |
-| 8 | Appendix G and Section 5.6 | Not ready | Metadata-only selection manifest frozen and disclosed as post-unblinding descriptive |
+| 7 | Sections 5.2--5.4 | Internal preview drafted; final prose not ready | Generated human-canonical tables and registered claim gates available |
+| 8 | Appendix G and qualitative part of Section 5.4 | Not ready | Metadata-only selection manifest frozen and disclosed as post-unblinding descriptive |
 | 9 | Related Work | Drafted and source-checked | Refresh the ledger before submission if new close work appears |
 | 10 | Introduction | Drafted except the headline result | Quantitative headline waits for canonical evidence |
 | 11 | Scope, Conclusion, and ICLR statements | Scope/Conclusion drafted | Human coverage, supported result language, and author-reviewed AI-use history remain gated |
@@ -310,6 +310,11 @@ Use the evidence order:
 > overall efficacy -> role identification -> surface-form generalization ->
 > preservation and failures -> qualitative evidence
 
+The final main-text result budget uses three subsections rather than five so
+that headings and repeated transitions do not displace the main table or
+qualitative evidence. Full identification and generalization tables live in
+Appendix F.
+
 #### 5.1 Experimental Setup
 
 Keep this near half a page with bold run-in headings:
@@ -320,72 +325,54 @@ Keep this near half a page with bold run-in headings:
 
 No result or preliminary number belongs in this subsection.
 
-#### 5.2 Main Results across Seven Mechanisms
+#### 5.2 Main Efficacy and Guardrails
 
-Paragraph 1: Table 1 observed eight-by-seven ranking.
+Paragraph 1: Table 1 observed eight-by-seven ranking, separated into Wan and
+CogVideoX blocks.
 
-Paragraph 2: Table 2 same-backbone SRCD-minus-Matched estimate, interval, and
-multiplicity status.
+Paragraph 2: the same-backbone SRCD-minus-Matched estimate, interval,
+multiplicity status, and primary preservation guardrails. The frozen final
+macro-table interface produces one Wan float and one external-estimability
+float; cite both by label rather than hard-coded table number.
 
-Paragraph 3: mechanism heterogeneity and difficult mechanisms.
-
-Paragraph 4: preservation guardrails and external shared-capability
-estimability boundary.
+Paragraph 3: mechanism heterogeneity, difficult mechanisms, Original
+capability, and the external shared-capability estimability boundary.
 
 Template:
 
 > question or licensed conclusion -> decisive estimate and interval ->
 > heterogeneity -> preservation -> boundary
 
-#### 5.3 Role or Word?
+#### 5.3 Role Evidence beyond Lexical Shortcuts
 
-Paragraph 1: explain what the two controls remove as alternative
-explanations.
+Paragraph 1: explain what Generic Paraphrase and Bystander Token remove as
+alternative explanations, report their causal, implicit-footprint, and
+specificity conditions, and state the Water/Fracture-only scope. Put the full
+control table in Appendix F.
 
-Paragraph 2: Generic Paraphrase causal result, positive implicit-footprint
-point-estimate condition, and specificity result.
-
-Paragraph 3: Bystander Token causal result, positive implicit-footprint
-point-estimate condition, and specificity result.
-
-Paragraph 4: joint interpretation and the Water/Fracture-only scope.
+Paragraph 2: report implicit-footprint and held-out-source contrasts, their
+overlap, and mechanism heterogeneity. Put their full breakdown in Appendix F
+and do not call them independent replications.
 
 If either registered guardrail fails, write partial support or consistent
 with; do not claim that the full role-conditioned criterion passed.
 
-#### 5.4 Beyond Explicit Footprints and Seen Sources
+#### 5.4 Components, Failures, and Qualitative Evidence
 
-Paragraph 1: implicit-footprint contrast.
+Paragraph 1: separate graded source/footprint efficacy from complete absence
+and strict success, then report weak mechanisms and preservation costs that
+the macro mean hides.
 
-Paragraph 2: held-out-source contrast.
+Paragraph 2 and Figure 3: disclose the metadata-only deterministic rule and
+that it is frozen after aggregate unblinding, so the display is descriptive.
+Use three Wan rows---Original, Matched, and SRCD---for one explicit causal,
+one implicit causal, and one paired same-noun specificity case. Describe only
+the fixed visible outcomes.
 
-Paragraph 3: subset overlap, mechanism heterogeneity, and the exact behavioral
-interpretation. Do not call the two subsets independent replications.
-
-#### 5.5 Preservation and Failure Analysis
-
-Paragraph 1: separate gated source and footprint contributions.
-
-Paragraph 2: contrast graded suppression with complete absence and strict
-success.
-
-Paragraph 3: report weak and negative mechanisms.
-
-Paragraph 4: report receiver, quality, usability, Original capability, and
-cross-backbone limits.
-
-#### 5.6 Qualitative Comparisons
-
-Paragraph 1: disclose the metadata-only deterministic rule and that it is
-frozen after aggregate unblinding, so the display is descriptive. The rule
-selects one explicit causal, one implicit causal, and one specificity case; it
-does not select outcomes.
-
-Paragraph 2: describe the actual visible outcomes using only observable facts;
-do not guarantee that any selected case is a success or failure.
-
-The selection manifest must be frozen before Figure 3 is generated. After the
-figure is viewed, no case replacement is allowed.
+The outcome-blind G0 selection commitment must be frozen before any selected
+media are viewed and must not contain Original eligibility. After
+human-canonical scoring, a separate render receipt records eligibility and
+media/figure hashes without changing G0. No case replacement is allowed.
 
 ### 6. Scope and Limitations
 
@@ -430,11 +417,11 @@ References follow them, and appendices follow the references.
 | --- | --- | --- | --- |
 | Figure 1 | Premise: object visibility is not event absence | Introduction P1 | Schematic/pre-treatment only; no method-success selection |
 | Figure 2 | Mechanism: what changes and what is fixed | Section 4 opening | Method and Matched contracts verified |
-| Figure 3 | Explicit causal, implicit causal, and specificity cases | Section 5.6 | Post-unblinding metadata-only category selection manifest frozen |
+| Figure 3 | Explicit causal, implicit causal, and specificity cases | Section 5.4 | Post-unblinding metadata-only category selection manifest frozen |
 | Table 1 | Eight methods by seven mechanisms plus macro CES | Section 5.2 | Final human-canonical table |
 | Table 2 | Wan single-factor contrast and preservation guardrails | Section 5.2 | Final CI, Holm, NI, and claim gates |
-| Table 3 | Two-mechanism identification controls | Section 5.3 | Final causal, implicit-point, and specificity results |
-| Table 4 | Implicit-footprint and held-out-source evidence | Section 5.4 | Final subset contrasts and counts |
+| Table 3 | External normalized contrasts and estimability | Section 5.2 | Final shared-capability freeze and estimability status |
+| Tables F1--F3 | Identification controls and role-conditioned subsets | Appendix F | Final causal, implicit, held-out, and specificity results |
 
 Figure 2 should have four panels:
 
@@ -578,3 +565,9 @@ wrappers, reviewer instructions, tested release environment, and final table
 exporter are frozen; the next experimental stage is independent human review.
 Result sections and the headline result sentences in the Introduction and
 abstract remain blocked until human canonicalization.
+
+Separately, the internal outline build contains a fifth, explicitly
+non-canonical writing preview for Sections 5.2--5.4. It is bound to preview
+manifest `fc4c9409f7f4...`, is absent from prose-mode PDFs, and does not count
+as a completed scientific-results batch. Human-canonical tables replace this
+preview; they never inherit its claim wording automatically.

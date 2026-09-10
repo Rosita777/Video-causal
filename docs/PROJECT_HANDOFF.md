@@ -145,9 +145,15 @@ The evidence-independent abstract, Introduction, Related Work, Scope and
 Limitations, Conclusion, evaluation protocol, reproducibility appendix, and
 experimental setup now have draft prose.
 `paper/CITATION_LEDGER.md` records the verified sources and licensed claim
-boundaries. Appendix E/F tables, Sections 5.2--5.5, and the quantitative
+boundaries. Appendix E/F tables, Sections 5.2--5.4, and the quantitative
 headline sentences in the abstract and Introduction wait for the final
 human-canonical artifacts.
+
+For drafting only, the outline build loads
+`paper/tables/preliminary/results_writing_preview_v2_preliminary.tex`, a
+post-unblinding VLM-only narrative bound to preview manifest
+`fc4c9409f7f4...`. It is non-canonical, absent from prose-mode PDFs, and must
+be replaced rather than promoted when human-canonical tables exist.
 
 ## 5. Artifact Locations
 
@@ -193,6 +199,11 @@ source-checked in `paper/CITATION_LEDGER.md`.
 Appendices D and H retain explicit completion gates. The final result tables,
 result prose, and abstract/Introduction headline sentences remain blocked on
 human canonicalization.
+
+The outline-only VLM preview for Sections 5.2--5.4 is a drafting aid, not
+result prose licensed for submission. Its positive and negative branches must
+be reselected from the generated human-canonical tables rather than promoted
+verbatim.
 
 Permitted before final scoring:
 
