@@ -1,0 +1,18 @@
+# Release-time evaluation environment for causal_role_erasure_7m_single_seed_v2.
+#
+# This is not a reconstruction of the environment used to create the frozen
+# September 2026 VLM artifacts.  It pins the environment in which the public
+# evaluation, canonicalization, metric, and table-building code is tested for
+# release.  The accompanying environment receipt records the exact Python,
+# platform, codec libraries, test command, and test result.
+#
+# Supported interpreter: CPython 3.12.x
+av==18.1.0
+iniconfig==2.3.0
+numpy==2.3.5
+opencv-python-headless==4.14.0.94
+packaging==26.3
+pillow==12.3.0
+pluggy==1.6.0
+Pygments==2.21.0
+pytest==9.1.1

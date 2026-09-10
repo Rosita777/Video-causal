@@ -1,6 +1,9 @@
 # Final main tables
 
-Only human-canonical generated LaTeX tables belong here. Planned interfaces:
+This directory records the main-table interface contract.  The frozen final
+exporter atomically materializes the actual generated files under
+`../human_canonical_v1/main/`; it never hand-copies files into this directory.
+Planned interfaces:
 
 - tab_main_mechanisms.tex
 - tab_main_macro_guardrails.tex

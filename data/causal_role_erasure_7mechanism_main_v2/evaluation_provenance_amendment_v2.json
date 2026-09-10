@@ -1,0 +1,102 @@
+{
+  "schema_version": 2,
+  "protocol": "causal_role_erasure_7m_evaluation_provenance_amendment_v2",
+  "protocol_version": "causal_role_erasure_7m_single_seed_v2",
+  "status": "frozen_after_disclosed_global_full_key_access_before_human_labeling",
+  "deviation": {
+    "global_full_method_key_opened": true,
+    "access_mode": "separate_read_only_audit",
+    "opened_before_human_canonicalization": true,
+    "opened_before_exploratory_ab_mean_materialization": true,
+    "global_pre_unblinding_state_restorable": false,
+    "vlm_review_process_used_public_only_inputs": true,
+    "human_review_process_answer_key_blind_required": true,
+    "post_unblinding_preview_admissible_for_final_claims": false
+  },
+  "preserved_contract": {
+    "permitted_changes": [
+      "manifest_schema",
+      "provenance_statements",
+      "wrapper_orchestration"
+    ],
+    "scientific_payload_byte_parity_required": true,
+    "rules": {
+      "rubric": "unchanged_from_evaluation_code_registry_v1",
+      "audit_sampling": "unchanged_from_evaluation_code_registry_v1",
+      "canonical_substitution": "unchanged_from_evaluation_code_registry_v1",
+      "audit_expansion": "unchanged_from_evaluation_code_registry_v1",
+      "original_eligibility": "unchanged_from_evaluation_code_registry_v1",
+      "ces_and_su": "unchanged_from_evaluation_code_registry_v1",
+      "bootstrap": "unchanged_from_evaluation_code_registry_v1",
+      "estimability": "unchanged_from_evaluation_code_registry_v1",
+      "multiplicity": "unchanged_from_evaluation_code_registry_v1",
+      "noninferiority_margins": "unchanged_from_evaluation_code_registry_v1",
+      "claim_gates": "unchanged_from_evaluation_code_registry_v1"
+    }
+  },
+  "bindings": {
+    "evaluation_code_registry": {
+      "sha256": "c4f10b7129493fd2aa646ab4a38f0b141332dfa8d9da1e64f2c737c33861528f",
+      "size_bytes": 1081,
+      "registry_sha256": "bafc045ba94a6a5a8771ea8a2dd879c5f42aa219e3b5228b43594494b24eedf4"
+    },
+    "evaluation_code_registry_validator": {
+      "path": "scripts/causal_role_erasure_7mechanism_evaluation_code_registry_v1.py",
+      "sha256": "c65278de7a357c4f7db2f12d4927ffe46afe5e1a504524194ab9efcfbefd7536",
+      "size_bytes": 2746
+    },
+    "key_commitments": {
+      "sha256": "825d0d3c207b75469db17aecf712e67c957605c2f1dec74475d10e975f19859c",
+      "size_bytes": 902
+    },
+    "formal_launch_receipt": {
+      "sha256": "833254ac9b38a609f233b0d09d9507d316326ab46a6956a0d07b4c1fdf0d3ff1",
+      "size_bytes": 2890
+    },
+    "pass_a_merge_manifest": {
+      "sha256": "98b7f1b61070b789cb8755dab56829be06608ddda966dc44d7c11b32fbbae07c",
+      "size_bytes": 10098
+    },
+    "pass_b_merge_manifest": {
+      "sha256": "a5cc4a44c4eb017f2bd0f81a67959f5d8848ef460c412d1758521450ac30c457",
+      "size_bytes": 11297
+    },
+    "human_audit_manifest": {
+      "sha256": "d8f40e586ce33869508029dd705296e5b7de179851f9a5bf11134898500f1538",
+      "size_bytes": 2772,
+      "videos": 2448,
+      "atoms": 9792,
+      "initial_audit_atoms": 3633,
+      "initial_audit_videos": 2009
+    },
+    "human_audit_queue": {
+      "sha256": "e8a8f9dbd5b45df978aa73a59978b68826634c52d9b94e7d8d3e50c889e64e7b",
+      "size_bytes": 3392206,
+      "rows": 3633,
+      "review_fields_blank": true
+    },
+    "formal_cases": {
+      "path": "data/causal_role_erasure_7mechanism_main_v2/formal_cases.csv",
+      "sha256": "555ec79a1f084a8b75c802cd570801faf98531fc063fa0eb5170ab8c1d710a04",
+      "size_bytes": 266049
+    },
+    "identification_subset": {
+      "path": "data/causal_role_erasure_7mechanism_main_v2/identification_subset.csv",
+      "sha256": "07e102ec70f3957b7d6cface7826ccdde428c4a436560a6cc3631c01bbd6c897",
+      "size_bytes": 10327
+    },
+    "tier_0_audit_strata": {
+      "sha256": "0046f60f4b1c40ddc751ae7cd31e06446cfdca30c7c28639e949a33a0e166bcb",
+      "row_count": 2448
+    },
+    "tier_1_original_only": {
+      "sha256": "353263937d3f033ba34a6d5e01f357b6353433973cf6d91907fbcef400e15ccb",
+      "row_count": 588
+    },
+    "tier_2_full": {
+      "sha256": "7ad0775ba59394b5a1e718cdf7745681e4ce432292663efcfef26e7502d65cdf",
+      "row_count": 2448
+    }
+  },
+  "amendment_sha256": "f65652b23bc8fa0f68e1d24e04b2fed1c9f096ed164d32bc7e8b98310ee1d617"
+}
