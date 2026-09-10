@@ -1,29 +1,38 @@
 \section{Scope and Limitations}
 \label{sec:limitations}
 
-\outlineblock{Model and intervention scope}{
-The study learns seven mechanism-specific adapters under one shared training
-principle; it does not produce one universal eraser. It uses a single training
-seed and one frozen generation seed per semantic case.}
+Our scope is deliberately narrower than universal concept erasure.
+\methodshort{} is instantiated as seven mechanism-specific adapters on Wan 2.1
+T2V 1.3B, not one seven-mechanism adapter.  The Wan block also contains seven
+Matched adapters and four Water/Fracture lexical-control adapters; a separate
+CogVideoX-2B block evaluates Original and four benchmark interfaces.  Each
+training run uses one committed seed, and each semantic case uses one
+generation seed shared across compatible streams.  We therefore do not
+estimate sensitivity to random initialization or cross-backbone robustness of
+\methodshort{}, which is evaluated only on Wan.  The scope is further limited
+to locked-camera events within the registered prompt distribution.  Held-out
+sources test transfer within this ontology, not open-world causal
+generalization.
 
-\outlineblock{Counterfactual and causal scope}{
-Targets are distributional rather than pixel-level individual
-counterfactuals. The structured data provide the causal-source role.
-Behavioral controls can support a role-conditioned interpretation but cannot
-establish a true internal causal representation.}
+The supervision target is also limited.  Each source-free video is an
+independently generated and screened proxy for a desired distribution, not the
+unique individual counterfactual paired with one factual realization.  Event
+roles are provided by the data construction rather than discovered by the
+model.  Even positive outcomes under source-slot randomization and the
+registered controls can therefore support at most a role-conditioned
+behavioral interpretation, not an internal causal representation.
 
-\outlineblock{Evaluation and generalization scope}{
-Discuss incomplete removal, mechanism heterogeneity, Original-capability
-limits, cross-backbone estimability, fixed-camera synthetic prompts, reviewer
-subjectivity, and the bounds of the seven registered mechanisms.}
+Evaluation inherits both capability and judgment constraints.  Causal credit
+is gated by whether the same-backbone Original produces an eligible event;
+this prevents erasure credit for a missing base capability but narrows the
+estimand.  External comparisons normalize to different Originals and remain
+cross-backbone benchmark comparisons rather than pure ablations.  The atomic
+(0/1/2) rubric records partial visibility, so improvement need not mean
+complete disappearance.  Finally, a separate read-only audit opened the full
+method key before human canonicalization; global pre-unblinding cannot be
+claimed.  The reviewer-delivery design still keeps each human process-locally
+answer-key blind, while post-unblinding VLM previews remain excluded from final
+scientific claims.
 
-\outlineblock{Protocol deviation and remaining blinding}{
-Disclose that a separate read-only audit opened the full method key before
-human canonicalization and before the exploratory A/B-mean rule was
-materialized. This global pre-unblinding state cannot be restored. The frozen
-human queue can still be labeled by answer-key-blind reviewers, and only those
-human-canonical scores may supply final paper metrics; the post-unblinding VLM
-preview remains drafting evidence only.}
-
-% TODO-PAPER: Replace any preliminary-evaluation wording with final
-% human-canonical coverage and agreement statistics before submission.
+% TODO-PAPER: Add final human coverage, agreement, and adjudication statistics
+% only after the canonical process receipt is frozen.

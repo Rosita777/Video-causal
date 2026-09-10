@@ -1,53 +1,70 @@
 \section{Introduction}
 \label{sec:introduction}
 
-% TODO-PAPER: Write the introduction as a continuous argument; do not add
-% numbered subsections unless required by the final venue.
-\outlineblock{Paragraph 1 - the overlooked failure}{
-Open with the mismatch between object-centric erasure and physical events.
-An edited video can reduce the named source while retaining the splash,
-fracture, deformation, release, or trace that it caused. Establish why this
-residual footprint remains evidence of the erased event.}
+Removing an object from a generated video is not equivalent to removing its
+participation in a physical event.  A ball can fade while water still
+splashes; an impactor can vanish while fresh fragments remain; a load can
+disappear while a surface stays deformed.  These residues are temporally
+downstream evidence of the event that the edit was meant to suppress.  Recent
+effect-aware video removal exposes this gap when editing an observed clip
+\citep{motamed2026void,ekin2026beyondmasks}.
+We study its model-level counterpart in open-ended text-to-video (T2V)
+generation.  At inference, each mechanism-specific edited generator receives
+only text, without an input video, mask, user-specified trajectory, or clean
+reference.  We operationalize the source-dependent evidence following a
+registered interaction as its \emph{causal footprint}.
 
-\outlineblock{Paragraph 2 - role, not noun}{
-Explain why unconditional noun removal is also wrong. The same entity may be a
-causal source, a receiver, or a bystander. A valid method must intervene on its
-role in an event rather than suppress every use of its name or appearance.}
+The noun alone is also the wrong intervention unit.  The same noun can denote
+a causal source in one prompt and a bystander or otherwise legitimate
+noncausal object in another.  Unconditional suppression may under-erase the
+causal event by leaving its footprint, or over-erase the noncausal scene by
+deleting every use of the noun.  Prior erasure methods typically specify a
+semantic concept or category as the target
+\citep{gandikota2023esd,xu2025videoeraser}.  Our contract instead suppresses a
+registered source role and its dependent footprint while preserving
+registered noncausal uses.  We call this task \emph{causal-role erasure} and
+summarize its requirements as \emph{source--footprint--specificity}.
 
-\outlineblock{Paragraph 3 - technical obstacles}{
-Introduce the three hard cases that determine the design: the footprint may be
-implicit in the prompt, source identities must generalize beyond training, and
-the desired no-source video is distributional rather than pixel-aligned with a
-single factual realization.}
+Three difficulties follow.  A prompt need not name the footprint: a splash or
+fracture can be visually expected even when absent from the text.  Repeating a
+few training sources can encourage noun memorization rather than transfer to
+a new identity in the same role.  Finally, the individual frame-aligned
+no-source realization is unavailable from the prompt alone.  We instead
+supervise with a \emph{distributional source-free target}: a
+plausible dynamic video without the source, registered interaction, or
+dependent footprint, but with the receiver and scene preserved.
 
-\outlineblock{Paragraph 4 - method idea}{
-Introduce \methodname\ as one mechanism, not a component list: vary the
-identity occupying the causal-source slot while holding the corresponding
-dynamic no-source target fixed, then distill toward that target under a
-preservation constraint. Point to \S\ref{sec:method}.}
+For each mechanism, \methodname\ (\methodshort) trains a separate adapter from
+structured event pairs.  It varies only the identity in the factual source
+slot while fixing the source-free target and remaining training recipe.  The
+noun therefore changes across examples while the role to suppress does not,
+making identity memorization a less reliable shortcut.  Counterfactual
+distillation moves the adapter toward the source-free target, while
+frozen-model matching on generic videos constrains drift
+(\S\ref{sec:method}).
 
-\outlineblock{Paragraph 5 - evidence and boundary}{
-Preview the seven equal-status mechanisms and eight main streams, followed by
-the two-mechanism Water/Fracture identification study, implicit-footprint and
-held-out-source subsets, and specificity guardrails. State the supported
-behavioral conclusion without upgrading it to internal causal reasoning.}
+We evaluate seven equal-status mechanisms and eight streams across Wan and
+CogVideoX.  A same-backbone Matched Control isolates source-slot replacement;
+two-mechanism lexical controls and held-out-source, implicit-footprint, and
+specificity tests probe simpler explanations.  Full-video judgments separate
+source and footprint efficacy from preservation.  This design licenses at
+most a behavioral conclusion: it can test role-conditioned generation, not
+discover or certify a latent causal model.
+
+% TODO-PAPER: Add one quantitative headline sentence here only after the
+% human-canonical table and registered claim gates are materialized.
 
 \paragraph{Contributions.}
-\ifoutline
 \begin{enumerate}
-  \item A causal-role erasure problem and evaluation protocol that jointly
-        score source suppression, downstream-footprint suppression, and
-        specificity.
-  \item \methodname, with a single-factor Matched Control that isolates the
-        source-slot intervention.
-  \item A seven-mechanism main study plus a two-mechanism role-identification
-        study, with implicit effects, unseen sources, full-video judgment,
-        preservation tests, and explicit failure reporting.
+  \item We formulate model-level causal-role erasure for open-ended T2V around
+        a source--footprint--specificity contract and gated full-video metrics.
+  \item We introduce \methodname, which varies source identity while fixing a
+        dynamic source-free target, and a single-factor Matched Control.
+  \item We construct a registered seven-mechanism main study and a
+        two-mechanism identification study with generalization, specificity,
+        preservation, and failure analyses.
 \end{enumerate}
-\fi
 
-\outlineblock{Figure 1 - task teaser}{
-Use a task schematic or pre-treatment illustration to contrast object-centric
-erasure with causal-role erasure. Label source, receiver, and footprint
-directly. Do not use this teaser as confirmatory method evidence or imply that
-its case was selected before the already completed aggregate unblinding.}
+% TODO-PAPER: Insert the frozen Figure 1 task schematic only after its source
+% manifest and hash exist.  It must illustrate the task, not a selected method
+% success, and must label source, receiver, and footprint directly.

@@ -4,30 +4,49 @@
 \subsection{Concept Erasure in Image and Video Diffusion}
 \label{subsec:related-concept-erasure}
 
-\outlineblock{Argument}{
-Summarize training-free, fine-tuning, and representation-level erasure by the
-unit they suppress. End with the precise gap: most treat the target as a
-lexical or visual concept and do not distinguish the entity's role in a
-physical event. Move method-by-method detail to
-\appref{app:training-baselines}.}
+Concept erasure suppresses selected semantic content while preserving
+untargeted capabilities.  Image methods use negative-guidance fine-tuning or
+closed-form parameter edits \citep{gandikota2023esd,gandikota2024uce}.  T2V
+approaches filter prompt embeddings and latent features, steer denoising
+noise, train adapters against negatively guided velocity targets, learn
+preferences over concept-free trajectories, or localize sparse features
+\citep{yoon2025safree,xu2025videoeraser,ye2025t2vunlearning,wang2026latentdpo,wang2026erasesae}.
+Their target remains a specified semantic concept or category, evaluated
+through target presence, generation quality, and broad preservation.  Causal-role erasure
+instead registers a source, its dependent footprint, and specificity: the
+same noun must remain valid in registered noncausal prompts.
 
-\subsection{Video Object Removal and Controllable Editing}
+\subsection{Video Object and Effect Removal}
 \label{subsec:related-video-editing}
 
-\outlineblock{Argument}{
-Position object removal, effect-aware removal, and temporally consistent video
-editing. Distinguish their input-video, mask, trajectory, or reference-frame
-assumptions from open-ended text-to-video generation of a distributional
-source-free world.}
+Video inpainting reconstructs masked regions across frames
+\citep{zhou2023propainter}.  Effect-aware removal includes associated shadows,
+reflections, and appearance changes \citep{miao2025rose,kushwaha2026objectwiper};
+EffectErase adds deformation, and VOID extends removal to downstream
+interactions \citep{fu2026effecterase,motamed2026void}.  BeyondMasks separately
+evaluates object disappearance and residual after-effects against paired clean
+references \citep{ekin2026beyondmasks}.  These are direct precedents for
+separating object disappearance from residual effects, but the removal
+methods operate on an observed video using masks, reference pairs,
+or affected-region localization.  We instead edit T2V generators: at
+inference, each mechanism-specific edited generator uses only the rendered prompt---no
+input video, object/effect mask, user-specified trajectory, or reference
+frame---and is evaluated on registered source-role and noncausal uses of the
+same noun.
 
-\subsection{Counterfactual Supervision and Role-Based Generalization}
+\subsection{Counterfactual Supervision and Structured Event Roles}
 \label{subsec:related-counterfactual}
 
-\outlineblock{Argument}{
-Connect paired supervision, counterfactual targets, structured prompt
-interventions, and role generalization. State explicitly that the paper tests
-behavior induced by a registered source role; it does not claim to discover a
-true internal causal representation.}
-
-\claimboundary{Use a priority word such as \emph{first} only after the
-literature search and citation ledger establish the exact scope of the claim.}
+Related systems construct alternative outcomes through paired present/absent
+supervision or assumed causal structure.  EffectErase learns from paired
+videos, while VOID constructs paired counterfactual removals
+\citep{fu2026effecterase,motamed2026void}.  Causally Steered Diffusion optimizes
+video-editing prompts under a supplied graph \citep{spyrou2025causally}.
+Separately, event-centric causal-chain prompting structures physical
+generation as temporally ordered events \citep{wang2026chain}.  Video
+semantic-role labeling represents events through verbs, role-bearing entities,
+and event relations, but predicts structure rather than editing a generator
+\citep{sadhu2021vidsrl}.  Our source-free target is independently generated
+rather than a pixel-aligned individual counterfactual, and event roles are
+supplied rather than discovered.  We test role-conditioned behavior, not an
+internal causal representation.

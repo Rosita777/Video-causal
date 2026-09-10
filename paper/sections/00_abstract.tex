@@ -1,18 +1,21 @@
-% Scope: seven-sentence problem-to-evidence arc.
-% TODO-PAPER: Replace this architecture block only after human-canonical
-% results and the final claim language are frozen.
-\outlineblock{Seven-sentence arc}{
-Sentence 1 identifies the video-specific failure: a causal source may be
-weakened while its downstream footprint remains. Sentence 2 explains why the
-problem is role-dependent rather than ordinary object erasure. Sentence 3
-defines causal-role erasure and its preservation requirement. Sentence 4
-introduces structured dynamic counterfactual targets and source-slot
-randomization. Sentence 5 states the seven-mechanism, eight-stream main study
-and the two-mechanism identification study. Sentence 6 reports only the
-strongest result licensed by the final human-canonical analysis. Sentence 7
-ends at behavioral evidence without claiming an internal causal
-representation.}
+Concept erasure in text-to-video generation targets specified semantic
+content, yet a physical event can remain legible after its source weakens
+through a residual splash, fracture, deformation, release, or trace.  We
+formulate \emph{causal-role erasure}: suppress an entity in a registered source
+role and reduce its dependent footprint while preserving the same noun in
+registered noncausal uses.  We introduce \methodname, which distills toward
+dynamic distributional source-free targets under a preservation update.
+Relative to its Matched Control, \methodshort{} changes only the identity in the
+factual source slot while holding the target and remaining training recipe
+fixed.  Our registered main study compares three Wan streams---Original,
+Matched, and \methodshort{}---with a separate five-stream CogVideoX benchmark
+across seven physical mechanisms.  Generic Paraphrase and Bystander Token
+controls on Water and Fracture probe surface-form and noun-frequency
+explanations.  Full-video evaluation separates source and footprint efficacy
+from receiver, quality, and specificity guardrails, and stratifies efficacy by
+held-out-source and implicit-footprint cases.
 
-\claimboundary{Do not claim complete removal, a universal adapter, internal
-causal representation learning, or superiority over every baseline unless the
-final registered gates support those statements.}
+% TODO-PAPER: Insert exactly one human-canonical headline result sentence here
+% after the registered claim gates are materialized.  End at role-conditioned
+% behavior; do not claim complete removal, universal adaptation, or an internal
+% causal representation.

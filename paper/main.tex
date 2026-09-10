@@ -6,6 +6,7 @@
 \input{preamble/common_packages}
 \usepackage{hyperref}
 \usepackage{url}
+\hypersetup{hidelinks}
 \input{preamble/macros}
 
 \title{Causal-Role Erasure for\\Text-to-Video Diffusion Models}
@@ -24,16 +25,8 @@
 \input{sections/09_ethics_statement}
 \input{sections/10_reproducibility_statement}
 
-\ifoutline
-  \section*{References}
-  \outlineblock{Reference plan}{Maintain references in
-  \texttt{references.bib}. The final driver uses the official
-  \texttt{iclr2027\_conference.bst}. No citation or priority claim should be
-  added without source verification.}
-\else
-  \bibliography{references}
-  \bibliographystyle{iclr2027_conference}
-\fi
+\bibliography{references}
+\bibliographystyle{iclr2027_conference}
 
 \ifdefined\paperwithoutappendix
   % Main-only build requested by a wrapper such as main_only.tex.

@@ -141,11 +141,13 @@ data.
 9. Run the v2 formal metric wrapper and the pre-metric-frozen final
    table exporter.  The existing exporter remains preview-only.
 
-The evidence-independent evaluation protocol, reproducibility appendix, and
-experimental setup now have draft prose.  Citation-ledger construction and
-Related Work may proceed in parallel with human review.  Appendix E/F tables,
-Sections 5.2--5.5, the abstract result sentence, and the introduction's result
-paragraph wait for the final human-canonical artifacts.
+The evidence-independent abstract, Introduction, Related Work, Scope and
+Limitations, Conclusion, evaluation protocol, reproducibility appendix, and
+experimental setup now have draft prose.
+`paper/CITATION_LEDGER.md` records the verified sources and licensed claim
+boundaries. Appendix E/F tables, Sections 5.2--5.5, and the quantitative
+headline sentences in the abstract and Introduction wait for the final
+human-canonical artifacts.
 
 ## 5. Artifact Locations
 
@@ -184,10 +186,13 @@ reviewers.
 
 ## 6. Paper and Claim Boundary
 
-The paper uses the official ICLR 2027 template. Section 3, Method 4.1--4.3,
-Section 5.1, and Appendices A--D and H have draft prose. Appendices D and H
-retain explicit completion gates. The final result tables and result prose
-remain blocked on human canonicalization.
+The paper uses the official ICLR 2027 template. The evidence-independent
+abstract, Introduction, Related Work, Sections 3 and 6--7, Method 4.1--4.3,
+Section 5.1, and Appendices A--D and H have draft prose. Related Work is
+source-checked in `paper/CITATION_LEDGER.md`.
+Appendices D and H retain explicit completion gates. The final result tables,
+result prose, and abstract/Introduction headline sentences remain blocked on
+human canonicalization.
 
 Permitted before final scoring:
 

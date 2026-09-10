@@ -10,11 +10,14 @@ Template provenance and hashes are recorded in
 Paragraph-level writing must follow [WRITING_PLAN.md](WRITING_PLAN.md). That
 plan is reviewed before manuscript prose is drafted.
 
-Current draft status (2026-09-10): Section 3, Method 4.1--4.3, Section 5.1,
-and Appendices A--D and H contain prose. Appendices D and H retain explicit
-human/final-release completion gates.  The deviation-aware v2 wrappers,
-tested release environment, and fixed final table exporter are frozen before
-human labeling; quantitative tables and result prose remain blocked on human
+Current draft status (2026-09-10): the evidence-independent abstract,
+Introduction, Related Work, Sections 3 and 6--7, Method 4.1--4.3, Section 5.1,
+and Appendices A--D and H contain prose.
+Related Work is backed by `CITATION_LEDGER.md`. Appendices D and H retain
+explicit human/final-release completion gates. The deviation-aware v2
+wrappers, tested release environment, and fixed final table exporter are
+frozen before human labeling; quantitative tables and the headline result
+sentences in the Introduction and abstract remain blocked on human
 canonicalization.
 
 ## Paper spine

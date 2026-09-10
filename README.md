@@ -65,10 +65,12 @@ verified prefix DAG retains all nine human/canonical/final outputs as pending.
 ## Paper Status
 
 The manuscript uses the official ICLR 2027 template under `paper/`.
-Section 3, Method 4.1--4.3, Section 5.1, and Appendices A--D and H have draft
-prose. Appendices D and H retain explicit completion gates. Results, final
-tables, and the abstract result sentence remain gated on human-canonical
-scores. The writing order and claim boundaries are in
+The evidence-independent abstract, Introduction, Related Work, Sections 3 and
+6--7, Method 4.1--4.3, Section 5.1, and Appendices A--D and H have draft prose.
+Related Work is backed by a verified citation ledger.  Appendices D and H
+retain explicit completion gates. Results, final tables, and the abstract and
+Introduction headline sentences remain gated on human-canonical scores. The
+writing order and claim boundaries are in
 [`paper/WRITING_PLAN.md`](paper/WRITING_PLAN.md).
 
 ## Start Here
@@ -100,8 +102,9 @@ seed, mechanism weight, prompt set, or method variant on the formal data.
 4. Run only the deviation-aware v2 canonical freeze, eligibility freeze, and
    formal metric wrapper, followed by the pre-metric-frozen final exporter.
    The v1 final entry points and preview exporter remain prohibited.
-5. In parallel, build the citation ledger and draft Related Work; refine the
-   completed evidence-independent sections only against frozen evidence.
+5. In parallel, refine the completed evidence-independent prose and citation
+   ledger only against frozen evidence.  Keep result paragraphs and the
+   abstract headline gated on the human-canonical tables.
 
 ## Artifact Locations
 

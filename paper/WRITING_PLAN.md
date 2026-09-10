@@ -1,10 +1,12 @@
 # Writing plan before prose
 
-Status: accepted writing contract. Progress updated 2026-09-10: Section 3,
-Method 4.1--4.3, Section 5.1, and Appendices A--D and H have draft prose.
+Status: accepted writing contract. Progress updated 2026-09-10: the
+evidence-independent abstract, Introduction, Related Work, Sections 3 and
+6--7, Method 4.1--4.3, Section 5.1, and Appendices A--D and H have draft prose.
 The pre-metric provenance prefix and final table interface are frozen;
-Appendices D and H retain explicit completion gates only for the
-not-yet-materialized human-canonical and final-release artifacts.
+Appendices D and H retain explicit
+completion gates only for the not-yet-materialized human-canonical and
+final-release artifacts.
 
 This plan separates three things:
 
@@ -88,10 +90,10 @@ The writing order should not follow the final section order.
 | 6 | Final quantitative Appendices E--F | Not ready | Human calibration, audit, adjudication, and canonical metrics complete |
 | 7 | Sections 5.2--5.5 | Not ready | Generated human-canonical tables and registered claim gates available |
 | 8 | Appendix G and Section 5.6 | Not ready | Metadata-only selection manifest frozen and disclosed as post-unblinding descriptive |
-| 9 | Related Work | Needs source ledger | Closest-work claims and citations verified |
-| 10 | Introduction | Partly ready | Problem and method stable; result paragraph waits for canonical evidence |
-| 11 | Scope, Conclusion, and ICLR statements | Partly ready | Final evidence boundary and author-reviewed AI-use history known |
-| 12 | Abstract | Write last | Every sentence is supported by the completed paper |
+| 9 | Related Work | Drafted and source-checked | Refresh the ledger before submission if new close work appears |
+| 10 | Introduction | Drafted except the headline result | Quantitative headline waits for canonical evidence |
+| 11 | Scope, Conclusion, and ICLR statements | Scope/Conclusion drafted | Human coverage, supported result language, and author-reviewed AI-use history remain gated |
+| 12 | Abstract | Drafted except the headline result; finalize last | Every result word must follow the canonical tables |
 
 Results prose must be distilled from generated Appendix E/F tables. We must
 not write a desired result story first and then search the tables for support.
@@ -401,7 +403,7 @@ Use four compact paragraphs:
 
 Use three moves:
 
-1. recover the overlooked task;
+1. recover the model-level causal-role erasure setting;
 2. recover the source-slot intervention;
 3. state the final supported behavioral conclusion.
 
@@ -551,10 +553,11 @@ A section is ready for author review only if:
 
 ## 10. Completed evidence-independent writing batches
 
-Status: complete through the second batch. Section 3, Method 4.1--4.3,
-Section 5.1, and Appendices A--D and H now have evidence-grounded draft prose.
-Figure 2 remains a separately gated asset; Appendices D and H retain visible
-completion gates for artifacts that do not yet exist.
+Status: complete through the fourth batch. The evidence-independent abstract,
+Introduction, Related Work, Sections 3 and 6--7, Method 4.1--4.3, Section 5.1,
+and Appendices A--D and H now have evidence-grounded draft prose. Figure 2
+remains a separately gated asset; Appendices D and H retain visible completion
+gates for artifacts that do not yet exist.
 
 The completed first batch was:
 
@@ -567,8 +570,11 @@ That batch was reviewed for logical necessity and terminology before the loss
 equations and experimental setup were drafted.
 
 The completed second batch was Appendix D, Appendix H, and Section 5.1.  The
-next paper-only task is the citation ledger and Related Work.  The additive
-deviation amendment, v2 wrappers, reviewer instructions, tested release
-environment, and final table exporter are frozen; the next experimental stage
-is independent human review. Result sections remain blocked until human
-canonicalization.
+third batch is the verified citation ledger, Related Work, and the
+evidence-independent Introduction. The fourth batch is the abstract without
+its headline result, Scope and Limitations, and Conclusion without its final
+evidence sentence. The additive deviation amendment, v2
+wrappers, reviewer instructions, tested release environment, and final table
+exporter are frozen; the next experimental stage is independent human review.
+Result sections and the headline result sentences in the Introduction and
+abstract remain blocked until human canonicalization.
