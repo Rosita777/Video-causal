@@ -1,15 +1,11 @@
 \section{\methodname}
 \label{sec:method}
 
-Our method is organized around a single training invariant: the identity
-occupying a causal-source slot may change, while the desired no-source world
-does not. We first construct dynamic source-free supervision from structured
-event descriptions (\S\ref{subsec:counterfactual-pairs}). We then randomize
-only the source-slot identity while retaining the same counterfactual target
-and the same schedule and stochastic draws
-(\S\ref{subsec:source-slot-randomization}), before
-training the adapter with counterfactual distillation and preservation updates
-(\S\ref{subsec:training-objectives}).
+Figure~\ref{fig:task-method-overview} summarizes \methodshort{}: construct
+dynamic source-free supervision (\S\ref{subsec:counterfactual-pairs}),
+replace only the factual source-slot identity relative to Matched
+(\S\ref{subsec:source-slot-randomization}), and alternate counterfactual
+distillation with preservation updates (\S\ref{subsec:training-objectives}).
 
 \subsection{Structured Dynamic Counterfactual Pairs}
 \label{subsec:counterfactual-pairs}
@@ -55,21 +51,15 @@ online teacher; \(n_i\) is used for target-media generation only and is not
 part of that teacher condition.
 
 \paragraph{Screening and preservation.}
-Each mechanism begins with 192 target candidates. A treatment-blind anonymous
-review is followed by a deterministic hard-rejection, ranking, and tie-break
-rule that freezes exactly 178 eligible erasure bindings before either training
-arm is run; a data version with fewer eligible candidates is invalid rather
-than replenished after training. Selected media are finite proxies: the
-screen rejects clear violations and ranks the remaining candidates, but an
-atomic absence score may still record a partial or uncertain cue. We
-additionally freeze 36 generic preservation bindings shared by all 18 Wan
-method/control training runs. For every selected
-erasure row, the target latent and the factual, source-free-target, and
-arm-specific prompt embeddings are cached and hash-bound before optimization.
-The frozen base prediction under \(p_i^{\mathrm{cf}}\) is instead computed
-online on the same noised target latent used by the student. Complete
-templates, screening fields, rejection reasons, preservation prompts, and
-cache contracts appear in \appref{app:counterfactual-data}.
+Treatment-blind screening freezes exactly 178 of 192 candidate erasure
+bindings per mechanism before either arm trains. Deterministic rejection,
+ranking, and tie-breaking govern selection; a version with fewer eligible
+targets is invalid. These screened proxies may still contain partial or
+uncertain cues. All 18 Wan method/control runs share 36 generic preservation
+bindings. Target latents and prompt embeddings are cached and hash-bound
+before optimization; the frozen teacher prediction is computed online on the
+student's noised target latent. Templates, screening rules, preservation
+prompts, and cache contracts appear in \appref{app:counterfactual-data}.
 
 \subsection{Randomizing the Causal-Source Slot}
 \label{subsec:source-slot-randomization}
@@ -110,12 +100,11 @@ The complete frozen pair banks can be written as
 The registered schedule shuffles each bank and optimizes on the same
 100-element active erase-index set \(\mathcal{I}_{\mathrm{er}}\); the remaining
 78 rows stay cached and mapped but do not enter the 200-update optimization.
-The two arms share the counterfactual videos and target prompts, target
-latents, target-prompt embeddings, preservation data, initialization, sample
-order, noise and sigma draws (and hence timesteps), optimizer, and inference
-configuration. The arm-specific student embedding differs only through the
-source identity in its factual conditioning; the frozen teacher prediction is
-computed online under the shared target-prompt embedding.
+The two arms share target media, target latents, target-prompt embeddings,
+preservation data, initialization, sample order, noise and sigma draws
+(hence timesteps), optimizer, and inference settings. Their student embeddings
+differ only through factual source identity; the online teacher uses the shared
+source-free condition.
 
 \paragraph{Training pressure and falsification.}
 Across bindings, source identity varies while the desired source-free outcome
@@ -177,8 +166,7 @@ the adapter-disabled online teacher, and
 first term fits the flow of the source-free target latent. The second aligns
 the factual-conditioned student with the frozen-model prediction under the
 source-free target prompt; both predictions receive the same noised latent
-and timestep. The \ces{} components convert source and footprint visibility
-into gated per-output erasure credit. Only the paired \methodshort{}--Matched
+and timestep. Only the paired \methodshort{}--Matched
 contrast tests an improvement attributable to the source-slot intervention.
 
 \paragraph{Preservation update.}
@@ -214,17 +202,9 @@ and~\eqref{eq:preservation-loss} on separate, strictly alternating updates;
 it does not optimize their sum on a common minibatch. The frozen 200-update
 schedule contains 100 erasure and 100 preservation updates, with 100 distinct
 erasure bindings selected from the 178-row bank. Only \(\phi_{m,\ell}\) is
-optimized,
-and checkpoint 200 is the sole checkpoint eligible for evaluation. We train a
-separate adapter for each mechanism, so \methodshort{} denotes a shared
-training principle rather than one universal seven-mechanism adapter. The
-Matched and \methodshort{} arms share both objectives, their weights,
-counterfactual and preservation data, initialization, schedule, stochastic
-draws, optimizer, and checkpoint policy. Their comparison therefore isolates
-source-slot replacement, not the necessity of flow matching, teacher
-distillation, preservation matching, or LoRA itself. Full optimization and
+optimized, and checkpoint 200 is the sole checkpoint eligible for evaluation.
+Matched and \methodshort{} use separate adapters for each mechanism. They share both
+objectives, their weights, and all remaining training settings, so the contrast
+isolates source-slot replacement rather than the necessity of flow matching,
+teacher distillation, preservation matching, or LoRA. Full optimization and
 inference settings appear in \appref{app:optimization-details}.
-
-% Figure 2 is specified in paper/WRITING_PLAN.md and
-% paper/figures/main/README.md. Insert the frozen asset only after its source
-% manifest and hash exist.

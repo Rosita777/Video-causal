@@ -77,6 +77,10 @@ The internal outline build now contains an explicitly non-canonical VLM-only
 Results writing preview. Prose-mode and submission builds omit every preview
 number; only the later human-canonical exporter may populate final results.
 
+The combined task-and-method Figure 1 is now embedded in the Introduction and
+cited in Method. Its editable source, vector PDF, and caption are bound by
+the manifest under paper/figures/main. The diagram contains no result media.
+
 ## Start Here
 
 - [`docs/PROJECT_HANDOFF.md`](docs/PROJECT_HANDOFF.md): authoritative current

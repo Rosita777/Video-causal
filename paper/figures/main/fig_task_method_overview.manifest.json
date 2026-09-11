@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "artifact_kind": "schematic_task_method_figure",
+  "source_revision": "approved reference-style slide with publication-size label edits",
+  "selection": {
+    "applicable": false,
+    "reason": "Schematic only; no result videos or scores used"
+  },
+  "examples": {
+    "source": "ball",
+    "replacement": "pebble",
+    "receiver": "water",
+    "prompt_status": "illustrative; not a literal registered case"
+  },
+  "claim_scope": "Task and training design only; no empirical success or performance claim",
+  "rendering": {
+    "backend": "bundled LibreOffice Impress PDF export",
+    "typeface": "Arial",
+    "icons": "Lucide 1.8.0 original SVG paths",
+    "raw_export_sha256": "ec80d3a89cbeb21bc364c85ba26e9f78e07e303f1787bfd854354d248d617a44",
+    "normalization": "pypdf vector-preserving page scaling to 396 points"
+  },
+  "inputs": [
+    {
+      "path": "paper/figures/main/source/fig_task_method_approved.pptx",
+      "sha256": "60efde0f781fe224a7cbfb2719158056aa6d6f034b34ee80c33c287061f73b2c",
+      "size_bytes": 72893
+    },
+    {
+      "path": "paper/figures/main/source/fig_task_method_overview.pptx",
+      "sha256": "ecfa55c1aca8b1090aa4dd55c4b0ba4fa9c24af259473d3b99fdcca51160f083",
+      "size_bytes": 47012
+    },
+    {
+      "path": "paper/figures/main/source/LUCIDE_LICENSE.txt",
+      "sha256": "b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57",
+      "size_bytes": 3208
+    },
+    {
+      "path": "paper/scripts/prepare_task_method_figure.mjs",
+      "sha256": "91881c69f20ab215dddd1b7320f66289067aa4737a27b109d9aa375b9a6597c0",
+      "size_bytes": 4891
+    },
+    {
+      "path": "paper/scripts/finalize_task_method_pdf.py",
+      "sha256": "bf723ea378840a5737b929713cb4436c76224da818a2103c587c673591447143",
+      "size_bytes": 3952
+    },
+    {
+      "path": "paper/figures/main/fig_task_method_overview.tex",
+      "sha256": "442288b4c1e95f088ef3295766ce68d725e9de9f0fc0ba26d70b0cc834820ca7",
+      "size_bytes": 870
+    },
+    {
+      "path": "paper/figures/main/fig_task_method_overview_spec.md",
+      "sha256": "45c8c2a6015677355d8a69bb062cee6679cb894300aacb77c919dab02afb6ce5",
+      "size_bytes": 2355
+    },
+    {
+      "path": "paper/sections/03_problem_formulation.tex",
+      "sha256": "c2df0323d5969b2b62cc1c79560be1ffe447bb40fa644cd3f797520588ffad28",
+      "size_bytes": 8007
+    },
+    {
+      "path": "paper/sections/04_method.tex",
+      "sha256": "64e81d847d7068731556777953ca0e564b98e9181bd16de2a03c32a3c2d7f6f4",
+      "size_bytes": 9991
+    }
+  ],
+  "output": {
+    "path": "paper/figures/main/fig_task_method_overview.pdf",
+    "sha256": "818e4716a8f0474a7616c13cf6a5c7cf7594c8a31724a216458a6d9ad072c2ac",
+    "size_bytes": 167168
+  },
+  "checks": {
+    "page_count": 1,
+    "width_points": 396.0,
+    "height_points": 179.437683,
+    "minimum_type_points": 7.42492691999999,
+    "raster_image_count": 0,
+    "vector_path_count": 104,
+    "text_character_count": 495,
+    "font_families": [
+      "Arial-BoldMT",
+      "ArialMT"
+    ]
+  }
+}

@@ -83,7 +83,7 @@ The writing order should not follow the final section order.
 | --- | --- | --- | --- |
 | 0 | This plan and claim matrix | Accepted | Structure and boundaries frozen for drafting |
 | 1 | Section 3 problem formulation | Drafted | Initial prose complete; final compression remains |
-| 2 | Section 4 method and Figure 2 specification | Method drafted | Figure 2 asset remains gated on a source manifest and hash |
+| 2 | Section 4 method and combined Figure 1 | Method drafted; schematic integrated | Figure source, PDF, and caption are hash-bound together |
 | 3 | Appendices A--C | Drafted | Initial prose compiled against frozen artifacts |
 | 4 | Appendix D protocol and Appendix H provenance | Pre-metric prefix drafted and frozen | Final human agreement, canonical outputs, and final-release hashes remain open |
 | 5 | Section 5.1 experimental setup | Drafted | Contains only verified appendix facts; final compression remains |
@@ -127,7 +127,7 @@ bullets.
 
 - Start from the conventional visibility endpoint.
 - Introduce residual splash, fracture, deformation, release, or trace.
-- Use Figure 1 as a premise figure.
+- Use the combined Figure 1 to connect the task to the source-slot intervention.
 - End with the gap: visual absence of the named object is not sufficient
   evidence that the event has been erased.
 - Figure 1 is a schematic or pre-treatment task illustration, not a selected
@@ -155,7 +155,7 @@ bullets.
 - Change only the identity in the causal-source slot.
 - Hold the dynamic no-source target fixed.
 - State counterfactual distillation and preservation as the training response.
-- Refer to Figure 2; avoid listing every implementation component.
+- Refer to the same Figure 1; avoid listing every implementation component.
 
 #### Paragraph 5 - What evidence can falsify the interpretation?
 
@@ -363,7 +363,7 @@ Paragraph 1: separate graded source/footprint efficacy from complete absence
 and strict success, then report weak mechanisms and preservation costs that
 the macro mean hides.
 
-Paragraph 2 and Figure 3: disclose the metadata-only deterministic rule and
+Paragraph 2 and Figure 2: disclose the metadata-only deterministic rule and
 that it is frozen after aggregate unblinding, so the display is descriptive.
 Use three Wan rows---Original, Matched, and SRCD---for one explicit causal,
 one implicit causal, and one paired same-noun specificity case. Describe only
@@ -415,20 +415,18 @@ References follow them, and appendices follow the references.
 
 | ID | Function | Placement | Readiness gate |
 | --- | --- | --- | --- |
-| Figure 1 | Premise: object visibility is not event absence | Introduction P1 | Schematic/pre-treatment only; no method-success selection |
-| Figure 2 | Mechanism: what changes and what is fixed | Section 4 opening | Method and Matched contracts verified |
-| Figure 3 | Explicit causal, implicit causal, and specificity cases | Section 5.4 | Post-unblinding metadata-only category selection manifest frozen |
+| Figure 1 | Combined task, source-free target, and separate training arms | Introduction P4; Method back-reference | Approved editable source and vector PDF recorded in the figure manifest |
+| Figure 2 | Explicit causal, implicit causal, and specificity cases | Section 5.4 | Post-unblinding metadata-only category selection manifest frozen |
 | Table 1 | Eight methods by seven mechanisms plus macro CES | Section 5.2 | Final human-canonical table |
 | Table 2 | Wan single-factor contrast and preservation guardrails | Section 5.2 | Final CI, Holm, NI, and claim gates |
 | Table 3 | External normalized contrasts and estimability | Section 5.2 | Final shared-capability freeze and estimability status |
 | Tables F1--F3 | Identification controls and role-conditioned subsets | Appendix F | Final causal, implicit, held-out, and specificity results |
 
-Figure 2 should have four panels:
-
-1. factual event anatomy;
-2. independently generated no-source target;
-3. Matched versus randomized source slot with all fixed fields visible;
-4. student, frozen teacher, and preservation paths.
+Figure 1 uses the approved two-tier composition. The upper tier pairs
+illustrative Matched/SRCD prompts with one independently generated source-free
+proxy and shows the separate specificity contract. The lower tier shows the
+shared noised target, frozen teacher, two independently trained LoRA arms, and
+alternating updates. Details remain in Sections 3--4 and the caption.
 
 All temporal grids use fixed frame indices and method order, visibly separate
 Wan and CogVideoX, and annotate source, receiver, and footprint.
@@ -542,14 +540,14 @@ A section is ready for author review only if:
 
 Status: complete through the fourth batch. The evidence-independent abstract,
 Introduction, Related Work, Sections 3 and 6--7, Method 4.1--4.3, Section 5.1,
-and Appendices A--D and H now have evidence-grounded draft prose. Figure 2
-remains a separately gated asset; Appendices D and H retain visible completion
+and Appendices A--D and H now have evidence-grounded draft prose. The combined
+Figure 1 is integrated; qualitative Figure 2 remains gated. Appendices D and H retain visible completion
 gates for artifacts that do not yet exist.
 
 The completed first batch was:
 
 1. Section 3.1--3.3;
-2. Section 4.1--4.2 and the Figure 2 specification;
+2. Section 4.1--4.2 and the original method-figure specification, now merged into Figure 1;
 3. Appendix A;
 4. Appendix B.
 

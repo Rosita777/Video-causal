@@ -52,10 +52,10 @@ Use these terms consistently instead of cycling through synonyms.
 | Section | Function | Main evidence | Budget |
 | --- | --- | --- | ---: |
 | Abstract | Complete problem-to-evidence arc in seven functional sentences | Final headline only | 0.25 page |
-| 1 Introduction | Phenomenon, gap, method idea, evidence, contributions | Task teaser | 1.10 pages |
+| 1 Introduction | Phenomenon, gap, method idea, evidence, contributions | Combined task-and-method Figure 1 | 1.10 pages |
 | 2 Related Work | Position the task without bibliography dumping | Three precise gaps | 0.55 page |
-| 3 Causal-Role Erasure | Define source, receiver, footprint, and no-source world | Task diagram and desiderata | 0.85 page |
-| 4 Method | Pair construction, source-slot intervention, objectives | Method overview | 1.55 pages |
+| 3 Causal-Role Erasure | Define source, receiver, footprint, and no-source world | Event definition and desiderata | 0.85 page |
+| 4 Method | Pair construction, source-slot intervention, objectives | Back-reference to Figure 1 | 1.55 pages |
 | 5 Experiments | Efficacy, role evidence, generalization, preservation, failures | Main tables and compact qualitative figure | 3.15 pages |
 | 6 Scope and Limitations | Freeze what the evidence does and does not establish | Explicit boundaries | 0.35 page |
 | 7 Conclusion | Recover the problem, intervention, and supported behavior | No new claims | 0.20 page |
@@ -139,10 +139,12 @@ non-inferiority p-value.
 
 Main figures:
 
-1. Task teaser: source, receiver, and lingering footprint.
-2. Method overview: structured pair, randomized source slot, fixed no-source
-   target, distillation, and preservation.
-3. Compact temporal comparison: one explicit causal case, one implicit causal
+1. Combined task-and-method overview: the approved source-slot prompt
+   comparison and source-free target above separate LoRA arms and alternating
+   updates. The vector PDF is embedded at full text width in the Introduction
+   and cited again in Method. Its source, caption, and hashes live in
+   figures/main/fig_task_method_overview.manifest.json.
+2. Compact temporal comparison: one explicit causal case, one implicit causal
    case, and one specificity case, selected by a metadata-only deterministic
    rule frozen after aggregate unblinding and labeled descriptive. The G0
    selection commitment excludes Original eligibility and all outcome data; a

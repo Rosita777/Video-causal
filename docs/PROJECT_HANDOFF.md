@@ -205,6 +205,13 @@ result prose licensed for submission. Its positive and negative branches must
 be reselected from the generated human-canonical tables rather than promoted
 verbatim.
 
+The combined task-and-method schematic is integrated as Figure 1 in the
+Introduction, with a Method back-reference. Its vector PDF, readable
+publication-size PPTX, caption, and source hashes are recorded in
+paper/figures/main/fig_task_method_overview.manifest.json. The separately
+planned qualitative comparison is now main Figure 2 and still requires its
+metadata-only selection commitment. The schematic contains no result media.
+
 Permitted before final scoring:
 
 - task, ontology, data-construction, method, and evaluation definitions;

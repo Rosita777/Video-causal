@@ -9,10 +9,8 @@ downstream evidence of the event that the edit was meant to suppress.  Recent
 effect-aware video removal exposes this gap when editing an observed clip
 \citep{motamed2026void,ekin2026beyondmasks}.
 We study its model-level counterpart in open-ended text-to-video (T2V)
-generation.  At inference, each mechanism-specific edited generator receives
-only text, without an input video, mask, user-specified trajectory, or clean
-reference.  We operationalize the source-dependent evidence following a
-registered interaction as its \emph{causal footprint}.
+generation with text-only inference.  We operationalize the source-dependent
+evidence following a registered interaction as its \emph{causal footprint}.
 
 The noun alone is also the wrong intervention unit.  The same noun can denote
 a causal source in one prompt and a bystander or otherwise legitimate
@@ -25,31 +23,31 @@ registered source role and its dependent footprint while preserving
 registered noncausal uses.  We call this task \emph{causal-role erasure} and
 summarize its requirements as \emph{source--footprint--specificity}.
 
-Three difficulties follow.  A prompt need not name the footprint: a splash or
-fracture can be visually expected even when absent from the text.  Repeating a
-few training sources can encourage noun memorization rather than transfer to
-a new identity in the same role.  Finally, the individual frame-aligned
-no-source realization is unavailable from the prompt alone.  We instead
-supervise with a \emph{distributional source-free target}: a
-plausible dynamic video without the source, registered interaction, or
-dependent footprint, but with the receiver and scene preserved.
+Three difficulties follow: footprints can be implicit, repeated source
+identities invite noun memorization, and a prompt supplies no frame-aligned
+no-source realization.  We therefore use a \emph{distributional source-free
+target}: an independently generated dynamic video without the registered
+source, trigger, or dependent footprint, but with the receiver and scene
+preserved.
 
-For each mechanism, \methodname\ (\methodshort) trains a separate adapter from
-structured event pairs.  It varies only the identity in the factual source
-slot while fixing the source-free target and remaining training recipe.  The
-noun therefore changes across examples while the role to suppress does not,
-making identity memorization a less reliable shortcut.  Counterfactual
-distillation moves the adapter toward the source-free target, while
-frozen-model matching on generic videos constrains drift
-(\S\ref{sec:method}).
+\methodname\ (\methodshort) trains a separate adapter for each mechanism.
+It varies factual source-slot identity against a fixed source-free target and
+alternates counterfactual distillation with generic preservation updates
+(\S\ref{sec:method}). Figure~\ref{fig:task-method-overview} shows the shared
+target and the two separate training arms; their only treatment difference
+is the source identity.
 
+\input{figures/main/fig_task_method_overview}
+
+\begin{samepage}
 We evaluate seven equal-status mechanisms and eight streams across Wan and
 CogVideoX.  A same-backbone Matched Control isolates source-slot replacement;
 two-mechanism lexical controls and held-out-source, implicit-footprint, and
 specificity tests probe simpler explanations.  Full-video judgments separate
 source and footprint efficacy from preservation.  This design licenses at
 most a behavioral conclusion: it can test role-conditioned generation, not
-discover or certify a latent causal model.
+discover or certify a latent causal model.\par
+\end{samepage}
 
 % TODO-PAPER: Add one quantitative headline sentence here only after the
 % human-canonical table and registered claim gates are materialized.
@@ -64,7 +62,3 @@ discover or certify a latent causal model.
         two-mechanism identification study with generalization, specificity,
         preservation, and failure analyses.
 \end{enumerate}
-
-% TODO-PAPER: Insert the frozen Figure 1 task schematic only after its source
-% manifest and hash exist.  It must illustrate the task, not a selected method
-% success, and must label source, receiver, and footprint directly.
